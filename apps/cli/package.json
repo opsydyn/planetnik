@@ -13,12 +13,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "*",
-    "@effect/cli": "*",
-    "@effect/schema": "*",
-    "@effect/platform": "*",
-    "@effect/platform-node": "*",
-    "simple-git": "*",
+    "effect": "catalog:",
+    "@effect/cli": "catalog:",
+    "@effect/schema": "catalog:",
+    "@effect/platform": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "simple-git": "catalog:",
     "@planetnik/common": "workspace:*",
     "@planetnik/analyzer": "workspace:*",
     "@planetnik/reports": "workspace:*"

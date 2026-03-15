@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "*",
-    "@effect/schema": "*"
+    "effect": "catalog:",
+    "@effect/schema": "catalog:"
   }
 }

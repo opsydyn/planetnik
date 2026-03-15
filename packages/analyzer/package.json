@@ -12,9 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "*",
-    "@effect/schema": "*",
-    "@effect/platform": "*",
+    "effect": "catalog:",
+    "@effect/schema": "catalog:",
+    "@effect/platform": "catalog:",
     "@planetnik/common": "workspace:*"
   }
 }
