@@ -1,0 +1,26 @@
+{
+  "name": "@planetnik/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "planetnik": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "dev": "bun run ./src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "*",
+    "@effect/cli": "*",
+    "@effect/schema": "*",
+    "@effect/platform": "*",
+    "@effect/platform-node": "*",
+    "simple-git": "*",
+    "@planetnik/common": "workspace:*",
+    "@planetnik/analyzer": "workspace:*",
+    "@planetnik/reports": "workspace:*"
+  }
+}

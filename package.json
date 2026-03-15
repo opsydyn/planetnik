@@ -1,0 +1,25 @@
+{
+  "name": "planetnik",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "bunx biome check .",
+    "lint:fix": "bunx biome check --write ."
+  },
+  "dependencies": {
+    "@effect/experimental": "^0.58.0",
+    "@effect/language-service": "^0.80.0",
+    "@effect/platform-node": "^0.104.1",
+    "@effect/printer": "^0.47.0",
+    "@effect/printer-ansi": "^0.47.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.7"
+  }
+}
