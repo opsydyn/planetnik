@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import { JsonMapper, JsonParseError } from "../JsonMapper"
+import { JsonMapper } from "../JsonMapper"
 
 describe("JsonMapper", () => {
   test("generate produces pretty-printed JSON", () => {

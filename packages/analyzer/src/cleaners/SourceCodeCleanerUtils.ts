@@ -7,7 +7,7 @@ export class SourceCodeCleanerUtils {
       .replace(/\r/g, "\n")
       .replace(/\t/g, "    ")
       .replace(/\f/g, "")
-      .replace(new RegExp("\\x08", "g"), "")
+      .replace(/\x08/g, "")
   }
 
   static cleanEmptyLines(content: string): string {

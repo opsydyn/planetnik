@@ -3,8 +3,8 @@ export class Metric {
   value: number = 0
   description: string = ""
 
-  setId(name: string): this {
-    this.id = name.toUpperCase().replace(/[^A-Z0-9_]/g, "_")
+  setId(id: string): this {
+    this.id = id
     return this
   }
 

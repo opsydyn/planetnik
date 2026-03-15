@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Schema } from "@effect/schema"
-import { Effect } from "effect"
-import { AnalysisConfig, CodeAnalyzerSettings, Link, Metadata, Range, SourceFileFilter, TagRule } from "../index.js"
+import { CodeAnalyzerSettings, Link, Metadata, Range, SourceFileFilter, TagRule } from "../index.js"
 
 describe("SourceFileFilter", () => {
   test("matches path pattern", () => {

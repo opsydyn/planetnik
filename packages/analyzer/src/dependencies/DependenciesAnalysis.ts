@@ -9,6 +9,7 @@ export interface Dependency {
 export interface DependencyError {
   readonly message: string
   readonly sourceFile: string
+  readonly filtering: string
 }
 
 export class DependenciesAnalysis {
