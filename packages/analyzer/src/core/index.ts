@@ -1,5 +1,6 @@
 export { AnalysisConfig, type AnalysisConfigType } from "./AnalysisConfig.js"
 export { CodeAnalyzerSettings, type CodeAnalyzerSettingsType } from "./CodeAnalyzerSettings.js"
+export { CodeConfiguration, DEFAULT_CONFIGURATION_FOLDER } from "./CodeConfiguration.js"
 export { Link, type LinkType } from "./Link.js"
 export { Metadata, type MetadataType } from "./Metadata.js"
 export { Range, type RangeType } from "./Range.js"
