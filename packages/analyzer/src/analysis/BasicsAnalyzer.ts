@@ -1,5 +1,5 @@
 import type { SourceFile } from "../aspects/SourceFile.js"
-import type { CodeConfiguration } from "../core/CodeConfiguration.js"
+import { CodeConfiguration } from "../core/CodeConfiguration.js"
 import type { FoundTag } from "../core/FoundTag.js"
 import type { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 import { AnalysisUtils } from "./AnalysisUtils.js"
@@ -49,7 +49,7 @@ export class BasicsAnalyzer {
   }
 
   private loadScopes(sourceCodeFiles: SourceCodeFiles): void {
-    sourceCodeFiles.getSourceFiles(this.codeConfiguration.main)
+    // First populate secondary scopes (test, generated, build, other)
     if (this.codeConfiguration.test) {
       sourceCodeFiles.getSourceFiles(this.codeConfiguration.test)
     }
@@ -61,6 +61,29 @@ export class BasicsAnalyzer {
     }
     if (this.codeConfiguration.other) {
       sourceCodeFiles.getSourceFiles(this.codeConfiguration.other)
+    }
+
+    // Main scope: if main has explicit filters, use them; otherwise take all
+    // files in broad scope that weren't claimed by other scopes
+    if (this.codeConfiguration.main.sourceFileFilters.length > 0 || this.codeConfiguration.main.files.length > 0) {
+      sourceCodeFiles.getSourceFiles(this.codeConfiguration.main)
+    } else {
+      const claimed = new Set<string>()
+      for (const aspect of [
+        this.codeConfiguration.test,
+        this.codeConfiguration.generated,
+        this.codeConfiguration.buildAndDeployment,
+        this.codeConfiguration.other,
+      ]) {
+        if (aspect) {
+          for (const sf of aspect.sourceFiles) {
+            claimed.add(sf.relativePath)
+          }
+        }
+      }
+      this.codeConfiguration.main.sourceFiles = sourceCodeFiles.filesInBroadScope.filter(
+        (f) => !claimed.has(f.relativePath),
+      )
     }
   }
 
@@ -171,6 +194,3 @@ export class BasicsAnalyzer {
     return map
   }
 }
-
-// Import for static method reference
-import { CodeConfiguration } from "../core/CodeConfiguration.js"
