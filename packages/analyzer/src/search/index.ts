@@ -5,3 +5,8 @@ export { SearchExpression } from "./SearchExpression.js"
 export { SearchRequest } from "./SearchRequest.js"
 export { SearchResult, type SourceFileSearchData } from "./SearchResult.js"
 export { type CleanedFoundText, SearchResultCleaner } from "./SearchResultCleaner.js"
+export {
+  SearchResultDependencies,
+  SourceNodeExtractionType,
+  TargetNodeExtractionType,
+} from "./SearchResultDependencies.js"

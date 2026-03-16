@@ -1,3 +1,4 @@
+import { RegexUtils } from "@planetnik/common"
 import type { OperationStatement } from "./OperationStatement.js"
 
 export class ComplexOperation {
@@ -19,28 +20,42 @@ export class ComplexOperation {
     switch (op.op.toLowerCase()) {
       case "extract": {
         if (op.params.length === 0) return input
-        try {
-          const match = input.match(new RegExp(op.params[0]))
-          return match ? match[0] : input
-        } catch {
-          return input
+        let result = input
+        for (const pattern of op.params) {
+          const matched = RegexUtils.getMatchedRegex(result, pattern)
+          result = matched || ""
         }
+        return result
       }
       case "remove": {
         if (op.params.length === 0) return input
-        try {
-          return input.replace(new RegExp(op.params[0], "g"), "")
-        } catch {
-          return input
+        let result = input
+        for (const pattern of op.params) {
+          try {
+            result = result.replace(new RegExp(pattern, "g"), "")
+          } catch {
+            // skip invalid regex
+          }
         }
+        return result
       }
       case "replace": {
         if (op.params.length < 2) return input
-        try {
-          return input.replace(new RegExp(op.params[0], "g"), op.params[1])
-        } catch {
-          return input
+        let result = input
+        for (let i = 0; i + 1 < op.params.length; i += 2) {
+          const pattern = op.params[i]!
+          const replacement = op.params[i + 1]!
+          try {
+            if (pattern === ".*") {
+              result = replacement
+            } else {
+              result = result.replace(new RegExp(pattern, "g"), replacement)
+            }
+          } catch {
+            // skip invalid regex
+          }
         }
+        return result
       }
       case "trim":
         return input.trim()
@@ -48,10 +63,20 @@ export class ComplexOperation {
         return input.toUpperCase()
       case "lowercase":
         return input.toLowerCase()
-      case "append":
-        return op.params.length > 0 ? input + op.params[0] : input
-      case "prepend":
-        return op.params.length > 0 ? op.params[0] + input : input
+      case "append": {
+        let result = input
+        for (const param of op.params) {
+          result += param
+        }
+        return result
+      }
+      case "prepend": {
+        let prefix = ""
+        for (const param of op.params) {
+          prefix += param
+        }
+        return prefix + input
+      }
       default:
         return input
     }

@@ -2,6 +2,7 @@
 
 export * from "./analysis/index.js"
 export * from "./aspects/index.js"
+export * from "./catalogs/index.js"
 export * from "./cleaners/index.js"
 export * from "./contributors/index.js"
 export * from "./core/index.js"

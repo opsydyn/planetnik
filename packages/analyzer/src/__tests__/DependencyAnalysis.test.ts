@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { LogicalDecomposition } from "../aspects/LogicalDecomposition.js"
 import { NamedSourceCodeAspect } from "../aspects/NamedSourceCodeAspect.js"
 import { SourceFile } from "../aspects/SourceFile.js"
-import { LogicalDecomposition } from "../aspects/LogicalDecomposition.js"
 import { ComponentDependency } from "../dependencies/ComponentDependency.js"
 import { DependenciesFinderExtractor } from "../dependencies/DependenciesFinderExtractor.js"
 import { DependencyFinderPattern } from "../dependencies/DependencyFinderPattern.js"
@@ -12,7 +12,7 @@ import { OperationStatement } from "../operations/OperationStatement.js"
 
 describe("OperationStatement & ComplexOperation", () => {
   test("extract operation", () => {
-    const op = new ComplexOperation([new OperationStatement("extract", ["[a-z]+"]) ])
+    const op = new ComplexOperation([new OperationStatement("extract", ["[a-z]+"])])
     expect(op.exec("Hello123world")).toBe("ello")
   })
 
@@ -61,12 +61,15 @@ describe("DependencyFinderPattern — simple rules", () => {
     ld.components = [serviceComp, controllerComp]
 
     // Create source files in "controller" component
-    const file1 = new SourceFile("src/controller/UserController.java", [
-      "package com.example.controller;",
-      "import com.example.service.UserService;",
-      "public class UserController {",
-      "}",
-    ].join("\n"))
+    const file1 = new SourceFile(
+      "src/controller/UserController.java",
+      [
+        "package com.example.controller;",
+        "import com.example.service.UserService;",
+        "public class UserController {",
+        "}",
+      ].join("\n"),
+    )
     file1.linesOfCode = 4
     file1.logicalComponents = [controllerComp]
 

@@ -184,7 +184,7 @@ export class ContributorsAnalyzer {
     const dependencies: ComponentDependency[] = []
     const depMap = new Map<string, ComponentDependency>()
 
-    for (const [path, emails] of contributionMap) {
+    for (const [_path, emails] of contributionMap) {
       const emailList = Array.from(emails)
       for (let i = 0; i < emailList.length; i++) {
         for (let j = i + 1; j < emailList.length; j++) {
