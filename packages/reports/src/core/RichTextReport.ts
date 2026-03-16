@@ -247,6 +247,11 @@ export class RichTextReport {
     this.addHtml(style ? `<div style="${style}">${content}</div>` : `<div>${content}</div>`)
   }
 
+  addContentInDivWithTooltip(content: string, tooltip: string, style: string = ""): void {
+    const attrs = [style ? `style="${style}"` : "", tooltip ? `title="${tooltip}"` : ""].filter(Boolean).join(" ")
+    this.addHtml(`<div ${attrs}>${content}</div>`)
+  }
+
   addSvgFigure(_title: string, svg: string): void {
     this.fragments.push(new RichTextFragment(svg, FragmentType.SVG))
   }
@@ -257,6 +262,10 @@ export class RichTextReport {
     } else {
       this.fragments.push(new RichTextFragment(graphvizCodeOrDescription, FragmentType.GRAPHVIZ))
     }
+  }
+
+  renderToString(): string {
+    return this.fragments.map((f) => f.fragment).join("")
   }
 
   // --- Internal ---

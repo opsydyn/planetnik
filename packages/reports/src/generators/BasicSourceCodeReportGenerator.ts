@@ -6,8 +6,10 @@ import { ConditionalComplexityReportGenerator } from "./ConditionalComplexityRep
 import { ContributorsReportGenerator } from "./ContributorsReportGenerator.js"
 import { ControlsReportGenerator } from "./ControlsReportGenerator.js"
 import { DuplicationReportGenerator } from "./DuplicationReportGenerator.js"
+import { FileChurnReportGenerator } from "./FileChurnReportGenerator.js"
 import { FileHistoryReportGenerator } from "./FileHistoryReportGenerator.js"
 import { FileSizeReportGenerator } from "./FileSizeReportGenerator.js"
+import { FileTemporalDependenciesReportGenerator } from "./FileTemporalDependenciesReportGenerator.js"
 import { FindingsReportGenerator } from "./FindingsReportGenerator.js"
 import { LogicalComponentsReportGenerator } from "./LogicalComponentsReportGenerator.js"
 import { MetricsReportGenerator } from "./MetricsReportGenerator.js"
@@ -30,11 +32,10 @@ export class BasicSourceCodeReportGenerator {
   private duplicationReport = new RichTextReport("duplication", "Duplication.html")
   private fileSizeReport = new RichTextReport("fileSize", "FileSize.html")
   private fileHistoryReport = new RichTextReport("fileAge", "FileAge.html")
+  private fileChangeFrequencyReport = new RichTextReport("fileChurn", "FileChangeFrequency.html")
+  private fileTemporalDependenciesReport = new RichTextReport("temporalDependencies", "FileTemporalDependencies.html")
   private unitSizeReport = new RichTextReport("unitSize", "UnitSize.html")
-  private conditionalComplexityReport = new RichTextReport(
-    "conditionalComplexity",
-    "ConditionalComplexity.html",
-  )
+  private conditionalComplexityReport = new RichTextReport("conditionalComplexity", "ConditionalComplexity.html")
   private commitsReport = new RichTextReport("commits", "Commits.html")
   private contributorsReport = new RichTextReport("contributors", "Contributors.html")
   private findingsReport = new RichTextReport("findings", "Notes.html")
@@ -58,6 +59,8 @@ export class BasicSourceCodeReportGenerator {
     this.duplicationReport.displayName = "Duplication"
     this.fileSizeReport.displayName = "File Size"
     this.fileHistoryReport.displayName = "File Age & Freshness"
+    this.fileChangeFrequencyReport.displayName = "File Change Frequency"
+    this.fileTemporalDependenciesReport.displayName = "Temporal Dependencies"
     this.unitSizeReport.displayName = "Unit Size"
     this.conditionalComplexityReport.displayName = "Conditional Complexity"
     this.commitsReport.displayName = "Commits"
@@ -87,6 +90,8 @@ export class BasicSourceCodeReportGenerator {
       const hasHistory = this.analysisResults.filesHistoryAnalysisResults.history.length > 0
       if (hasHistory) {
         reports.push(this.fileHistoryReport)
+        reports.push(this.fileChangeFrequencyReport)
+        reports.push(this.fileTemporalDependenciesReport)
         reports.push(this.commitsReport)
         reports.push(this.contributorsReport)
       }
@@ -111,11 +116,7 @@ export class BasicSourceCodeReportGenerator {
     OverviewReportGenerator.addScopeAnalysisToReport(this.overviewReport, this.analysisResults)
 
     if (this.settings.analyzeLogicalDecomposition) {
-      LogicalComponentsReportGenerator.addComponentsToReport(
-        this.logicalComponentsReport,
-        this.analysisResults,
-        true,
-      )
+      LogicalComponentsReportGenerator.addComponentsToReport(this.logicalComponentsReport, this.analysisResults, true)
       if (this.settings.analyzeStaticDependencies) {
         LogicalComponentsReportGenerator.addComponentsToReport(
           this.logicalComponentsAndDependenciesReport,
@@ -141,6 +142,11 @@ export class BasicSourceCodeReportGenerator {
       const hasHistory = this.analysisResults.filesHistoryAnalysisResults.history.length > 0
       if (hasHistory) {
         FileHistoryReportGenerator.addFileHistoryToReport(this.fileHistoryReport, this.analysisResults)
+        FileChurnReportGenerator.addFileChurnToReport(this.fileChangeFrequencyReport, this.analysisResults)
+        FileTemporalDependenciesReportGenerator.addTemporalDependenciesToReport(
+          this.fileTemporalDependenciesReport,
+          this.analysisResults,
+        )
         CommitsReportGenerator.addCommitsToReport(this.commitsReport, this.analysisResults)
         ContributorsReportGenerator.addContributorsToReport(this.contributorsReport, this.analysisResults)
       }

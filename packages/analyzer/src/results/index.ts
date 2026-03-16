@@ -9,5 +9,6 @@ export { FileDistributionPerLogicalDecomposition } from "./FileDistributionPerLo
 export { FilesAnalysisResults } from "./FilesAnalysisResults.js"
 export { type FilePairChangedTogether, FilesHistoryAnalysisResults } from "./FilesHistoryAnalysisResults.js"
 export { GoalsAnalysisResults } from "./GoalsAnalysisResults.js"
+export { HistoryPerExtension } from "./HistoryPerExtension.js"
 export { LogicalDecompositionAnalysisResults } from "./LogicalDecompositionAnalysisResults.js"
 export { UnitsAnalysisResults } from "./UnitsAnalysisResults.js"
