@@ -4,18 +4,10 @@ import type { ContributorTag } from "./ContributorTag.js"
 import type { CustomTab } from "./CustomTab.js"
 import type { MergeExtension } from "./MergeExtension.js"
 import { PeopleConfig } from "./PeopleConfig.js"
+import type { SokratesRepositoryLink } from "./SokratesRepositoryLink.js"
+import type { SubLandscapeLink } from "./SubLandscapeLink.js"
 import type { TagGroup } from "./TagGroup.js"
 import { TeamsConfig } from "./TeamsConfig.js"
-
-export interface RepositoryLink {
-  analysisResultsPath: string
-  name: string
-}
-
-export interface SubLandscapeLink {
-  analysisResultsPath: string
-  name: string
-}
 
 export class LandscapeConfiguration {
   metadata: MetadataType = { name: "", description: "", tooltip: "", logoLink: "", links: [] }
@@ -33,7 +25,7 @@ export class LandscapeConfiguration {
   commitsMaxYears: number = 10
   significantContributorMinCommitDaysPerYear: number = 10
 
-  repositories: RepositoryLink[] = []
+  repositories: SokratesRepositoryLink[] = []
   subLandscapes: SubLandscapeLink[] = []
 
   ignoreContributors: string[] = []
