@@ -1,5 +1,11 @@
 import type { LinkType } from "../core/Link.js"
 import type { MetadataType } from "../core/Metadata.js"
+import type { ContributorTag } from "./ContributorTag.js"
+import type { CustomTab } from "./CustomTab.js"
+import type { MergeExtension } from "./MergeExtension.js"
+import { PeopleConfig } from "./PeopleConfig.js"
+import type { TagGroup } from "./TagGroup.js"
+import { TeamsConfig } from "./TeamsConfig.js"
 
 export interface RepositoryLink {
   analysisResultsPath: string
@@ -32,4 +38,11 @@ export class LandscapeConfiguration {
 
   ignoreContributors: string[] = []
   ignoreExtensions: string[] = []
+
+  teamsConfig: TeamsConfig = new TeamsConfig()
+  peopleConfig: PeopleConfig = new PeopleConfig()
+  contributorTags: ContributorTag[] = []
+  tagGroups: TagGroup[] = []
+  customTabs: CustomTab[] = []
+  mergeExtensions: MergeExtension[] = []
 }

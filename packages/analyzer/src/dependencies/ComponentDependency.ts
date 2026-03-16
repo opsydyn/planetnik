@@ -6,6 +6,7 @@ export class ComponentDependency {
   count: number = 1
   locFrom: number = 0
   evidence: DependencyEvidence[] = []
+  data: string[] = []
   color: string = ""
 
   constructor(fromComponent: string = "", toComponent: string = "") {

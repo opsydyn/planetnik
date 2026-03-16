@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { ContributionTimeSlot } from "../contributors/ContributionTimeSlot.js"
 import { Contributor } from "../contributors/Contributor.js"
 import { LandscapeAnalysisResults, type RepositoryAnalysisResult } from "./LandscapeAnalysisResults.js"
 import type { LandscapeConfiguration } from "./LandscapeConfiguration.js"
