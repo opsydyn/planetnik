@@ -91,9 +91,9 @@ export class DataExporter {
     if (dependencies.length === 0) return
 
     const exportData = dependencies.map((d) => ({
-      from: d.from,
-      to: d.to,
-      evidence: d.evidence,
+      from: d.fromComponentName ?? d.from.anchor,
+      to: d.toComponentName ?? d.to.anchor,
+      evidence: d.fromFiles.map((f) => ({ path: f.sourceFile.relativePath, codeFragment: f.codeFragment })),
     }))
     writeFileSync(join(dataFolder, "dependencies.json"), JSON.stringify(exportData, null, 2), "utf-8")
 

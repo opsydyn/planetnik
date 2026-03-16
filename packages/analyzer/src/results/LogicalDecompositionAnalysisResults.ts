@@ -1,6 +1,7 @@
 import type { LogicalDecomposition } from "../aspects/LogicalDecomposition.js"
 import type { ComponentDependency } from "../dependencies/ComponentDependency.js"
-import type { Dependency, DependencyError } from "../dependencies/DependenciesAnalysis.js"
+import type { Dependency } from "../dependencies/Dependency.js"
+import type { DependencyError } from "../dependencies/DependencyError.js"
 import { NumericMetric } from "../metrics/NumericMetric.js"
 import type { AspectAnalysisResults } from "./AspectAnalysisResults.js"
 
