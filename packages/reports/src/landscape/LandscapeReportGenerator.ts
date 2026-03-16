@@ -1,4 +1,4 @@
-import type { LandscapeAnalysisResults, RepositoryAnalysisResult } from "@planetnik/analyzer"
+import type { LandscapeAnalysisResults } from "@planetnik/analyzer"
 import type { RichTextReport } from "../core/RichTextReport.js"
 
 export class LandscapeReportGenerator {

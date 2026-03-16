@@ -5,6 +5,7 @@ import type { RepositoryAnalysisResult } from "./LandscapeAnalysisResults.js"
 export class ContributorRepositories {
   contributor: Contributor
   repositories: ContributorRepositoryInfo[] = []
+  members: ContributorRepositories[] = []
 
   constructor(contributor: Contributor) {
     this.contributor = contributor
