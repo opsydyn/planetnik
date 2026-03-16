@@ -39,8 +39,8 @@ export class RichTextReport {
     this.addHtml(`<h1>${text}</h1>`)
   }
 
-  addLevel2Header(text: string): void {
-    this.addHtml(`<h2>${text}</h2>`)
+  addLevel2Header(text: string, style: string = ""): void {
+    this.addHtml(style ? `<h2 style="${style}">${text}</h2>` : `<h2>${text}</h2>`)
   }
 
   addLevel3Header(text: string): void {
@@ -237,6 +237,10 @@ export class RichTextReport {
 
   addHorizontalLine(): void {
     this.addHtml("<hr/>")
+  }
+
+  addTextArea(content: string, style: string = ""): void {
+    this.addHtml(`<textarea style="${style}">${content}</textarea>`)
   }
 
   addHtmlContent(html: string): void {

@@ -2,6 +2,16 @@ import type { RiskDistributionStats } from "@planetnik/analyzer"
 import type { RichTextReport } from "../core/RichTextReport.js"
 
 export class RiskDistributionReportUtils {
+  static getRowData(stats: RiskDistributionStats): number[] {
+    return [
+      stats.veryHighRiskValue,
+      stats.highRiskValue,
+      stats.mediumRiskValue,
+      stats.lowRiskValue,
+      stats.negligibleRiskValue,
+    ]
+  }
+
   static addRiskDistributionTable(report: RichTextReport, stats: RiskDistributionStats): void {
     if (stats.key) {
       report.addLevel4Header(stats.key)
