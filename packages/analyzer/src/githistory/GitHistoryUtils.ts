@@ -1,17 +1,81 @@
 import { CommitInfo } from "./CommitInfo.js"
 
-export interface FileUpdate {
+export class FileUpdate {
   date: string
   email: string
   commitId: string
   path: string
+  userName: string
+  bot: boolean
+
+  constructor(
+    date: string,
+    email: string,
+    commitId: string,
+    path: string,
+    userName: string = "",
+    bot: boolean = false,
+  ) {
+    this.date = date
+    this.email = email
+    this.commitId = commitId
+    this.path = path
+    this.userName = userName
+    this.bot = bot
+  }
+
+  getExtension(): string {
+    const name = this.path.replace(/\\/g, "/")
+    const lastDot = name.lastIndexOf(".")
+    if (lastDot < 0) return ""
+    return name.substring(lastDot + 1).toLowerCase()
+  }
 }
 
-export interface AuthorCommit {
+export class AuthorCommit {
   commitId: string
   email: string
   date: string
+  userName: string
   filesUpdated: number
+  bot: boolean
+
+  constructor(date: string = "", email: string = "", userName: string = "", bot: boolean = false) {
+    this.commitId = ""
+    this.date = date
+    this.email = email
+    this.userName = userName
+    this.filesUpdated = 1
+    this.bot = bot
+  }
+
+  getYear(): string {
+    return this.date.length >= 4 ? this.date.substring(0, 4) : ""
+  }
+
+  getMonth(): string {
+    return this.date.length >= 7 ? this.date.substring(0, 7) : ""
+  }
+
+  getWeekOfYear(): string {
+    if (this.date.length < 10) return ""
+    const parts = this.date.substring(0, 10).split("-")
+    if (parts.length !== 3) return ""
+    const year = Number.parseInt(parts[0], 10)
+    const month = Number.parseInt(parts[1], 10) - 1
+    const day = Number.parseInt(parts[2], 10)
+    if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return ""
+
+    const d = new Date(year, month, day)
+    // Roll back to Monday
+    while (d.getDay() !== 1) {
+      d.setDate(d.getDate() - 1)
+    }
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const dd = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${dd}`
+  }
 }
 
 export class GitHistoryUtils {
@@ -42,7 +106,7 @@ export class GitHistoryUtils {
 
     if (GitHistoryUtils.shouldIgnore(email, ignorePatterns)) return null
 
-    return { date, email, commitId, path }
+    return new FileUpdate(date, email, commitId, path)
   }
 
   static shouldIgnore(email: string, ignorePatterns: string[]): boolean {
@@ -82,12 +146,7 @@ export class GitHistoryUtils {
         }
       } else if (currentCommit) {
         // It's a file path line belonging to the current commit
-        updates.push({
-          date: currentCommit.date,
-          email: currentCommit.email,
-          commitId: currentCommit.commitId,
-          path: trimmed,
-        })
+        updates.push(new FileUpdate(currentCommit.date, currentCommit.email, currentCommit.commitId, trimmed))
       }
     }
 
@@ -102,12 +161,9 @@ export class GitHistoryUtils {
       if (existing) {
         existing.filesUpdated++
       } else {
-        commitMap.set(update.commitId, {
-          commitId: update.commitId,
-          email: update.email,
-          date: update.date,
-          filesUpdated: 1,
-        })
+        const commit = new AuthorCommit(update.date, update.email, update.userName, update.bot)
+        commit.commitId = update.commitId
+        commitMap.set(update.commitId, commit)
       }
     }
 

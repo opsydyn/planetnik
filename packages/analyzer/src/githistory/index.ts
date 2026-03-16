@@ -1,5 +1,6 @@
 export { CommitInfo } from "./CommitInfo.js"
 export { CommitsPerExtension } from "./CommitsPerExtension.js"
 export { ContributorPerExtensionStats } from "./ContributorPerExtensionStats.js"
-export type { AuthorCommit, FileUpdate } from "./GitHistoryUtils.js"
-export { GitHistoryUtils } from "./GitHistoryUtils.js"
+export { ExtractGitHistoryFileHandler } from "./ExtractGitHistoryFileHandler.js"
+export { GitHistoryPerExtensionUtils } from "./GitHistoryPerExtensionUtils.js"
+export { AuthorCommit, FileUpdate, GitHistoryUtils } from "./GitHistoryUtils.js"
