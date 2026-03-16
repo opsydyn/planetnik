@@ -1,3 +1,5 @@
 export { DateUtils, FileHistoryUtils } from "./FileHistoryUtils.js"
+export { FileHistoryScopingUtils } from "./FileHistoryScopingUtils.js"
 export { FileModificationHistory } from "./FileModificationHistory.js"
 export { FilePairsChangedTogetherEngine } from "./FilePairsChangedTogether.js"
+export { TemporalDependenciesHelper } from "./TemporalDependenciesHelper.js"

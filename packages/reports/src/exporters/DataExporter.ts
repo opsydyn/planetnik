@@ -23,6 +23,7 @@ export class DataExporter {
     this.exportJson(dataFolder)
     this.exportUnits(dataFolder)
     this.exportDuplicates(dataFolder)
+    this.exportDependencies(dataFolder)
   }
 
   private exportFileLists(dataFolder: string): void {
@@ -83,5 +84,34 @@ export class DataExporter {
       })),
     }))
     writeFileSync(join(dataFolder, "duplicates.json"), JSON.stringify(exportData, null, 2), "utf-8")
+  }
+
+  private exportDependencies(dataFolder: string): void {
+    const dependencies = this.analysisResults.allDependencies
+    if (dependencies.length === 0) return
+
+    const exportData = dependencies.map((d) => ({
+      from: d.from,
+      to: d.to,
+      evidence: d.evidence,
+    }))
+    writeFileSync(join(dataFolder, "dependencies.json"), JSON.stringify(exportData, null, 2), "utf-8")
+
+    // Export units as JSON too
+    const units = this.analysisResults.unitsAnalysisResults.allUnits
+    if (units.length > 0) {
+      const unitExport = units.map((u) => ({
+        shortName: u.shortName,
+        longName: u.longName ?? u.shortName,
+        linesOfCode: u.linesOfCode,
+        mcCabeIndex: u.mcCabeIndex,
+        numberOfParameters: u.numberOfParameters ?? 0,
+        startLine: u.startLine,
+        endLine: u.endLine,
+        relativeFileName: u.sourceFile?.relativePath ?? "",
+        components: u.sourceFile?.logicalComponents.map((c) => c.name) ?? [],
+      }))
+      writeFileSync(join(dataFolder, "units.json"), JSON.stringify(unitExport, null, 2), "utf-8")
+    }
   }
 }
