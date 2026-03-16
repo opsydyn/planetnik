@@ -4,8 +4,10 @@ import { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 import { AnalysisUtils } from "./AnalysisUtils.js"
 import { BasicsAnalyzer } from "./BasicsAnalyzer.js"
 import { ConcernsAnalyzer } from "./ConcernsAnalyzer.js"
+import { ContributorsAnalyzer } from "./ContributorsAnalyzer.js"
 import { ControlsAnalyzer } from "./ControlsAnalyzer.js"
 import { DuplicationAnalyzer } from "./DuplicationAnalyzer.js"
+import { FileHistoryAnalyzer } from "./FileHistoryAnalyzer.js"
 import { FileSizeAnalyzer } from "./FileSizeAnalyzer.js"
 import { LogicalDecompositionAnalyzer } from "./LogicalDecompositionAnalyzer.js"
 import { UnitsAnalyzer } from "./UnitsAnalyzer.js"
@@ -47,8 +49,13 @@ export class CodeAnalyzer {
       new UnitsAnalyzer(results).analyze()
     }
 
-    // FileHistoryAnalyzer and ContributorsAnalyzer: deferred to Step 6
-    // (require external git history file parsing)
+    if (this.shouldAnalyzeFileHistory()) {
+      new FileHistoryAnalyzer(results, this.configFilePath).analyze()
+    }
+
+    if (this.shouldAnalyzeContributors()) {
+      new ContributorsAnalyzer(results, this.configFilePath).analyze()
+    }
 
     if (this.shouldAnalyzeDuplication()) {
       new DuplicationAnalyzer(results).analyze()
@@ -78,6 +85,14 @@ export class CodeAnalyzer {
       this.settings.createMetricsList ||
       this.settings.analyzeControls
     )
+  }
+
+  private shouldAnalyzeFileHistory(): boolean {
+    return this.settings.analyzeFileHistory
+  }
+
+  private shouldAnalyzeContributors(): boolean {
+    return this.settings.analyzeContributors
   }
 
   private shouldAnalyzeDuplication(): boolean {

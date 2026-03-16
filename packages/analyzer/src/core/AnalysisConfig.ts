@@ -32,6 +32,15 @@ const AnalysisConfigSchema = Schema.Struct({
   conditionalComplexityThresholds: Schema.optionalWith(ThresholdsSchema, {
     default: () => ({ low: 5, medium: 10, high: 25, veryHigh: 50 }),
   }),
+  fileAgeThresholds: Schema.optionalWith(ThresholdsSchema, {
+    default: () => ({ low: 30, medium: 90, high: 180, veryHigh: 365 }),
+  }),
+  fileUpdateFrequencyThresholds: Schema.optionalWith(ThresholdsSchema, {
+    default: () => ({ low: 5, medium: 20, high: 50, veryHigh: 100 }),
+  }),
+  fileContributorsCountThresholds: Schema.optionalWith(ThresholdsSchema, {
+    default: () => ({ low: 1, medium: 5, high: 10, veryHigh: 25 }),
+  }),
 })
 
 export type AnalysisConfigType = typeof AnalysisConfigSchema.Type
@@ -55,6 +64,21 @@ export const AnalysisConfig = {
 
   getConditionalComplexityThresholds(config: AnalysisConfigType): Thresholds {
     const t = config.conditionalComplexityThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
+
+  getFileAgeThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileAgeThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
+
+  getFileUpdateFrequencyThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileUpdateFrequencyThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
+
+  getFileContributorsCountThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileContributorsCountThresholds
     return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
   },
 }

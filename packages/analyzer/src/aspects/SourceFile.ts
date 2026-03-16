@@ -1,3 +1,4 @@
+import type { FileModificationHistory } from "../filehistory/FileModificationHistory.js"
 import type { NamedSourceCodeAspect } from "./NamedSourceCodeAspect.js"
 
 export interface SourceFileType {
@@ -13,6 +14,7 @@ export interface SourceFileType {
   linesOfCodeInUnits: number
   logicalComponents: NamedSourceCodeAspect[]
   concerns: NamedSourceCodeAspect[]
+  fileModificationHistory: FileModificationHistory | null
 }
 
 export class SourceFile implements SourceFileType {
@@ -28,6 +30,7 @@ export class SourceFile implements SourceFileType {
   linesOfCodeInUnits: number = 0
   logicalComponents: NamedSourceCodeAspect[] = []
   concerns: NamedSourceCodeAspect[] = []
+  fileModificationHistory: FileModificationHistory | null = null
 
   constructor(relativePath: string, content: string = "") {
     this.relativePath = relativePath

@@ -17,6 +17,7 @@ export class NamedSourceCodeAspect {
   readonly sourceFileFilters: ReturnType<typeof SourceFileFilter.make>[]
   readonly files: string[]
   sourceFiles: SourceFileType[] = []
+  filtering: string = ""
 
   constructor(
     name: string = "",

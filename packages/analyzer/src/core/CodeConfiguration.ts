@@ -5,9 +5,11 @@ import { NamedSourceCodeAspect } from "../aspects/NamedSourceCodeAspect.js"
 import type { MetricsWithGoalType } from "../metrics/MetricsWithGoal.js"
 import type { AnalysisConfigType } from "./AnalysisConfig.js"
 import { AnalysisConfig } from "./AnalysisConfig.js"
+import { FileHistoryAnalysisConfig } from "./FileHistoryAnalysisConfig.js"
 import type { Metadata } from "./Metadata.js"
 import type { SourceFileFilter } from "./SourceFileFilter.js"
 import type { TagRule } from "./TagRule.js"
+import { TrendAnalysisConfig } from "./TrendAnalysisConfig.js"
 
 export const DEFAULT_CONFIGURATION_FOLDER = "_sokrates"
 
@@ -30,6 +32,9 @@ export class CodeConfiguration {
   tagRules: TagRule[] = []
 
   analysis: AnalysisConfigType = AnalysisConfig.make()
+
+  fileHistoryAnalysis: FileHistoryAnalysisConfig = new FileHistoryAnalysisConfig()
+  trendAnalysis: TrendAnalysisConfig = new TrendAnalysisConfig()
 
   fileHistoryPath: string = ""
   fileHistoryAdditionalPaths: string[] = []

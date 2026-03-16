@@ -1,1 +1,1 @@
-export {}
+export { LandscapeReportGenerator } from "./LandscapeReportGenerator.js"

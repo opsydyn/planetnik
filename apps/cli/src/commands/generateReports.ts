@@ -6,6 +6,7 @@ import {
   CodeAnalyzerSettings,
   CodeConfiguration,
   DEFAULT_CONFIGURATION_FOLDER,
+  NamedSourceCodeAspect,
 } from "@planetnik/analyzer"
 import { BasicSourceCodeReportGenerator, DataExporter, ReportFileExporter } from "@planetnik/reports"
 import { Effect } from "effect"
@@ -28,7 +29,22 @@ export const generateReportsCommand = Command.make("generateReports", { confFile
     yield* Effect.log(`Configuration file: ${configPath}`)
 
     const jsonContent = readFileSync(configPath, "utf-8")
-    const codeConfiguration: CodeConfiguration = Object.assign(new CodeConfiguration(), JSON.parse(jsonContent))
+    const parsed = JSON.parse(jsonContent)
+    const codeConfiguration = new CodeConfiguration()
+    Object.assign(codeConfiguration, parsed)
+
+    // Reconstruct NamedSourceCodeAspect instances (JSON parse loses class methods)
+    for (const key of ["main", "test", "generated", "buildAndDeployment", "other"] as const) {
+      if (parsed[key]) {
+        const aspect = new NamedSourceCodeAspect(
+          parsed[key].name ?? key,
+          parsed[key].sourceFileFilters ?? [],
+          parsed[key].files ?? [],
+        )
+        aspect.sourceFiles = parsed[key].sourceFiles ?? []
+        codeConfiguration[key] = aspect
+      }
+    }
 
     const reportsFolder =
       args.outputFolder._tag === "Some"

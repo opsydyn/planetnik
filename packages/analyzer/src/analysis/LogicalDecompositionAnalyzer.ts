@@ -1,4 +1,6 @@
 import type { CodeConfiguration } from "../core/CodeConfiguration.js"
+import { DependenciesFinderExtractor } from "../dependencies/DependenciesFinderExtractor.js"
+import { DependencyUtils } from "../dependencies/DependencyUtils.js"
 import type { MetricsList } from "../metrics/MetricsList.js"
 import { AspectAnalysisResults } from "../results/AspectAnalysisResults.js"
 import type { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
@@ -14,7 +16,6 @@ export class LogicalDecompositionAnalyzer {
   private start: number
 
   constructor(results: CodeAnalysisResults) {
-    this.codeAnalysisResults = results
     this.logicalDecompositionResults = results.logicalDecompositionsAnalysisResults
     this.codeConfiguration = results.codeConfiguration!
     this.metricsList = results.metricsList
@@ -43,18 +44,25 @@ export class LogicalDecompositionAnalyzer {
         )
       }
 
+      // Run dependency analysis via DependenciesFinderExtractor
+      const finder = new DependenciesFinderExtractor(logicalDecomposition)
+      const finderDependencies = finder.findComponentDependencies(this.codeConfiguration.main)
+      ldResults.componentDependencies.push(...finderDependencies)
+      ldResults.allDependencies.push(...finder.allDependencies)
+
       const metricFriendlyName = logicalDecomposition.name.toUpperCase().replace(/ /g, "_").replace(/-/g, "_")
+
       this.metricsList
         .addMetric()
         .setId(AnalysisUtils.getMetricId(`NUMBER_OF_DEPENDENCIES_DECOMPOSITION_${metricFriendlyName}`))
-        .setValue(0)
+        .setValue(finderDependencies.length)
 
       this.metricsList
         .addMetric()
         .setId(
           AnalysisUtils.getMetricId(`NUMBER_OF_PLACES_WITH_CYCLIC_DEPENDENCIES_DECOMPOSITION_${metricFriendlyName}`),
         )
-        .setValue(0)
+        .setValue(DependencyUtils.getCyclicDependencyPlacesCount(finderDependencies))
     }
   }
 }

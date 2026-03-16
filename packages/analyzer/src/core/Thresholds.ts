@@ -28,4 +28,16 @@ export class Thresholds {
   static defaultConditionalComplexityThresholds(): Thresholds {
     return new Thresholds(5, 10, 25, 50)
   }
+
+  static defaultFileAgeThresholds(): Thresholds {
+    return new Thresholds(30, 90, 180, 365)
+  }
+
+  static defaultFileUpdateFrequencyThresholds(): Thresholds {
+    return new Thresholds(5, 20, 50, 100)
+  }
+
+  static defaultFileContributorsCountThresholds(): Thresholds {
+    return new Thresholds(1, 5, 10, 25)
+  }
 }

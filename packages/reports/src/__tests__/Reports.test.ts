@@ -406,12 +406,13 @@ describe("BasicSourceCodeReportGenerator", () => {
     const gen = new BasicSourceCodeReportGenerator(settings, results)
     const reports = gen.report()
 
-    // overview + duplication + fileSize + metrics = 4
-    expect(reports.length).toBe(4)
+    // overview + duplication + fileSize + metrics + trend = 5
+    expect(reports.length).toBe(5)
     expect(reports[0]!.displayName).toBe("Source Code Overview")
     expect(reports[1]!.displayName).toBe("Duplication")
     expect(reports[2]!.displayName).toBe("File Size")
     expect(reports[3]!.displayName).toBe("Metrics")
+    expect(reports[4]!.displayName).toBe("Trend")
   })
 
   test("includes all reports when all enabled", () => {
@@ -435,8 +436,220 @@ describe("BasicSourceCodeReportGenerator", () => {
     }
     const gen = new BasicSourceCodeReportGenerator(settings, results)
     const reports = gen.report()
-    // overview + duplication + fileSize + unitSize + controls + metrics = 6
-    expect(reports.length).toBe(6)
+    // overview + components + componentDeps + duplication + fileSize + unitSize + conditionalComplexity + concerns + findings + metrics + trend + controls = 12
+    // (no file history data, so fileAge/commits/contributors are skipped)
+    expect(reports.length).toBe(12)
+  })
+})
+
+describe("LandscapeReportGenerator", () => {
+  test("generates landscape overview report", () => {
+    const { LandscapeAnalysisResults, Contributor } = require("@planetnik/analyzer")
+    const { LandscapeReportGenerator } = require("../landscape/LandscapeReportGenerator.js")
+
+    const results = new LandscapeAnalysisResults()
+    results.metadata = { name: "MyLandscape", description: "Test landscape", tooltip: "", logoLink: "", links: [] }
+    results.totalMainLoc = 50000
+    results.totalTestLoc = 10000
+    results.totalMainFilesCount = 200
+    results.linesOfCodePerExtension.set("ts", 30000)
+    results.linesOfCodePerExtension.set("java", 20000)
+    results.repositoriesPerExtension.set("ts", 3)
+    results.repositoriesPerExtension.set("java", 2)
+    results.firstCommitDate = "2020-01-01"
+    results.latestCommitDate = "2024-12-01"
+
+    const c = new Contributor()
+    c.email = "alice@example.com"
+    c.commitsCount = 100
+    c.commitsCount30Days = 5
+    c.firstCommitDate = "2020-01-01"
+    c.latestCommitDate = "2024-12-01"
+    results.allContributors = [c]
+
+    results.repositoryAnalysisResults = [
+      {
+        name: "RepoA",
+        analysisResultsPath: "repoA",
+        metadata: { name: "RepoA", description: "", tooltip: "", logoLink: "", links: [] },
+        mainLoc: 30000,
+        mainFilesCount: 120,
+        testLoc: 5000,
+        testFilesCount: 40,
+        generatedLoc: 0,
+        buildAndDeployLoc: 0,
+        otherLoc: 0,
+        extensions: ["ts"],
+        linesOfCodePerExtension: [{ extension: "ts", linesOfCode: 30000 }],
+        contributors: [c],
+        firstCommitDate: "2020-01-01",
+        latestCommitDate: "2024-12-01",
+        duplicationPercentage: 3.5,
+      },
+    ]
+
+    const report = new RichTextReport()
+    LandscapeReportGenerator.generate(report, results)
+    const html = renderToString(report)
+
+    expect(html).toContain("MyLandscape")
+    expect(html).toContain("50,000")
+    expect(html).toContain("alice@example.com")
+    expect(html).toContain("RepoA")
+    expect(html).toContain("ts")
+    expect(html).toContain("30,000")
+  })
+})
+
+describe("LogicalComponentsReportGenerator", () => {
+  test("renders components and dependencies", () => {
+    const {
+      LogicalDecompositionAnalysisResults,
+      AspectAnalysisResults,
+      ComponentDependency,
+    } = require("@planetnik/analyzer")
+    const { LogicalComponentsReportGenerator } = require("../generators/LogicalComponentsReportGenerator.js")
+
+    const results = createMockResults()
+    const decomp = new LogicalDecompositionAnalysisResults("primary")
+    const comp1 = new AspectAnalysisResults()
+    comp1.name = "core"
+    comp1.filesCount = 5
+    comp1.linesOfCode = 300
+    const comp2 = new AspectAnalysisResults()
+    comp2.name = "ui"
+    comp2.filesCount = 3
+    comp2.linesOfCode = 200
+    decomp.components = [comp1, comp2]
+
+    const dep = new ComponentDependency("core", "ui")
+    dep.count = 4
+    decomp.componentDependencies = [dep]
+    results.logicalDecompositionsAnalysisResults = [decomp]
+
+    const report = new RichTextReport()
+    LogicalComponentsReportGenerator.addComponentsToReport(report, results, false)
+    const html = renderToString(report)
+    expect(html).toContain("primary")
+    expect(html).toContain("core")
+    expect(html).toContain("ui")
+    expect(html).toContain("300")
+    expect(html).toContain("Static Dependencies")
+    expect(html).toContain("4")
+  })
+})
+
+describe("ConcernsReportGenerator", () => {
+  test("renders concerns overview and details", () => {
+    const { ConcernsAnalysisResults, AspectAnalysisResults } = require("@planetnik/analyzer")
+    const { ConcernsReportGenerator } = require("../generators/ConcernsReportGenerator.js")
+
+    const results = createMockResults()
+    const group = new ConcernsAnalysisResults("Security")
+    const concern1 = new AspectAnalysisResults()
+    concern1.name = "Authentication"
+    concern1.filesCount = 3
+    concern1.linesOfCode = 150
+    const concern2 = new AspectAnalysisResults()
+    concern2.name = "Authorization"
+    concern2.filesCount = 2
+    concern2.linesOfCode = 100
+    group.concerns = [concern1, concern2]
+    results.concernsAnalysisResults = [group]
+
+    const report = new RichTextReport()
+    ConcernsReportGenerator.addConcernsToReport(report, results)
+    const html = renderToString(report)
+    expect(html).toContain("SECURITY")
+    expect(html).toContain("Authentication")
+    expect(html).toContain("Authorization")
+    expect(html).toContain("150")
+  })
+})
+
+describe("FindingsReportGenerator", () => {
+  test("renders findings from HTML", () => {
+    const { FindingsReportGenerator } = require("../generators/FindingsReportGenerator.js")
+    const report = new RichTextReport()
+    const html = "<finding><summary>Bug found</summary><body>Details here</body></finding>"
+    FindingsReportGenerator.addFindingsToReport(report, html)
+    const rendered = renderToString(report)
+    expect(rendered).toContain("Bug found")
+    expect(rendered).toContain("Details here")
+    expect(rendered).toContain("Summary")
+  })
+
+  test("shows no findings message when empty", () => {
+    const { FindingsReportGenerator } = require("../generators/FindingsReportGenerator.js")
+    const report = new RichTextReport()
+    FindingsReportGenerator.addFindingsToReport(report, null)
+    const rendered = renderToString(report)
+    expect(rendered).toContain("No manual findings")
+  })
+})
+
+describe("ConditionalComplexityReportGenerator", () => {
+  test("renders complexity distribution", () => {
+    const { ConditionalComplexityReportGenerator } = require("../generators/ConditionalComplexityReportGenerator.js")
+    const results = createMockResults()
+    const stats = new RiskDistributionStats(5, 10, 25, 50)
+    stats.update(3, 10) // simple
+    stats.update(8, 20) // medium
+    stats.update(15, 30) // complex
+    stats.update(30, 40) // very complex
+    results.unitsAnalysisResults.conditionalComplexityRiskDistribution = stats
+    results.unitsAnalysisResults.totalNumberOfUnits = 4
+    results.unitsAnalysisResults.linesOfCodeInUnits = 100
+
+    const unit = new UnitInfo()
+    unit.shortName = "complexMethod"
+    unit.linesOfCode = 40
+    unit.mcCabeIndex = 30
+    unit.sourceFile = new SourceFile("src/Complex.java")
+    results.unitsAnalysisResults.mostComplexUnits = [unit]
+
+    const report = new RichTextReport()
+    ConditionalComplexityReportGenerator.addConditionalComplexityToReport(report, results)
+    const html = renderToString(report)
+    expect(html).toContain("Conditional Complexity")
+    expect(html).toContain("complexMethod")
+    expect(html).toContain("30")
+    expect(html).toContain("very complex")
+  })
+})
+
+describe("CommitsReportGenerator", () => {
+  test("renders commit trends", () => {
+    const { ContributionTimeSlot } = require("@planetnik/analyzer")
+    const { CommitsReportGenerator } = require("../generators/CommitsReportGenerator.js")
+    const results = createMockResults()
+    results.contributorsAnalysisResults.commitsCount = 50
+    results.contributorsAnalysisResults.latestCommitDate = "2024-12-01"
+
+    const slot = new ContributionTimeSlot()
+    slot.timeSlot = "2024"
+    slot.commitsCount = 50
+    slot.contributorsCount = 3
+    results.contributorsAnalysisResults.contributorsPerYear = [slot]
+
+    const report = new RichTextReport()
+    CommitsReportGenerator.addCommitsToReport(report, results)
+    const html = renderToString(report)
+    expect(html).toContain("50")
+    expect(html).toContain("2024")
+    expect(html).toContain("2024-12-01")
+  })
+})
+
+describe("TrendReportGenerator", () => {
+  test("renders trend placeholder", () => {
+    const { TrendReportGenerator } = require("../generators/TrendReportGenerator.js")
+    const results = createMockResults()
+    const report = new RichTextReport()
+    TrendReportGenerator.addTrendToReport(report, results)
+    const html = renderToString(report)
+    expect(html).toContain("Trend")
+    expect(html).toContain("No reference analysis results")
   })
 })
 

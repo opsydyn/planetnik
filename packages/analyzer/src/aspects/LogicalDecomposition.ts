@@ -1,4 +1,5 @@
 import type { SourceFileFilter } from "../core/SourceFileFilter.js"
+import { DependenciesFinder } from "../dependencies/DependenciesFinder.js"
 import type { NamedSourceCodeAspect } from "./NamedSourceCodeAspect.js"
 
 export class LogicalDecomposition {
@@ -10,6 +11,7 @@ export class LogicalDecomposition {
   components: NamedSourceCodeAspect[] = []
   includeRemainingFiles: boolean = true
   includeExternalComponents: boolean = true
+  dependenciesFinder: DependenciesFinder = new DependenciesFinder()
   dependencyLinkThreshold: number = 1
   duplicationLinkThreshold: number = 50
   temporalLinkThreshold: number = 1
@@ -17,5 +19,9 @@ export class LogicalDecomposition {
 
   constructor(name: string = "") {
     this.name = name
+  }
+
+  getComponentByName(name: string): NamedSourceCodeAspect | null {
+    return this.components.find((c) => c.name.toLowerCase() === name.toLowerCase()) ?? null
   }
 }
