@@ -4,85 +4,42 @@ Tracking remaining gaps between Java Sokrates and the TypeScript Planetnik port.
 Goal: **100% parity on core backend** — analysis engine, data models, data exporters, CLI.
 Visual/HTML report generation is out of scope per [ADR-0003](docs/adr/0003-backend-only-parity-astro-frontend.md).
 
-Current state: **439 tests, 34 test files, 1038 assertions** — all green.
+Current state: **501 tests, 36 test files, 1194 assertions** — all green.
 
 ---
 
-## High Priority — Core functionality gaps
+## Status: Core Backend Parity Complete
 
-### 1. Data Exporters (~19 classes)
-The JSON export layer that feeds the Astro frontend. Java `reports/dataexporters/` has full export infrastructure.
+All core backend items have been ported:
 
-- [ ] `DataExportUtils` — central export orchestration
-- [ ] **Dependencies** — `DependenciesExporter`, `DependenciesExportInfo`, `DependencyExportInfo`, `DependencyAnchorExportInfo`, `SourceFileDependencyExportInfo`
-- [ ] **Duplication** — `DuplicationExporter`, `DuplicationExportInfo`, `DuplicateExportInfo`, `DuplicateFileBlockExportInfo`
-- [ ] **Files** — `FileListExporter`, `FilesExportInfo`
-- [ ] **Trends** — `MetricsTrendExporter`, `MetricsTrendInfo`, `ReferenceResultsLoader`, `ValueSnapshotPair`
-- [ ] **Units** — `UnitListExporter`, `UnitsExportInfo`, `UnitInfoExport`
-
-### 2. String Operations (~10 classes)
-Used by `MetaRulesProcessor` for analysis logic. Only `ComplexOperation` and `OperationStatement` exist in TS.
-
-- [ ] `StringOperation` — base interface
-- [ ] `StringOperationFactory` — creates operation instances from config
-- [ ] **Implementations:** `AppendOperation`, `ExtractRegexOperation`, `LowerCaseOperation`, `NoOpsOperation`, `PrependOperation`, `RemoveRegexOperation`, `ReplaceOperation`, `TrimOperation`, `UpperCaseOperation`
-
-### 3. Aspect/Decomposition (analysis logic)
-Core analysis logic for component grouping, meta-rules, and dependency detection.
-
-- [ ] `MetaRulesProcessor` — processes meta-rules for derived decompositions
-- [ ] `GroupingRule` — rules for grouping components
-- [ ] `MetaDependencyRule` — meta-level dependency rules
-- [ ] `DerivedConcern` — derived cross-cutting concerns
-- [ ] `DependenciesFinder` + `DependencyFinderPattern` — pattern-based dependency detection
+- [x] **Data Exporters** — `DataExporter`, `DataExportUtils`, `DependenciesExporter`, `DuplicationExporter`, `FileListExporter`, `UnitListExporter`, `MetricsTrendExporter` + all DTO interfaces
+- [x] **String Operations** — `ComplexOperation` handles all ops (extract, remove, replace, append, prepend, trim, uppercase, lowercase) with multi-param support
+- [x] **Aspect/Decomposition** — `MetaRulesProcessor`, `GroupingRule`, `MetaDependencyRule`, `DerivedConcern`, `DependenciesFinder`, `DependencyFinderPattern`
+- [x] **Duplication subsystem** — `DuplicationDependenciesHelper`, `AspectDuplication`, `ExtensionDuplication`, `DuplicateRangePair(s)`
+- [x] **Scoping/Conventions** — `ConcernConventions`, `CustomConventionsHelper`, `CustomScopingConventions`, `CustomExtensionConventions`
+- [x] **Analysis Orchestration** — `CodeAnalyzer` pipeline with all 9 analyzers (Basics, LogicalDecomposition, Concerns, FileSize, Units, FileHistory, Contributors, Duplication, Controls)
+- [x] **Catalogs** — `StandardSecurityAspects`
+- [x] **File History** — `ComponentUpdateHistory`, `FileHistoryComponentsHelper`
+- [x] **Core** — `CodeConfigurationUtils`, `ReferenceAnalysisResult`
+- [x] **Cleaners** — `CodeBlockParser`, `CommentsCleanerUtils`
+- [x] **Contributors** — `ContributorsImport`, `GitContributorsUtil`
+- [x] **Search** — `CleanedFoundText`, `SearchResultDependencies`
 
 ---
 
-## Medium Priority — Gaps in existing subsystems
+## Next: Astro Frontend Architecture
 
-### 4. Duplication subsystem
-Data models and analysis logic for duplication tracking.
-
-- [ ] `DuplicationDependenciesHelper` — duplication-based dependency detection
-- [ ] `AspectDuplication` + `ExtensionDuplication` — aspect/extension-level duplication tracking
-- [ ] `DuplicateRangePair` + `DuplicateRangePairs` — range-based duplicate tracking
-
-### 5. Scoping/Conventions
-Config processing for custom analysis scoping rules.
-
-- [ ] `ConcernConventions` — concern naming conventions
-- [ ] `CustomConventionsHelper` — custom convention processing
-- [ ] `CustomScopingConventions` + `CustomExtensionConventions` — user-defined scoping rules
-
-### 6. Analysis Orchestration
-- [ ] `AnalysisEngine` — orchestration interface for analysis pipeline
-
----
-
-## Low Priority — Minor utilities and edge cases
-
-### 7. Catalogs
-- [ ] `StandardSecurityAspects` — predefined security concern patterns
-
-### 8. File History
-- [ ] `ComponentUpdateHistory` — per-component change tracking
-- [ ] `FileHistoryComponentsHelper` — component-level history aggregation
-
-### 9. Core
-- [ ] `CodeConfigurationUtils` — config utility methods
-- [ ] `ReferenceAnalysisResult` — reference/baseline analysis for trends
-
-### 10. Cleaners
-- [ ] `CodeBlockParser` — nested code block parsing
-- [ ] `CommentsCleanerUtils` — shared comment cleaning helpers
-
-### 11. Contributors
-- [ ] `ContributorsImport` — external contributor data import
-- [ ] `GitContributorsUtil` — git contributor extraction helpers
-
-### 12. Search
-- [ ] `CleanedFoundText` — cleaned search results
-- [ ] `SearchResultDependencies` — dependency-aware search results
+Ready to plan the Astro web app that will consume the exported JSON data.
+Key data files produced by the export layer:
+- `analysisResults.json` — summary metrics
+- `files_main.json` / `files_test.json` — file listings with component/concern mapping
+- `units.json` — function/method-level metrics
+- `duplicates.json` / `unit_duplicates.json` — duplication instances
+- `dependencies.json` — logical dependency graph
+- `metrics.txt` — all metric values
+- `contributors.txt` — contributor statistics
+- `temporal_dependencies*.txt` — file co-change data
+- Per-component/aspect file lists
 
 ---
 
