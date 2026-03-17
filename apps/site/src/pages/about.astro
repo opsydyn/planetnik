@@ -1,5 +1,6 @@
 ---
 import Dashboard from "../layouts/Dashboard.astro"
+import { Image } from "astro:assets"
 import { getEntry } from "astro:content"
 
 const summary = await getEntry("analysis", "summary")
@@ -83,6 +84,16 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
       <li>what hidden forces are driving delivery pain?</li>
     </ul>
 
+    <div class="section-banner">
+      <Image
+        src="/plantnik-banner.png"
+        alt="Planetnik banner"
+        width={1536}
+        height={1024}
+        class="section-banner-image"
+      />
+    </div>
+
     <hr />
 
     <h3>what planetnik helps you see</h3>
@@ -120,7 +131,7 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
 
     <h3>approach</h3>
 
-    <blockquote>do not begin with opinion. begin with the code.</blockquote>
+    <blockquote>do not begin with stories. begin with the code.</blockquote>
 
     <p>
       The tool borrows from the spirit of code spelunking tools such as <code>grep</code>, but adds structure,
@@ -298,6 +309,10 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
 
 <style>
   .about {
+    max-width: none;
+  }
+
+  .about > :not(.section-banner) {
     max-width: 720px;
   }
 
@@ -401,5 +416,17 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
   .questions li {
     font-style: italic;
     color: var(--color-text-muted);
+  }
+
+  .section-banner {
+    width: 100%;
+    margin: 1.5rem 0 0.5rem;
+  }
+
+  .section-banner-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
   }
 </style>

@@ -1,14 +1,16 @@
+import { RegistryProvider, Result, useAtom, useAtomValue } from "@effect-atom/atom-react"
 import dagre from "@dagrejs/dagre"
 import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesState } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
-import { useCallback, useEffect, useMemo, useState } from "react"
-
-interface PeopleDep {
-  from: string
-  to: string
-  count: number
-  files: string[]
-}
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type PeopleDep,
+  currentEdgesAtom,
+  selectedPeriodAtom,
+  sortedEdgesAtom,
+  topologyPeriodsAtom,
+  topologyStatsAtom,
+} from "../state/topologyGraphState"
 
 interface TopologyGraphProps {
   periods: Record<string, PeopleDep[]>
@@ -104,39 +106,152 @@ function buildGraph(rawEdges: PeopleDep[]) {
   return layoutWithDagre(nodes, edgeList)
 }
 
-function computeStats(edges: PeopleDep[]) {
-  const contributorSet = new Set<string>()
-  const connectionCounts = new Map<string, number>()
-  for (const e of edges) {
-    contributorSet.add(e.from)
-    contributorSet.add(e.to)
-    connectionCounts.set(e.from, (connectionCounts.get(e.from) ?? 0) + 1)
-    connectionCounts.set(e.to, (connectionCounts.get(e.to) ?? 0) + 1)
-  }
+const pulseKeyframes = `
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+`
 
-  let mostConnected = ""
-  let maxConnections = 0
-  for (const [email, count] of connectionCounts) {
-    if (count > maxConnections) {
-      mostConnected = email
-      maxConnections = count
-    }
-  }
+function SkeletonBlock({ width, height, style }: { width: string | number; height: string | number; style?: React.CSSProperties }) {
+  return (
+    <div
+      style={{
+        width,
+        height,
+        background: "#e2e8f0",
+        borderRadius: "6px",
+        animation: "skeleton-pulse 1.8s ease-in-out infinite",
+        ...style,
+      }}
+    />
+  )
+}
 
-  return {
-    contributorCount: contributorSet.size,
-    connectionCount: edges.length,
-    mostConnected: mostConnected.split("@")[0],
-    maxConnections,
-  }
+function GraphSkeleton() {
+  // Fake node positions mimicking a dagre TB layout
+  const skeletonNodes = [
+    { x: 200, y: 40 },
+    { x: 80, y: 180 },
+    { x: 320, y: 180 },
+    { x: 40, y: 320 },
+    { x: 160, y: 320 },
+    { x: 360, y: 320 },
+  ]
+
+  const skeletonEdges = [
+    [0, 1], [0, 2], [1, 3], [1, 4], [2, 5],
+  ]
+
+  return (
+    <div style={{ width: "100%", height: "600px", background: "#fafafa", borderRadius: "8px", border: "1px solid #e2e8f0", position: "relative", overflow: "hidden" }}>
+      <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
+        {skeletonEdges.map(([from, to], i) => {
+          const f = skeletonNodes[from]
+          const t = skeletonNodes[to]
+          return (
+            <line
+              key={i}
+              x1={f.x + 90} y1={f.y + 25}
+              x2={t.x + 90} y2={t.y + 25}
+              stroke="#e2e8f0"
+              strokeWidth={2}
+              style={{ animation: "skeleton-pulse 1.8s ease-in-out infinite", animationDelay: `${i * 0.15}s` }}
+            />
+          )
+        })}
+      </svg>
+      {skeletonNodes.map((pos, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: pos.x,
+            top: pos.y,
+            width: NODE_WIDTH,
+            height: NODE_HEIGHT,
+            background: "#e2e8f0",
+            borderRadius: "8px",
+            animation: "skeleton-pulse 1.8s ease-in-out infinite",
+            animationDelay: `${i * 0.12}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function TableSkeleton() {
+  const rows = 5
+  return (
+    <table style={tableStyle}>
+      <thead>
+        <tr>
+          <th style={thStyle}>Contributor 1</th>
+          <th style={thStyle}>Contributor 2</th>
+          <th style={{ ...thStyle, textAlign: "right" }}>Shared Files</th>
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({ length: rows }).map((_, i) => (
+          <tr key={i}>
+            <td style={tdBase}><SkeletonBlock width={`${60 + (i % 3) * 20}%`} height={14} style={{ animationDelay: `${i * 0.1}s` }} /></td>
+            <td style={tdBase}><SkeletonBlock width={`${50 + (i % 3) * 15}%`} height={14} style={{ animationDelay: `${i * 0.1 + 0.05}s` }} /></td>
+            <td style={{ ...tdBase, textAlign: "right" }}><SkeletonBlock width={32} height={14} style={{ marginLeft: "auto", animationDelay: `${i * 0.1 + 0.1}s` }} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function CardsSkeleton() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={cardStyle}>
+          <SkeletonBlock width={80} height={28} style={{ animationDelay: `${i * 0.15}s` }} />
+          <SkeletonBlock width={100} height={12} style={{ marginTop: "0.5rem", animationDelay: `${i * 0.15 + 0.05}s` }} />
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function TopologyGraph({ periods }: TopologyGraphProps) {
   const periodKeys = Object.keys(periods)
-  const [selectedPeriod, setSelectedPeriod] = useState(periodKeys[0] ?? "All Time")
+  const initialValues = useMemo(
+    () => [
+      [topologyPeriodsAtom, periods],
+      [selectedPeriodAtom, periodKeys[0] ?? "All Time"],
+    ] as const,
+    [periodKeys, periods],
+  )
 
-  const currentEdges = periods[selectedPeriod] ?? []
-  const stats = useMemo(() => computeStats(currentEdges), [currentEdges])
+  return (
+    <RegistryProvider initialValues={initialValues}>
+      <TopologyGraphContent periodKeys={periodKeys} />
+    </RegistryProvider>
+  )
+}
+
+function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
+  const [selectedPeriod, setSelectedPeriod] = useAtom(selectedPeriodAtom)
+  const currentEdges = useAtomValue(currentEdgesAtom)
+  const stats = useAtomValue(topologyStatsAtom)
+  const sortedEdges = useAtomValue(sortedEdgesAtom)
+  const [ready, setReady] = useState(false)
+  const styleInjected = useRef(false)
+
+  // Inject pulse animation keyframes once
+  useEffect(() => {
+    if (styleInjected.current) return
+    styleInjected.current = true
+    const style = document.createElement("style")
+    style.textContent = pulseKeyframes
+    document.head.appendChild(style)
+  }, [])
+
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => buildGraph(currentEdges), [currentEdges])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes)
@@ -148,51 +263,42 @@ export default function TopologyGraph({ periods }: TopologyGraphProps) {
   }, [layoutedNodes, layoutedEdges, setNodes, setEdges])
 
   const onInit = useCallback((instance: { fitView: () => void }) => {
-    setTimeout(() => instance.fitView(), 50)
+    setTimeout(() => {
+      instance.fitView()
+      setReady(true)
+    }, 50)
   }, [])
 
-  const sortedEdges = useMemo(
-    () => [...currentEdges].sort((a, b) => b.count - a.count).slice(0, 30),
-    [currentEdges],
+  const contentResult = useMemo(
+    () => ready
+      ? Result.success({
+          stats,
+          sortedEdges,
+        })
+      : Result.initial<{
+          stats: typeof stats
+          sortedEdges: typeof sortedEdges
+        }>(),
+    [ready, sortedEdges, stats],
   )
 
-  return (
-    <div>
-      {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-        <div style={cardStyle}>
-          <div style={cardValueStyle}>{stats.contributorCount}</div>
-          <div style={cardLabelStyle}>Contributors</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={cardValueStyle}>{stats.connectionCount.toLocaleString()}</div>
-          <div style={cardLabelStyle}>Connections</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={{ ...cardValueStyle, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {stats.mostConnected}
+  return Result.builder(contentResult)
+    .onInitial(() => (
+      <div>
+        <CardsSkeleton />
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Contributor Topology</h3>
+            <SkeletonBlock width={100} height={32} />
           </div>
-          <div style={cardLabelStyle}>Most Connected ({stats.maxConnections})</div>
+          <GraphSkeleton />
         </div>
-      </div>
-
-      {/* Graph section with period selector */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Contributor Topology</h3>
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            style={selectStyle}
-          >
-            {periodKeys.map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
+        <div style={{ marginBottom: "2rem" }}>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>Strongest Connections</h3>
+          <TableSkeleton />
         </div>
-        <div style={{ width: "100%", height: "600px", background: "#fafafa", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+        {/* Hidden ReactFlow to trigger onInit */}
+        <div style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -200,39 +306,89 @@ export default function TopologyGraph({ periods }: TopologyGraphProps) {
             onEdgesChange={onEdgesChange}
             onInit={onInit}
             fitView
-            minZoom={0.2}
-            maxZoom={2}
             proOptions={{ hideAttribution: true }}
-          >
-            <Background color="#e2e8f0" gap={20} />
-          </ReactFlow>
+          />
         </div>
       </div>
+    ))
+    .onSuccess(({ stats, sortedEdges }) => (
+      <div>
+        {/* Summary cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+          <div style={cardStyle}>
+            <div style={cardValueStyle}>{stats.contributorCount}</div>
+            <div style={cardLabelStyle}>Contributors</div>
+          </div>
+          <div style={cardStyle}>
+            <div style={cardValueStyle}>{stats.connectionCount.toLocaleString()}</div>
+            <div style={cardLabelStyle}>Connections</div>
+          </div>
+          <div style={cardStyle}>
+            <div style={{ ...cardValueStyle, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {stats.mostConnected}
+            </div>
+            <div style={cardLabelStyle}>Most Connected ({stats.maxConnections})</div>
+          </div>
+        </div>
 
-      {/* Strongest connections table */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>Strongest Connections</h3>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Contributor 1</th>
-              <th style={thStyle}>Contributor 2</th>
-              <th style={{ ...thStyle, textAlign: "right" }}>Shared Files</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedEdges.map((e, i) => (
-              <tr key={i}>
-                <td style={emailStyle}>{e.from}</td>
-                <td style={emailStyle}>{e.to}</td>
-                <td style={numStyle}>{e.count}</td>
+        {/* Graph section with period selector */}
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Contributor Topology</h3>
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              style={selectStyle}
+            >
+              {periodKeys.map((key) => (
+                <option key={key} value={key}>
+                  {key}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ width: "100%", height: "600px", background: "#fafafa", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onInit={onInit}
+              fitView
+              minZoom={0.2}
+              maxZoom={2}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background color="#e2e8f0" gap={20} />
+            </ReactFlow>
+          </div>
+        </div>
+
+        {/* Strongest connections table */}
+        <div style={{ marginBottom: "2rem" }}>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>Strongest Connections</h3>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Contributor 1</th>
+                <th style={thStyle}>Contributor 2</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Shared Files</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sortedEdges.map((e, i) => (
+                <tr key={i}>
+                  <td style={emailStyle}>{e.from}</td>
+                  <td style={emailStyle}>{e.to}</td>
+                  <td style={numStyle}>{e.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  )
+    ))
+    .render()
 }
 
 const cardStyle: React.CSSProperties = {

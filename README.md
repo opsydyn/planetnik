@@ -89,7 +89,7 @@ Płanetnik helps make visible:
 
 Płanetnik follows a simple principle:
 
-> do not begin with opinion. begin with the code.
+> Do not begin with stories. begin with the code.
 
 The tool borrows from the spirit of code spelunking tools such as `grep`, but adds structure, modelling, and analysis on top of source-code searches.
 

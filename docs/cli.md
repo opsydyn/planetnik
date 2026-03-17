@@ -299,6 +299,13 @@ PLANETNIK_DATA_DIR=./report/data bun run --cwd apps/site build
 PLANETNIK_DATA_DIR=./report/data bun run --cwd apps/site dev
 ```
 
+For local developer-specific defaults, prefer `apps/site/.env.local`:
+
+```env
+# Prefer an absolute path to avoid cwd ambiguity
+PLANETNIK_DATA_DIR=/absolute/path/to/report/data
+```
+
 ### Deploy to GitHub Pages
 
 The included GitHub Actions workflow (`.github/workflows/analyze-and-deploy.yml`) automates the full pipeline:
@@ -320,7 +327,7 @@ name: React
 
 | Variable | Description |
 |----------|-------------|
-| `PLANETNIK_DATA_DIR` | Path to the `data/` directory from a report run. Used by the Astro content loader to find analysis results. |
+| `PLANETNIK_DATA_DIR` | Path to the `data/` directory from a report run. Used by the Astro site and content loaders to find analysis results. |
 
 ---
 

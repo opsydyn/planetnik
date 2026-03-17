@@ -3,27 +3,35 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Loader } from "astro/loaders"
 
-// Load .env manually since content loaders run before Vite's env loading
 const siteRoot = join(dirname(fileURLToPath(import.meta.url)), "../..")
-const envPath = join(siteRoot, ".env")
-if (existsSync(envPath) && !process.env.PLANETNIK_DATA_DIR) {
-  const envContent = readFileSync(envPath, "utf-8")
-  for (const line of envContent.split("\n")) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith("#")) continue
-    const eqIdx = trimmed.indexOf("=")
-    if (eqIdx < 0) continue
-    const key = trimmed.substring(0, eqIdx).trim()
-    const value = trimmed.substring(eqIdx + 1).trim()
-    if (key === "PLANETNIK_DATA_DIR") process.env.PLANETNIK_DATA_DIR = value
+const workspaceRoot = join(siteRoot, "../..")
+const defaultDataDir = join(workspaceRoot, "_planetnik", "reports", "data")
+
+let loadedEnv: Record<string, string> | undefined
+
+function getLoadedEnv(): Record<string, string> {
+  if (!loadedEnv) {
+    const mode = process.env.MODE ?? process.env.NODE_ENV ?? "development"
+    const envFiles = [`.env.${mode}.local`, `.env.${mode}`, ".env.local", ".env"]
+
+    for (const envFile of envFiles) {
+      const envPath = join(siteRoot, envFile)
+      if (existsSync(envPath)) {
+        process.loadEnvFile(envPath)
+      }
+    }
+
+    loadedEnv = { ...process.env } as Record<string, string>
   }
+  const env = loadedEnv
+  return env
 }
 
 export function resolveDataDir(): string {
-  const dir = process.env.PLANETNIK_DATA_DIR ?? join(process.cwd(), "_planetnik", "reports", "data")
+  const dir = process.env.PLANETNIK_DATA_DIR ?? getLoadedEnv().PLANETNIK_DATA_DIR ?? defaultDataDir
   if (!existsSync(dir)) {
     console.warn(`[planetnik-loader] Data directory not found: ${dir}`)
-    console.warn(`[planetnik-loader] Set PLANETNIK_DATA_DIR env var or create apps/site/.env`)
+    console.warn(`[planetnik-loader] Set PLANETNIK_DATA_DIR env var or create apps/site/.env.local`)
   }
   return dir
 }
@@ -152,11 +160,11 @@ export function contributorsLoader(): Loader {
         const email = cols[0].trim()
         const rec = {
           email,
-          commitsAllTime: parseInt(cols[1]) || 0,
-          commits30Days: parseInt(cols[2]) || 0,
-          commits90Days: parseInt(cols[3]) || 0,
-          commits180Days: parseInt(cols[4]) || 0,
-          commits365Days: parseInt(cols[5]) || 0,
+          commitsAllTime: parseInt(cols[1], 10) || 0,
+          commits30Days: parseInt(cols[2], 10) || 0,
+          commits90Days: parseInt(cols[3], 10) || 0,
+          commits180Days: parseInt(cols[4], 10) || 0,
+          commits365Days: parseInt(cols[5], 10) || 0,
           firstCommit: cols[6].trim(),
           lastCommit: cols[7].trim(),
           percentage: cols[8] ? cols[8].trim() : "",
@@ -203,9 +211,9 @@ export function temporalDepsLoader(): Loader {
         const rec = {
           file1: cols[0].trim(),
           file2: cols[1].trim(),
-          sameCommits: parseInt(cols[2]) || 0,
-          commitsFile1: parseInt(cols[3]) || 0,
-          commitsFile2: parseInt(cols[4]) || 0,
+          sameCommits: parseInt(cols[2], 10) || 0,
+          commitsFile1: parseInt(cols[3], 10) || 0,
+          commitsFile2: parseInt(cols[4], 10) || 0,
         }
         const data = await parseData({ id, data: rec })
         store.set({ id, data })

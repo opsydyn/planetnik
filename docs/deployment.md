@@ -111,13 +111,14 @@ PLANETNIK_DATA_DIR=./my-report/data bun run --cwd apps/site dev
 
 ### Dev data setup
 
-Create `apps/site/.env` to avoid typing the env var each time:
+Create `apps/site/.env.local` to avoid typing the env var each time:
 
 ```env
+# Prefer an absolute path to avoid cwd ambiguity
 PLANETNIK_DATA_DIR=/absolute/path/to/report/data
 ```
 
-The content loader reads this `.env` file automatically.
+The site reads this file using Astro/Vite-style env loading.
 
 ## Analyzing Private Repositories
 

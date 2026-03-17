@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DistributionChart from "../../components/charts/DistributionChart"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -29,7 +30,12 @@ for (const u of sorted) {
   }
 }
 
-const maxBucketLoc = Math.max(...buckets.map((b) => b.loc))
+const distData = buckets.map((b) => ({
+  label: b.label + " LOC",
+  value: b.loc,
+  detail: b.count + " units",
+  detailSecondary: b.loc.toLocaleString() + " LOC",
+}))
 ---
 
 <Dashboard title="Unit Size" projectName={projectName}>
@@ -38,21 +44,7 @@ const maxBucketLoc = Math.max(...buckets.map((b) => b.loc))
 
   <section class="section">
     <h3>Size Distribution</h3>
-    <div class="distribution">
-      {buckets.map((b) => (
-        <div class="dist-row">
-          <span class="dist-label">{b.label} LOC</span>
-          <div class="dist-bar-container">
-            <div
-              class="dist-bar"
-              style={`width: ${maxBucketLoc > 0 ? (b.loc / maxBucketLoc) * 100 : 0}%`}
-            />
-          </div>
-          <span class="dist-count">{b.count} units</span>
-          <span class="dist-loc">{b.loc.toLocaleString()} LOC</span>
-        </div>
-      ))}
-    </div>
+    <DistributionChart client:load data={distData} />
   </section>
 
   <section class="section">
@@ -83,111 +75,14 @@ const maxBucketLoc = Math.max(...buckets.map((b) => b.loc))
 </Dashboard>
 
 <style>
-  .subtitle {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
-  }
-
-  .section {
-    margin-bottom: 2rem;
-  }
-
-  .section h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-  }
-
-  .distribution {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 1rem;
-  }
-
-  .dist-row {
-    display: grid;
-    grid-template-columns: 80px 1fr 80px 100px;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.35rem 0;
-  }
-
-  .dist-label {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    font-family: "SF Mono", "Fira Code", monospace;
-  }
-
-  .dist-bar-container {
-    height: 18px;
-    background: #f1f5f9;
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .dist-bar {
-    height: 100%;
-    background: var(--color-accent);
-    border-radius: 3px;
-    min-width: 2px;
-  }
-
-  .dist-count, .dist-loc {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    text-align: right;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  th, td {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  th {
-    background: #f8fafc;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-  }
-
-  td {
-    font-size: 0.85rem;
-  }
-
-  .unit-name {
-    font-weight: 500;
-    max-width: min(300px, 40vw);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .filepath {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    max-width: min(400px, 40vw);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .high {
-    color: #ef4444;
-    font-weight: 600;
-  }
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .unit-name { font-weight: 500; max-width: min(300px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: min(400px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .high { color: #ef4444; font-weight: 600; }
 </style>
