@@ -1,0 +1,30 @@
+---
+import { Icon } from "astro-icon/components"
+import { getTechnologyIconName } from "../../lib/iconography"
+
+interface Props {
+  extension: string
+  size?: number | string
+  title?: string
+  class?: string
+  decorative?: boolean
+}
+
+const {
+  extension,
+  size = 18,
+  title,
+  class: className,
+  decorative = !title,
+} = Astro.props
+
+const iconName = getTechnologyIconName(extension)
+---
+
+<Icon
+  name={iconName}
+  size={size}
+  title={title}
+  aria-hidden={decorative ? "true" : undefined}
+  class:list={["technology-icon", className]}
+/>

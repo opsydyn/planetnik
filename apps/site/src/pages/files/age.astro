@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DistributionChart from "../../components/charts/DistributionChart"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -22,6 +23,12 @@ const ageCategories = [
   { label: "High Risk", metric: "FILE_AGE_HIGH_RISK_COUNT" },
   { label: "Very High Risk", metric: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
 ]
+
+const riskColors = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"]
+const distData = ageCategories.map((cat, i) => {
+  const val = getMetric(cat.metric)
+  return { label: cat.label, value: val ?? 0, detail: (val ?? 0).toLocaleString() + " files", color: riskColors[i] }
+}).filter((d) => d.value > 0)
 ---
 
 <Dashboard title="File Age" projectName={projectName}>
@@ -48,8 +55,15 @@ const ageCategories = [
     )}
   </div>
 
+  {distData.length > 0 && (
+    <section class="section">
+      <h3>File Age Distribution</h3>
+      <DistributionChart client:load data={distData} />
+    </section>
+  )}
+
   <section class="section">
-    <h3>File Age Distribution</h3>
+    <h3>File Age Detail</h3>
     <table>
       <thead>
         <tr><th>Category</th><th>Files</th></tr>

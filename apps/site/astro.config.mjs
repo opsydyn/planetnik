@@ -1,6 +1,7 @@
 // @ts-check
 import react from "@astrojs/react"
 import { defineConfig, envField, fontProviders } from "astro/config"
+import icon from "astro-icon"
 import tunnel from "astro-tunnel"
 
 // https://astro.build/config
@@ -40,5 +41,5 @@ export default defineConfig({
       dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     },
   },
-  integrations: [react(), tunnel()],
+  integrations: [react(), icon(), tunnel()],
 })

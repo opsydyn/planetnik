@@ -1,5 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DistributionChart from "../../components/charts/DistributionChart"
+import ScatterPlot from "../../components/charts/ScatterPlot"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -21,7 +23,19 @@ for (const u of sorted) {
     if (u.data.mcCabeIndex >= b.min && u.data.mcCabeIndex <= b.max) { b.count++; break }
   }
 }
-const maxCount = Math.max(...buckets.map((b) => b.count))
+
+const distData = buckets.map((b) => ({
+  label: b.label,
+  value: b.count,
+  detail: b.count.toString(),
+  color: b.color,
+}))
+
+const scatterData = sorted.slice(0, 200).map((u) => ({
+  x: u.data.linesOfCode,
+  y: u.data.mcCabeIndex,
+  label: u.data.shortName,
+}))
 ---
 
 <Dashboard title="Conditional Complexity" projectName={projectName}>
@@ -30,17 +44,12 @@ const maxCount = Math.max(...buckets.map((b) => b.count))
 
   <section class="section">
     <h3>McCabe Complexity Distribution</h3>
-    <div class="distribution">
-      {buckets.map((b) => (
-        <div class="dist-row">
-          <span class="dist-label">{b.label}</span>
-          <div class="dist-bar-container">
-            <div class="dist-bar" style={`width: ${maxCount > 0 ? (b.count / maxCount) * 100 : 0}%; background: ${b.color}`} />
-          </div>
-          <span class="dist-count">{b.count}</span>
-        </div>
-      ))}
-    </div>
+    <DistributionChart client:load data={distData} />
+  </section>
+
+  <section class="section">
+    <h3>LOC vs McCabe Complexity</h3>
+    <ScatterPlot client:load data={scatterData} xLabel="Lines of Code" yLabel="McCabe Index" thresholds={{ x: 50, y: 10 }} />
   </section>
 
   <section class="section">
@@ -67,12 +76,6 @@ const maxCount = Math.max(...buckets.map((b) => b.count))
   .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  .distribution { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; }
-  .dist-row { display: grid; grid-template-columns: 160px 1fr 60px; align-items: center; gap: 0.75rem; padding: 0.35rem 0; }
-  .dist-label { font-size: 0.8rem; color: var(--color-text-muted); }
-  .dist-bar-container { height: 18px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
-  .dist-bar { height: 100%; border-radius: 3px; min-width: 2px; }
-  .dist-count { font-size: 0.8rem; color: var(--color-text-muted); text-align: right; }
   table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
   th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
   th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }

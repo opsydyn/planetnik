@@ -1,5 +1,9 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import DonutChart from "../components/charts/DonutChart"
+import TreemapChart from "../components/charts/Treemap"
+import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -36,6 +40,11 @@ function getMetric(id: string): number | null {
   const m = metrics.find((m) => m.data.id === id)
   return m?.data.value ?? null
 }
+
+const mainBarData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
+const testBarData = testExtensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
+const treemapData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
+const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
 ---
 
 <Dashboard title="Source Code Overview" projectName={projectName}>
@@ -62,6 +71,9 @@ function getMetric(id: string): number | null {
 
   <section class="section">
     <h3>Main Scope — By Language</h3>
+    <DonutChart client:load data={donutData} valueLabel="LOC" />
+    <TreemapChart client:load data={treemapData} valueLabel="LOC" />
+    <HorizontalBarChart client:load data={mainBarData} valueLabel="LOC" />
     <table>
       <thead>
         <tr><th>Extension</th><th>Files</th><th>LOC</th><th>%</th></tr>
@@ -69,7 +81,12 @@ function getMetric(id: string): number | null {
       <tbody>
         {extensions.map(([ext, s]) => (
           <tr>
-            <td><code>.{ext}</code></td>
+            <td>
+              <span class="language-cell">
+                <TechnologyIcon extension={ext} size={18} class="language-icon" />
+                <code>.{ext}</code>
+              </span>
+            </td>
             <td>{s.files.toLocaleString()}</td>
             <td>{s.loc.toLocaleString()}</td>
             <td>{totalLoc > 0 ? ((s.loc / totalLoc) * 100).toFixed(1) : 0}%</td>
@@ -82,6 +99,7 @@ function getMetric(id: string): number | null {
   {testExtensions.length > 0 && (
     <section class="section">
       <h3>Test Scope — By Language</h3>
+      <HorizontalBarChart client:load data={testBarData} valueLabel="LOC" barColor="#8b5cf6" />
       <table>
         <thead>
           <tr><th>Extension</th><th>Files</th><th>LOC</th></tr>
@@ -89,7 +107,12 @@ function getMetric(id: string): number | null {
         <tbody>
           {testExtensions.map(([ext, s]) => (
             <tr>
-              <td><code>.{ext}</code></td>
+              <td>
+                <span class="language-cell">
+                  <TechnologyIcon extension={ext} size={18} class="language-icon" />
+                  <code>.{ext}</code>
+                </span>
+              </td>
               <td>{s.files.toLocaleString()}</td>
               <td>{s.loc.toLocaleString()}</td>
             </tr>
@@ -107,6 +130,8 @@ function getMetric(id: string): number | null {
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .language-cell { display: inline-flex; align-items: center; gap: 0.55rem; }
+  .language-icon { flex: none; }
   table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
   th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
   th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }

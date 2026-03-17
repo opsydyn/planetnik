@@ -1,4 +1,5 @@
-import { defineCollection, z } from "astro:content"
+import { defineCollection } from "astro:content"
+import { z } from "astro/zod"
 import {
   analysisLoader,
   contributorsLoader,
@@ -114,16 +115,6 @@ export const collections = {
     }),
   }),
 
-  peopleDeps: defineCollection({
-    loader: peopleDependenciesLoader(),
-    schema: z.object({
-      from: z.string(),
-      to: z.string(),
-      count: z.number(),
-      files: z.array(z.string()),
-    }),
-  }),
-
   temporalDeps: defineCollection({
     loader: temporalDepsLoader(),
     schema: z.object({
@@ -132,6 +123,16 @@ export const collections = {
       sameCommits: z.number(),
       commitsFile1: z.number(),
       commitsFile2: z.number(),
+    }),
+  }),
+
+  peopleDeps: defineCollection({
+    loader: peopleDependenciesLoader(),
+    schema: z.object({
+      from: z.string(),
+      to: z.string(),
+      count: z.number(),
+      files: z.array(z.string()),
     }),
   }),
 }

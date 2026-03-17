@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DistributionChart from "../components/charts/DistributionChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -20,6 +21,13 @@ const activeContributors365 = contributors.filter((c) => c.data.commits365Days >
 
 const ageDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
 const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
+
+const activityData = [
+  { label: "Past 30 days", value: activeContributors30, detail: `${activeContributors30} contributors` },
+  { label: "Past 90 days", value: activeContributors90, detail: `${activeContributors90} contributors` },
+  { label: "Past year", value: activeContributors365, detail: `${activeContributors365} contributors` },
+  { label: "All time", value: totalContributors, detail: `${totalContributors} contributors` },
+]
 ---
 
 <Dashboard title="Commits" projectName={projectName}>
@@ -59,11 +67,18 @@ const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
       </div>
     )}
   </div>
+
+  <section class="section">
+    <h3>Active Contributors Over Time</h3>
+    <DistributionChart client:load data={activityData} />
+  </section>
 </Dashboard>
 
 <style>
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
   .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
   .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
 </style>

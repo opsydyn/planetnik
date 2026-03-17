@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -9,11 +10,23 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
 // Sort by commits descending
 const sorted = [...contributors].sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
 const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0)
+
+const contribBarData = sorted.slice(0, 15).map((c) => {
+  const at = c.data.email.indexOf("@")
+  return {
+    label: at > 0 ? c.data.email.slice(0, at) : c.data.email,
+    value: c.data.commitsAllTime,
+  }
+})
 ---
 
 <Dashboard title="Contributors" projectName={projectName}>
   <h2>Contributors</h2>
   <p class="subtitle">{sorted.length} contributors, {totalCommits.toLocaleString()} total commits</p>
+
+  <section class="section">
+    <HorizontalBarChart client:load data={contribBarData} valueLabel="commits" />
+  </section>
 
   <table>
     <thead>
@@ -84,6 +97,7 @@ const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0)
     font-size: 0.8rem;
   }
 
+  .section { margin-bottom: 1.5rem; }
   .date {
     font-family: "SF Mono", "Fira Code", monospace;
     font-size: 0.8rem;

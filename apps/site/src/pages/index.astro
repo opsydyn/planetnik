@@ -1,5 +1,8 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
+import { getTechnologyIconData } from "../lib/iconography"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -42,6 +45,12 @@ function getMetric(id: string): number | null {
 }
 
 const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
+
+const langBarData = extensions.map(([ext, stats]) => ({
+  label: `.${ext}`,
+  value: stats.loc,
+  icon: getTechnologyIconData(ext),
+}))
 ---
 
 <Dashboard title="Dashboard" projectName={projectName}>
@@ -88,6 +97,7 @@ const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
   {extensions.length > 0 && (
     <section class="section">
       <h3>Languages</h3>
+      <HorizontalBarChart client:load data={langBarData} valueLabel="LOC" maxItems={10} />
       <table>
         <thead>
           <tr>
@@ -100,7 +110,12 @@ const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
         <tbody>
           {extensions.map(([ext, stats]) => (
             <tr>
-              <td><code>.{ext}</code></td>
+              <td>
+                <span class="language-cell">
+                  <TechnologyIcon extension={ext} size={18} class="language-icon" />
+                  <code>.{ext}</code>
+                </span>
+              </td>
               <td>{stats.files.toLocaleString()}</td>
               <td>{stats.loc.toLocaleString()}</td>
               <td>{((stats.loc / totalLoc) * 100).toFixed(1)}%</td>
@@ -182,6 +197,16 @@ const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
+  }
+
+  .language-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .language-icon {
+    flex: none;
   }
 
   table {

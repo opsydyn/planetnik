@@ -1,0 +1,28 @@
+---
+import "@phosphor-icons/web/regular"
+
+interface Props {
+  name: string
+  size?: number | string
+  title?: string
+  class?: string
+  decorative?: boolean
+}
+
+const {
+  name,
+  size = 18,
+  title,
+  class: className,
+  decorative = !title,
+} = Astro.props
+---
+
+<i
+  class:list={["ph", `ph-${name}`, "system-icon", className]}
+  style={`font-size: ${typeof size === "number" ? `${size}px` : size};`}
+  title={title}
+  aria-hidden={decorative ? "true" : undefined}
+  aria-label={decorative ? undefined : title}
+  role={decorative ? undefined : "img"}
+/>
