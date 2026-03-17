@@ -1,0 +1,93 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const metrics = await getCollection("metrics")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+function getMetric(id: string): number | null {
+  const m = metrics.find((m) => m.data.id === id)
+  return m?.data.value ?? null
+}
+
+const ageInDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
+const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
+const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS")
+
+const ageCategories = [
+  { label: "Negligible Risk", metric: "FILE_AGE_NEGLIGIBLE_RISK_COUNT" },
+  { label: "Low Risk", metric: "FILE_AGE_LOW_RISK_COUNT" },
+  { label: "Medium Risk", metric: "FILE_AGE_MEDIUM_RISK_COUNT" },
+  { label: "High Risk", metric: "FILE_AGE_HIGH_RISK_COUNT" },
+  { label: "Very High Risk", metric: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
+]
+---
+
+<Dashboard title="File Age" projectName={projectName}>
+  <h2>File Age &amp; Freshness</h2>
+
+  <div class="cards">
+    {ageInDays !== null && (
+      <div class="card">
+        <div class="card-value">{ageInDays.toLocaleString()}</div>
+        <div class="card-label">Age (Days)</div>
+      </div>
+    )}
+    {activeDays !== null && (
+      <div class="card">
+        <div class="card-value">{activeDays.toLocaleString()}</div>
+        <div class="card-label">Active Days</div>
+      </div>
+    )}
+    {weeks !== null && (
+      <div class="card">
+        <div class="card-value">{weeks.toLocaleString()}</div>
+        <div class="card-label">Weeks</div>
+      </div>
+    )}
+  </div>
+
+  <section class="section">
+    <h3>File Age Distribution</h3>
+    <table>
+      <thead>
+        <tr><th>Category</th><th>Files</th></tr>
+      </thead>
+      <tbody>
+        {ageCategories.map((cat) => {
+          const val = getMetric(cat.metric)
+          return val !== null ? (
+            <tr>
+              <td>{cat.label}</td>
+              <td>{val.toLocaleString()}</td>
+            </tr>
+          ) : null
+        })}
+      </tbody>
+    </table>
+    {ageInDays === null && (
+      <div class="empty">
+        <p>No file history data available.</p>
+        <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code> to populate file age data.</p>
+      </div>
+    )}
+  </section>
+</Dashboard>
+
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
+  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>

@@ -1,0 +1,44 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const dependencies = await getCollection("dependencies")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+---
+
+<Dashboard title="Dependencies" projectName={projectName}>
+  <h2>Static Component Dependencies</h2>
+
+  {dependencies.length === 0 ? (
+    <div class="empty">
+      <p>No component dependencies found.</p>
+      <p class="hint">Dependencies are detected when logical components are configured and files reference each other across component boundaries.</p>
+    </div>
+  ) : (
+    <table>
+      <thead>
+        <tr><th>From</th><th>To</th><th>Count</th></tr>
+      </thead>
+      <tbody>
+        {dependencies.map((d) => (
+          <tr>
+            <td>{d.data.fromComponent ?? "—"}</td>
+            <td>{d.data.toComponent ?? "—"}</td>
+            <td>{d.data.count ?? 0}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Dashboard>
+
+<style>
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+</style>

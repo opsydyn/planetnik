@@ -1,0 +1,92 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const contributors = await getCollection("contributors")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+// Sort by commits descending
+const sorted = [...contributors].sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
+const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0)
+---
+
+<Dashboard title="Contributors" projectName={projectName}>
+  <h2>Contributors</h2>
+  <p class="subtitle">{sorted.length} contributors, {totalCommits.toLocaleString()} total commits</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Contributor</th>
+        <th>All Time</th>
+        <th>30d</th>
+        <th>90d</th>
+        <th>180d</th>
+        <th>365d</th>
+        <th>First Commit</th>
+        <th>Last Commit</th>
+        <th>%</th>
+      </tr>
+    </thead>
+    <tbody>
+      {sorted.map((c) => (
+        <tr>
+          <td class="email">{c.data.email}</td>
+          <td>{c.data.commitsAllTime}</td>
+          <td>{c.data.commits30Days || ""}</td>
+          <td>{c.data.commits90Days || ""}</td>
+          <td>{c.data.commits180Days || ""}</td>
+          <td>{c.data.commits365Days || ""}</td>
+          <td class="date">{c.data.firstCommit}</td>
+          <td class="date">{c.data.lastCommit}</td>
+          <td>{c.data.percentage}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.85rem;
+  }
+
+  th, td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  th {
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  .email {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.8rem;
+  }
+
+  .date {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+</style>

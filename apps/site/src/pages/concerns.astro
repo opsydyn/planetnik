@@ -1,0 +1,58 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const filesMain = await getCollection("filesMain")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+// Aggregate concerns from files
+const concernMap = new Map<string, { files: number; loc: number }>()
+for (const f of filesMain) {
+  for (const concern of f.data.concerns) {
+    const entry = concernMap.get(concern) ?? { files: 0, loc: 0 }
+    entry.files++
+    entry.loc += f.data.linesOfCode
+    concernMap.set(concern, entry)
+  }
+}
+const concerns = [...concernMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
+---
+
+<Dashboard title="Features of Interest" projectName={projectName}>
+  <h2>Features of Interest</h2>
+
+  {concerns.length === 0 ? (
+    <div class="empty">
+      <p>No features of interest (concerns) configured.</p>
+      <p class="hint">Add <code>concerns</code> to your Planetnik config to track cross-cutting features across your codebase.</p>
+    </div>
+  ) : (
+    <table>
+      <thead>
+        <tr><th>Concern</th><th>Files</th><th>LOC</th></tr>
+      </thead>
+      <tbody>
+        {concerns.map(([name, s]) => (
+          <tr>
+            <td class="concern-name">{name}</td>
+            <td>{s.files.toLocaleString()}</td>
+            <td>{s.loc.toLocaleString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Dashboard>
+
+<style>
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .concern-name { font-weight: 500; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>

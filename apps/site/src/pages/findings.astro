@@ -1,0 +1,21 @@
+---
+import { getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+---
+
+<Dashboard title="Findings" projectName={projectName}>
+  <h2>Notes &amp; Findings</h2>
+  <div class="empty">
+    <p>No findings data exported yet.</p>
+    <p class="hint">Findings are pattern-based search results configured in your Planetnik config.</p>
+  </div>
+</Dashboard>
+
+<style>
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+</style>

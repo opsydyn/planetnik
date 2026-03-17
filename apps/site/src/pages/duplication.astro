@@ -1,0 +1,106 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const duplicates = await getCollection("duplicates")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const dupLines = summary?.data.duplication.duplicatedLines ?? 0
+const dupPct = summary?.data.duplication.percentage ?? 0
+
+// Sort by block size descending
+const sorted = [...duplicates].sort((a, b) => b.data.blockSize - a.data.blockSize)
+
+// Size distribution
+const buckets = [
+  { label: "6-10 lines", min: 6, max: 10, count: 0 },
+  { label: "11-20 lines", min: 11, max: 20, count: 0 },
+  { label: "21-50 lines", min: 21, max: 50, count: 0 },
+  { label: "51-100 lines", min: 51, max: 100, count: 0 },
+  { label: "100+ lines", min: 101, max: Infinity, count: 0 },
+]
+for (const d of sorted) {
+  for (const b of buckets) {
+    if (d.data.blockSize >= b.min && d.data.blockSize <= b.max) { b.count++; break }
+  }
+}
+const maxCount = Math.max(...buckets.map((b) => b.count))
+---
+
+<Dashboard title="Duplication" projectName={projectName}>
+  <h2>Duplication</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{dupPct.toFixed(1)}%</div>
+      <div class="card-label">Duplication</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{dupLines.toLocaleString()}</div>
+      <div class="card-label">Duplicated Lines</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{sorted.length.toLocaleString()}</div>
+      <div class="card-label">Duplicate Blocks</div>
+    </div>
+  </div>
+
+  <section class="section">
+    <h3>Block Size Distribution</h3>
+    <div class="distribution">
+      {buckets.map((b) => (
+        <div class="dist-row">
+          <span class="dist-label">{b.label}</span>
+          <div class="dist-bar-container">
+            <div class="dist-bar" style={`width: ${maxCount > 0 ? (b.count / maxCount) * 100 : 0}%`} />
+          </div>
+          <span class="dist-count">{b.count}</span>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <h3>Largest Duplicate Blocks</h3>
+    <table>
+      <thead>
+        <tr><th>Block Size</th><th>Files</th><th>Locations</th></tr>
+      </thead>
+      <tbody>
+        {sorted.slice(0, 50).map((d) => (
+          <tr>
+            <td class="size">{d.data.blockSize} lines</td>
+            <td>{d.data.duplicatedFileBlocks.length} files</td>
+            <td class="locations">
+              {d.data.duplicatedFileBlocks.map((b) => (
+                <div class="loc">{b.file.relativePath}:{b.startLine}-{b.endLine}</div>
+              ))}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+</Dashboard>
+
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
+  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .distribution { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; }
+  .dist-row { display: grid; grid-template-columns: 100px 1fr 60px; align-items: center; gap: 0.75rem; padding: 0.35rem 0; }
+  .dist-label { font-size: 0.8rem; color: var(--color-text-muted); }
+  .dist-bar-container { height: 18px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+  .dist-bar { height: 100%; background: var(--color-accent); border-radius: 3px; min-width: 2px; }
+  .dist-count { font-size: 0.8rem; color: var(--color-text-muted); text-align: right; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .size { font-weight: 600; white-space: nowrap; }
+  .loc { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.6; }
+</style>

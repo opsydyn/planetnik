@@ -1,0 +1,207 @@
+---
+interface Props {
+  title: string
+  projectName?: string
+}
+
+const { title, projectName = "Planetnik" } = Astro.props
+
+const navSections = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/", label: "Dashboard" },
+      { href: "/overview", label: "Source Code Overview" },
+      { href: "/metrics", label: "Metrics" },
+      { href: "/about", label: "About" },
+    ],
+  },
+  {
+    label: "Structure",
+    items: [
+      { href: "/components", label: "Components" },
+      { href: "/dependencies", label: "Dependencies" },
+      { href: "/duplication", label: "Duplication" },
+    ],
+  },
+  {
+    label: "Files",
+    items: [
+      { href: "/files/size", label: "File Size" },
+      { href: "/files/age", label: "File Age" },
+      { href: "/files/churn", label: "File Churn" },
+      { href: "/files/temporal", label: "Temporal Dependencies" },
+    ],
+  },
+  {
+    label: "Units",
+    items: [
+      { href: "/units/size", label: "Unit Size" },
+      { href: "/units/complexity", label: "Conditional Complexity" },
+    ],
+  },
+  {
+    label: "Team",
+    items: [
+      { href: "/contributors", label: "Contributors" },
+      { href: "/commits", label: "Commits" },
+    ],
+  },
+  {
+    label: "Quality",
+    items: [
+      { href: "/concerns", label: "Features of Interest" },
+      { href: "/findings", label: "Findings" },
+      { href: "/controls", label: "Goals & Controls" },
+      { href: "/trends", label: "Trend" },
+    ],
+  },
+]
+
+const currentPath = Astro.url.pathname
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — {projectName}</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --sidebar-width: 240px;
+        --color-bg: #fafafa;
+        --color-sidebar: #1a1a2e;
+        --color-sidebar-text: #c4c4d4;
+        --color-sidebar-active: #e2e8f0;
+        --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+        --color-accent: #6366f1;
+        --color-text: #1e293b;
+        --color-text-muted: #64748b;
+        --color-border: #e2e8f0;
+        --color-card: #ffffff;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--color-bg);
+        color: var(--color-text);
+        display: flex;
+        min-height: 100vh;
+      }
+
+      nav {
+        width: var(--sidebar-width);
+        background: var(--color-sidebar);
+        color: var(--color-sidebar-text);
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        overflow-y: auto;
+        padding: 1.5rem 0;
+      }
+
+      .nav-header {
+        padding: 0.75rem 1.25rem 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 0.75rem;
+      }
+
+      .nav-logo-link {
+        display: block;
+      }
+
+      .nav-logo {
+        width: 100%;
+        max-width: 180px;
+        height: auto;
+        display: block;
+      }
+
+      .nav-header .project-name {
+        font-size: 0.8rem;
+        color: var(--color-sidebar-text);
+        margin-top: 0.5rem;
+      }
+
+      .nav-section {
+        margin-bottom: 0.5rem;
+      }
+
+      .nav-section-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.5rem 1.25rem 0.25rem;
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .nav-section a {
+        display: block;
+        padding: 0.4rem 1.25rem;
+        color: var(--color-sidebar-text);
+        text-decoration: none;
+        font-size: 0.85rem;
+        transition: background 0.15s, color 0.15s;
+      }
+
+      .nav-section a:hover {
+        background: var(--color-sidebar-hover);
+        color: #fff;
+      }
+
+      .nav-section a.active {
+        color: var(--color-sidebar-active);
+        background: rgba(99, 102, 241, 0.2);
+        font-weight: 500;
+      }
+
+      main {
+        margin-left: var(--sidebar-width);
+        flex: 1;
+        padding: 2rem 2.5rem;
+        max-width: 1200px;
+      }
+
+      main h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--color-text);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-header">
+        <a href="/" class="nav-logo-link">
+          <img src="/planetnik-logo-2.png" alt="Płanetnik" class="nav-logo" />
+        </a>
+        <div class="project-name">Report for <strong>{projectName}</strong></div>
+      </div>
+      {
+        navSections.map((section) => (
+          <div class="nav-section">
+            <div class="nav-section-label">{section.label}</div>
+            {section.items.map((item) => (
+              <a href={item.href} class={currentPath === item.href ? "active" : ""}>
+                {item.label}
+              </a>
+            ))}
+          </div>
+        ))
+      }
+    </nav>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { Command, Options } from "@effect/cli"
-import { LandscapeAnalyzer } from "@planetnik/analyzer"
+import { LandscapeAnalysisInitiator, LandscapeAnalyzer } from "@planetnik/analyzer"
 import {
   LandscapeReportGenerator,
   REPORTS_HTML_FOOTER,
@@ -29,16 +29,24 @@ export const updateLandscapeCommand = Command.make(
 
       yield* Effect.log(`Updating landscape at ${root}...`)
 
-      // Load or create landscape config
-      const _configPath =
-        args.confFile._tag === "Some" ? resolve(args.confFile.value) : join(root, "_planetnik", "config.json")
+      // Discover repos and build landscape config from directory structure
+      const configPath =
+        args.confFile._tag === "Some" ? resolve(args.confFile.value) : null
 
-      const analyzer = new LandscapeAnalyzer()
-      const results = analyzer.analyze(root)
+      const initiator = new LandscapeAnalysisInitiator()
+      const landscapeConfig = initiator.initConfiguration(root, configPath, true)
 
       // Apply metadata overrides
-      if (args.name._tag === "Some") results.metadata.name = args.name.value
-      if (args.description._tag === "Some") results.metadata.description = args.description.value
+      if (args.name._tag === "Some" || args.description._tag === "Some") {
+        landscapeConfig.metadata = {
+          ...landscapeConfig.metadata,
+          ...(args.name._tag === "Some" ? { name: args.name.value } : {}),
+          ...(args.description._tag === "Some" ? { description: args.description.value } : {}),
+        }
+      }
+
+      const analyzer = new LandscapeAnalyzer(landscapeConfig, root)
+      const results = analyzer.analyze()
 
       // Generate report
       const report = new RichTextReport("landscape", "index.html")

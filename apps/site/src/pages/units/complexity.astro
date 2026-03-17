@@ -1,0 +1,83 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const units = await getCollection("units")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+// Sort by McCabe complexity descending
+const sorted = [...units].sort((a, b) => b.data.mcCabeIndex - a.data.mcCabeIndex)
+
+// Complexity distribution
+const buckets = [
+  { label: "1-5 (simple)", min: 1, max: 5, count: 0, color: "#22c55e" },
+  { label: "6-10 (moderate)", min: 6, max: 10, count: 0, color: "#eab308" },
+  { label: "11-25 (complex)", min: 11, max: 25, count: 0, color: "#f97316" },
+  { label: "26+ (very complex)", min: 26, max: Infinity, count: 0, color: "#ef4444" },
+]
+for (const u of sorted) {
+  for (const b of buckets) {
+    if (u.data.mcCabeIndex >= b.min && u.data.mcCabeIndex <= b.max) { b.count++; break }
+  }
+}
+const maxCount = Math.max(...buckets.map((b) => b.count))
+---
+
+<Dashboard title="Conditional Complexity" projectName={projectName}>
+  <h2>Conditional Complexity</h2>
+  <p class="subtitle">{sorted.length.toLocaleString()} units analyzed</p>
+
+  <section class="section">
+    <h3>McCabe Complexity Distribution</h3>
+    <div class="distribution">
+      {buckets.map((b) => (
+        <div class="dist-row">
+          <span class="dist-label">{b.label}</span>
+          <div class="dist-bar-container">
+            <div class="dist-bar" style={`width: ${maxCount > 0 ? (b.count / maxCount) * 100 : 0}%; background: ${b.color}`} />
+          </div>
+          <span class="dist-count">{b.count}</span>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <h3>Most Complex Units</h3>
+    <table>
+      <thead>
+        <tr><th>Unit</th><th>File</th><th>McCabe</th><th>LOC</th></tr>
+      </thead>
+      <tbody>
+        {sorted.slice(0, 50).map((u) => (
+          <tr>
+            <td class="unit-name">{u.data.shortName}</td>
+            <td class="filepath">{u.data.relativeFileName}</td>
+            <td class={u.data.mcCabeIndex > 10 ? "high" : ""}>{u.data.mcCabeIndex}</td>
+            <td>{u.data.linesOfCode}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+</Dashboard>
+
+<style>
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .distribution { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; }
+  .dist-row { display: grid; grid-template-columns: 160px 1fr 60px; align-items: center; gap: 0.75rem; padding: 0.35rem 0; }
+  .dist-label { font-size: 0.8rem; color: var(--color-text-muted); }
+  .dist-bar-container { height: 18px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+  .dist-bar { height: 100%; border-radius: 3px; min-width: 2px; }
+  .dist-count { font-size: 0.8rem; color: var(--color-text-muted); text-align: right; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .unit-name { font-weight: 500; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .high { color: #ef4444; font-weight: 600; }
+</style>

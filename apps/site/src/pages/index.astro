@@ -1,17 +1,208 @@
 ---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
 
+const summary = await getEntry("analysis", "summary")
+const filesMain = await getCollection("filesMain")
+const filesTest = await getCollection("filesTest")
+const units = await getCollection("units")
+const duplicates = await getCollection("duplicates")
+const contributors = await getCollection("contributors")
+const metrics = await getCollection("metrics")
+
+const projectName = summary?.data.metadata.name ?? "Unknown"
+const totalFiles = summary?.data.filesCount ?? 0
+const totalLoc = summary?.data.linesOfCode ?? 0
+const dupPercentage = summary?.data.duplication.percentage ?? 0
+const dupLines = summary?.data.duplication.duplicatedLines ?? 0
+
+const mainFiles = filesMain.length
+const testFiles = filesTest.length
+const totalUnits = units.length
+const totalDuplicates = duplicates.length
+const totalContributors = contributors.length
+
+// Extension breakdown from main files
+const extMap = new Map<string, { files: number; loc: number }>()
+for (const f of filesMain) {
+  const ext = f.data.extension
+  const entry = extMap.get(ext) ?? { files: 0, loc: 0 }
+  entry.files++
+  entry.loc += f.data.linesOfCode
+  extMap.set(ext, entry)
+}
+const extensions = [...extMap.entries()]
+  .sort((a, b) => b[1].loc - a[1].loc)
+  .slice(0, 10)
+
+// Find specific metrics
+function getMetric(id: string): number | null {
+  const m = metrics.find((m) => m.data.id === id)
+  return m?.data.value ?? null
+}
+
+const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Dashboard title="Dashboard" projectName={projectName}>
+  <h2>{projectName} — Analysis Dashboard</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{totalFiles.toLocaleString()}</div>
+      <div class="card-label">Total Files</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalLoc.toLocaleString()}</div>
+      <div class="card-label">Lines of Code</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{mainFiles.toLocaleString()}</div>
+      <div class="card-label">Main Files</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{testFiles.toLocaleString()}</div>
+      <div class="card-label">Test Files</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalUnits.toLocaleString()}</div>
+      <div class="card-label">Units (Functions)</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalContributors}</div>
+      <div class="card-label">Contributors</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{dupPercentage.toFixed(1)}%</div>
+      <div class="card-label">Duplication</div>
+      <div class="card-detail">{dupLines.toLocaleString()} duplicated lines</div>
+    </div>
+    {testVsMainPct !== null && (
+      <div class="card">
+        <div class="card-value">{testVsMainPct.toFixed(1)}%</div>
+        <div class="card-label">Test vs Main LOC</div>
+      </div>
+    )}
+  </div>
+
+  {extensions.length > 0 && (
+    <section class="section">
+      <h3>Languages</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Extension</th>
+            <th>Files</th>
+            <th>Lines of Code</th>
+            <th>% of Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {extensions.map(([ext, stats]) => (
+            <tr>
+              <td><code>.{ext}</code></td>
+              <td>{stats.files.toLocaleString()}</td>
+              <td>{stats.loc.toLocaleString()}</td>
+              <td>{((stats.loc / totalLoc) * 100).toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+
+  {totalDuplicates > 0 && (
+    <section class="section">
+      <h3>Duplication Summary</h3>
+      <p>{totalDuplicates} duplicate blocks found across {dupLines.toLocaleString()} lines.</p>
+    </section>
+  )}
+</Dashboard>
+
+<style>
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .card-detail {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td {
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  th {
+    background: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  td {
+    font-size: 0.875rem;
+  }
+
+  code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85em;
+    background: #f1f5f9;
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+  }
+
+  p {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+</style>

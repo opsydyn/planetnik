@@ -1,0 +1,53 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const temporalDeps = await getCollection("temporalDeps")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const sorted = [...temporalDeps].sort((a, b) => b.data.sameCommits - a.data.sameCommits)
+---
+
+<Dashboard title="Temporal Dependencies" projectName={projectName}>
+  <h2>Temporal Dependencies</h2>
+  <p class="subtitle">Files that change together frequently</p>
+
+  {sorted.length === 0 ? (
+    <div class="empty">
+      <p>No temporal dependency data available.</p>
+      <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code>.</p>
+    </div>
+  ) : (
+    <table>
+      <thead>
+        <tr><th>File 1</th><th>File 2</th><th>Same Commits</th><th>Commits File 1</th><th>Commits File 2</th></tr>
+      </thead>
+      <tbody>
+        {sorted.slice(0, 100).map((d) => (
+          <tr>
+            <td class="filepath">{d.data.file1}</td>
+            <td class="filepath">{d.data.file2}</td>
+            <td class="num">{d.data.sameCommits}</td>
+            <td class="num">{d.data.commitsFile1}</td>
+            <td class="num">{d.data.commitsFile2}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>

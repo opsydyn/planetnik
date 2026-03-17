@@ -1,0 +1,103 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const metrics = await getCollection("metrics")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+// Group metrics by prefix
+const groups = new Map<string, { id: string; value: number }[]>()
+for (const m of metrics) {
+  const parts = m.data.id.split("_")
+  const prefix = parts.slice(0, Math.min(3, parts.length)).join("_")
+  const list = groups.get(prefix) ?? []
+  list.push(m.data)
+  groups.set(prefix, list)
+}
+
+const sortedGroups = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+---
+
+<Dashboard title="Metrics" projectName={projectName}>
+  <h2>All Metrics</h2>
+  <p class="subtitle">{metrics.length} metrics</p>
+
+  {sortedGroups.map(([group, items]) => (
+    <section class="section">
+      <h3>{group.replace(/_/g, " ").toLowerCase()}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((m) => (
+            <tr>
+              <td class="metric-id">{m.id}</td>
+              <td class="metric-value">{m.value.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ))}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .section {
+    margin-bottom: 1.5rem;
+  }
+
+  .section h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: capitalize;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  th, td {
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  th {
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  .metric-id {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.78rem;
+  }
+
+  .metric-value {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+</style>

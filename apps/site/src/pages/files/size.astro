@@ -1,0 +1,181 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const filesMain = await getCollection("filesMain")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+// Sort by LOC descending
+const sorted = [...filesMain].sort((a, b) => b.data.linesOfCode - a.data.linesOfCode)
+const totalLoc = sorted.reduce((sum, f) => sum + f.data.linesOfCode, 0)
+
+// Size distribution buckets
+const buckets = [
+  { label: "1-50", min: 1, max: 50, count: 0, loc: 0 },
+  { label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
+  { label: "101-200", min: 101, max: 200, count: 0, loc: 0 },
+  { label: "201-500", min: 201, max: 500, count: 0, loc: 0 },
+  { label: "501-1000", min: 501, max: 1000, count: 0, loc: 0 },
+  { label: "1001+", min: 1001, max: Infinity, count: 0, loc: 0 },
+]
+
+for (const f of sorted) {
+  for (const b of buckets) {
+    if (f.data.linesOfCode >= b.min && f.data.linesOfCode <= b.max) {
+      b.count++
+      b.loc += f.data.linesOfCode
+      break
+    }
+  }
+}
+
+const maxBucketLoc = Math.max(...buckets.map((b) => b.loc))
+---
+
+<Dashboard title="File Size" projectName={projectName}>
+  <h2>File Size</h2>
+  <p class="subtitle">{sorted.length} files, {totalLoc.toLocaleString()} total lines of code</p>
+
+  <section class="section">
+    <h3>Size Distribution</h3>
+    <div class="distribution">
+      {buckets.map((b) => (
+        <div class="dist-row">
+          <span class="dist-label">{b.label} LOC</span>
+          <div class="dist-bar-container">
+            <div
+              class="dist-bar"
+              style={`width: ${maxBucketLoc > 0 ? (b.loc / maxBucketLoc) * 100 : 0}%`}
+            />
+          </div>
+          <span class="dist-count">{b.count} files</span>
+          <span class="dist-loc">{b.loc.toLocaleString()} LOC</span>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <h3>Largest Files</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Extension</th>
+          <th>Lines of Code</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.slice(0, 50).map((f) => (
+          <tr>
+            <td class="filepath">{f.data.relativePath}</td>
+            <td><code>.{f.data.extension}</code></td>
+            <td>{f.data.linesOfCode.toLocaleString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .distribution {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .dist-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 80px 100px;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+  }
+
+  .dist-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-family: "SF Mono", "Fira Code", monospace;
+  }
+
+  .dist-bar-container {
+    height: 18px;
+    background: #f1f5f9;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .dist-bar {
+    height: 100%;
+    background: var(--color-accent);
+    border-radius: 3px;
+    min-width: 2px;
+  }
+
+  .dist-count, .dist-loc {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    text-align: right;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  th {
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  td {
+    font-size: 0.85rem;
+  }
+
+  .filepath {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.78rem;
+    word-break: break-all;
+  }
+
+  code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85em;
+    background: #f1f5f9;
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+  }
+</style>

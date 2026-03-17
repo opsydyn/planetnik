@@ -1,0 +1,13 @@
+{
+  "githubCloneUrl": "https://github.com",
+  "githubApiUrl": "https://api.github.com",
+  "githubToken": "<YOUR_GITHUB_TOKEN>",
+  "reposUpdatedAfter": "2023-01-01",
+  "githubOrgs": [
+    "<YOUR_ORG>"
+  ],
+  "ignore": [
+    { "org": "", "repo": ".*[-]builds" },
+    { "org": "", "repo": "\\.github" }
+  ]
+}

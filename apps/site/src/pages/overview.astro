@@ -1,0 +1,115 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const filesMain = await getCollection("filesMain")
+const filesTest = await getCollection("filesTest")
+const metrics = await getCollection("metrics")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const totalLoc = summary?.data.linesOfCode ?? 0
+
+// Extension breakdown
+const extMap = new Map<string, { files: number; loc: number }>()
+for (const f of filesMain) {
+  const ext = f.data.extension
+  const entry = extMap.get(ext) ?? { files: 0, loc: 0 }
+  entry.files++
+  entry.loc += f.data.linesOfCode
+  extMap.set(ext, entry)
+}
+const extensions = [...extMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
+
+// Test extension breakdown
+const testExtMap = new Map<string, { files: number; loc: number }>()
+for (const f of filesTest) {
+  const ext = f.data.extension
+  const entry = testExtMap.get(ext) ?? { files: 0, loc: 0 }
+  entry.files++
+  entry.loc += f.data.linesOfCode
+  testExtMap.set(ext, entry)
+}
+const testExtensions = [...testExtMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
+
+function getMetric(id: string): number | null {
+  const m = metrics.find((m) => m.data.id === id)
+  return m?.data.value ?? null
+}
+---
+
+<Dashboard title="Source Code Overview" projectName={projectName}>
+  <h2>Source Code Overview</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{filesMain.length.toLocaleString()}</div>
+      <div class="card-label">Main Files</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalLoc.toLocaleString()}</div>
+      <div class="card-label">Main LOC</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{filesTest.length.toLocaleString()}</div>
+      <div class="card-label">Test Files</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{getMetric("LINES_OF_CODE_TEST")?.toLocaleString() ?? "—"}</div>
+      <div class="card-label">Test LOC</div>
+    </div>
+  </div>
+
+  <section class="section">
+    <h3>Main Scope — By Language</h3>
+    <table>
+      <thead>
+        <tr><th>Extension</th><th>Files</th><th>LOC</th><th>%</th></tr>
+      </thead>
+      <tbody>
+        {extensions.map(([ext, s]) => (
+          <tr>
+            <td><code>.{ext}</code></td>
+            <td>{s.files.toLocaleString()}</td>
+            <td>{s.loc.toLocaleString()}</td>
+            <td>{totalLoc > 0 ? ((s.loc / totalLoc) * 100).toFixed(1) : 0}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  {testExtensions.length > 0 && (
+    <section class="section">
+      <h3>Test Scope — By Language</h3>
+      <table>
+        <thead>
+          <tr><th>Extension</th><th>Files</th><th>LOC</th></tr>
+        </thead>
+        <tbody>
+          {testExtensions.map(([ext, s]) => (
+            <tr>
+              <td><code>.{ext}</code></td>
+              <td>{s.files.toLocaleString()}</td>
+              <td>{s.loc.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+</Dashboard>
+
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
+  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>

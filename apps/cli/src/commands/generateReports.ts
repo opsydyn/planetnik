@@ -11,16 +11,12 @@ import {
 import { BasicSourceCodeReportGenerator, DataExporter, ReportFileExporter } from "@planetnik/reports"
 import { Effect } from "effect"
 
-const confFile = Options.text("confFile").pipe(Options.optional)
-const outputFolder = Options.text("outputFolder").pipe(Options.optional)
-
-export const generateReportsCommand = Command.make("generateReports", { confFile, outputFolder }, (args) =>
-  Effect.gen(function* () {
-    const configPath =
-      args.confFile._tag === "Some"
-        ? resolve(args.confFile.value)
-        : resolve(DEFAULT_CONFIGURATION_FOLDER, "config.json")
-
+/**
+ * Shared analysis pipeline: load config, analyze, export data, generate reports.
+ * Used by both `generateReports` and `analyzeRemote` commands.
+ */
+export function runAnalysis(configPath: string, reportsFolder: string) {
+  return Effect.gen(function* () {
     if (!existsSync(configPath)) {
       yield* Effect.logError(`Configuration file "${configPath}" does not exist.`)
       return
@@ -45,11 +41,6 @@ export const generateReportsCommand = Command.make("generateReports", { confFile
         codeConfiguration[key] = aspect
       }
     }
-
-    const reportsFolder =
-      args.outputFolder._tag === "Some"
-        ? resolve(args.outputFolder.value)
-        : resolve(DEFAULT_CONFIGURATION_FOLDER, "reports")
 
     yield* Effect.log(`Reports folder: ${reportsFolder}`)
 
@@ -77,5 +68,24 @@ export const generateReportsCommand = Command.make("generateReports", { confFile
     }
 
     yield* Effect.log(`Analysis complete. Reports saved to ${reportsFolder}`)
+  })
+}
+
+const confFile = Options.text("confFile").pipe(Options.optional)
+const outputFolder = Options.text("outputFolder").pipe(Options.optional)
+
+export const generateReportsCommand = Command.make("generateReports", { confFile, outputFolder }, (args) =>
+  Effect.gen(function* () {
+    const configPath =
+      args.confFile._tag === "Some"
+        ? resolve(args.confFile.value)
+        : resolve(DEFAULT_CONFIGURATION_FOLDER, "config.json")
+
+    const reportsFolder =
+      args.outputFolder._tag === "Some"
+        ? resolve(args.outputFolder.value)
+        : resolve(DEFAULT_CONFIGURATION_FOLDER, "reports")
+
+    yield* runAnalysis(configPath, reportsFolder)
   }),
 )

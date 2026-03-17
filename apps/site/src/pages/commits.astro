@@ -1,0 +1,69 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const contributors = await getCollection("contributors")
+const metrics = await getCollection("metrics")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+function getMetric(id: string): number | null {
+  const m = metrics.find((m) => m.data.id === id)
+  return m?.data.value ?? null
+}
+
+const totalContributors = contributors.length
+const totalCommits = contributors.reduce((s, c) => s + c.data.commitsAllTime, 0)
+const activeContributors30 = contributors.filter((c) => c.data.commits30Days > 0).length
+const activeContributors90 = contributors.filter((c) => c.data.commits90Days > 0).length
+const activeContributors365 = contributors.filter((c) => c.data.commits365Days > 0).length
+
+const ageDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
+const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
+---
+
+<Dashboard title="Commits" projectName={projectName}>
+  <h2>Commits</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{totalCommits.toLocaleString()}</div>
+      <div class="card-label">Total Commits</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalContributors}</div>
+      <div class="card-label">All-Time Contributors</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{activeContributors30}</div>
+      <div class="card-label">Active (30d)</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{activeContributors90}</div>
+      <div class="card-label">Active (90d)</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{activeContributors365}</div>
+      <div class="card-label">Active (1yr)</div>
+    </div>
+    {ageDays !== null && (
+      <div class="card">
+        <div class="card-value">{ageDays.toLocaleString()}</div>
+        <div class="card-label">Repo Age (Days)</div>
+      </div>
+    )}
+    {activeDays !== null && (
+      <div class="card">
+        <div class="card-value">{activeDays.toLocaleString()}</div>
+        <div class="card-label">Active Days</div>
+      </div>
+    )}
+  </div>
+</Dashboard>
+
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
+  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+</style>

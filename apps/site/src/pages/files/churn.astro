@@ -1,0 +1,60 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const metrics = await getCollection("metrics")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+function getMetric(id: string): number | null {
+  const m = metrics.find((m) => m.data.id === id)
+  return m?.data.value ?? null
+}
+
+const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
+const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS")
+const estimatedWorkingDays = getMetric("FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS")
+---
+
+<Dashboard title="File Churn" projectName={projectName}>
+  <h2>File Change Frequency</h2>
+
+  <div class="cards">
+    {activeDays !== null && (
+      <div class="card">
+        <div class="card-value">{activeDays.toLocaleString()}</div>
+        <div class="card-label">Active Days</div>
+      </div>
+    )}
+    {weeks !== null && (
+      <div class="card">
+        <div class="card-value">{weeks.toLocaleString()}</div>
+        <div class="card-label">Weeks Span</div>
+      </div>
+    )}
+    {estimatedWorkingDays !== null && (
+      <div class="card">
+        <div class="card-value">{estimatedWorkingDays.toLocaleString()}</div>
+        <div class="card-label">Est. Working Days</div>
+      </div>
+    )}
+  </div>
+
+  {activeDays === null && (
+    <div class="empty">
+      <p>No file history data available.</p>
+      <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code>.</p>
+    </div>
+  )}
+</Dashboard>
+
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
+  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>

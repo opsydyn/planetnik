@@ -4,6 +4,8 @@
 import { Command } from "@effect/cli"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import { Effect } from "effect"
+import { analyzeLandscapeCommand } from "./commands/analyzeLandscape.js"
+import { analyzeRemoteCommand } from "./commands/analyzeRemote.js"
 import { exportConventionsCommand } from "./commands/exportConventions.js"
 import { extractFilesCommand } from "./commands/extractFiles.js"
 import { extractGitHistoryCommand } from "./commands/extractGitHistory.js"
@@ -20,6 +22,8 @@ const command = Command.make("planetnik", {}, () =>
   Command.withSubcommands([
     initCommand,
     generateReportsCommand,
+    analyzeRemoteCommand,
+    analyzeLandscapeCommand,
     extractGitHistoryCommand,
     extractGitSubHistoryCommand,
     extractFilesCommand,
