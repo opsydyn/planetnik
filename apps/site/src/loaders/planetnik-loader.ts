@@ -19,7 +19,7 @@ if (existsSync(envPath) && !process.env.PLANETNIK_DATA_DIR) {
   }
 }
 
-function resolveDataDir(): string {
+export function resolveDataDir(): string {
   const dir = process.env.PLANETNIK_DATA_DIR ?? join(process.cwd(), "_planetnik", "reports", "data")
   if (!existsSync(dir)) {
     console.warn(`[planetnik-loader] Data directory not found: ${dir}`)
@@ -163,6 +163,26 @@ export function contributorsLoader(): Loader {
         }
         const data = await parseData({ id: email, data: rec })
         store.set({ id: email, data })
+      }
+    },
+  }
+}
+
+export function peopleDependenciesLoader(): Loader {
+  return {
+    name: "planetnik-people-deps",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("people_dependencies.json") as Array<{
+        from: string
+        to: string
+        count: number
+        files: string[]
+      }> | null
+      if (!raw || !Array.isArray(raw)) return
+      for (const entry of raw) {
+        const id = `${entry.from}::${entry.to}`
+        const data = await parseData({ id, data: entry })
+        store.set({ id, data })
       }
     },
   }

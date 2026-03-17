@@ -47,7 +47,7 @@ const sorted = [...temporalDeps].sort((a, b) => b.data.sameCommits - a.data.same
   th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
   th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
   td { font-size: 0.85rem; }
-  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: min(350px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

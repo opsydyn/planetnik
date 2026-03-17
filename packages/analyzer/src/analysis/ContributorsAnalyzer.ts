@@ -62,7 +62,8 @@ export class ContributorsAnalyzer {
       this.analysisResults.peopleDependencies90Days = this.getPeopleDependencies(history, 90)
       this.analysisResults.peopleDependencies180Days = this.getPeopleDependencies(history, 180)
       this.analysisResults.peopleDependencies365Days = this.getPeopleDependencies(history, 365)
-      this.analysisResults.peopleDependencies = this.analysisResults.peopleDependencies365Days
+      this.analysisResults.peopleDependenciesAllTime = this.getPeopleDependencies(history, 36500)
+      this.analysisResults.peopleDependencies = this.analysisResults.peopleDependenciesAllTime
     }
 
     // Metrics

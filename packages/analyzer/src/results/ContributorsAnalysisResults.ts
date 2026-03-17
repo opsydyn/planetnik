@@ -16,4 +16,5 @@ export class ContributorsAnalysisResults {
   peopleDependencies90Days: ComponentDependency[] = []
   peopleDependencies180Days: ComponentDependency[] = []
   peopleDependencies365Days: ComponentDependency[] = []
+  peopleDependenciesAllTime: ComponentDependency[] = []
 }

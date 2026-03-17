@@ -37,6 +37,7 @@ export class DataExporter {
     this.exportUnits(dataFolder)
     this.exportDependencies(dataFolder)
     this.exportTemporalDependencies(dataFolder)
+    this.exportPeopleDependencies(dataFolder)
   }
 
   private exportFileLists(dataFolder: string): void {
@@ -329,6 +330,28 @@ export class DataExporter {
     }
 
     writeFileSync(join(dataFolder, fileName), lines.join("\n"), "utf-8")
+  }
+
+  private exportPeopleDependencies(dataFolder: string): void {
+    const contribResults = this.analysisResults.contributorsAnalysisResults
+
+    const exportDeps = (deps: ComponentDependency[], fileName: string) => {
+      if (deps.length === 0) return
+      const limited = deps.slice(0, DataExporter.MAX_EXPORT_LIST_SIZE)
+      const exported = limited.map((d) => ({
+        from: d.fromComponent,
+        to: d.toComponent,
+        count: d.count,
+        files: d.data,
+      }))
+      writeFileSync(join(dataFolder, fileName), JSON.stringify(exported, null, 2), "utf-8")
+    }
+
+    exportDeps(contribResults.peopleDependencies30Days, "people_dependencies_30d.json")
+    exportDeps(contribResults.peopleDependencies90Days, "people_dependencies_90d.json")
+    exportDeps(contribResults.peopleDependencies180Days, "people_dependencies_180d.json")
+    exportDeps(contribResults.peopleDependencies365Days, "people_dependencies_365d.json")
+    exportDeps(contribResults.peopleDependenciesAllTime, "people_dependencies.json")
   }
 
   static dependenciesFileNamePrefix(

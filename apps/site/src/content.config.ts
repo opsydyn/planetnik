@@ -6,6 +6,7 @@ import {
   duplicatesLoader,
   filesLoader,
   metricsLoader,
+  peopleDependenciesLoader,
   temporalDepsLoader,
   unitsLoader,
 } from "./loaders/planetnik-loader"
@@ -110,6 +111,16 @@ export const collections = {
       firstCommit: z.string(),
       lastCommit: z.string(),
       percentage: z.string(),
+    }),
+  }),
+
+  peopleDeps: defineCollection({
+    loader: peopleDependenciesLoader(),
+    schema: z.object({
+      from: z.string(),
+      to: z.string(),
+      count: z.number(),
+      files: z.array(z.string()),
     }),
   }),
 

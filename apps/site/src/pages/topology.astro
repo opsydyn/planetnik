@@ -1,0 +1,65 @@
+---
+import { existsSync, readFileSync } from "node:fs"
+import { join } from "node:path"
+import { getEntry } from "astro:content"
+import TopologyGraph from "../components/TopologyGraph"
+import Dashboard from "../layouts/Dashboard.astro"
+// Import triggers .env side-effect, ensuring PLANETNIK_DATA_DIR is set
+import { resolveDataDir } from "../loaders/planetnik-loader"
+
+const summary = await getEntry("analysis", "summary")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const dataDir = resolveDataDir()
+
+type PeopleDep = { from: string; to: string; count: number; files: string[] }
+
+function loadPeriod(filename: string): PeopleDep[] {
+  const path = join(dataDir, filename)
+  if (!existsSync(path)) return []
+  try {
+    const raw = JSON.parse(readFileSync(path, "utf-8"))
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
+
+const periods: Record<string, PeopleDep[]> = {
+  "All Time": loadPeriod("people_dependencies.json"),
+  "1 Year": loadPeriod("people_dependencies_365d.json"),
+  "6 Months": loadPeriod("people_dependencies_180d.json"),
+  "Quarter": loadPeriod("people_dependencies_90d.json"),
+  "Month": loadPeriod("people_dependencies_30d.json"),
+}
+
+// Filter out empty periods
+const availablePeriods: Record<string, PeopleDep[]> = {}
+for (const [key, value] of Object.entries(periods)) {
+  if (value.length > 0) availablePeriods[key] = value
+}
+
+const hasData = Object.keys(availablePeriods).length > 0
+---
+
+<Dashboard title="Team Topology" projectName={projectName}>
+  <h2>Team Topology</h2>
+  <p class="subtitle">Contributors connected by shared file modifications</p>
+
+  {!hasData ? (
+    <div class="empty">
+      <p>No people dependency data available.</p>
+      <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code> to generate contributor topology data.</p>
+    </div>
+  ) : (
+    <TopologyGraph client:only="react" periods={availablePeriods} />
+  )}
+</Dashboard>
+
+<style>
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+  .hint { font-size: 0.85rem; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+</style>

@@ -170,7 +170,7 @@ const maxBucketLoc = Math.max(...buckets.map((b) => b.loc))
 
   .unit-name {
     font-weight: 500;
-    max-width: 300px;
+    max-width: min(300px, 40vw);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -180,7 +180,7 @@ const maxBucketLoc = Math.max(...buckets.map((b) => b.loc))
     font-family: "SF Mono", "Fira Code", monospace;
     font-size: 0.75rem;
     color: var(--color-text-muted);
-    max-width: 400px;
+    max-width: min(400px, 40vw);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
