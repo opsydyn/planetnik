@@ -7,7 +7,7 @@ import { CodeConfiguration } from "../core/CodeConfiguration.js"
 import { ScopeCreator } from "../scoping/ScopeCreator.js"
 
 const WORKSPACE = join(import.meta.dir, "__integration_workspace__")
-const CONFIG_DIR = join(WORKSPACE, "_sokrates")
+const CONFIG_DIR = join(WORKSPACE, "_planetnik")
 const CONFIG_FILE = join(CONFIG_DIR, "config.json")
 
 // Sample source files

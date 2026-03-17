@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs"
 import { basename, join, relative } from "node:path"
 import { LandscapeConfiguration } from "./LandscapeConfiguration.js"
-import { SokratesRepositoryLink } from "./SokratesRepositoryLink.js"
+import { RepositoryLink } from "./RepositoryLink.js"
 import { SubLandscapeLink } from "./SubLandscapeLink.js"
 
 export class LandscapeAnalysisInitiator {
@@ -14,19 +14,19 @@ export class LandscapeAnalysisInitiator {
     config.analysisRoot = analysisRoot
 
     this.walkDirectory(analysisRoot, (filePath) => {
-      if (this.isSokratesLandscapeFile(filePath)) {
+      if (this.isLandscapeFile(filePath)) {
         this.addSubLandscape(analysisRoot, config, filePath)
       }
     })
 
     this.walkDirectory(analysisRoot, (filePath) => {
-      if (this.isSokratesAnalysisFile(filePath)) {
+      if (this.isAnalysisFile(filePath)) {
         this.processAnalysisResultFile(analysisRoot, config, filePath)
       }
     })
 
     if (!landscapeConfigFile) {
-      const landscapeDir = join(analysisRoot, "_sokrates_landscape")
+      const landscapeDir = join(analysisRoot, "_planetnik_landscape")
       landscapeConfigFile = join(landscapeDir, "config.json")
     }
 
@@ -44,7 +44,7 @@ export class LandscapeAnalysisInitiator {
 
   private addSubLandscape(root: string, config: LandscapeConfiguration, filePath: string): void {
     const relativePath = relative(root, filePath)
-    // _sokrates_landscape/index.html → parent is _sokrates_landscape, grandparent is the landscape dir
+    // _planetnik_landscape/index.html → parent is _planetnik_landscape, grandparent is the landscape dir
     const parts = relativePath.replace(/\\/g, "/").split("/")
     if (parts.length >= 2) {
       const parentName = parts[parts.length - 3] ?? parts[0]
@@ -54,15 +54,15 @@ export class LandscapeAnalysisInitiator {
 
   private processAnalysisResultFile(root: string, config: LandscapeConfiguration, filePath: string): void {
     const relativePath = relative(root, filePath)
-    config.repositories.push(new SokratesRepositoryLink(relativePath))
+    config.repositories.push(new RepositoryLink(relativePath))
   }
 
-  private isSokratesAnalysisFile(filePath: string): boolean {
+  private isAnalysisFile(filePath: string): boolean {
     return filePath.replace(/\\/g, "/").endsWith("data/analysisResults.json")
   }
 
-  private isSokratesLandscapeFile(filePath: string): boolean {
-    return filePath.replace(/\\/g, "/").endsWith("_sokrates_landscape/index.html")
+  private isLandscapeFile(filePath: string): boolean {
+    return filePath.replace(/\\/g, "/").endsWith("_planetnik_landscape/index.html")
   }
 
   private save(configFile: string, config: LandscapeConfiguration): void {

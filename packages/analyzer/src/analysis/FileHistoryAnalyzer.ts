@@ -66,7 +66,7 @@ export class FileHistoryAnalyzer {
       if (existsSync(p)) return p
     }
 
-    // Default path: _sokrates/../git-history.txt relative to config
+    // Default path: _planetnik/../git-history.txt relative to config
     const defaultPath = join(configDir, "..", GitHistoryUtils.GIT_HISTORY_FILE_NAME)
     if (existsSync(defaultPath)) return defaultPath
 

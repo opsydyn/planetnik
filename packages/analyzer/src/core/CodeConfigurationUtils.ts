@@ -2,20 +2,20 @@ import { NamedSourceCodeAspect } from "../aspects/NamedSourceCodeAspect.js"
 import type { SourceFile } from "../aspects/SourceFile.js"
 
 export class CodeConfigurationUtils {
-  static readonly DEFAULT_CONFIGURATION_FOLDER = "_sokrates"
+  static readonly DEFAULT_CONFIGURATION_FOLDER = "_planetnik"
   static readonly UNCLASSIFIED_FILES = "Unclassified"
   static readonly FILES_IN_MULTIPLE_CLASSIFICATIONS = "Multiple Classifications"
 
-  static getDefaultSokratesFolder(srcRoot: string): string {
+  static getDefaultConfigFolder(srcRoot: string): string {
     return `${srcRoot}/${CodeConfigurationUtils.DEFAULT_CONFIGURATION_FOLDER}`
   }
 
-  static getDefaultSokratesConfigFile(srcRoot: string): string {
-    return `${CodeConfigurationUtils.getDefaultSokratesFolder(srcRoot)}/config.json`
+  static getDefaultConfigFile(srcRoot: string): string {
+    return `${CodeConfigurationUtils.getDefaultConfigFolder(srcRoot)}/config.json`
   }
 
-  static getDefaultSokratesReportsFolder(srcRoot: string): string {
-    return `${CodeConfigurationUtils.getDefaultSokratesFolder(srcRoot)}/reports`
+  static getDefaultReportsFolder(srcRoot: string): string {
+    return `${CodeConfigurationUtils.getDefaultConfigFolder(srcRoot)}/reports`
   }
 
   static populateUnclassifiedAndMultipleAspectsFiles(

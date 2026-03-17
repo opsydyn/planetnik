@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path"
 
-export class SokratesRepositoryLink {
+export class RepositoryLink {
   analysisResultsPath: string = ""
   htmlReportsRoot: string = ""
   note: string = ""

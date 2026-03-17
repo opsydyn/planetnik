@@ -4,7 +4,7 @@ import type { ContributorTag } from "./ContributorTag.js"
 import type { CustomTab } from "./CustomTab.js"
 import type { MergeExtension } from "./MergeExtension.js"
 import { PeopleConfig } from "./PeopleConfig.js"
-import type { SokratesRepositoryLink } from "./SokratesRepositoryLink.js"
+import type { RepositoryLink } from "./RepositoryLink.js"
 import type { SubLandscapeLink } from "./SubLandscapeLink.js"
 import type { TagGroup } from "./TagGroup.js"
 import { TeamsConfig } from "./TeamsConfig.js"
@@ -25,7 +25,7 @@ export class LandscapeConfiguration {
   commitsMaxYears: number = 10
   significantContributorMinCommitDaysPerYear: number = 10
 
-  repositories: SokratesRepositoryLink[] = []
+  repositories: RepositoryLink[] = []
   subLandscapes: SubLandscapeLink[] = []
 
   ignoreContributors: string[] = []

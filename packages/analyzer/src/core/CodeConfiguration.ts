@@ -11,7 +11,7 @@ import type { SourceFileFilter } from "./SourceFileFilter.js"
 import type { TagRule } from "./TagRule.js"
 import { TrendAnalysisConfig } from "./TrendAnalysisConfig.js"
 
-export const DEFAULT_CONFIGURATION_FOLDER = "_sokrates"
+export const DEFAULT_CONFIGURATION_FOLDER = "_planetnik"
 
 export class CodeConfiguration {
   metadata: Metadata = { name: "", description: "", tooltip: "", logoLink: "", links: [] }

@@ -95,10 +95,7 @@ export class ConcernsReportGenerator {
       const mainLoc = results.mainAspectAnalysisResults.linesOfCode
       const pct = mainLoc > 0 ? ((100.0 * concern.linesOfCode) / mainLoc).toFixed(1) : "0.0"
 
-      report.startSubSection(
-        `${groupCounter}.${concernCounter} ${concern.name}`,
-        "",
-      )
+      report.startSubSection(`${groupCounter}.${concernCounter} ${concern.name}`, "")
       report.startUnorderedList()
       report.addListItem(`Files: <b>${concern.filesCount}</b>`)
       report.addListItem(`Lines of code: <b>${concern.linesOfCode}</b> (${pct}% of main)`)

@@ -2,7 +2,7 @@ import { readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
 
 export class LandscapeAnalysisUtils {
-  static findAllSokratesLandscapeConfigFiles(root: string): string[] {
+  static findAllLandscapeConfigFiles(root: string): string[] {
     const files: string[] = []
 
     const walk = (dir: string): void => {
@@ -14,7 +14,7 @@ export class LandscapeAnalysisUtils {
             const stat = statSync(fullPath)
             if (stat.isDirectory()) {
               walk(fullPath)
-            } else if (LandscapeAnalysisUtils.isSokratesLandscapeConfigFile(fullPath)) {
+            } else if (LandscapeAnalysisUtils.isLandscapeConfigFile(fullPath)) {
               files.push(fullPath)
             }
           } catch {
@@ -38,8 +38,8 @@ export class LandscapeAnalysisUtils {
     return files
   }
 
-  static isSokratesLandscapeConfigFile(filePath: string): boolean {
+  static isLandscapeConfigFile(filePath: string): boolean {
     const normalized = filePath.replace(/\\/g, "/")
-    return normalized.endsWith("_sokrates_landscape/config.json")
+    return normalized.endsWith("_planetnik_landscape/config.json")
   }
 }

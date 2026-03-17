@@ -5,7 +5,7 @@ import { LandscapeAnalysisInitiator } from "../landscape/LandscapeAnalysisInitia
 import { LandscapeAnalysisUpdater } from "../landscape/LandscapeAnalysisUpdater.js"
 import { LandscapeConfiguration } from "../landscape/LandscapeConfiguration.js"
 import { LandscapeInfo } from "../landscape/LandscapeInfo.js"
-import { SokratesRepositoryLink } from "../landscape/SokratesRepositoryLink.js"
+import { RepositoryLink } from "../landscape/RepositoryLink.js"
 import { SubLandscapeLink } from "../landscape/SubLandscapeLink.js"
 
 const tmpRoot = join(import.meta.dir, "__tmp_landscape_init__")
@@ -26,24 +26,24 @@ function createAnalysisResultFile(repoName: string): void {
 }
 
 function createSubLandscapeFile(landscapeName: string): void {
-  const dir = join(tmpRoot, landscapeName, "_sokrates_landscape")
+  const dir = join(tmpRoot, landscapeName, "_planetnik_landscape")
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, "index.html"), "<html></html>", "utf-8")
 }
 
-describe("SokratesRepositoryLink", () => {
+describe("RepositoryLink", () => {
   test("extracts name from path", () => {
-    const link = new SokratesRepositoryLink("myRepo/data/analysisResults.json")
+    const link = new RepositoryLink("myRepo/data/analysisResults.json")
     expect(link.name).toBe("myRepo")
   })
 
   test("computes htmlReportsRoot", () => {
-    const link = new SokratesRepositoryLink("myRepo/data/analysisResults.json")
+    const link = new RepositoryLink("myRepo/data/analysisResults.json")
     expect(link.htmlReportsRoot).toContain("html")
   })
 
   test("handles empty path", () => {
-    const link = new SokratesRepositoryLink()
+    const link = new RepositoryLink()
     expect(link.analysisResultsPath).toBe("")
     expect(link.htmlReportsRoot).toBe("")
   })
@@ -51,9 +51,9 @@ describe("SokratesRepositoryLink", () => {
 
 describe("SubLandscapeLink", () => {
   test("stores name and path", () => {
-    const link = new SubLandscapeLink("MyLandscape", "sub/_sokrates_landscape/index.html")
+    const link = new SubLandscapeLink("MyLandscape", "sub/_planetnik_landscape/index.html")
     expect(link.name).toBe("MyLandscape")
-    expect(link.indexFilePath).toBe("sub/_sokrates_landscape/index.html")
+    expect(link.indexFilePath).toBe("sub/_planetnik_landscape/index.html")
     expect(link.landscapeAnalysisResults).toBeNull()
   })
 })
@@ -108,7 +108,7 @@ describe("LandscapeAnalysisInitiator", () => {
   test("saves config file when saveFile is true", () => {
     createAnalysisResultFile("repo1")
 
-    const configPath = join(tmpRoot, "_sokrates_landscape", "config.json")
+    const configPath = join(tmpRoot, "_planetnik_landscape", "config.json")
     const initiator = new LandscapeAnalysisInitiator()
     initiator.initConfiguration(tmpRoot, configPath, true)
 
@@ -117,7 +117,7 @@ describe("LandscapeAnalysisInitiator", () => {
     expect(saved.repositories.length).toBe(1)
   })
 
-  test("returns empty lists when no sokrates files found", () => {
+  test("returns empty lists when no analysis files found", () => {
     const initiator = new LandscapeAnalysisInitiator()
     const config = initiator.initConfiguration(tmpRoot, null, false)
 
@@ -136,8 +136,8 @@ describe("LandscapeAnalysisUpdater", () => {
     expect(config.repositories.length).toBe(1)
 
     // Check that both config.json and info.json were created
-    const configPath = join(tmpRoot, "_sokrates_landscape", "config.json")
-    const infoPath = join(tmpRoot, "_sokrates_landscape", "info.json")
+    const configPath = join(tmpRoot, "_planetnik_landscape", "config.json")
+    const infoPath = join(tmpRoot, "_planetnik_landscape", "info.json")
     expect(existsSync(configPath)).toBe(true)
     expect(existsSync(infoPath)).toBe(true)
   })
@@ -146,7 +146,7 @@ describe("LandscapeAnalysisUpdater", () => {
     createAnalysisResultFile("repo1")
 
     // Create an existing config with custom settings
-    const landscapeDir = join(tmpRoot, "_sokrates_landscape")
+    const landscapeDir = join(tmpRoot, "_planetnik_landscape")
     mkdirSync(landscapeDir, { recursive: true })
     const existingConfig = new LandscapeConfiguration()
     existingConfig.extensionThresholdLoc = 500
@@ -194,7 +194,7 @@ describe("LandscapeAnalysisUpdater", () => {
     const updater = new LandscapeAnalysisUpdater()
     updater.updateConfiguration(tmpRoot, null, null)
 
-    const infoPath = join(tmpRoot, "_sokrates_landscape", "info.json")
+    const infoPath = join(tmpRoot, "_planetnik_landscape", "info.json")
     const info = JSON.parse(readFileSync(infoPath, "utf-8"))
     expect(info.subLandscapes.length).toBe(1)
     expect(info.repositories.length).toBe(1)
@@ -204,7 +204,7 @@ describe("LandscapeAnalysisUpdater", () => {
     createAnalysisResultFile("repo1")
 
     // Create existing config with name
-    const landscapeDir = join(tmpRoot, "_sokrates_landscape")
+    const landscapeDir = join(tmpRoot, "_planetnik_landscape")
     mkdirSync(landscapeDir, { recursive: true })
     const existingConfig = new LandscapeConfiguration()
     existingConfig.metadata.name = "Keep This"

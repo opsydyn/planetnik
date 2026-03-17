@@ -1,15 +1,15 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs"
+import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { Command, Options } from "@effect/cli"
-import { Effect } from "effect"
 import { LandscapeAnalyzer } from "@planetnik/analyzer"
 import {
   LandscapeReportGenerator,
+  REPORTS_HTML_FOOTER,
+  REPORTS_HTML_HEADER,
   ReportRenderer,
   RichTextReport,
-  REPORTS_HTML_HEADER,
-  REPORTS_HTML_FOOTER,
 } from "@planetnik/reports"
+import { Effect } from "effect"
 
 const analysisRoot = Options.text("analysisRoot").pipe(Options.withDefault("."))
 const confFile = Options.text("confFile").pipe(Options.optional)
@@ -30,9 +30,8 @@ export const updateLandscapeCommand = Command.make(
       yield* Effect.log(`Updating landscape at ${root}...`)
 
       // Load or create landscape config
-      const configPath = args.confFile._tag === "Some"
-        ? resolve(args.confFile.value)
-        : join(root, "_sokrates", "config.json")
+      const _configPath =
+        args.confFile._tag === "Some" ? resolve(args.confFile.value) : join(root, "_planetnik", "config.json")
 
       const analyzer = new LandscapeAnalyzer()
       const results = analyzer.analyze(root)
@@ -47,18 +46,17 @@ export const updateLandscapeCommand = Command.make(
       LandscapeReportGenerator.generate(report, results)
 
       // Write report
-      const reportsDir = join(root, "_sokrates", "reports")
+      const reportsDir = join(root, "_planetnik", "reports")
       mkdirSync(reportsDir, { recursive: true })
 
       const parts: string[] = []
       const client = { append: (text: string) => parts.push(text) }
       new ReportRenderer().render(report, client)
 
-      const html = REPORTS_HTML_HEADER
-        .replace("{{TITLE}}", report.displayName)
-        .replace("{{CUSTOM_HEADER}}", "")
-        + parts.join("")
-        + REPORTS_HTML_FOOTER
+      const html =
+        REPORTS_HTML_HEADER.replace("{{TITLE}}", report.displayName).replace("{{CUSTOM_HEADER}}", "") +
+        parts.join("") +
+        REPORTS_HTML_FOOTER
 
       writeFileSync(join(reportsDir, "index.html"), html, "utf-8")
 
@@ -72,8 +70,6 @@ export const updateLandscapeCommand = Command.make(
       )
 
       yield* Effect.log(`Landscape report generated at ${reportsDir}/index.html`)
-      yield* Effect.log(
-        `Found ${results.getRepositoryCount()} repositories, ${results.getTotalLoc()} total LOC`,
-      )
+      yield* Effect.log(`Found ${results.getRepositoryCount()} repositories, ${results.getTotalLoc()} total LOC`)
     }),
 )

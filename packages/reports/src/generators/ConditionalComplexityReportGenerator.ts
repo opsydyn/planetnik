@@ -43,15 +43,11 @@ export class ConditionalComplexityReportGenerator {
     report.addListItem(
       `<b>${distribution.veryHighRiskCount}</b> very complex units (<b>${distribution.veryHighRiskValue}</b> LOC)`,
     )
-    report.addListItem(
-      `<b>${distribution.highRiskCount}</b> complex units (<b>${distribution.highRiskValue}</b> LOC)`,
-    )
+    report.addListItem(`<b>${distribution.highRiskCount}</b> complex units (<b>${distribution.highRiskValue}</b> LOC)`)
     report.addListItem(
       `<b>${distribution.mediumRiskCount}</b> medium complex units (<b>${distribution.mediumRiskValue}</b> LOC)`,
     )
-    report.addListItem(
-      `<b>${distribution.lowRiskCount}</b> simple units (<b>${distribution.lowRiskValue}</b> LOC)`,
-    )
+    report.addListItem(`<b>${distribution.lowRiskCount}</b> simple units (<b>${distribution.lowRiskValue}</b> LOC)`)
     report.addListItem(
       `<b>${distribution.negligibleRiskCount}</b> very simple units (<b>${distribution.negligibleRiskValue}</b> LOC)`,
     )
@@ -74,8 +70,7 @@ export class ConditionalComplexityReportGenerator {
       report.startSection("Conditional Complexity per Logical Component", "")
       for (let i = 0; i < unitsResults.conditionalComplexityRiskDistributionPerComponent.length; i++) {
         const stats = unitsResults.conditionalComplexityRiskDistributionPerComponent[i]!
-        const decompName =
-          results.logicalDecompositionsAnalysisResults[i]?.key ?? `Decomposition ${i + 1}`
+        const decompName = results.logicalDecompositionsAnalysisResults[i]?.key ?? `Decomposition ${i + 1}`
         report.startSubSection(`${decompName}`, "")
         for (const dist of stats) {
           RiskDistributionReportUtils.addRiskDistributionTable(report, dist)
@@ -86,10 +81,7 @@ export class ConditionalComplexityReportGenerator {
 
     // Most complex units
     if (unitsResults.mostComplexUnits.length > 0) {
-      report.startSection(
-        `Most Complex Units (Top ${unitsResults.mostComplexUnits.length})`,
-        "",
-      )
+      report.startSection(`Most Complex Units (Top ${unitsResults.mostComplexUnits.length})`, "")
       report.startDiv("max-height: 400px; overflow-y: auto")
       report.startTable()
       report.addTableHeaderLeft("Unit", "File", "Lines", "McCabe Index")

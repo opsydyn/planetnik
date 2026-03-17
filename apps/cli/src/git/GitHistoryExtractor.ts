@@ -1,4 +1,4 @@
-import { appendFileSync, writeFileSync } from "node:fs"
+import { writeFileSync } from "node:fs"
 import { join } from "node:path"
 import simpleGit from "simple-git"
 
@@ -8,32 +8,29 @@ export async function extractGitHistory(root: string): Promise<number> {
   const git = simpleGit(root)
   const outputPath = join(root, GIT_HISTORY_FILE)
 
-  // Clear the file
-  writeFileSync(outputPath, "", "utf-8")
+  // Use raw git log with --name-only to get commit metadata + changed files
+  // Format: "date email hash" followed by blank line and file names
+  const raw = await git.raw(["log", "--name-only", "--format=%ad %ae %H", "--date=short"])
 
-  // Get all commits with diff
-  const log = await git.log(["--name-only", "--format=%ad %ae %H", "--date=short"])
+  const lines: string[] = []
   let count = 0
 
-  for (const commit of log.all) {
-    const date = commit.date.slice(0, 10) // YYYY-MM-DD
-    const email = commit.author_email
-    const hash = commit.hash
+  let currentPrefix = ""
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
 
-    // Get the files changed in this commit
-    const diff = await git.diff(["--name-only", `${hash}^..${hash}`]).catch(() => "")
-    const files = diff
-      .split("\n")
-      .map((f) => f.trim())
-      .filter(Boolean)
-
-    for (const filePath of files) {
-      const safePath = filePath.replace(/ /g, "&nbsp;")
-      const line = `${date} ${email} ${hash} ${safePath}`
-      appendFileSync(outputPath, `${line}\n`, "utf-8")
+    // Lines matching "YYYY-MM-DD email hash" are commit headers
+    if (/^\d{4}-\d{2}-\d{2} /.test(trimmed)) {
+      currentPrefix = trimmed
+    } else if (currentPrefix) {
+      // This is a file path belonging to the current commit
+      const safePath = trimmed.replace(/ /g, "&nbsp;")
+      lines.push(`${currentPrefix} ${safePath}`)
       count++
     }
   }
 
+  writeFileSync(outputPath, `${lines.join("\n")}\n`, "utf-8")
   return count
 }

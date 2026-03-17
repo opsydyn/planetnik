@@ -57,8 +57,8 @@ function multiply(a, b) {
   )
 
   // Create config
-  const configPath = path.join(root, "_sokrates", "config.json")
-  fs.mkdirSync(path.join(root, "_sokrates"), { recursive: true })
+  const configPath = path.join(root, "_planetnik", "config.json")
+  fs.mkdirSync(path.join(root, "_planetnik"), { recursive: true })
   fs.writeFileSync(configPath, "{}")
 
   const config = new CodeConfiguration()

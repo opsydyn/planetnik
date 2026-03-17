@@ -44,11 +44,11 @@ export class LandscapeAnalysisUpdater {
 
   private getLandscapeConfigFile(analysisRoot: string, configFile: string | null): string {
     if (configFile) return configFile
-    return join(analysisRoot, "_sokrates_landscape", "config.json")
+    return join(analysisRoot, "_planetnik_landscape", "config.json")
   }
 
   private getLandscapeInfoFile(analysisRoot: string): string {
-    return join(analysisRoot, "_sokrates_landscape", "info.json")
+    return join(analysisRoot, "_planetnik_landscape", "info.json")
   }
 
   private getNewConfig(analysisRoot: string, landscapeConfigFile: string): LandscapeConfiguration {

@@ -251,16 +251,16 @@ describe("CustomConventionsHelper", () => {
 // ── CodeConfigurationUtils ──────────────────────────────────────────────
 
 describe("CodeConfigurationUtils", () => {
-  test("getDefaultSokratesFolder", () => {
-    expect(CodeConfigurationUtils.getDefaultSokratesFolder("/project")).toBe("/project/_sokrates")
+  test("getDefaultConfigFolder", () => {
+    expect(CodeConfigurationUtils.getDefaultConfigFolder("/project")).toBe("/project/_planetnik")
   })
 
-  test("getDefaultSokratesConfigFile", () => {
-    expect(CodeConfigurationUtils.getDefaultSokratesConfigFile("/project")).toBe("/project/_sokrates/config.json")
+  test("getDefaultConfigFile", () => {
+    expect(CodeConfigurationUtils.getDefaultConfigFile("/project")).toBe("/project/_planetnik/config.json")
   })
 
-  test("getDefaultSokratesReportsFolder", () => {
-    expect(CodeConfigurationUtils.getDefaultSokratesReportsFolder("/project")).toBe("/project/_sokrates/reports")
+  test("getDefaultReportsFolder", () => {
+    expect(CodeConfigurationUtils.getDefaultReportsFolder("/project")).toBe("/project/_planetnik/reports")
   })
 
   test("populateUnclassifiedAndMultipleAspectsFiles", () => {

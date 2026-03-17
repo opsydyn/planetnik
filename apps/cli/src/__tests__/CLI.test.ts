@@ -22,7 +22,7 @@ describe("ScopeCreator", () => {
     writeFileSync(join(TEST_DIR, "src", "Utils.ts"), "export function add(a: number, b: number) { return a + b }")
     writeFileSync(join(TEST_DIR, "src", "Main.java"), "public class Main { public static void main(String[] args) {} }")
 
-    const confFile = join(TEST_DIR, "_sokrates", "config.json")
+    const confFile = join(TEST_DIR, "_planetnik", "config.json")
     const creator = new ScopeCreator(TEST_DIR, confFile)
     creator.createScopeFromConventions("TestProject")
 
@@ -40,7 +40,7 @@ describe("ScopeCreator", () => {
     writeFileSync(join(TEST_DIR, "src", "b.py"), "print('world')")
     writeFileSync(join(TEST_DIR, "src", "c.go"), "package main")
 
-    const confFile = join(TEST_DIR, "_sokrates", "config.json")
+    const confFile = join(TEST_DIR, "_planetnik", "config.json")
     const creator = new ScopeCreator(TEST_DIR, confFile)
     creator.createScopeFromConventions()
 
@@ -58,7 +58,7 @@ describe("ScopeCreator", () => {
     writeFileSync(join(TEST_DIR, "node_modules", "pkg", "index.js"), "module.exports = {}")
     writeFileSync(join(TEST_DIR, "src", "app.js"), "const x = 1")
 
-    const confFile = join(TEST_DIR, "_sokrates", "config.json")
+    const confFile = join(TEST_DIR, "_planetnik", "config.json")
     const creator = new ScopeCreator(TEST_DIR, confFile)
     creator.createScopeFromConventions()
 
@@ -70,7 +70,7 @@ describe("ScopeCreator", () => {
     mkdirSync(join(TEST_DIR, "src"), { recursive: true })
     writeFileSync(join(TEST_DIR, "src", "app.ts"), "export const x = 1")
 
-    const confFile = join(TEST_DIR, "_sokrates", "config.json")
+    const confFile = join(TEST_DIR, "_planetnik", "config.json")
     const creator = new ScopeCreator(TEST_DIR, confFile)
     creator.createScopeFromConventions()
 
@@ -83,7 +83,7 @@ describe("ScopeCreator", () => {
     mkdirSync(join(TEST_DIR, "src"), { recursive: true })
     writeFileSync(join(TEST_DIR, "src", "app.ts"), "export const x = 1")
 
-    const confFile = join(TEST_DIR, "_sokrates", "config.json")
+    const confFile = join(TEST_DIR, "_planetnik", "config.json")
     const creator = new ScopeCreator(TEST_DIR, confFile)
     creator.createScopeFromConventions()
 
@@ -95,7 +95,7 @@ describe("ScopeCreator", () => {
 
 describe("CodeConfiguration", () => {
   test("getAbsoluteSrcRoot resolves relative path", () => {
-    const result = CodeConfiguration.getAbsoluteSrcRoot("..", "/Users/test/project/_sokrates/config.json")
+    const result = CodeConfiguration.getAbsoluteSrcRoot("..", "/Users/test/project/_planetnik/config.json")
     expect(result).toBe("/Users/test/project")
   })
 

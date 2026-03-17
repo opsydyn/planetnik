@@ -85,19 +85,15 @@ describe("FileExport", () => {
 })
 
 describe("LandscapeAnalysisUtils", () => {
-  test("identifies sokrates landscape config file", () => {
-    expect(LandscapeAnalysisUtils.isSokratesLandscapeConfigFile("/root/_sokrates_landscape/config.json")).toBe(true)
-    expect(LandscapeAnalysisUtils.isSokratesLandscapeConfigFile("/root/some_dir/_sokrates_landscape/config.json")).toBe(
-      true,
-    )
-    expect(LandscapeAnalysisUtils.isSokratesLandscapeConfigFile("/root/config.json")).toBe(false)
-    expect(LandscapeAnalysisUtils.isSokratesLandscapeConfigFile("/root/landscape/config.json")).toBe(false)
+  test("identifies landscape config file", () => {
+    expect(LandscapeAnalysisUtils.isLandscapeConfigFile("/root/_planetnik_landscape/config.json")).toBe(true)
+    expect(LandscapeAnalysisUtils.isLandscapeConfigFile("/root/some_dir/_planetnik_landscape/config.json")).toBe(true)
+    expect(LandscapeAnalysisUtils.isLandscapeConfigFile("/root/config.json")).toBe(false)
+    expect(LandscapeAnalysisUtils.isLandscapeConfigFile("/root/landscape/config.json")).toBe(false)
   })
 
   test("normalizes windows paths", () => {
-    expect(LandscapeAnalysisUtils.isSokratesLandscapeConfigFile("C:\\root\\_sokrates_landscape\\config.json")).toBe(
-      true,
-    )
+    expect(LandscapeAnalysisUtils.isLandscapeConfigFile("C:\\root\\_planetnik_landscape\\config.json")).toBe(true)
   })
 })
 

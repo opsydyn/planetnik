@@ -2,16 +2,9 @@ import type { CodeAnalysisResults, ComponentDependency, LogicalDecompositionAnal
 import type { RichTextReport } from "../core/RichTextReport.js"
 
 export class LogicalComponentsReportGenerator {
-  static addComponentsToReport(
-    report: RichTextReport,
-    results: CodeAnalysisResults,
-    skipDependencies: boolean,
-  ): void {
+  static addComponentsToReport(report: RichTextReport, results: CodeAnalysisResults, skipDependencies: boolean): void {
     if (skipDependencies) {
-      report.addParagraph(
-        "An overview of source code logical components.",
-        "margin-top: 12px; color: grey",
-      )
+      report.addParagraph("An overview of source code logical components.", "margin-top: 12px; color: grey")
     } else {
       report.addParagraph(
         "An overview of static code dependencies among source code logical components.",
@@ -32,9 +25,7 @@ export class LogicalComponentsReportGenerator {
     report.startUnorderedList()
     for (const decomp of decompositions) {
       const count = decomp.components.length
-      report.addListItem(
-        `${decomp.key} (${count} component${count > 1 ? "s" : ""})`,
-      )
+      report.addListItem(`${decomp.key} (${count} component${count > 1 ? "s" : ""})`)
     }
     report.endUnorderedList()
     report.endSection()
@@ -46,7 +37,7 @@ export class LogicalComponentsReportGenerator {
 
   private static addDecompositionSection(
     report: RichTextReport,
-    results: CodeAnalysisResults,
+    _results: CodeAnalysisResults,
     decomp: LogicalDecompositionAnalysisResults,
     skipDependencies: boolean,
   ): void {
@@ -80,10 +71,7 @@ export class LogicalComponentsReportGenerator {
     report.endSection()
   }
 
-  private static addDependenciesSection(
-    report: RichTextReport,
-    decomp: LogicalDecompositionAnalysisResults,
-  ): void {
+  private static addDependenciesSection(report: RichTextReport, decomp: LogicalDecompositionAnalysisResults): void {
     const deps = decomp.componentDependencies
     report.startSubSection("Static Dependencies", "Dependencies among components")
 
@@ -93,9 +81,7 @@ export class LogicalComponentsReportGenerator {
     }
 
     report.startUnorderedList()
-    report.addListItem(
-      `Analyzed system has <b>${deps.length}</b> links between components.`,
-    )
+    report.addListItem(`Analyzed system has <b>${deps.length}</b> links between components.`)
     const totalCount = deps.reduce((sum, d) => sum + d.count, 0)
     report.addListItem(`These links contain <b>${totalCount}</b> dependencies.`)
 
@@ -127,10 +113,7 @@ export class LogicalComponentsReportGenerator {
       for (let j = i + 1; j < deps.length; j++) {
         const a = deps[i]!
         const b = deps[j]!
-        if (
-          a.fromComponent === b.toComponent &&
-          a.toComponent === b.fromComponent
-        ) {
+        if (a.fromComponent === b.toComponent && a.toComponent === b.fromComponent) {
           count++
         }
       }

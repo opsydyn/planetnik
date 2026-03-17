@@ -11,7 +11,7 @@ import { DateUtils } from "../filehistory/FileHistoryUtils.js"
 import { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 
 const WORKSPACE = join(import.meta.dir, "__file_history_workspace__")
-const CONFIG_DIR = join(WORKSPACE, "_sokrates")
+const CONFIG_DIR = join(WORKSPACE, "_planetnik")
 const CONFIG_FILE = join(CONFIG_DIR, "config.json")
 const HISTORY_FILE = join(CONFIG_DIR, "..", "git-history.txt")
 
