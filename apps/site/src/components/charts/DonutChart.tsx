@@ -16,6 +16,9 @@ interface DonutChartProps {
 
 const PALETTE = chartTheme.colors.palette
 const DONUT_THICKNESS = 40
+const LEGEND_WIDTH = 160
+const CHART_GAP = 16
+const CHART_PADDING = 16
 
 export default function DonutChart({ data, valueLabel }: DonutChartProps) {
   if (data.length === 0) return null
@@ -38,16 +41,17 @@ function DonutInner({
   const { containerRef, TooltipInPortal } = useTooltipInPortal({ detectBounds: true, scroll: true })
 
   const total = data.reduce((s, d) => s + d.value, 0)
-  const legendWidth = 160
-  const chartArea = Math.min(width - legendWidth, height)
-  const radius = chartArea / 2 - 8
-  const innerRadius = radius - DONUT_THICKNESS
-  const centerX = chartArea / 2
+  const availableChartWidth = Math.max(width - LEGEND_WIDTH - CHART_GAP, 0)
+  const chartSize = Math.max(Math.min(availableChartWidth, height) - CHART_PADDING * 2, 120)
+  const svgWidth = chartSize + CHART_PADDING * 2
+  const radius = chartSize / 2
+  const innerRadius = Math.max(radius - DONUT_THICKNESS, radius * 0.58)
+  const centerX = radius + CHART_PADDING
   const centerY = height / 2
 
   return (
     <div ref={containerRef} style={{ position: "relative", display: "flex", alignItems: "center", gap: "1rem" }}>
-      <svg width={chartArea} height={height}>
+      <svg width={svgWidth} height={height}>
         <Group left={centerX} top={centerY}>
           <Pie
             data={data}
@@ -109,7 +113,7 @@ function DonutInner({
       </svg>
 
       {/* Legend */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: legendWidth }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: LEGEND_WIDTH }}>
         {data.slice(0, 10).map((d, i) => {
           const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0"
           return (

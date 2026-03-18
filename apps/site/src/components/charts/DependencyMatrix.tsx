@@ -1,5 +1,5 @@
 import { Group } from "@visx/group"
-import { scaleLinear, scaleOrdinal } from "@visx/scale"
+import { scaleLinear } from "@visx/scale"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"

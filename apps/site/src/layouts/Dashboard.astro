@@ -1,4 +1,5 @@
 ---
+import GlobalSearch from "../components/search/GlobalSearch"
 import SystemIcon from "../components/icons/SystemIcon.astro"
 
 interface Props {
@@ -419,6 +420,8 @@ const currentPath = Astro.url.pathname
     <main>
       <slot />
     </main>
+
+    <GlobalSearch client:load projectName={projectName} />
 
     <script>
       const sidebar = document.getElementById("sidebar")!
