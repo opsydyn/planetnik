@@ -33,6 +33,12 @@ const mostChangedBarData = filesWithHistory.slice(0, 15).map((f) => ({
   label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
   value: f.data.commitsCount ?? 0,
 }))
+
+const volatilityData = filesWithHistory.slice(0, 200).map((f) => ({
+  x: f.data.linesOfCode,
+  y: f.data.commitsCount ?? 0,
+  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+}))
 ---
 
 <Dashboard title="File Churn" projectName={projectName}>
@@ -70,6 +76,11 @@ const mostChangedBarData = filesWithHistory.slice(0, 15).map((f) => ({
       <section class="section">
         <h3>Commits vs Contributors per File</h3>
         <ScatterPlot client:load data={scatterData} xLabel="Commits" yLabel="Contributors" thresholds={{ x: 20, y: 5 }} />
+      </section>
+
+      <section class="section">
+        <h3>File Size vs Change Frequency</h3>
+        <ScatterPlot client:load data={volatilityData} xLabel="Lines of Code" yLabel="Commits" thresholds={{ x: 200, y: 20 }} />
       </section>
 
       <section class="section">

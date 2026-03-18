@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DependencyMatrix from "../components/charts/DependencyMatrix"
+import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -12,6 +13,18 @@ const matrixData = dependencies.map((d) => ({
   to: d.data.toComponent ?? "unknown",
   count: d.data.count ?? 0,
 }))
+
+// In-degree: how many dependencies point TO each component
+const inDegree = new Map<string, number>()
+const outDegree = new Map<string, number>()
+for (const d of dependencies) {
+  const to = d.data.toComponent ?? "unknown"
+  const from = d.data.fromComponent ?? "unknown"
+  inDegree.set(to, (inDegree.get(to) ?? 0) + (d.data.count ?? 0))
+  outDegree.set(from, (outDegree.get(from) ?? 0) + (d.data.count ?? 0))
+}
+const inDegreeData = [...inDegree.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ label: name, value: count }))
+const outDegreeData = [...outDegree.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ label: name, value: count }))
 ---
 
 <Dashboard title="Dependencies" projectName={projectName}>
@@ -27,6 +40,14 @@ const matrixData = dependencies.map((d) => ({
     <section class="section">
       <h3>Dependency Matrix</h3>
       <DependencyMatrix client:load data={matrixData} />
+    </section>
+    <section class="section">
+      <h3>Most Depended-On (Incoming)</h3>
+      <HorizontalBarChart client:load data={inDegreeData} valueLabel="incoming refs" />
+    </section>
+    <section class="section">
+      <h3>Most Dependent (Outgoing)</h3>
+      <HorizontalBarChart client:load data={outDegreeData} valueLabel="outgoing refs" barColor="#8b5cf6" />
     </section>
     <table>
       <thead>

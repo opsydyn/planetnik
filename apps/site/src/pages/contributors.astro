@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -24,6 +25,13 @@ const contribBarData = sorted.slice(0, 15).map((c) => ({
 
 const rookieCount = sorted.filter((c) => c.data.isRookie).length
 const activeCount = sorted.filter((c) => c.data.isActive).length
+const inactiveCount = sorted.length - activeCount
+
+const segmentData = [
+  ...(rookieCount > 0 ? [{ label: "Rookies (active, < 1yr)", value: rookieCount }] : []),
+  ...(activeCount - rookieCount > 0 ? [{ label: "Active (> 1yr)", value: activeCount - rookieCount }] : []),
+  ...(inactiveCount > 0 ? [{ label: "Inactive", value: inactiveCount }] : []),
+]
 ---
 
 <Dashboard title="Contributors" projectName={projectName}>
@@ -34,7 +42,15 @@ const activeCount = sorted.filter((c) => c.data.isActive).length
     {rookieCount > 0 && <> &middot; {rookieCount} rookies</>}
   </p>
 
+  {segmentData.length > 1 && (
+    <section class="section">
+      <h3>Contributor Activity</h3>
+      <DonutChart client:load data={segmentData} valueLabel="contributors" />
+    </section>
+  )}
+
   <section class="section">
+    <h3>Top Contributors</h3>
     <HorizontalBarChart client:load data={contribBarData} valueLabel="commits" />
   </section>
 
@@ -114,6 +130,7 @@ const activeCount = sorted.filter((c) => c.data.isActive).length
   .inactive td { opacity: 0.55; }
 
   .section { margin-bottom: 1.5rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .date {
     font-family: "SF Mono", "Fira Code", monospace;
     font-size: 0.8rem;

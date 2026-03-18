@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
+import DonutChart from "../../components/charts/DonutChart"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -36,11 +37,23 @@ const distData = buckets.map((b) => ({
   detail: b.count + " units",
   detailSecondary: b.loc.toLocaleString() + " LOC",
 }))
+
+const riskData = [
+  { label: "Low (1-20 LOC)", value: buckets[0].count + buckets[1].count },
+  { label: "Medium (21-50 LOC)", value: buckets[2].count },
+  { label: "High (51-100 LOC)", value: buckets[3].count },
+  { label: "Very High (101+ LOC)", value: buckets[4].count },
+].filter((d) => d.value > 0)
 ---
 
 <Dashboard title="Unit Size" projectName={projectName}>
   <h2>Unit Size</h2>
   <p class="subtitle">{sorted.length.toLocaleString()} units, {totalLoc.toLocaleString()} total lines in units</p>
+
+  <section class="section">
+    <h3>Size Risk</h3>
+    <DonutChart client:load data={riskData} valueLabel="units" />
+  </section>
 
   <section class="section">
     <h3>Size Distribution</h3>

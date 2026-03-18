@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import ScatterPlot from "../components/charts/ScatterPlot"
 import TreemapChart from "../components/charts/Treemap"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -33,6 +34,14 @@ const treemapData = components.map(([name, s]) => ({
   label: name,
   value: s.loc,
 }))
+
+const busFactorData = components
+  .filter(([, s]) => s.contributors.size > 0)
+  .map(([name, s]) => ({
+    x: s.loc,
+    y: s.contributors.size,
+    label: name,
+  }))
 ---
 
 <Dashboard title="Components" projectName={projectName}>
@@ -52,6 +61,12 @@ const treemapData = components.map(([name, s]) => ({
       <section class="section">
         <HorizontalBarChart client:load data={compBarData} valueLabel="LOC" />
       </section>
+      {busFactorData.length > 0 && (
+        <section class="section">
+          <h3>Bus Factor Risk (LOC vs Contributors)</h3>
+          <ScatterPlot client:load data={busFactorData} xLabel="Lines of Code" yLabel="Contributors" thresholds={{ y: 3 }} />
+        </section>
+      )}
       <table>
         <thead>
           <tr><th>Component</th><th>Files</th><th>LOC</th><th>Contributors</th></tr>

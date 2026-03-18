@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -23,6 +24,11 @@ const concernBarData = concerns.slice(0, 15).map(([name, s]) => ({
   label: name,
   value: s.loc,
 }))
+
+const donutData = concerns.map(([name, s]) => ({
+  label: name,
+  value: s.loc,
+}))
 ---
 
 <Dashboard title="Features of Interest" projectName={projectName}>
@@ -36,6 +42,11 @@ const concernBarData = concerns.slice(0, 15).map(([name, s]) => ({
   ) : (
     <>
     <section class="section">
+      <h3>Concern Distribution</h3>
+      <DonutChart client:load data={donutData} valueLabel="LOC" />
+    </section>
+    <section class="section">
+      <h3>Top Concerns by Size</h3>
       <HorizontalBarChart client:load data={concernBarData} valueLabel="LOC" />
     </section>
     <table>
@@ -64,6 +75,8 @@ const concernBarData = concerns.slice(0, 15).map(([name, s]) => ({
   th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
   th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
   td { font-size: 0.85rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .concern-name { font-weight: 500; }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -7,6 +8,16 @@ const temporalDeps = await getCollection("temporalDeps")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
 const sorted = [...temporalDeps].sort((a, b) => b.data.sameCommits - a.data.sameCommits)
+
+function shortPath(p: string): string {
+  const parts = p.split("/")
+  return parts.length > 2 ? `…/${parts.slice(-2).join("/")}` : p
+}
+
+const couplingBarData = sorted.slice(0, 15).map((d) => ({
+  label: `${shortPath(d.data.file1)} ↔ ${shortPath(d.data.file2)}`,
+  value: d.data.sameCommits,
+}))
 ---
 
 <Dashboard title="Temporal Dependencies" projectName={projectName}>
@@ -19,6 +30,11 @@ const sorted = [...temporalDeps].sort((a, b) => b.data.sameCommits - a.data.same
       <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code>.</p>
     </div>
   ) : (
+    <>
+    <section class="section">
+      <h3>Most Coupled File Pairs</h3>
+      <HorizontalBarChart client:load data={couplingBarData} valueLabel="shared commits" />
+    </section>
     <table>
       <thead>
         <tr><th>File 1</th><th>File 2</th><th>Same Commits</th><th>Commits File 1</th><th>Commits File 2</th></tr>
@@ -35,11 +51,14 @@ const sorted = [...temporalDeps].sort((a, b) => b.data.sameCommits - a.data.same
         ))}
       </tbody>
     </table>
+    </>
   )}
 </Dashboard>
 
 <style>
   .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
