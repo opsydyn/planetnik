@@ -253,7 +253,7 @@ export default function GlobalSearch({ projectName }: { projectName: string }) {
   }
 
   const groupedResults = groupResults(results)
-  const shortcutLabel = typeof navigator !== "undefined" && navigator.platform.toLowerCase().includes("mac") ? "⌘K" : "Ctrl K"
+  const shortcutLabel = typeof navigator !== "undefined" && /mac|iphone|ipad|ipod/i.test(navigator.userAgent) ? "⌘K" : "Ctrl K"
 
   return (
     <div className="global-search-root">

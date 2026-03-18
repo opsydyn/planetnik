@@ -157,7 +157,7 @@ describe("Smoke Test: Full Pipeline on Multi-Language Project", () => {
     expect(contribResults.contributorsPerMonth.length).toBeGreaterThan(0)
 
     // alice has the most commits
-    expect(contribResults.contributors[0].email).toBe("alice@example.com")
+    expect(contribResults.contributors[0]!.email).toBe("alice@example.com")
 
     // --- ControlsAnalyzer ---
     // No controls configured, so no goal results, but no crash

@@ -1,5 +1,5 @@
 import type { SourceFile } from "../aspects/SourceFile.js"
-import type { SourceFileFilter } from "../core/SourceFileFilter.js"
+import type { SourceFileFilterType } from "../core/SourceFileFilter.js"
 
 export class DependencyAnchor {
   static readonly MAX_REGEX_LINE_SEARCH_DEPTH = 1000
@@ -8,7 +8,7 @@ export class DependencyAnchor {
   codeFragment: string = ""
   dependencyPatterns: string[] = []
   sourceFiles: SourceFile[] = []
-  filters: SourceFileFilter[] = []
+  filters: SourceFileFilterType[] = []
 
   constructor(anchor: string = "") {
     this.anchor = anchor

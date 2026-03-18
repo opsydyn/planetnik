@@ -31,7 +31,7 @@ export class TagMap {
         getExtensionMetrics(repository),
       )
       linesOfCodePerExtension.sort((a, b) => b.value - a.value)
-      const mainTech = linesOfCodePerExtension.length > 0 ? linesOfCodePerExtension[0].name : ""
+      const mainTech = linesOfCodePerExtension[0]?.name ?? ""
 
       const allTags: RepositoryTag[] = []
       for (const group of this.tagGroups) {

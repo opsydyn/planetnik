@@ -11,9 +11,9 @@ describe("DependenciesCreator", () => {
     const creator = new DependenciesCreator()
     creator.add("A", "B")
     expect(creator.getDependencies()).toHaveLength(1)
-    expect(creator.getDependencies()[0].fromComponent).toBe("A")
-    expect(creator.getDependencies()[0].toComponent).toBe("B")
-    expect(creator.getDependencies()[0].count).toBe(1)
+    expect(creator.getDependencies()[0]!.fromComponent).toBe("A")
+    expect(creator.getDependencies()[0]!.toComponent).toBe("B")
+    expect(creator.getDependencies()[0]!.count).toBe(1)
   })
 
   test("increments existing dependency (same direction)", () => {
@@ -21,7 +21,7 @@ describe("DependenciesCreator", () => {
     creator.add("A", "B")
     creator.add("A", "B")
     expect(creator.getDependencies()).toHaveLength(1)
-    expect(creator.getDependencies()[0].count).toBe(2)
+    expect(creator.getDependencies()[0]!.count).toBe(2)
   })
 
   test("increments existing dependency (reverse direction)", () => {
@@ -29,7 +29,7 @@ describe("DependenciesCreator", () => {
     creator.add("A", "B")
     creator.add("B", "A")
     expect(creator.getDependencies()).toHaveLength(1)
-    expect(creator.getDependencies()[0].count).toBe(2)
+    expect(creator.getDependencies()[0]!.count).toBe(2)
   })
 
   test("tracks separate dependencies for different pairs", () => {
@@ -47,9 +47,9 @@ describe("DependenciesCreator", () => {
     creator.add("B", "X")
     const indirect = creator.getIndirectDependencies()
     expect(indirect).toHaveLength(1)
-    expect(indirect[0].count).toBe(1)
+    expect(indirect[0]!.count).toBe(1)
     // A and B are indirectly connected
-    const components = [indirect[0].fromComponent, indirect[0].toComponent].sort()
+    const components = [indirect[0]!.fromComponent, indirect[0]!.toComponent].sort()
     expect(components).toEqual(["A", "B"])
   })
 
@@ -62,7 +62,7 @@ describe("DependenciesCreator", () => {
     const indirect = creator.getIndirectDependencies()
     expect(indirect).toHaveLength(1)
     // Count should be 2 since A and B share two targets (X and Y)
-    expect(indirect[0].count).toBe(2)
+    expect(indirect[0]!.count).toBe(2)
   })
 })
 

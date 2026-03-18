@@ -5,7 +5,9 @@ export class DuplicationUtils {
   static getLinesAsString(lines: string[], startLine: number, blockSize: number): string {
     const result: string[] = []
     for (let lineIndex = startLine; lineIndex < startLine + blockSize; lineIndex++) {
-      result.push(lines[lineIndex])
+      const line = lines[lineIndex]
+      if (line === undefined) break
+      result.push(line)
     }
     return result.join("\n")
   }
@@ -14,7 +16,9 @@ export class DuplicationUtils {
     for (let i = startIndex; i <= lines.length - linesToLookFor.length; i++) {
       let found = true
       for (let j = 0; j < linesToLookFor.length; j++) {
-        if (lines[i + j].toLowerCase() !== linesToLookFor[j].toLowerCase()) {
+        const line = lines[i + j]
+        const expected = linesToLookFor[j]
+        if (!line || !expected || line.toLowerCase() !== expected.toLowerCase()) {
           found = false
           break
         }

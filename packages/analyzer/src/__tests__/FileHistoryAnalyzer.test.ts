@@ -141,8 +141,8 @@ describe("FileHistoryAnalyzer", () => {
 
     // App.java was first committed 2024-01-15, utils.ts on 2024-02-20
     // So App.java should be oldest
-    expect(hist.oldestFiles[0].relativePath).toContain("App.java")
-    expect(hist.youngestFiles[0].relativePath).toContain("utils.ts")
+    expect(hist.oldestFiles[0]!.relativePath).toContain("App.java")
+    expect(hist.youngestFiles[0]!.relativePath).toContain("utils.ts")
   })
 
   test("finds files changed together", () => {
@@ -154,7 +154,18 @@ describe("FileHistoryAnalyzer", () => {
     expect(hist.filePairsChangedTogether180Days.length).toBeGreaterThan(0)
 
     const pair = hist.filePairsChangedTogether180Days[0]
-    expect(pair.commits.length).toBeGreaterThanOrEqual(1)
+    expect(pair!.commits.length).toBeGreaterThanOrEqual(1)
+  })
+
+  test("uses the configured 180-day temporal dependency bucket instead of the all-time one", () => {
+    const { results } = createConfigAndResults()
+    new FileHistoryAnalyzer(results, CONFIG_FILE).analyze()
+
+    const hist = results.filesHistoryAnalysisResults
+    expect(hist.filePairsChangedTogether).toHaveLength(0)
+    expect(hist.filePairsChangedTogether30Days).toHaveLength(0)
+    expect(hist.filePairsChangedTogether90Days).toHaveLength(0)
+    expect(hist.filePairsChangedTogether180Days.length).toBeGreaterThan(0)
   })
 
   test("adds metrics", () => {

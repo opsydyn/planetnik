@@ -82,12 +82,12 @@ describe("ContributorsAnalyzer", () => {
     expect(contributors.length).toBe(3) // alice, bob, charlie
 
     // Sorted by commit count desc: alice(3), bob(2), charlie(1)
-    expect(contributors[0].email).toBe("alice@example.com")
-    expect(contributors[0].commitsCount).toBe(3)
-    expect(contributors[1].email).toBe("bob@example.com")
-    expect(contributors[1].commitsCount).toBe(2)
-    expect(contributors[2].email).toBe("charlie@example.com")
-    expect(contributors[2].commitsCount).toBe(1)
+    expect(contributors[0]!.email).toBe("alice@example.com")
+    expect(contributors[0]!.commitsCount).toBe(3)
+    expect(contributors[1]!.email).toBe("bob@example.com")
+    expect(contributors[1]!.commitsCount).toBe(2)
+    expect(contributors[2]!.email).toBe("charlie@example.com")
+    expect(contributors[2]!.commitsCount).toBe(1)
   })
 
   test("tracks first and latest commit dates per contributor", () => {

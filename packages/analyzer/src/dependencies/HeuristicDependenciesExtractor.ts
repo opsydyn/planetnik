@@ -14,11 +14,11 @@ export abstract class HeuristicDependenciesExtractor {
     const anchors = this.getDependencyAnchors(files)
 
     let i = 0
-    for (const sourceAnchor of anchors) {
+    for (const sourceAnchor of anchors.values()) {
       if (progressFeedback.canceled()) break
       progressFeedback.setText(sourceAnchor.anchor)
 
-      for (const targetAnchor of anchors) {
+      for (const targetAnchor of anchors.values()) {
         if (sourceAnchor !== targetAnchor) {
           for (const sourceFile of sourceAnchor.sourceFiles) {
             this.extractDependenciesToTargetAnchor(dependencies, sourceFile, sourceAnchor, targetAnchor)

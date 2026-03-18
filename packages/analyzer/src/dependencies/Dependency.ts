@@ -45,8 +45,8 @@ export class Dependency {
   getComponentDependency(group: string): string {
     const fromComponents = this.getFromComponents(group)
     const toComponents = this.getToComponents(group)
-    const fromName = fromComponents.length > 0 ? fromComponents[0].name : this.from.anchor
-    const toName = toComponents.length > 0 ? toComponents[0].name : this.to.anchor
+    const fromName = fromComponents[0]?.name ?? this.from.anchor
+    const toName = toComponents[0]?.name ?? this.to.anchor
     return `${fromName} -> ${toName}`
   }
 

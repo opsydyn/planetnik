@@ -25,7 +25,7 @@ describe("ConventionUtils", () => {
     ConventionUtils.addConventions(conventions, filters, files)
 
     expect(filters).toHaveLength(1)
-    expect(filters[0].pathPattern).toBe(".*test.*")
+    expect(filters[0]!.pathPattern).toBe(".*test.*")
   })
 
   test("does not add duplicate conventions", () => {
@@ -53,7 +53,7 @@ describe("ConventionUtils", () => {
 
     // First convention matched, second should also be added since it's different
     expect(filters.length).toBeGreaterThanOrEqual(1)
-    expect(filters[0].note).toBe("Test folder")
+    expect(filters[0]!.note).toBe("Test folder")
   })
 })
 
@@ -156,8 +156,8 @@ describe("ScopeCreator.getComponentsAtDepth", () => {
   test("creates path filters for each component", () => {
     const components = ScopeCreator.getComponentsAtDepth(files, 1)
     const first = components[0]
-    expect(first.sourceFileFilters.length).toBeGreaterThanOrEqual(1)
-    expect(first.sourceFileFilters[0].pathPattern).toBe("codeanalyzer/.*")
+    expect(first!.sourceFileFilters.length).toBeGreaterThanOrEqual(1)
+    expect(first!.sourceFileFilters[0]!.pathPattern).toBe("codeanalyzer/.*")
   })
 
   test("files at root level are excluded", () => {

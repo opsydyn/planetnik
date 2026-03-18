@@ -43,6 +43,7 @@ export class LineIndexesExtractor {
   clearUniqueLines(lineIndexes: number[]): void {
     for (let i = 0; i < lineIndexes.length; i++) {
       const index = lineIndexes[i]
+      if (index === undefined) continue
       const lineInfo = this.uniqueLinesIdMap.get(index)
       if (!lineInfo || lineInfo.count === 1) {
         lineIndexes[i] = FileInfoForDuplication.IGNORE_LINE_INDEX

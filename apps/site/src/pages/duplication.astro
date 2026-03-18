@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../components/tables/ReportDataGrid"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -49,6 +50,15 @@ const mostDuplicatedFiles = [...fileDupCount.entries()]
     label: path.split("/").pop() ?? path,
     value: count,
   }))
+
+const duplicationRows = sorted.map((d, index) => ({
+  id: `dup-${index}-${d.data.blockSize}`,
+  blockSize: d.data.blockSize,
+  files: d.data.duplicatedFileBlocks.length,
+  locations: d.data.duplicatedFileBlocks
+    .map((block) => `${block.file.relativePath}:${block.startLine}-${block.endLine}`)
+    .join("\n"),
+}))
 ---
 
 <Dashboard title="Duplication" projectName={projectName}>
@@ -83,24 +93,19 @@ const mostDuplicatedFiles = [...fileDupCount.entries()]
 
   <section class="section">
     <h3>Largest Duplicate Blocks</h3>
-    <table>
-      <thead>
-        <tr><th>Block Size</th><th>Files</th><th>Locations</th></tr>
-      </thead>
-      <tbody>
-        {sorted.slice(0, 50).map((d) => (
-          <tr>
-            <td class="size">{d.data.blockSize} lines</td>
-            <td>{d.data.duplicatedFileBlocks.length} files</td>
-            <td class="locations">
-              {d.data.duplicatedFileBlocks.map((b) => (
-                <div class="loc">{b.file.relativePath}:{b.startLine}-{b.endLine}</div>
-              ))}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ReportDataGrid
+      client:load
+      title="Duplicate Block Table"
+      description="Search exact files and line ranges while paging through duplicate blocks."
+      searchPlaceholder="Search duplicated file path or line range"
+      rows={duplicationRows}
+      columns={[
+        { field: "blockSize", headerName: "Block Size", type: "number", minWidth: 130, sort: "desc" },
+        { field: "files", headerName: "Files", type: "number", minWidth: 110 },
+        { field: "locations", headerName: "Locations", type: "multiline", minWidth: 460, flex: 1.5, tooltipField: "locations" },
+      ]}
+      paginationPageSize={15}
+    />
   </section>
 </Dashboard>
 
@@ -111,17 +116,9 @@ const mostDuplicatedFiles = [...fileDupCount.entries()]
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); vertical-align: top; }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
-  .size { font-weight: 600; white-space: nowrap; }
-  .loc { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.6; word-break: break-all; }
-  .locations { max-width: 0; min-width: 100%; }
   @media (max-width: 640px) {
     .cards { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
     .card { padding: 1rem; }
     .card-value { font-size: 1.35rem; }
-    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   }
 </style>

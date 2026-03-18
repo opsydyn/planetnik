@@ -1,7 +1,7 @@
 import type { SourceFile } from "../aspects/SourceFile.js"
 import type { CodeConfiguration } from "../core/CodeConfiguration.js"
 import type { FoundTag } from "../core/FoundTag.js"
-import type { Metadata } from "../core/Metadata.js"
+import type { MetadataType } from "../core/Metadata.js"
 import type { Dependency } from "../dependencies/Dependency.js"
 import { MetricsList } from "../metrics/MetricsList.js"
 import { AspectAnalysisResults } from "./AspectAnalysisResults.js"
@@ -19,7 +19,7 @@ export class CodeAnalysisResults {
   codeConfiguration: CodeConfiguration | null = null
   textSummary: string[] = []
 
-  metadata: Metadata = { name: "", description: "", tooltip: "", logoLink: "", links: [] }
+  metadata: MetadataType = { name: "", description: "", tooltip: "", logoLink: "", links: [] }
   metricsList: MetricsList = new MetricsList()
   controlResults: ControlsAnalysisResults = new ControlsAnalysisResults()
 

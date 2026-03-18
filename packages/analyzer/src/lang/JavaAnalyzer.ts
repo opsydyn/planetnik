@@ -1,7 +1,10 @@
+import type { SourceFile } from "../aspects/SourceFile.js"
 import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js"
-import { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js"
-import { OperationStatement } from "../operations/OperationStatement.js"
+import { ProgressFeedback } from "@planetnik/common"
+import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js"
 import { CStyleAnalyzer } from "./CStyleAnalyzer.js"
+import { FEATURE_ADVANCED_DEPENDENCIES_ANALYSIS } from "./LanguageAnalyzer.js"
+import { JavaHeuristicDependenciesExtractor } from "./JavaHeuristicDependenciesExtractor.js"
 
 export class JavaAnalyzer extends CStyleAnalyzer {
   protected override duplicationPatterns = ["{", "}", "import .*;", "package .*"]
@@ -14,21 +17,11 @@ export class JavaAnalyzer extends CStyleAnalyzer {
       .addStringBlockHelper("'", "'", "\\")
   }
 
-  override getMetaDependencyRules(): MetaDependencyRule[] {
-    // Match Java import statements and extract the top-level package as the component name.
-    // e.g. "import nl.obren.sokrates.common.utils.Foo;" → component "common"
-    // The nameOperations pipeline:
-    //   1. extract the package path between "import " and the last dot (class name)
-    //   2. replace dots with "/" so it matches folder-based component paths
-    // The component name is then matched against logical decomposition components.
-    const rule = new MetaDependencyRule(".*[.]java", "import .*;")
-    rule.nameOperations = [
-      // Remove "import " prefix (including optional "static ") and trailing ";"
-      new OperationStatement("replace", ["^import\\s+(static\\s+)?", ""]),
-      new OperationStatement("replace", [";\\s*$", ""]),
-      // Remove the last dotted segment (class name, method name, or wildcard)
-      new OperationStatement("replace", ["\\.[^.]+$", ""]),
-    ]
-    return [rule]
+  override extractDependencies(sourceFiles: readonly SourceFile[]): DependenciesAnalysis {
+    return new JavaHeuristicDependenciesExtractor().extractDependencies([...sourceFiles], new ProgressFeedback())
+  }
+
+  override getFeaturesDescription(): string[] {
+    return [...super.getFeaturesDescription(), `${FEATURE_ADVANCED_DEPENDENCIES_ANALYSIS} (based on package names)`]
   }
 }

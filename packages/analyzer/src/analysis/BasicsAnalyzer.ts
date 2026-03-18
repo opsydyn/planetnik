@@ -1,6 +1,7 @@
 import type { SourceFile } from "../aspects/SourceFile.js"
 import { CodeConfiguration } from "../core/CodeConfiguration.js"
 import type { FoundTag } from "../core/FoundTag.js"
+import type { TagRuleType } from "../core/TagRule.js"
 import type { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 import { AnalysisUtils } from "./AnalysisUtils.js"
 import { SourceCodeFiles } from "./SourceCodeFiles.js"
@@ -164,7 +165,7 @@ export class BasicsAnalyzer {
           const re = new RegExp(pattern)
           const matchedPath = allPaths.find((p) => re.test(p))
           if (matchedPath) {
-            const excluded = tagRule.excludePathPatterns.some((ep) => {
+            const excluded = tagRule.excludePathPatterns.some((ep: TagRuleType["excludePathPatterns"][number]) => {
               try {
                 return new RegExp(ep).test(matchedPath)
               } catch {

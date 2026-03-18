@@ -1,72 +1,74 @@
 ---
 import { getCollection, getEntry } from "astro:content"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import TemporalDependenciesExplorer from "../../components/TemporalDependenciesExplorer"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
 const temporalDeps = await getCollection("temporalDeps")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
-const sorted = [...temporalDeps].sort((a, b) => b.data.sameCommits - a.data.sameCommits)
-
-function shortPath(p: string): string {
-  const parts = p.split("/")
-  return parts.length > 2 ? `…/${parts.slice(-2).join("/")}` : p
+const groupedTemporalDeps = new Map<string, typeof temporalDeps>()
+for (const dependency of temporalDeps) {
+  const group = groupedTemporalDeps.get(dependency.data.periodKey) ?? []
+  group.push(dependency)
+  groupedTemporalDeps.set(dependency.data.periodKey, group)
 }
 
-const couplingBarData = sorted.slice(0, 15).map((d) => ({
-  label: `${shortPath(d.data.file1)} ↔ ${shortPath(d.data.file2)}`,
-  value: d.data.sameCommits,
-}))
+const temporalSections = [...groupedTemporalDeps.entries()]
+  .map(([periodKey, group]) => {
+    const first = group[0]
+    if (!first) {
+      return null
+    }
+
+    const sorted = [...group].sort((left, right) => right.data.sameCommits - left.data.sameCommits)
+    return {
+      periodKey,
+      periodLabel: first.data.periodLabel,
+      periodDays: first.data.periodDays,
+      dependencies: sorted,
+    }
+  })
+  .filter((section): section is NonNullable<typeof section> => section !== null)
+  .sort((left, right) => left.periodDays - right.periodDays)
 ---
 
 <Dashboard title="Temporal Dependencies" projectName={projectName}>
   <h2>Temporal Dependencies</h2>
   <p class="subtitle">Files that change together frequently</p>
 
-  {sorted.length === 0 ? (
+  {temporalSections.length === 0 ? (
     <div class="empty">
       <p>No temporal dependency data available.</p>
       <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code>.</p>
     </div>
   ) : (
-    <>
-    <section class="section">
-      <h3>Most Coupled File Pairs</h3>
-      <HorizontalBarChart client:load data={couplingBarData} valueLabel="shared commits" />
-    </section>
-    <table>
-      <thead>
-        <tr><th>File 1</th><th>File 2</th><th>Same Commits</th><th>Commits File 1</th><th>Commits File 2</th></tr>
-      </thead>
-      <tbody>
-        {sorted.slice(0, 100).map((d) => (
-          <tr>
-            <td class="filepath">{d.data.file1}</td>
-            <td class="filepath">{d.data.file2}</td>
-            <td class="num">{d.data.sameCommits}</td>
-            <td class="num">{d.data.commitsFile1}</td>
-            <td class="num">{d.data.commitsFile2}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-    </>
+    <TemporalDependenciesExplorer
+      client:load
+      sections={temporalSections.map((section) => ({
+        periodKey: section.periodKey,
+        periodLabel: section.periodLabel,
+        periodDays: section.periodDays,
+        dependencies: section.dependencies.map((dependency) => ({
+          periodKey: dependency.data.periodKey,
+          periodLabel: dependency.data.periodLabel,
+          periodDays: dependency.data.periodDays,
+          file1: dependency.data.file1,
+          file2: dependency.data.file2,
+          sameCommits: dependency.data.sameCommits,
+          commitsFile1: dependency.data.commitsFile1,
+          commitsFile2: dependency.data.commitsFile2,
+          latestCommit: dependency.data.latestCommit,
+        })),
+      }))}
+    />
   )}
 </Dashboard>
 
 <style>
   .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
-  .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
-  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: min(350px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

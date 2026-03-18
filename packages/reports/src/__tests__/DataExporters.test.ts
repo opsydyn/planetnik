@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
+  AnalysisConfig,
   CodeAnalysisResults,
   CodeConfiguration,
   CommitInfo,
@@ -13,6 +14,7 @@ import {
   DuplicatedFileBlock,
   DuplicationInstance,
   FileModificationHistory,
+  LogicalDecompositionAnalysisResults,
   NamedSourceCodeAspect,
   SourceFile,
   SourceFileDependency,
@@ -111,6 +113,7 @@ describe("UnitListExporter", () => {
       sourceFile: file,
       cleanedBody: "",
       body: "",
+      children: [],
     }
 
     const result = UnitListExporter.exportUnits([unit], "All Units", "/root", "2024-01-01T00:00:00Z")
@@ -162,9 +165,7 @@ describe("DependenciesExporter", () => {
     const fromFile = new SourceFileDependency(sourceFile)
     fromFile.codeFragment = "import { B } from './b'"
 
-    const dep = new Dependency()
-    dep.from = fromAnchor
-    dep.to = toAnchor
+    const dep = new Dependency(fromAnchor, toAnchor)
     dep.fromFiles = [fromFile]
 
     const exporter = new DependenciesExporter([dep])
@@ -322,6 +323,149 @@ describe("MetricsTrendExporter", () => {
 })
 
 describe("DataExporter", () => {
+  test("exportData writes period-aware temporal dependency JSON and text files", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
+    config.analysis = AnalysisConfig.make({ maxTemporalDependenciesDepthDays: 180 })
+    results.codeConfiguration = config
+
+    const makePair = (
+      file1: string,
+      file2: string,
+      sharedCommits: number,
+      latestCommit: string,
+    ) => ({
+      sourceFile1Path: file1,
+      sourceFile2Path: file2,
+      commitsCountFile1: sharedCommits + 2,
+      commitsCountFile2: sharedCommits + 1,
+      commits: Array.from({ length: sharedCommits }, (_, index) => `commit-${index}`),
+      latestCommit,
+    })
+
+    results.filesHistoryAnalysisResults.filePairsChangedTogether30Days = [
+      makePair("src/App.java", "src/utils.ts", 2, "2025-01-12"),
+    ]
+    results.filesHistoryAnalysisResults.filePairsChangedTogether90Days = [
+      makePair("src/App.java", "src/service.ts", 3, "2025-01-10"),
+    ]
+    results.filesHistoryAnalysisResults.filePairsChangedTogether180Days = [
+      makePair("src/App.java", "src/helpers.ts", 4, "2024-12-30"),
+    ]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-temporal-deps-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const jsonPath = join(reportsFolder, "data", "temporal_dependencies.json")
+      expect(existsSync(jsonPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(jsonPath, "utf-8")) as {
+        title: string
+        timestamp: string
+        dependencies: Array<{
+          periodKey: string
+          periodLabel: string
+          periodDays: number
+          file1: string
+          file2: string
+          sameCommits: number
+          commitsFile1: number
+          commitsFile2: number
+          latestCommit: string
+        }>
+      }
+
+      expect(exported.title).toBe("Temporal Dependencies")
+      expect(exported.dependencies.map((dependency) => dependency.periodKey)).toEqual([
+        "30_days",
+        "90_days",
+        "180_days",
+      ])
+      expect(exported.dependencies[0]).toEqual({
+        periodKey: "30_days",
+        periodLabel: "Past 30 Days",
+        periodDays: 30,
+        file1: "src/App.java",
+        file2: "src/utils.ts",
+        sameCommits: 2,
+        commitsFile1: 4,
+        commitsFile2: 3,
+        latestCommit: "2025-01-12",
+      })
+
+      expect(existsSync(join(reportsFolder, "data", "temporal_dependencies_30_days.txt"))).toBe(true)
+      expect(existsSync(join(reportsFolder, "data", "temporal_dependencies_90_days.txt"))).toBe(true)
+      expect(existsSync(join(reportsFolder, "data", "temporal_dependencies_180_days.txt"))).toBe(true)
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes decomposition-aware component dependency JSON", () => {
+    const results = new CodeAnalysisResults()
+
+    const primary = new LogicalDecompositionAnalysisResults("primary")
+    const codeanalyzerToCommon = new ComponentDependency("codeanalyzer", "common")
+    codeanalyzerToCommon.count = 2
+    codeanalyzerToCommon.locFrom = 500
+
+    const reportsToCodeanalyzer = new ComponentDependency("reports", "codeanalyzer")
+    reportsToCodeanalyzer.count = 1
+    reportsToCodeanalyzer.locFrom = 150
+
+    primary.componentDependencies = [codeanalyzerToCommon, reportsToCodeanalyzer]
+    results.logicalDecompositionsAnalysisResults = [primary]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-component-deps-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const exportPath = join(reportsFolder, "data", "component_dependencies.json")
+      expect(existsSync(exportPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(exportPath, "utf-8")) as {
+        title: string
+        timestamp: string
+        dependencies: Array<{
+          decompositionKey: string
+          fromComponent: string
+          toComponent: string
+          count: number
+          locFrom: number
+          evidenceCount: number
+          color?: string
+        }>
+      }
+
+      expect(exported.title).toBe("Static Component Dependencies")
+      expect(exported.dependencies).toEqual([
+        {
+          decompositionKey: "primary",
+          fromComponent: "codeanalyzer",
+          toComponent: "common",
+          count: 2,
+          locFrom: 500,
+          evidenceCount: 0,
+          color: "",
+        },
+        {
+          decompositionKey: "primary",
+          fromComponent: "reports",
+          toComponent: "codeanalyzer",
+          count: 1,
+          locFrom: 150,
+          evidenceCount: 0,
+          color: "",
+        },
+      ])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
   test("exportData writes per-contributor detail files with deduplicated activity and structure footprint", () => {
     const results = new CodeAnalysisResults()
     const config = new CodeConfiguration()

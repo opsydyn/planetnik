@@ -6,18 +6,18 @@ import type { MetricsWithGoalType } from "../metrics/MetricsWithGoal.js"
 import type { AnalysisConfigType } from "./AnalysisConfig.js"
 import { AnalysisConfig } from "./AnalysisConfig.js"
 import { FileHistoryAnalysisConfig } from "./FileHistoryAnalysisConfig.js"
-import type { Metadata } from "./Metadata.js"
-import type { SourceFileFilter } from "./SourceFileFilter.js"
-import type { TagRule } from "./TagRule.js"
+import type { MetadataType } from "./Metadata.js"
+import type { SourceFileFilterType } from "./SourceFileFilter.js"
+import type { TagRuleType } from "./TagRule.js"
 import { TrendAnalysisConfig } from "./TrendAnalysisConfig.js"
 
 export const DEFAULT_CONFIGURATION_FOLDER = "_planetnik"
 
 export class CodeConfiguration {
-  metadata: Metadata = { name: "", description: "", tooltip: "", logoLink: "", links: [] }
+  metadata: MetadataType = { name: "", description: "", tooltip: "", logoLink: "", links: [] }
   srcRoot: string = ".."
   extensions: string[] = []
-  ignore: SourceFileFilter[] = []
+  ignore: SourceFileFilterType[] = []
   summary: string[] = []
 
   main: NamedSourceCodeAspect = new NamedSourceCodeAspect("main")
@@ -29,7 +29,7 @@ export class CodeConfiguration {
   logicalDecompositions: LogicalDecomposition[] = []
   concernGroups: ConcernsGroup[] = []
   goalsAndControls: MetricsWithGoalType[] = []
-  tagRules: TagRule[] = []
+  tagRules: TagRuleType[] = []
 
   analysis: AnalysisConfigType = AnalysisConfig.make()
 

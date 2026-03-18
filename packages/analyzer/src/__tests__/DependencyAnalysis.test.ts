@@ -1,14 +1,21 @@
 import { describe, expect, test } from "bun:test"
+import { LogicalDecompositionAnalyzer } from "../analysis/LogicalDecompositionAnalyzer.js"
 import { LogicalDecomposition } from "../aspects/LogicalDecomposition.js"
 import { NamedSourceCodeAspect } from "../aspects/NamedSourceCodeAspect.js"
 import { SourceFile } from "../aspects/SourceFile.js"
+import { CodeConfiguration } from "../core/CodeConfiguration.js"
+import { SourceFileFilter } from "../core/SourceFileFilter.js"
 import { ComponentDependency } from "../dependencies/ComponentDependency.js"
 import { DependenciesFinderExtractor } from "../dependencies/DependenciesFinderExtractor.js"
+import { Dependency } from "../dependencies/Dependency.js"
+import { DependencyAnchor } from "../dependencies/DependencyAnchor.js"
 import { DependencyFinderPattern } from "../dependencies/DependencyFinderPattern.js"
 import { DependencyUtils } from "../dependencies/DependencyUtils.js"
 import { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js"
+import { SourceFileDependency } from "../dependencies/SourceFileDependency.js"
 import { ComplexOperation } from "../operations/ComplexOperation.js"
 import { OperationStatement } from "../operations/OperationStatement.js"
+import { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 
 describe("OperationStatement & ComplexOperation", () => {
   test("extract operation", () => {
@@ -92,10 +99,10 @@ describe("DependencyFinderPattern — simple rules", () => {
     const deps = extractor.findComponentDependencies(main)
 
     expect(deps.length).toBe(1)
-    expect(deps[0].fromComponent).toBe("controller")
-    expect(deps[0].toComponent).toBe("service")
-    expect(deps[0].evidence.length).toBe(1)
-    expect(deps[0].evidence[0].evidence).toContain("import com.example.service")
+    expect(deps[0]!.fromComponent).toBe("controller")
+    expect(deps[0]!.toComponent).toBe("service")
+    expect(deps[0]!.evidence.length).toBe(1)
+    expect(deps[0]!.evidence[0]!.evidence).toContain("import com.example.service")
   })
 
   test("reverse direction swaps from/to", () => {
@@ -126,8 +133,8 @@ describe("DependencyFinderPattern — simple rules", () => {
 
     const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
     expect(deps.length).toBe(1)
-    expect(deps[0].fromComponent).toBe("B")
-    expect(deps[0].toComponent).toBe("A")
+    expect(deps[0]!.fromComponent).toBe("B")
+    expect(deps[0]!.toComponent).toBe("A")
   })
 })
 
@@ -160,8 +167,8 @@ describe("MetaDependencyRule — meta rules", () => {
 
     const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
     expect(deps.length).toBe(1)
-    expect(deps[0].fromComponent).toBe("utils")
-    expect(deps[0].toComponent).toBe("core")
+    expect(deps[0]!.fromComponent).toBe("utils")
+    expect(deps[0]!.toComponent).toBe("core")
   })
 
   test("uses path as source when use='path'", () => {
@@ -190,7 +197,7 @@ describe("MetaDependencyRule — meta rules", () => {
 
     const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
     expect(deps.length).toBe(1)
-    expect(deps[0].toComponent).toBe("auth")
+    expect(deps[0]!.toComponent).toBe("auth")
   })
 })
 
@@ -232,64 +239,135 @@ describe("LogicalDecomposition", () => {
 })
 
 describe("JavaAnalyzer — getMetaDependencyRules", () => {
-  test("returns rules for Java import detection", () => {
+  test("does not rely on built-in meta dependency rules", () => {
     const { JavaAnalyzer } = require("../lang/JavaAnalyzer.js")
     const analyzer = new JavaAnalyzer()
     const rules = analyzer.getMetaDependencyRules()
-    expect(rules.length).toBeGreaterThan(0)
-    expect(rules[0].contentPattern).toBe("import .*;")
-    expect(rules[0].nameOperations.length).toBeGreaterThan(0)
+    expect(rules).toEqual([])
   })
 
-  test("nameOperations extract package from import statement", () => {
+  test("extractDependencies resolves Java package anchors to logical components", () => {
     const { JavaAnalyzer } = require("../lang/JavaAnalyzer.js")
     const analyzer = new JavaAnalyzer()
-    const rules = analyzer.getMetaDependencyRules()
-    const op = new ComplexOperation(rules[0].nameOperations)
 
-    // Standard import
-    expect(op.exec("import nl.obren.sokrates.common.utils.FormattingUtils;")).toBe("nl.obren.sokrates.common.utils")
+    const cliFile = new SourceFile(
+      "cli/src/main/java/nl/obren/sokrates/cli/SokratesFileUtils.java",
+      [
+        "package nl.obren.sokrates.cli;",
+        "import nl.obren.sokrates.sourcecode.githistory.GitHistoryUtils;",
+        "public class SokratesFileUtils {}",
+      ].join("\n"),
+    )
+    cliFile.linesOfCode = 3
+    const cliComponent = new NamedSourceCodeAspect("cli")
+    cliComponent.filtering = "primary"
+    cliFile.logicalComponents.push(cliComponent)
 
-    // Wildcard import
-    expect(op.exec("import nl.obren.sokrates.reports.*;")).toBe("nl.obren.sokrates.reports")
+    const codeAnalyzerFile = new SourceFile(
+      "codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/githistory/GitHistoryUtils.java",
+      [
+        "package nl.obren.sokrates.sourcecode.githistory;",
+        "public class GitHistoryUtils {}",
+      ].join("\n"),
+    )
+    codeAnalyzerFile.linesOfCode = 2
+    const codeAnalyzerComponent = new NamedSourceCodeAspect("codeanalyzer")
+    codeAnalyzerComponent.filtering = "primary"
+    codeAnalyzerFile.logicalComponents.push(codeAnalyzerComponent)
 
-    // Static import
-    expect(op.exec("import static org.junit.Assert.assertEquals;")).toBe("org.junit.Assert")
+    const analysis = analyzer.extractDependencies([cliFile, codeAnalyzerFile])
+    expect(analysis.dependencies).toHaveLength(1)
+
+    const componentDependencies = DependencyUtils.getComponentDependencies(analysis.dependencies, "primary")
+    expect(componentDependencies).toHaveLength(1)
+    expect(componentDependencies[0]!.fromComponent).toBe("cli")
+    expect(componentDependencies[0]!.toComponent).toBe("codeanalyzer")
+    expect(componentDependencies[0]!.count).toBe(1)
+  })
+
+  test("getComponentDependencies maps package anchors to owning components", () => {
+    const cliFile = new SourceFile("cli/src/main/java/nl/obren/sokrates/cli/App.java")
+    cliFile.linesOfCode = 20
+    const cliComponent = new NamedSourceCodeAspect("cli")
+    cliComponent.filtering = "primary"
+    cliFile.logicalComponents.push(cliComponent)
+
+    const codeAnalyzerFile = new SourceFile("codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/core/Model.java")
+    const codeAnalyzerComponent = new NamedSourceCodeAspect("codeanalyzer")
+    codeAnalyzerComponent.filtering = "primary"
+    codeAnalyzerFile.logicalComponents.push(codeAnalyzerComponent)
+
+    const dependency = new Dependency(
+      new DependencyAnchor("nl.obren.sokrates.cli"),
+      new DependencyAnchor("nl.obren.sokrates.sourcecode.core"),
+    )
+    dependency.to.sourceFiles.push(codeAnalyzerFile)
+
+    const sourceFileDependency = new SourceFileDependency(cliFile)
+    sourceFileDependency.codeFragment = "import nl.obren.sokrates.sourcecode.core.Model;"
+    dependency.fromFiles.push(sourceFileDependency)
+
+    const componentDependencies = DependencyUtils.getComponentDependencies([dependency], "primary")
+    expect(componentDependencies).toHaveLength(1)
+    expect(componentDependencies[0]!.fromComponent).toBe("cli")
+    expect(componentDependencies[0]!.toComponent).toBe("codeanalyzer")
   })
 })
 
 describe("Built-in dependency detection — Java imports", () => {
-  test("detects cross-component Java import dependencies", () => {
-    const ld = new LogicalDecomposition("primary")
-    ld.includeExternalComponents = false
+  test("maps built-in Java package anchors back to logical components through the analyzer", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
 
-    // Create components matching Sokrates structure
-    const codeanalyzer = new NamedSourceCodeAspect("codeanalyzer")
-    codeanalyzer.filtering = "primary"
     const common = new NamedSourceCodeAspect("common")
     common.filtering = "primary"
+    common.sourceFileFilters = [SourceFileFilter.make({ pathPattern: "common/.*" })]
+
+    const codeanalyzer = new NamedSourceCodeAspect("codeanalyzer")
+    codeanalyzer.filtering = "primary"
+    codeanalyzer.sourceFileFilters = [SourceFileFilter.make({ pathPattern: "codeanalyzer/.*" })]
+
     const reports = new NamedSourceCodeAspect("reports")
     reports.filtering = "primary"
-    ld.components = [codeanalyzer, common, reports]
+    reports.sourceFileFilters = [SourceFileFilter.make({ pathPattern: "reports/.*" })]
 
-    // A file in codeanalyzer that imports from common
-    const file1 = new SourceFile(
+    const decomposition = new LogicalDecomposition("primary")
+    decomposition.includeExternalComponents = false
+    decomposition.components = [common, codeanalyzer, reports]
+    decomposition.dependenciesFinder.useBuiltInDependencyFinders = true
+
+    const formattingUtils = new SourceFile(
+      "common/src/main/java/nl/obren/sokrates/common/utils/FormattingUtils.java",
+      [
+        "package nl.obren.sokrates.common.utils;",
+        "public class FormattingUtils {}",
+      ].join("\n"),
+    )
+    formattingUtils.extension = "java"
+    formattingUtils.linesOfCode = 2
+
+    const sourceFileModel = new SourceFile(
+      "codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/SourceFile.java",
+      [
+        "package nl.obren.sokrates.sourcecode;",
+        "public class SourceFile {}",
+      ].join("\n"),
+    )
+    sourceFileModel.extension = "java"
+    sourceFileModel.linesOfCode = 2
+
+    const analyzer = new SourceFile(
       "codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/Analyzer.java",
       [
         "package nl.obren.sokrates.sourcecode;",
         "import nl.obren.sokrates.common.utils.FormattingUtils;",
-        "import nl.obren.sokrates.common.io.JsonMapper;",
-        "import java.util.List;",
         "public class Analyzer {}",
       ].join("\n"),
     )
-    file1.extension = "java"
-    file1.linesOfCode = 5
-    file1.logicalComponents = [codeanalyzer]
-    codeanalyzer.sourceFiles = [file1]
+    analyzer.extension = "java"
+    analyzer.linesOfCode = 3
 
-    // A file in reports that imports from codeanalyzer
-    const file2 = new SourceFile(
+    const reportGen = new SourceFile(
       "reports/src/main/java/nl/obren/sokrates/reports/ReportGen.java",
       [
         "package nl.obren.sokrates.reports;",
@@ -297,72 +375,41 @@ describe("Built-in dependency detection — Java imports", () => {
         "public class ReportGen {}",
       ].join("\n"),
     )
-    file2.extension = "java"
-    file2.linesOfCode = 3
-    file2.logicalComponents = [reports]
-    reports.sourceFiles = [file2]
+    reportGen.extension = "java"
+    reportGen.linesOfCode = 3
 
-    ld.dependenciesFinder.useBuiltInDependencyFinders = true
+    config.main.sourceFiles = [formattingUtils, sourceFileModel, analyzer, reportGen]
+    config.logicalDecompositions = [decomposition]
+    results.codeConfiguration = config
 
-    const main = new NamedSourceCodeAspect("main")
-    main.sourceFiles = [file1, file2]
+    new LogicalDecompositionAnalyzer(results).analyze()
 
-    const extractor = new DependenciesFinderExtractor(ld)
-    const deps = extractor.findComponentDependencies(main)
-
-    // Should not detect java.util.List (no "java" component, includeExternalComponents=false)
-    // Should detect: codeanalyzer → common (2 imports resolved via segment matching)
-    // Should detect: reports → codeanalyzer (via "sourcecode" segment matching "codeanalyzer"?)
-    // Actually "nl.obren.sokrates.sourcecode" has segment "sourcecode" not "codeanalyzer",
-    // so reports → codeanalyzer won't match. Only codeanalyzer → common should match.
-    expect(deps.length).toBe(1)
-    expect(deps[0].fromComponent).toBe("codeanalyzer")
-    expect(deps[0].toComponent).toBe("common")
+    const dependencies = results.logicalDecompositionsAnalysisResults[0]?.componentDependencies ?? []
+    expect(dependencies).toHaveLength(2)
+    expect(dependencies.map((dependency) => `${dependency.fromComponent}->${dependency.toComponent}`)).toEqual([
+      "codeanalyzer->common",
+      "reports->codeanalyzer",
+    ])
   })
 
-  test("detects dependencies when component names match extracted package segments", () => {
-    const ld = new LogicalDecomposition("packages")
-    ld.includeExternalComponents = true // allow external components
+  test("does not emit self-dependencies after built-in Java extraction is mapped to components", () => {
+    const { JavaAnalyzer } = require("../lang/JavaAnalyzer.js")
+    const analyzer = new JavaAnalyzer()
 
-    const utils = new NamedSourceCodeAspect("com.example.utils")
-    utils.filtering = "packages"
-    const service = new NamedSourceCodeAspect("com.example.service")
-    service.filtering = "packages"
-    ld.components = [utils, service]
+    const serviceComponent = new NamedSourceCodeAspect("service")
+    serviceComponent.filtering = "packages"
 
-    const file = new SourceFile(
-      "src/main/java/com/example/service/UserService.java",
-      ["package com.example.service;", "import com.example.utils.StringHelper;", "public class UserService {}"].join(
-        "\n",
-      ),
+    const baseService = new SourceFile(
+      "src/main/java/com/example/service/BaseService.java",
+      [
+        "package com.example.service;",
+        "public class BaseService {}",
+      ].join("\n"),
     )
-    file.extension = "java"
-    file.linesOfCode = 3
-    file.logicalComponents = [service]
-    service.sourceFiles = [file]
+    baseService.linesOfCode = 2
+    baseService.logicalComponents.push(serviceComponent)
 
-    ld.dependenciesFinder.useBuiltInDependencyFinders = true
-
-    const main = new NamedSourceCodeAspect("main")
-    main.sourceFiles = [file]
-
-    const extractor = new DependenciesFinderExtractor(ld)
-    const deps = extractor.findComponentDependencies(main)
-
-    expect(deps.length).toBe(1)
-    expect(deps[0].fromComponent).toBe("com.example.service")
-    expect(deps[0].toComponent).toBe("com.example.utils")
-  })
-
-  test("does not detect self-dependencies", () => {
-    const ld = new LogicalDecomposition("packages")
-    ld.includeExternalComponents = true
-
-    const service = new NamedSourceCodeAspect("com.example.service")
-    service.filtering = "packages"
-    ld.components = [service]
-
-    const file = new SourceFile(
+    const userService = new SourceFile(
       "src/main/java/com/example/service/UserService.java",
       [
         "package com.example.service;",
@@ -370,45 +417,12 @@ describe("Built-in dependency detection — Java imports", () => {
         "public class UserService extends BaseService {}",
       ].join("\n"),
     )
-    file.extension = "java"
-    file.linesOfCode = 3
-    file.logicalComponents = [service]
-    service.sourceFiles = [file]
+    userService.linesOfCode = 3
+    userService.logicalComponents.push(serviceComponent)
 
-    ld.dependenciesFinder.useBuiltInDependencyFinders = true
+    const analysis = analyzer.extractDependencies([baseService, userService])
+    const componentDependencies = DependencyUtils.getComponentDependencies(analysis.dependencies, "packages")
 
-    const main = new NamedSourceCodeAspect("main")
-    main.sourceFiles = [file]
-
-    const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
-    expect(deps.length).toBe(0)
-  })
-
-  test("skips built-in rules when useBuiltInDependencyFinders is false", () => {
-    const ld = new LogicalDecomposition("packages")
-    ld.includeExternalComponents = true
-
-    const utils = new NamedSourceCodeAspect("com.example.utils")
-    utils.filtering = "packages"
-    const service = new NamedSourceCodeAspect("com.example.service")
-    service.filtering = "packages"
-    ld.components = [utils, service]
-
-    const file = new SourceFile(
-      "src/main/java/com/example/service/UserService.java",
-      ["package com.example.service;", "import com.example.utils.StringHelper;"].join("\n"),
-    )
-    file.extension = "java"
-    file.linesOfCode = 2
-    file.logicalComponents = [service]
-    service.sourceFiles = [file]
-
-    ld.dependenciesFinder.useBuiltInDependencyFinders = false
-
-    const main = new NamedSourceCodeAspect("main")
-    main.sourceFiles = [file]
-
-    const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
-    expect(deps.length).toBe(0)
+    expect(componentDependencies).toHaveLength(0)
   })
 })

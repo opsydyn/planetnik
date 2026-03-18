@@ -102,9 +102,13 @@ export const collections = {
   dependencies: defineCollection({
     loader: dependenciesLoader(),
     schema: z.object({
-      fromComponent: z.string().optional(),
-      toComponent: z.string().optional(),
-      count: z.number().optional(),
+      decompositionKey: z.string(),
+      fromComponent: z.string(),
+      toComponent: z.string(),
+      count: z.number(),
+      locFrom: z.number(),
+      evidenceCount: z.number(),
+      color: z.string(),
     }),
   }),
 
@@ -184,11 +188,15 @@ export const collections = {
   temporalDeps: defineCollection({
     loader: temporalDepsLoader(),
     schema: z.object({
+      periodKey: z.string(),
+      periodLabel: z.string(),
+      periodDays: z.number(),
       file1: z.string(),
       file2: z.string(),
       sameCommits: z.number(),
       commitsFile1: z.number(),
       commitsFile2: z.number(),
+      latestCommit: z.string(),
     }),
   }),
 

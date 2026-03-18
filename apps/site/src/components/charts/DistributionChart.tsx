@@ -45,7 +45,6 @@ export default function DistributionChart({ data, barColor }: DistributionChartP
             barAreaWidth={barAreaWidth}
             xScale={xScale}
             hasSecondary={hasSecondary}
-            totalDetailWidth={totalDetailWidth}
             height={height}
           />
         )
@@ -61,7 +60,6 @@ function DistributionInner({
   barAreaWidth,
   xScale,
   hasSecondary,
-  totalDetailWidth,
   height,
 }: {
   data: DistributionItem[]
@@ -70,7 +68,6 @@ function DistributionInner({
   barAreaWidth: number
   xScale: ReturnType<typeof scaleLinear<number>>
   hasSecondary: boolean
-  totalDetailWidth: number
   height: number
 }) {
   const { tooltipOpen, tooltipLeft, tooltipTop, tooltipData, showTooltip, hideTooltip } = useTooltip<DistributionItem>()

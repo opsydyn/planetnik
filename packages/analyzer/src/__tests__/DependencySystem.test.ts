@@ -104,7 +104,7 @@ describe("Dependency", () => {
 
     const components = dep.getFromComponents("layer")
     expect(components).toHaveLength(1)
-    expect(components[0].name).toBe("ComponentA")
+    expect(components[0]!.name).toBe("ComponentA")
 
     // Wrong group returns empty
     expect(dep.getFromComponents("other")).toHaveLength(0)
@@ -121,7 +121,7 @@ describe("Dependency", () => {
     const dep = new Dependency(new DependencyAnchor("A"), to)
     const components = dep.getToComponents("layer")
     expect(components).toHaveLength(1)
-    expect(components[0].name).toBe("ComponentB")
+    expect(components[0]!.name).toBe("ComponentB")
   })
 
   test("getComponentDependency uses component names when available", () => {
@@ -193,14 +193,14 @@ describe("DependencyUtils", () => {
 
     DependencyUtils.addDependency(deps, sfd, sourceAnchor, targetAnchor)
     expect(deps).toHaveLength(1)
-    expect(deps[0].fromFiles).toHaveLength(1)
+    expect(deps[0]!.fromFiles).toHaveLength(1)
 
     // Add another file to same dependency
     const sf2 = new SourceFile("src/a2.ts")
     const sfd2 = new SourceFileDependency(sf2)
     DependencyUtils.addDependency(deps, sfd2, sourceAnchor, targetAnchor)
     expect(deps).toHaveLength(1)
-    expect(deps[0].fromFiles).toHaveLength(2)
+    expect(deps[0]!.fromFiles).toHaveLength(2)
   })
 
   test("addDependency skips self-dependencies", () => {
@@ -250,7 +250,7 @@ describe("DependencyUtils", () => {
     const errors: DependencyError[] = []
     DependencyUtils.findErrors([anchor], errors)
     expect(errors).toHaveLength(1)
-    expect(errors[0].filtering).toBe("layer")
+    expect(errors[0]!.filtering).toBe("layer")
   })
 
   test("findErrors no error when all same component", () => {
@@ -291,8 +291,8 @@ describe("DependencyUtils", () => {
 
     const componentDeps = DependencyUtils.getComponentDependencies([dep], "layer")
     expect(componentDeps).toHaveLength(1)
-    expect(componentDeps[0].fromComponent).toBe("Frontend")
-    expect(componentDeps[0].toComponent).toBe("Backend")
-    expect(componentDeps[0].evidence).toHaveLength(1)
+    expect(componentDeps[0]!.fromComponent).toBe("Frontend")
+    expect(componentDeps[0]!.toComponent).toBe("Backend")
+    expect(componentDeps[0]!.evidence).toHaveLength(1)
   })
 })

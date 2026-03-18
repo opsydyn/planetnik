@@ -52,9 +52,11 @@ export class Blocks {
   private createDuplicatedFilesMap(): void {
     for (const db of this.blocksDuplicatedAmongFiles) {
       if (db.files.length === 2) {
-        this.duplicatedFilePairs.push(db)
         const f1 = db.files[0]
         const f2 = db.files[1]
+        if (!f1 || !f2) continue
+
+        this.duplicatedFilePairs.push(db)
         const pairKey1 = this.getPairKey(f1.relativePath, f2.relativePath)
         const pairKey2 = this.getPairKey(f2.relativePath, f1.relativePath)
 
@@ -90,8 +92,9 @@ export class Blocks {
 
   private findDuplicatesAmongFiles(): void {
     for (const [f1, f2] of this.filePairMap.values()) {
-      const fileInfo1 = this.files.getFilesMap().get(f1)!
-      const fileInfo2Orig = this.files.getFilesMap().get(f2)!
+      const fileInfo1 = this.files.getFilesMap().get(f1)
+      const fileInfo2Orig = this.files.getFilesMap().get(f2)
+      if (!fileInfo1 || !fileInfo2Orig) continue
 
       const fileInfo2Copy = new FileInfoForDuplication()
       fileInfo2Copy.sourceFile = fileInfo2Orig.sourceFile
@@ -125,6 +128,7 @@ export class Blocks {
         const foundBlockIDs = fileInfo2.indexesOf(subBlock1)
         if (foundBlockIDs.length > 0) {
           const cleanedStartLine2 = foundBlockIDs[0]
+          if (cleanedStartLine2 === undefined) continue
 
           const range1 = new DuplicateRange(cleanedStartLine1, cleanedStartLine1 + blockSize - 1)
           const range2 = new DuplicateRange(cleanedStartLine2, cleanedStartLine2 + blockSize - 1)
@@ -228,10 +232,16 @@ export class Blocks {
     if (cleanedContent) {
       const fileLineIndexes = cleanedContent.fileLineIndexes
       if (cleanedStartLine - 1 < fileLineIndexes.length) {
-        duplicatedFileBlock.startLine = fileLineIndexes[cleanedStartLine - 1] + 1
+        const startLine = fileLineIndexes[cleanedStartLine - 1]
+        if (startLine !== undefined) {
+          duplicatedFileBlock.startLine = startLine + 1
+        }
       }
       if (cleanedEndLine - 1 < fileLineIndexes.length) {
-        duplicatedFileBlock.endLine = fileLineIndexes[cleanedEndLine - 1] + 1
+        const endLine = fileLineIndexes[cleanedEndLine - 1]
+        if (endLine !== undefined) {
+          duplicatedFileBlock.endLine = endLine + 1
+        }
       }
       duplicatedFileBlock.sourceFileCleanedLinesOfCode = fileLineIndexes.length
     }

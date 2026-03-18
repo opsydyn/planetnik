@@ -2,68 +2,108 @@
 import { getCollection, getEntry } from "astro:content"
 import DependencyMatrix from "../components/charts/DependencyMatrix"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../components/tables/ReportDataGrid"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
 const dependencies = await getCollection("dependencies")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
-const matrixData = dependencies.map((d) => ({
-  from: d.data.fromComponent ?? "unknown",
-  to: d.data.toComponent ?? "unknown",
-  count: d.data.count ?? 0,
-}))
-
-// In-degree: how many dependencies point TO each component
-const inDegree = new Map<string, number>()
-const outDegree = new Map<string, number>()
-for (const d of dependencies) {
-  const to = d.data.toComponent ?? "unknown"
-  const from = d.data.fromComponent ?? "unknown"
-  inDegree.set(to, (inDegree.get(to) ?? 0) + (d.data.count ?? 0))
-  outDegree.set(from, (outDegree.get(from) ?? 0) + (d.data.count ?? 0))
+const groupedDependencies = new Map<string, typeof dependencies>()
+for (const dependency of dependencies) {
+  const group = groupedDependencies.get(dependency.data.decompositionKey) ?? []
+  group.push(dependency)
+  groupedDependencies.set(dependency.data.decompositionKey, group)
 }
-const inDegreeData = [...inDegree.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ label: name, value: count }))
-const outDegreeData = [...outDegree.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ label: name, value: count }))
+
+const dependencySections = [...groupedDependencies.entries()]
+  .sort(([left], [right]) => left.localeCompare(right))
+  .map(([decompositionKey, group]) => {
+    const matrixData = group.map((dependency) => ({
+      from: dependency.data.fromComponent,
+      to: dependency.data.toComponent,
+      count: dependency.data.count,
+    }))
+
+    const inDegree = new Map<string, number>()
+    const outDegree = new Map<string, number>()
+    for (const dependency of group) {
+      inDegree.set(dependency.data.toComponent, (inDegree.get(dependency.data.toComponent) ?? 0) + dependency.data.count)
+      outDegree.set(
+        dependency.data.fromComponent,
+        (outDegree.get(dependency.data.fromComponent) ?? 0) + dependency.data.count,
+      )
+    }
+
+    return {
+      decompositionKey,
+      dependencies: group,
+      matrixData,
+      inDegreeData: [...inDegree.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .map(([label, value]) => ({ label, value })),
+      outDegreeData: [...outDegree.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .map(([label, value]) => ({ label, value })),
+    }
+  })
 ---
 
 <Dashboard title="Dependencies" projectName={projectName}>
   <h2>Static Component Dependencies</h2>
 
-  {dependencies.length === 0 ? (
+  {dependencySections.length === 0 ? (
     <div class="empty">
       <p>No component dependencies found.</p>
       <p class="hint">Dependencies are detected when logical components are configured and files reference each other across component boundaries.</p>
     </div>
   ) : (
-    <>
-    <section class="section">
-      <h3>Dependency Matrix</h3>
-      <DependencyMatrix client:load data={matrixData} />
-    </section>
-    <section class="section">
-      <h3>Most Depended-On (Incoming)</h3>
-      <HorizontalBarChart client:load data={inDegreeData} valueLabel="incoming refs" />
-    </section>
-    <section class="section">
-      <h3>Most Dependent (Outgoing)</h3>
-      <HorizontalBarChart client:load data={outDegreeData} valueLabel="outgoing refs" barColor="#8b5cf6" />
-    </section>
-    <table>
-      <thead>
-        <tr><th>From</th><th>To</th><th>Count</th></tr>
-      </thead>
-      <tbody>
-        {dependencies.map((d) => (
-          <tr>
-            <td>{d.data.fromComponent ?? "—"}</td>
-            <td>{d.data.toComponent ?? "—"}</td>
-            <td>{d.data.count ?? 0}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-    </>
+    dependencySections.map((section) => (
+      <section class="decomposition">
+        <header class="decomposition-header">
+          <h3>{section.decompositionKey}</h3>
+          <p>{section.dependencies.length} component links</p>
+        </header>
+        <section class="section">
+          <h4>Dependency Matrix</h4>
+          <DependencyMatrix client:load data={section.matrixData} />
+        </section>
+        <section class="section">
+          <h4>Most Depended-On (Incoming)</h4>
+          <HorizontalBarChart client:load data={section.inDegreeData} valueLabel="incoming refs" />
+        </section>
+        <section class="section">
+          <h4>Most Dependent (Outgoing)</h4>
+          <HorizontalBarChart
+            client:load
+            data={section.outDegreeData}
+            valueLabel="outgoing refs"
+            barColor="#8b5cf6"
+          />
+        </section>
+        <ReportDataGrid
+          client:load
+          title="Dependency Links"
+          description="Search and paginate component links for this decomposition without losing the matrix view."
+          searchPlaceholder="Search source or target component"
+          rows={section.dependencies.map((dependency) => ({
+            id: `${section.decompositionKey}:${dependency.data.fromComponent}:${dependency.data.toComponent}`,
+            fromComponent: dependency.data.fromComponent,
+            toComponent: dependency.data.toComponent,
+            count: dependency.data.count,
+            evidenceCount: dependency.data.evidenceCount,
+            locFrom: dependency.data.locFrom,
+          }))}
+          columns={[
+            { field: "fromComponent", headerName: "From", minWidth: 180, flex: 1 },
+            { field: "toComponent", headerName: "To", minWidth: 180, flex: 1 },
+            { field: "count", headerName: "Count", type: "number", minWidth: 110, sort: "desc" },
+            { field: "evidenceCount", headerName: "Evidence", type: "number", minWidth: 120 },
+            { field: "locFrom", headerName: "LOC From", type: "number", minWidth: 120 },
+          ]}
+        />
+      </section>
+    ))
   )}
 </Dashboard>
 
@@ -71,10 +111,10 @@ const outDegreeData = [...outDegree.entries()].sort((a, b) => b[1] - a[1]).map((
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
+  .decomposition { margin-bottom: 2.5rem; }
+  .decomposition-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .decomposition-header h3 { font-size: 1.25rem; font-weight: 700; margin: 0; text-transform: capitalize; }
+  .decomposition-header p { margin: 0; color: var(--color-text-muted); font-size: 0.9rem; }
   .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
+  .section h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
 </style>

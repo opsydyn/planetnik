@@ -4,10 +4,5 @@
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../../packages/common" },
-    { "path": "../../packages/analyzer" },
-    { "path": "../../packages/reports" }
-  ]
+  "include": ["src"]
 }

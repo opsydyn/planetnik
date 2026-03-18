@@ -15,7 +15,6 @@
     "composite": true,
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
-    "noEmit": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
        "plugins": [
@@ -25,4 +24,3 @@
     ]
   }
 }
-

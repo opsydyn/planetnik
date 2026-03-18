@@ -1,6 +1,6 @@
 import { Group } from "@visx/group"
-import { hierarchy, Treemap, treemapSquarify } from "@visx/hierarchy"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
+import { hierarchy, treemap, treemapSquarify, type HierarchyRectangularNode } from "d3-hierarchy"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 
@@ -73,12 +73,11 @@ function TreemapInner({
     .sum((d) => d.value ?? 0)
     .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
 
-  const tree = Treemap<TreeNode>({
-    tile: treemapSquarify,
-    size: [width, height],
-    padding: 2,
-    paddingInner: 1,
-  })(root)
+  const tree = treemap<TreeNode>()
+    .tile(treemapSquarify)
+    .size([width, height])
+    .padding(2)
+    .paddingInner(1)(root)
 
   const leaves = tree.leaves()
 
@@ -89,7 +88,7 @@ function TreemapInner({
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
       <svg width={width} height={height}>
-        {leaves.map((leaf, i) => {
+        {leaves.map((leaf: HierarchyRectangularNode<TreeNode>, i: number) => {
           const w = leaf.x1 - leaf.x0
           const h = leaf.y1 - leaf.y0
           const colorKey = leaf.data.group ?? leaf.data.name

@@ -23,7 +23,6 @@ export class UnitsAnalyzer {
     this.unitsAnalysisResults = results.unitsAnalysisResults
     this.codeConfiguration = results.codeConfiguration!
     this.metricsList = results.metricsList
-    this.start = results.analysisStartTimeMs
     this.textSummary = results.textSummary
   }
 

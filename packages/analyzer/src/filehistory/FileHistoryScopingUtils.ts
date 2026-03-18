@@ -25,7 +25,7 @@ function wrapDecomposition(decomposition: LogicalDecomposition): LogicalDecompos
 }
 
 function getByUpdateFrequency(analysisResults: CodeAnalysisResults): LogicalDecomposition {
-  const allFiles = analysisResults.mainAspectAnalysisResults.aspect.sourceFiles
+  const allFiles = getMainAspectFiles(analysisResults)
   const decomposition = new LogicalDecomposition("frequency of changes")
   const config = analysisResults.codeConfiguration
   const thresholds = config ? AnalysisConfig.getFileUpdateFrequencyThresholds(config.analysis) : null
@@ -41,7 +41,7 @@ function getByUpdateFrequency(analysisResults: CodeAnalysisResults): LogicalDeco
 }
 
 function getByAge(analysisResults: CodeAnalysisResults): LogicalDecomposition {
-  const allFiles = analysisResults.mainAspectAnalysisResults.aspect.sourceFiles
+  const allFiles = getMainAspectFiles(analysisResults)
   const decomposition = new LogicalDecomposition("file age")
   const config = analysisResults.codeConfiguration
   const thresholds = config ? AnalysisConfig.getFileAgeThresholds(config.analysis) : null
@@ -57,7 +57,7 @@ function getByAge(analysisResults: CodeAnalysisResults): LogicalDecomposition {
 }
 
 function getByFreshness(analysisResults: CodeAnalysisResults): LogicalDecomposition {
-  const allFiles = analysisResults.mainAspectAnalysisResults.aspect.sourceFiles
+  const allFiles = getMainAspectFiles(analysisResults)
   const decomposition = new LogicalDecomposition("file freshness")
   const config = analysisResults.codeConfiguration
   const thresholds = config ? AnalysisConfig.getFileAgeThresholds(config.analysis) : null
@@ -106,4 +106,8 @@ function categorizeFiles(
   }
 
   return decomposition
+}
+
+function getMainAspectFiles(analysisResults: CodeAnalysisResults): SourceFile[] {
+  return analysisResults.mainAspectAnalysisResults.aspect?.sourceFiles ?? []
 }

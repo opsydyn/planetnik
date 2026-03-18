@@ -21,9 +21,10 @@ export class TemporalDependenciesHelper {
     // Build file path → component name lookup
     const fileToComponent = new Map<string, string>()
     for (const file of allFiles) {
-      const components = file.logicalComponents.get(logicalDecompositionKey)
-      if (components && components.length > 0) {
-        fileToComponent.set(file.relativePath.toLowerCase(), components[0]!.name)
+      const components = file.logicalComponents.filter((component) => component.filtering === logicalDecompositionKey)
+      const firstComponent = components[0]
+      if (firstComponent) {
+        fileToComponent.set(file.relativePath.toLowerCase(), firstComponent.name)
       }
     }
 

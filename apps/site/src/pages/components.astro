@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import ScatterPlot from "../components/charts/ScatterPlot"
+import ReportDataGrid from "../components/tables/ReportDataGrid"
 import TreemapChart from "../components/charts/Treemap"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -42,6 +43,26 @@ const busFactorData = components
     y: s.contributors.size,
     label: name,
   }))
+
+const componentRows = components.map(([name, s]) => ({
+  id: name,
+  component: name,
+  files: s.files,
+  loc: s.loc,
+  contributors: s.contributors.size > 0 ? s.contributors.size : null,
+  risk: s.contributors.size > 0 && s.contributors.size <= 2 ? "Bus factor risk" : "",
+}))
+
+if (unassigned.length > 0) {
+  componentRows.push({
+    id: "__unassigned__",
+    component: "(unassigned)",
+    files: unassigned.length,
+    loc: unassigned.reduce((sum, file) => sum + file.data.linesOfCode, 0),
+    contributors: null,
+    risk: "",
+  })
+}
 ---
 
 <Dashboard title="Components" projectName={projectName}>
@@ -67,34 +88,20 @@ const busFactorData = components
           <ScatterPlot client:load data={busFactorData} xLabel="Lines of Code" yLabel="Contributors" thresholds={{ y: 3 }} />
         </section>
       )}
-      <table>
-        <thead>
-          <tr><th>Component</th><th>Files</th><th>LOC</th><th>Contributors</th></tr>
-        </thead>
-        <tbody>
-          {components.map(([name, s]) => (
-            <tr>
-              <td class="comp-name">
-                {name}
-                {s.contributors.size > 0 && s.contributors.size <= 2 && (
-                  <span class="bus-factor" title={`Only ${s.contributors.size} contributor${s.contributors.size === 1 ? "" : "s"} — bus factor risk`}>!</span>
-                )}
-              </td>
-              <td>{s.files.toLocaleString()}</td>
-              <td>{s.loc.toLocaleString()}</td>
-              <td class="num">{s.contributors.size > 0 ? s.contributors.size : "—"}</td>
-            </tr>
-          ))}
-          {unassigned.length > 0 && (
-            <tr class="muted">
-              <td>(unassigned)</td>
-              <td>{unassigned.length.toLocaleString()}</td>
-              <td>{unassigned.reduce((s, f) => s + f.data.linesOfCode, 0).toLocaleString()}</td>
-              <td>—</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <ReportDataGrid
+        client:load
+        title="Component Inventory"
+        description="Search and sort the full logical component inventory while keeping the structure charts above."
+        searchPlaceholder="Search component or risk"
+        rows={componentRows}
+        columns={[
+          { field: "component", headerName: "Component", minWidth: 220, flex: 1.1, sort: "asc" },
+          { field: "files", headerName: "Files", type: "number", minWidth: 110 },
+          { field: "loc", headerName: "LOC", type: "number", minWidth: 120, sort: "desc" },
+          { field: "contributors", headerName: "Contributors", type: "number", minWidth: 140 },
+          { field: "risk", headerName: "Risk", minWidth: 180 },
+        ]}
+      />
     </>
   )}
 </Dashboard>
@@ -105,13 +112,5 @@ const busFactorData = components
   .hint { font-size: 0.85rem; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
-  .comp-name { font-weight: 500; }
-  .bus-factor { display: inline-block; margin-left: 0.4rem; background: #fbbf24; color: #78350f; font-size: 0.65rem; font-weight: 700; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; cursor: help; }
-  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
-  .muted td { color: var(--color-text-muted); font-style: italic; }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

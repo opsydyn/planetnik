@@ -32,7 +32,10 @@ export class LandscapeAnalysisInitiator {
 
     if (!config.metadata.name) {
       const name = basename(analysisRoot)
-      config.metadata.name = `${name.charAt(0).toUpperCase()}${name.slice(1).toLowerCase()} Landscape`
+      config.metadata = {
+        ...config.metadata,
+        name: `${name.charAt(0).toUpperCase()}${name.slice(1).toLowerCase()} Landscape`,
+      }
     }
 
     if (saveFile) {

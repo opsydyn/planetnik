@@ -4,43 +4,53 @@ import type { RichTextReport } from "../core/RichTextReport.js"
 export class FileTemporalDependenciesReportGenerator {
   static addTemporalDependenciesToReport(report: RichTextReport, results: CodeAnalysisResults): void {
     const histResults = results.filesHistoryAnalysisResults
+    const maxTemporalDependenciesDepthDays = results.codeConfiguration?.analysis.maxTemporalDependenciesDepthDays ?? 180
 
     report.addParagraph(
       "A temporal dependency occurs when developers change two or more files at the same time (i.e. they are a part of the same commit).",
       "margin-top: 12px; color: grey",
     )
 
+    const periods = [
+      {
+        id: "30_days",
+        label: "Past 30 Days",
+        filePairs: histResults.filePairsChangedTogether30Days,
+        active: true,
+        enabled: maxTemporalDependenciesDepthDays >= 30,
+      },
+      {
+        id: "90_days",
+        label: "Past 3 Months",
+        filePairs: histResults.filePairsChangedTogether90Days,
+        active: false,
+        enabled: maxTemporalDependenciesDepthDays >= 90,
+      },
+      {
+        id: "180_days",
+        label: "Past 6 Months",
+        filePairs: histResults.filePairsChangedTogether180Days,
+        active: false,
+        enabled: maxTemporalDependenciesDepthDays >= 180,
+      },
+      {
+        id: "all_time",
+        label: `Past ${maxTemporalDependenciesDepthDays} Days`,
+        filePairs: histResults.filePairsChangedTogether,
+        active: false,
+        enabled: maxTemporalDependenciesDepthDays > 180,
+      },
+    ].filter((period) => period.enabled)
+
     report.startTabGroup()
-    report.addTab("30_days", "Past 30 Days", true)
-    report.addTab("90_days", "Past 3 Months", false)
-    report.addTab("180_days", "Past 6 Months", false)
-    report.addTab("all_time", "All Time", false)
+    for (const period of periods) {
+      report.addTab(period.id, period.label, period.active)
+    }
     report.endTabGroup()
 
-    FileTemporalDependenciesReportGenerator.addTabContent(
-      report,
-      "30_days",
-      histResults.filePairsChangedTogether30Days,
-      true,
-    )
-    FileTemporalDependenciesReportGenerator.addTabContent(
-      report,
-      "90_days",
-      histResults.filePairsChangedTogether90Days,
-      false,
-    )
-    FileTemporalDependenciesReportGenerator.addTabContent(
-      report,
-      "180_days",
-      histResults.filePairsChangedTogether180Days,
-      false,
-    )
-    FileTemporalDependenciesReportGenerator.addTabContent(
-      report,
-      "all_time",
-      histResults.filePairsChangedTogether,
-      false,
-    )
+    for (const period of periods) {
+      FileTemporalDependenciesReportGenerator.addTabContent(report, period.id, period.filePairs, period.active)
+    }
   }
 
   private static addTabContent(

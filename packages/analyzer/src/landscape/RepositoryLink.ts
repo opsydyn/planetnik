@@ -17,6 +17,6 @@ export class RepositoryLink {
   get name(): string {
     // Extract repo name from path: "repoName/data/analysisResults.json" -> "repoName"
     const parts = this.analysisResultsPath.replace(/\\/g, "/").split("/")
-    return parts.length >= 3 ? parts[parts.length - 3] : this.analysisResultsPath
+    return parts.length >= 3 ? (parts[parts.length - 3] ?? this.analysisResultsPath) : this.analysisResultsPath
   }
 }

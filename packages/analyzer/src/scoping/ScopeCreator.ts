@@ -112,9 +112,12 @@ export class ScopeCreator {
     const config = this.createDefaultConfig(extensions)
 
     const dirName = basename(this.srcRoot)
-    config.metadata.name = name || dirName.charAt(0).toUpperCase() + dirName.slice(1).toLowerCase()
-    if (description) config.metadata.description = description
-    if (logoLink) config.metadata.logoLink = logoLink
+    config.metadata = {
+      ...config.metadata,
+      name: name || dirName.charAt(0).toUpperCase() + dirName.slice(1).toLowerCase(),
+      description: description ?? config.metadata.description,
+      logoLink: logoLink ?? config.metadata.logoLink,
+    }
 
     // Scan source files for scoping conventions
     const sourceFiles = this.scanSourceFiles(extensions)
@@ -270,20 +273,22 @@ export class ScopeCreator {
 
   static greatestCommonPrefix(strings: string[]): string {
     if (strings.length === 0) return ""
+    const first = strings[0]
+    if (!first) return ""
 
     const minLen = Math.min(...strings.map((s) => s.length))
     let prefixEnd = 0
 
     for (let i = 0; i < minLen; i++) {
-      const c = strings[0][i]
-      if (strings.every((s) => s[i] === c)) {
+      const c = first[i]
+      if (c !== undefined && strings.every((s) => s[i] === c)) {
         prefixEnd = i + 1
       } else {
         break
       }
     }
 
-    let prefix = strings[0].substring(0, prefixEnd)
+    let prefix = first.substring(0, prefixEnd)
 
     // Truncate to last full folder boundary
     if (!prefix.endsWith("/") && prefix.includes("/")) {

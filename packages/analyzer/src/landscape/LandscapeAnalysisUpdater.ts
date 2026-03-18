@@ -36,10 +36,13 @@ export class LandscapeAnalysisUpdater {
 
   private updateMetadata(config: LandscapeConfiguration, metadata: MetadataType | null): void {
     if (!metadata) return
-    if (metadata.name) config.metadata.name = metadata.name
-    if (metadata.description) config.metadata.description = metadata.description
-    if (metadata.logoLink) config.metadata.logoLink = metadata.logoLink
-    if (metadata.links.length > 0) config.metadata.links = metadata.links
+    config.metadata = {
+      ...config.metadata,
+      name: metadata.name || config.metadata.name,
+      description: metadata.description || config.metadata.description,
+      logoLink: metadata.logoLink || config.metadata.logoLink,
+      links: metadata.links.length > 0 ? metadata.links : config.metadata.links,
+    }
   }
 
   private getLandscapeConfigFile(analysisRoot: string, configFile: string | null): string {

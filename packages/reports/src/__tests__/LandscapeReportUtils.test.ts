@@ -5,6 +5,7 @@ import {
   ContributorRepositoryInfo,
   LandscapeConfiguration,
   MergeExtension,
+  type RepositoryAnalysisResult,
   RepositoryTag,
   TagGroup,
 } from "@planetnik/analyzer"
@@ -16,7 +17,7 @@ import { LandscapeGeneratorUtils } from "../landscape/utils/LandscapeGeneratorUt
 import { TagMap } from "../landscape/utils/TagMap.js"
 import { TagStats } from "../landscape/utils/TagStats.js"
 
-function makeRepoResult(name: string) {
+function makeRepoResult(name: string): RepositoryAnalysisResult {
   return {
     name,
     analysisResultsPath: `${name}/data/analysisResults.json`,
@@ -48,7 +49,7 @@ describe("LandscapeGeneratorUtils", () => {
     ]
     const result = LandscapeGeneratorUtils.getLinesOfCodePerExtension(config, extensions)
     expect(result).toHaveLength(1)
-    expect(result[0].name).toBe("ts")
+    expect(result[0]!.name).toBe("ts")
   })
 
   test("filters ignored extensions", () => {
@@ -61,7 +62,7 @@ describe("LandscapeGeneratorUtils", () => {
     ]
     const result = LandscapeGeneratorUtils.getLinesOfCodePerExtension(config, extensions)
     expect(result).toHaveLength(1)
-    expect(result[0].name).toBe("ts")
+    expect(result[0]!.name).toBe("ts")
   })
 
   test("merges extensions via MergeExtension config", () => {
@@ -77,8 +78,8 @@ describe("LandscapeGeneratorUtils", () => {
     ]
     const result = LandscapeGeneratorUtils.getLinesOfCodePerExtension(config, extensions)
     expect(result).toHaveLength(1)
-    expect(result[0].name).toBe("ts")
-    expect(result[0].value).toBe(1000)
+    expect(result[0]!.name).toBe("ts")
+    expect(result[0]!.value).toBe(1000)
   })
 
   test("filters h- prefixed extensions", () => {
@@ -126,7 +127,7 @@ describe("TagMap", () => {
 
     expect(tagMap.tagsCount()).toBe(1)
     expect(tagMap.getTagStats("Type / API")?.repositoryAnalysisResults).toHaveLength(1)
-    expect(tagMap.getRepositoryTags(repos[0])).toHaveLength(1)
+    expect(tagMap.getRepositoryTags(repos[0]!)).toHaveLength(1)
     // untagged goes to "" bucket
     expect(tagMap.containsKey("")).toBe(true)
   })
@@ -236,7 +237,7 @@ describe("ContributorExport", () => {
     const exportData = new ContributorExport(cr)
     expect(exportData.contributor.email).toBe("alice@test.com")
     expect(exportData.repositories).toHaveLength(1)
-    expect(exportData.repositories[0].name).toBe("repo-a")
+    expect(exportData.repositories[0]!.name).toBe("repo-a")
     expect(exportData.members).toEqual([])
   })
 })

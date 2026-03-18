@@ -136,6 +136,8 @@ export class DependenciesFinderExtractor {
     if (logicalComponents.length === 0) return
 
     const firstAspect = logicalComponents[0]
+    if (!firstAspect) return
+
     const fromComponent = firstAspect.name
 
     const dep = new ComponentDependency()
@@ -190,7 +192,9 @@ export class DependenciesFinderExtractor {
       for (let i = 0; i <= segments.length - compSegments.length; i++) {
         let match = true
         for (let j = 0; j < compSegments.length; j++) {
-          if (segments[i + j].toLowerCase() !== compSegments[j].toLowerCase()) {
+          const segment = segments[i + j]
+          const componentSegment = compSegments[j]
+          if (!segment || !componentSegment || segment.toLowerCase() !== componentSegment.toLowerCase()) {
             match = false
             break
           }

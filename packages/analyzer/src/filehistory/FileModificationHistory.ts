@@ -13,22 +13,22 @@ export class FileModificationHistory {
 
   getOldestDate(): string {
     this.sortOldestFirst()
-    return this.dates.length > 0 ? this.dates[0] : ""
+    return this.dates[0] ?? ""
   }
 
   getLatestDate(): string {
     this.sortOldestFirst()
-    return this.dates.length > 0 ? this.dates[this.dates.length - 1] : ""
+    return this.dates[this.dates.length - 1] ?? ""
   }
 
   getOldestContributor(): string {
     this.sortOldestFirst()
-    return this.commits.length > 0 ? this.commits[0].email : ""
+    return this.commits[0]?.email ?? ""
   }
 
   getLatestContributor(): string {
     this.sortOldestFirst()
-    return this.commits.length > 0 ? this.commits[this.commits.length - 1].email : ""
+    return this.commits[this.commits.length - 1]?.email ?? ""
   }
 
   sortOldestFirst(): void {

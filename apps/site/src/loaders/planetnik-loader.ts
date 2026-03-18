@@ -126,7 +126,7 @@ export function dependenciesLoader(): Loader {
   return {
     name: "planetnik-dependencies",
     async load({ store, parseData }) {
-      const raw = readJsonFile("dependencies.json") as { dependencies?: unknown[] } | null
+      const raw = readJsonFile("component_dependencies.json") as { dependencies?: unknown[] } | null
       if (!raw?.dependencies) return
       for (let i = 0; i < raw.dependencies.length; i++) {
         const rec = raw.dependencies[i] as Record<string, unknown>
@@ -271,21 +271,11 @@ export function temporalDepsLoader(): Loader {
   return {
     name: "planetnik-temporal-deps",
     async load({ store, parseData }) {
-      const text = readTextFile("temporal_dependencies.txt")
-      if (!text) return
-      const lines = text.split("\n").filter((l) => l.trim())
-      if (lines.length < 2) return
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split("\t")
-        if (cols.length < 5) continue
-        const id = `${cols[0].trim()}::${cols[1].trim()}`
-        const rec = {
-          file1: cols[0].trim(),
-          file2: cols[1].trim(),
-          sameCommits: parseInt(cols[2], 10) || 0,
-          commitsFile1: parseInt(cols[3], 10) || 0,
-          commitsFile2: parseInt(cols[4], 10) || 0,
-        }
+      const raw = readJsonFile("temporal_dependencies.json") as { dependencies?: unknown[] } | null
+      if (!raw?.dependencies) return
+      for (let i = 0; i < raw.dependencies.length; i++) {
+        const rec = raw.dependencies[i] as Record<string, unknown>
+        const id = `${String(rec.periodKey)}::${String(rec.file1)}::${String(rec.file2)}`
         const data = await parseData({ id, data: rec })
         store.set({ id, data })
       }

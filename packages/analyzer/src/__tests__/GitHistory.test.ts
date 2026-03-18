@@ -152,16 +152,16 @@ describe("GitHistoryUtils.parseGitHistoryLines", () => {
     const updates = GitHistoryUtils.parseGitHistoryLines(lines)
     expect(updates.length).toBe(4)
     // First line is commit header + first file
-    expect(updates[0].path).toBe("src/main.ts")
-    expect(updates[0].email).toBe("alice@test.com")
+    expect(updates[0]!.path).toBe("src/main.ts")
+    expect(updates[0]!.email).toBe("alice@test.com")
     // Subsequent lines inherit commit info
-    expect(updates[1].path).toBe("src/util.ts")
-    expect(updates[1].email).toBe("alice@test.com")
-    expect(updates[1].commitId).toBe("abc123")
-    expect(updates[2].path).toBe("src/index.ts")
+    expect(updates[1]!.path).toBe("src/util.ts")
+    expect(updates[1]!.email).toBe("alice@test.com")
+    expect(updates[1]!.commitId).toBe("abc123")
+    expect(updates[2]!.path).toBe("src/index.ts")
     // After blank line, new commit
-    expect(updates[3].path).toBe("src/other.ts")
-    expect(updates[3].email).toBe("bob@test.com")
+    expect(updates[3]!.path).toBe("src/other.ts")
+    expect(updates[3]!.email).toBe("bob@test.com")
   })
 
   test("skips ignored emails", () => {
@@ -179,12 +179,12 @@ describe("GitHistoryUtils.parseGitHistoryLines", () => {
     ]
     const updates = GitHistoryUtils.parseGitHistoryLines(lines)
     expect(updates.length).toBe(3)
-    expect(updates[0].userName).toBe("Alice Smith")
-    expect(updates[0].path).toBe("src/main.ts")
+    expect(updates[0]!.userName).toBe("Alice Smith")
+    expect(updates[0]!.path).toBe("src/main.ts")
     // Subsequent file lines inherit userName
-    expect(updates[1].userName).toBe("Alice Smith")
-    expect(updates[1].path).toBe("src/util.ts")
-    expect(updates[2].userName).toBe("Bob Jones")
+    expect(updates[1]!.userName).toBe("Alice Smith")
+    expect(updates[1]!.path).toBe("src/util.ts")
+    expect(updates[2]!.userName).toBe("Bob Jones")
   })
 })
 

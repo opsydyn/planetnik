@@ -31,15 +31,15 @@ export class GitContributorsUtil {
     const map = new Map<string, Contributor>()
 
     for (const commit of authorCommits) {
-      const id = commit.authorEmail
+      const id = commit.email
       const existing = map.get(id)
       if (existing) {
-        existing.addCommit(commit.date, commit.fileUpdatesCount)
+        existing.addCommit(commit.date, commit.filesUpdated)
       } else {
-        const contributor = new Contributor(commit.authorEmail)
+        const contributor = new Contributor(commit.email)
         contributor.userName = commit.userName
-        contributor.isBot = commit.isBot
-        contributor.addCommit(commit.date, commit.fileUpdatesCount)
+        contributor.isBot = commit.bot
+        contributor.addCommit(commit.date, commit.filesUpdated)
         map.set(id, contributor)
         list.push(contributor)
       }
@@ -59,7 +59,7 @@ export class GitContributorsUtil {
 
     for (const commit of authorCommits) {
       const timeSlot = idFunction(commit)
-      const id = commit.authorEmail
+      const id = commit.email
 
       let ids = peopleIds.get(timeSlot)
       if (!ids) {
@@ -78,7 +78,7 @@ export class GitContributorsUtil {
       }
       slot.incrementCommitsCount()
       slot.contributorsCount = ids.length
-      slot.incrementFileUpdatesCount(commit.fileUpdatesCount)
+      slot.incrementFileUpdatesCount(commit.filesUpdated)
     }
 
     list.sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))

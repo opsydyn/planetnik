@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import {
+  AnalysisConfig,
   type CodeAnalysisResults,
+  CodeConfiguration,
   type FilePairChangedTogether,
   FilesHistoryAnalysisResults,
   HistoryPerExtension,
@@ -16,8 +18,10 @@ import { HistoryPerLanguageGenerator } from "../generators/HistoryPerLanguageGen
 function makeResults(overrides: Partial<FilesHistoryAnalysisResults> = {}): CodeAnalysisResults {
   const hist = new FilesHistoryAnalysisResults()
   Object.assign(hist, overrides)
+  const configuration = new CodeConfiguration()
 
   return {
+    codeConfiguration: configuration,
     filesHistoryAnalysisResults: hist,
     mainAspectAnalysisResults: { filesCount: 10, linesOfCode: 1000 },
   } as CodeAnalysisResults
@@ -115,10 +119,9 @@ describe("FileTemporalDependenciesReportGenerator", () => {
   test("renders tab groups", () => {
     const report = new RichTextReport("test", "test.html")
     const results = makeResults({
-      filePairsChangedTogether: [makePair("a.ts", "b.ts", 5)],
       filePairsChangedTogether30Days: [makePair("a.ts", "b.ts", 2)],
-      filePairsChangedTogether90Days: [],
-      filePairsChangedTogether180Days: [],
+      filePairsChangedTogether90Days: [makePair("a.ts", "b.ts", 3)],
+      filePairsChangedTogether180Days: [makePair("a.ts", "b.ts", 4)],
     })
 
     FileTemporalDependenciesReportGenerator.addTemporalDependenciesToReport(report, results)
@@ -127,16 +130,14 @@ describe("FileTemporalDependenciesReportGenerator", () => {
     expect(html).toContain("Past 30 Days")
     expect(html).toContain("Past 3 Months")
     expect(html).toContain("Past 6 Months")
-    expect(html).toContain("All Time")
     expect(html).toContain("30_days")
-    expect(html).toContain("all_time")
+    expect(html).not.toContain("all_time")
   })
 
   test("renders file pair table with percentages", () => {
     const report = new RichTextReport("test", "test.html")
     const results = makeResults({
-      filePairsChangedTogether: [makePair("src/a.ts", "src/b.ts", 5)],
-      filePairsChangedTogether30Days: [],
+      filePairsChangedTogether30Days: [makePair("src/a.ts", "src/b.ts", 5)],
       filePairsChangedTogether90Days: [],
       filePairsChangedTogether180Days: [],
     })
@@ -152,7 +153,6 @@ describe("FileTemporalDependenciesReportGenerator", () => {
   test("shows empty message when no pairs", () => {
     const report = new RichTextReport("test", "test.html")
     const results = makeResults({
-      filePairsChangedTogether: [],
       filePairsChangedTogether30Days: [],
       filePairsChangedTogether90Days: [],
       filePairsChangedTogether180Days: [],
@@ -162,6 +162,23 @@ describe("FileTemporalDependenciesReportGenerator", () => {
 
     const html = report.renderToString()
     expect(html).toContain("No file pairs changed together")
+  })
+
+  test("uses the configured range label when temporal depth exceeds 180 days", () => {
+    const report = new RichTextReport("test", "test.html")
+    const results = makeResults({
+      filePairsChangedTogether: [makePair("src/a.ts", "src/b.ts", 5)],
+      filePairsChangedTogether30Days: [makePair("src/a.ts", "src/b.ts", 2)],
+      filePairsChangedTogether90Days: [makePair("src/a.ts", "src/b.ts", 3)],
+      filePairsChangedTogether180Days: [makePair("src/a.ts", "src/b.ts", 4)],
+    })
+    results.codeConfiguration!.analysis = AnalysisConfig.make({ maxTemporalDependenciesDepthDays: 365 })
+
+    FileTemporalDependenciesReportGenerator.addTemporalDependenciesToReport(report, results)
+
+    const html = report.renderToString()
+    expect(html).toContain("Past 365 Days")
+    expect(html).toContain("all_time")
   })
 })
 

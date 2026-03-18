@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { LandscapeAnalyzer } from "../landscape/LandscapeAnalyzer.js"
 import { LandscapeConfiguration } from "../landscape/LandscapeConfiguration.js"
+import { RepositoryLink } from "../landscape/RepositoryLink.js"
 
 const WORKSPACE = join(import.meta.dir, "__landscape_workspace__")
 
@@ -117,10 +118,7 @@ describe("LandscapeAnalyzer", () => {
     const config = new LandscapeConfiguration()
     config.metadata.name = "TestLandscape"
     config.analysisRoot = "repos"
-    config.repositories = [
-      { analysisResultsPath: "repoA/results.json", name: "RepoA" },
-      { analysisResultsPath: "repoB/results.json", name: "RepoB" },
-    ]
+    config.repositories = [new RepositoryLink("repoA/results.json"), new RepositoryLink("repoB/results.json")]
 
     const analyzer = new LandscapeAnalyzer(config, WORKSPACE)
     const results = analyzer.analyze()
@@ -151,10 +149,7 @@ describe("LandscapeAnalyzer", () => {
 
     const config = new LandscapeConfiguration()
     config.analysisRoot = "repos"
-    config.repositories = [
-      { analysisResultsPath: "repoA/results.json", name: "RepoA" },
-      { analysisResultsPath: "repoB/results.json", name: "RepoB" },
-    ]
+    config.repositories = [new RepositoryLink("repoA/results.json"), new RepositoryLink("repoB/results.json")]
 
     const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
 
@@ -206,10 +201,7 @@ describe("LandscapeAnalyzer", () => {
 
     const config = new LandscapeConfiguration()
     config.analysisRoot = "repos"
-    config.repositories = [
-      { analysisResultsPath: "repoA/results.json", name: "RepoA" },
-      { analysisResultsPath: "repoB/results.json", name: "RepoB" },
-    ]
+    config.repositories = [new RepositoryLink("repoA/results.json"), new RepositoryLink("repoB/results.json")]
 
     const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
 
@@ -236,10 +228,7 @@ describe("LandscapeAnalyzer", () => {
 
     const config = new LandscapeConfiguration()
     config.analysisRoot = "repos"
-    config.repositories = [
-      { analysisResultsPath: "repoA/results.json", name: "RepoA" },
-      { analysisResultsPath: "repoB/results.json", name: "RepoB" },
-    ]
+    config.repositories = [new RepositoryLink("repoA/results.json"), new RepositoryLink("repoB/results.json")]
 
     const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
 
@@ -262,10 +251,7 @@ describe("LandscapeAnalyzer", () => {
     const config = new LandscapeConfiguration()
     config.analysisRoot = "repos"
     config.repositoryThresholdLocMain = 100
-    config.repositories = [
-      { analysisResultsPath: "repoA/results.json", name: "RepoA" },
-      { analysisResultsPath: "repoB/results.json", name: "RepoB" },
-    ]
+    config.repositories = [new RepositoryLink("repoA/results.json"), new RepositoryLink("repoB/results.json")]
 
     const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
     expect(results.getRepositoryCount()).toBe(1) // Only repoA passes threshold
@@ -274,7 +260,7 @@ describe("LandscapeAnalyzer", () => {
   test("handles missing result files gracefully", () => {
     const config = new LandscapeConfiguration()
     config.analysisRoot = "."
-    config.repositories = [{ analysisResultsPath: "nonexistent.json", name: "Missing" }]
+    config.repositories = [new RepositoryLink("nonexistent.json")]
 
     const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
     expect(results.getRepositoryCount()).toBe(0)

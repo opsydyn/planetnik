@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../../components/tables/ReportDataGrid"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -43,6 +44,13 @@ const largestBarData = sorted.slice(0, 15).map((f) => ({
   label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
   value: f.data.linesOfCode,
 }))
+
+const fileSizeRows = sorted.map((f) => ({
+  id: f.data.relativePath,
+  file: f.data.relativePath,
+  extension: `.${f.data.extension}`,
+  linesOfCode: f.data.linesOfCode,
+}))
 ---
 
 <Dashboard title="File Size" projectName={projectName}>
@@ -60,24 +68,18 @@ const largestBarData = sorted.slice(0, 15).map((f) => ({
   </section>
 
   <section class="section">
-    <table>
-      <thead>
-        <tr>
-          <th>File</th>
-          <th>Extension</th>
-          <th>Lines of Code</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.slice(0, 50).map((f) => (
-          <tr>
-            <td class="filepath">{f.data.relativePath}</td>
-            <td><code>.{f.data.extension}</code></td>
-            <td>{f.data.linesOfCode.toLocaleString()}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ReportDataGrid
+      client:load
+      title="Largest Files Table"
+      description="Search, sort, and paginate the full file inventory instead of a fixed top-50 slice."
+      searchPlaceholder="Search file path or extension"
+      rows={fileSizeRows}
+      columns={[
+        { field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.4 },
+        { field: "extension", headerName: "Extension", type: "code", minWidth: 120 },
+        { field: "linesOfCode", headerName: "Lines of Code", type: "number", minWidth: 150, sort: "desc" },
+      ]}
+    />
   </section>
 </Dashboard>
 
@@ -96,47 +98,5 @@ const largestBarData = sorted.slice(0, 15).map((f) => ({
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  th, td {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  th {
-    background: #f8fafc;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-  }
-
-  td {
-    font-size: 0.85rem;
-  }
-
-  .filepath {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 0.78rem;
-    word-break: break-all;
-  }
-
-  code {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 0.85em;
-    background: #f1f5f9;
-    padding: 0.15em 0.4em;
-    border-radius: 3px;
   }
 </style>

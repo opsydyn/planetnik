@@ -19,7 +19,6 @@ export class LandscapeDataExport {
 
   constructor(analysisResults: LandscapeAnalysisResults, folder: string) {
     this.analysisResults = analysisResults
-    this.reportsFolder = folder
 
     this.dataFolder = join(folder, "data")
     if (!existsSync(this.dataFolder)) {
@@ -66,7 +65,7 @@ export class LandscapeDataExport {
 
     for (const repo of repositories) {
       const extensions = repo.linesOfCodePerExtension
-      const mainLang = extensions.length > 0 ? extensions[0].extension.toUpperCase() : "-"
+      const mainLang = extensions[0]?.extension.toUpperCase() ?? "-"
       const otherLoc = repo.generatedLoc + repo.buildAndDeployLoc + repo.otherLoc
 
       lines.push(

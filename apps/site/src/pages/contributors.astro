@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content"
 import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../components/tables/ReportDataGrid"
 import Dashboard from "../layouts/Dashboard.astro"
 import { getContributorDisplayName, getContributorHref } from "../lib/contributors"
 
@@ -27,6 +28,22 @@ const segmentData = [
   ...(activeCount - rookieCount > 0 ? [{ label: "Active (> 1yr)", value: activeCount - rookieCount }] : []),
   ...(inactiveCount > 0 ? [{ label: "Inactive", value: inactiveCount }] : []),
 ]
+
+const contributorRows = sorted.map((c) => ({
+  id: c.data.email,
+  contributor: getContributorDisplayName(c.data),
+  href: getContributorHref(c.data.email),
+  email: c.data.userName ? c.data.email : "",
+  status: c.data.isRookie ? "Rookie" : c.data.isActive ? "Active" : "Inactive",
+  allTime: c.data.commitsAllTime,
+  commits30Days: c.data.commits30Days ?? null,
+  commits90Days: c.data.commits90Days ?? null,
+  commits180Days: c.data.commits180Days ?? null,
+  commits365Days: c.data.commits365Days ?? null,
+  firstCommit: c.data.firstCommit,
+  lastCommit: c.data.lastCommit,
+  percentage: c.data.percentage,
+}))
 ---
 
 <Dashboard title="Contributors" projectName={projectName}>
@@ -49,40 +66,25 @@ const segmentData = [
     <HorizontalBarChart client:load data={contribBarData} valueLabel="commits" />
   </section>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Contributor</th>
-        <th>All Time</th>
-        <th>30d</th>
-        <th>90d</th>
-        <th>180d</th>
-        <th>365d</th>
-        <th>First Commit</th>
-        <th>Last Commit</th>
-        <th>%</th>
-      </tr>
-    </thead>
-    <tbody>
-      {sorted.map((c) => (
-        <tr class={c.data.isActive ? "" : "inactive"}>
-          <td class="contributor">
-            <a class="name" href={getContributorHref(c.data.email)}>{getContributorDisplayName(c.data)}</a>
-            {c.data.isRookie && <span class="badge rookie" title="First commit less than a year ago">rookie</span>}
-            {c.data.userName && <div class="email-sub">{c.data.email}</div>}
-          </td>
-          <td>{c.data.commitsAllTime}</td>
-          <td>{c.data.commits30Days || ""}</td>
-          <td>{c.data.commits90Days || ""}</td>
-          <td>{c.data.commits180Days || ""}</td>
-          <td>{c.data.commits365Days || ""}</td>
-          <td class="date">{c.data.firstCommit}</td>
-          <td class="date">{c.data.lastCommit}</td>
-          <td>{c.data.percentage}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+  <ReportDataGrid
+    client:load
+    title="Contributor Table"
+    description="Search by name, email, status, or commit window while keeping the activity charts above."
+    searchPlaceholder="Search contributor, email, or status"
+    rows={contributorRows}
+    columns={[
+      { field: "contributor", headerName: "Contributor", type: "link", hrefField: "href", secondaryField: "email", minWidth: 260, flex: 1.3 },
+      { field: "status", headerName: "Status", minWidth: 120 },
+      { field: "allTime", headerName: "All Time", type: "number", minWidth: 120, sort: "desc" },
+      { field: "commits30Days", headerName: "30d", type: "number", minWidth: 100 },
+      { field: "commits90Days", headerName: "90d", type: "number", minWidth: 100 },
+      { field: "commits180Days", headerName: "180d", type: "number", minWidth: 100 },
+      { field: "commits365Days", headerName: "365d", type: "number", minWidth: 100 },
+      { field: "firstCommit", headerName: "First Commit", type: "date", minWidth: 140 },
+      { field: "lastCommit", headerName: "Last Commit", type: "date", minWidth: 140 },
+      { field: "percentage", headerName: "%", minWidth: 100 },
+    ]}
+  />
 </Dashboard>
 
 <style>
@@ -92,44 +94,6 @@ const segmentData = [
     font-size: 0.9rem;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-    font-size: 0.85rem;
-  }
-
-  th, td {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  th {
-    background: #f8fafc;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-  }
-
-  .contributor { min-width: 160px; }
-  .name { font-weight: 500; color: inherit; text-decoration: none; }
-  .name:hover { color: var(--color-accent); }
-  .email-sub { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 1px; }
-  .badge { display: inline-block; margin-left: 0.4rem; padding: 1px 6px; border-radius: 9999px; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; }
-  .rookie { background: #dbeafe; color: #1e40af; }
-  .inactive td { opacity: 0.55; }
-
   .section { margin-bottom: 1.5rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  .date {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-  }
 </style>

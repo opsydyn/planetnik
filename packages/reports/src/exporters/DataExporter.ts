@@ -3,10 +3,12 @@ import { join } from "node:path"
 import type { CodeAnalysisResults, ComponentDependency, Contributor, DuplicationInstance, SourceFile } from "@planetnik/analyzer"
 import { Range } from "@planetnik/analyzer"
 import { FormattingUtils } from "@planetnik/common"
+import { ComponentDependenciesExporter } from "./ComponentDependenciesExportInfo.js"
 import { DataExportUtils } from "./DataExportUtils.js"
 import { DependenciesExporter } from "./DependenciesExportInfo.js"
 import { DuplicationExporter } from "./DuplicationExportInfo.js"
 import { FileListExporter } from "./FilesExportInfo.js"
+import { TemporalDependenciesExporter } from "./TemporalDependenciesExportInfo.js"
 import { UnitListExporter } from "./UnitsExportInfo.js"
 
 export class DataExporter {
@@ -260,6 +262,26 @@ export class DataExporter {
       writeFileSync(join(dataFolder, "dependencies.json"), JSON.stringify(depExport, null, 2), "utf-8")
     }
 
+    const componentDependencies = this.analysisResults.logicalDecompositionsAnalysisResults.flatMap((decomposition) =>
+      decomposition.componentDependencies.map((dependency) => ({
+        decompositionKey: decomposition.key,
+        dependency,
+      })),
+    )
+
+    if (componentDependencies.length > 0) {
+      const componentDependencyExport = ComponentDependenciesExporter.exportDependencies(
+        componentDependencies,
+        "Static Component Dependencies",
+        timestamp,
+      )
+      writeFileSync(
+        join(dataFolder, "component_dependencies.json"),
+        JSON.stringify(componentDependencyExport, null, 2),
+        "utf-8",
+      )
+    }
+
     // Export per-logical-decomposition component dependencies
     for (const decomposition of this.analysisResults.logicalDecompositionsAnalysisResults) {
       const name = decomposition.key
@@ -315,17 +337,58 @@ export class DataExporter {
 
   private exportTemporalDependencies(dataFolder: string): void {
     const historyResults = this.analysisResults.filesHistoryAnalysisResults
+    const maxDays = this.analysisResults.codeConfiguration?.analysis.maxTemporalDependenciesDepthDays ?? 0
+    const periods = [
+      {
+        key: "30_days",
+        label: "Past 30 Days",
+        days: 30,
+        fileName: "temporal_dependencies_30_days.txt",
+        pairs: historyResults.filePairsChangedTogether30Days,
+        enabled: maxDays >= 30,
+      },
+      {
+        key: "90_days",
+        label: "Past 3 Months",
+        days: 90,
+        fileName: "temporal_dependencies_90_days.txt",
+        pairs: historyResults.filePairsChangedTogether90Days,
+        enabled: maxDays >= 90,
+      },
+      {
+        key: "180_days",
+        label: "Past 6 Months",
+        days: 180,
+        fileName: "temporal_dependencies_180_days.txt",
+        pairs: historyResults.filePairsChangedTogether180Days,
+        enabled: maxDays >= 180,
+      },
+      {
+        key: "all_time",
+        label: `Past ${maxDays} Days`,
+        days: maxDays,
+        fileName: "temporal_dependencies.txt",
+        pairs: historyResults.filePairsChangedTogether,
+        enabled: maxDays > 180,
+      },
+    ].filter((period) => period.enabled)
 
-    this.exportFilePairsChangedTogether(
-      historyResults.filePairsChangedTogether,
-      "temporal_dependencies.txt",
-      dataFolder,
-    )
-    this.exportFilePairsChangedTogether(
-      historyResults.filePairsChangedTogether30Days,
-      "temporal_dependencies_30_days.txt",
-      dataFolder,
-    )
+    for (const period of periods) {
+      this.exportFilePairsChangedTogether(period.pairs, period.fileName, dataFolder)
+    }
+
+    if (periods.length > 0) {
+      const temporalDependenciesExport = TemporalDependenciesExporter.exportDependencies(
+        periods,
+        "Temporal Dependencies",
+        new Date().toISOString(),
+      )
+      writeFileSync(
+        join(dataFolder, "temporal_dependencies.json"),
+        JSON.stringify(temporalDependenciesExport, null, 2),
+        "utf-8",
+      )
+    }
   }
 
   private exportFilePairsChangedTogether(

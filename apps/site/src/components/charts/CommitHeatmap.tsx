@@ -113,47 +113,51 @@ function CommitHeatmapInner({
             >
               {(cells) =>
                 cells.map((column) =>
-                  column.map((cell) => (
-                    <rect
-                      key={cell.bin.date}
-                      x={cell.x}
-                      y={cell.y}
-                      width={cell.width}
-                      height={cell.height}
-                      rx={Math.min(4, cell.width / 3)}
-                      fill={getCellColor(cell.count, heatmap.maxCommits)}
-                      stroke={cell.count > 0 ? "rgba(255,255,255,0.32)" : chartTheme.colors.border}
-                      strokeWidth={1}
-                      tabIndex={0}
-                      aria-label={`${cell.bin.date}: ${cell.bin.commits} ${cell.bin.commits === 1 ? "commit" : "commits"}`}
-                      style={{ cursor: "pointer", outline: "none" }}
-                      onMouseEnter={(event) =>
-                        showTooltip({
-                          tooltipLeft: event.clientX,
-                          tooltipTop: event.clientY,
-                          tooltipData: cell.bin,
-                        })
-                      }
-                      onMouseMove={(event) =>
-                        showTooltip({
-                          tooltipLeft: event.clientX,
-                          tooltipTop: event.clientY,
-                          tooltipData: cell.bin,
-                        })
-                      }
-                      onMouseLeave={hideTooltip}
-                      onFocus={(event) =>
-                        showTooltip({
-                          tooltipLeft: event.currentTarget.getBoundingClientRect().left + event.currentTarget.getBoundingClientRect().width / 2,
-                          tooltipTop: event.currentTarget.getBoundingClientRect().top,
-                          tooltipData: cell.bin,
-                        })
-                      }
-                      onBlur={hideTooltip}
-                    >
-                      <title>{cell.bin.date}: {cell.bin.commits} {cell.bin.commits === 1 ? "commit" : "commits"}</title>
-                    </rect>
-                  )),
+                  column.map((cell) => {
+                    const commitCount = cell.count ?? 0
+
+                    return (
+                      <rect
+                        key={cell.bin.date}
+                        x={cell.x}
+                        y={cell.y}
+                        width={cell.width}
+                        height={cell.height}
+                        rx={Math.min(4, cell.width / 3)}
+                        fill={getCellColor(commitCount, heatmap.maxCommits)}
+                        stroke={commitCount > 0 ? "rgba(255,255,255,0.32)" : chartTheme.colors.border}
+                        strokeWidth={1}
+                        tabIndex={0}
+                        aria-label={`${cell.bin.date}: ${cell.bin.commits} ${cell.bin.commits === 1 ? "commit" : "commits"}`}
+                        style={{ cursor: "pointer", outline: "none" }}
+                        onMouseEnter={(event) =>
+                          showTooltip({
+                            tooltipLeft: event.clientX,
+                            tooltipTop: event.clientY,
+                            tooltipData: cell.bin,
+                          })
+                        }
+                        onMouseMove={(event) =>
+                          showTooltip({
+                            tooltipLeft: event.clientX,
+                            tooltipTop: event.clientY,
+                            tooltipData: cell.bin,
+                          })
+                        }
+                        onMouseLeave={hideTooltip}
+                        onFocus={(event) =>
+                          showTooltip({
+                            tooltipLeft: event.currentTarget.getBoundingClientRect().left + event.currentTarget.getBoundingClientRect().width / 2,
+                            tooltipTop: event.currentTarget.getBoundingClientRect().top,
+                            tooltipData: cell.bin,
+                          })
+                        }
+                        onBlur={hideTooltip}
+                      >
+                        <title>{cell.bin.date}: {cell.bin.commits} {cell.bin.commits === 1 ? "commit" : "commits"}</title>
+                      </rect>
+                    )
+                  }),
                 )
               }
             </HeatmapRect>

@@ -424,19 +424,19 @@ describe("ContributorsImport", () => {
 describe("GitContributorsUtil", () => {
   test("getContributors aggregates by email", () => {
     const commit1 = new AuthorCommit()
-    commit1.authorEmail = "alice@test.com"
+    commit1.email = "alice@test.com"
     commit1.date = "2024-01-15"
-    commit1.fileUpdatesCount = 3
+    commit1.filesUpdated = 3
 
     const commit2 = new AuthorCommit()
-    commit2.authorEmail = "alice@test.com"
+    commit2.email = "alice@test.com"
     commit2.date = "2024-01-20"
-    commit2.fileUpdatesCount = 2
+    commit2.filesUpdated = 2
 
     const commit3 = new AuthorCommit()
-    commit3.authorEmail = "bob@test.com"
+    commit3.email = "bob@test.com"
     commit3.date = "2024-01-18"
-    commit3.fileUpdatesCount = 1
+    commit3.filesUpdated = 1
 
     const contributors = GitContributorsUtil.getContributors([commit1, commit2, commit3])
     expect(contributors.length).toBe(2)
@@ -447,11 +447,11 @@ describe("GitContributorsUtil", () => {
 
   test("getContributorsPerTimeSlot groups by year", () => {
     const commit1 = new AuthorCommit()
-    commit1.authorEmail = "alice@test.com"
+    commit1.email = "alice@test.com"
     commit1.date = "2024-01-15"
 
     const commit2 = new AuthorCommit()
-    commit2.authorEmail = "bob@test.com"
+    commit2.email = "bob@test.com"
     commit2.date = "2024-01-20"
 
     const slots = GitContributorsUtil.getContributorsPerTimeSlot([commit1, commit2], (c) => c.getYear())
@@ -463,9 +463,9 @@ describe("GitContributorsUtil", () => {
 
   test("importFromAuthorCommits builds full import", () => {
     const commit = new AuthorCommit()
-    commit.authorEmail = "alice@test.com"
+    commit.email = "alice@test.com"
     commit.date = "2024-03-10"
-    commit.fileUpdatesCount = 5
+    commit.filesUpdated = 5
 
     const result = GitContributorsUtil.importFromAuthorCommits([commit])
     expect(result.contributors.length).toBe(1)

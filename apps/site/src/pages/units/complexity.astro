@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
 import DonutChart from "../../components/charts/DonutChart"
 import ScatterPlot from "../../components/charts/ScatterPlot"
+import ReportDataGrid from "../../components/tables/ReportDataGrid"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -37,6 +38,14 @@ const scatterData = sorted.slice(0, 200).map((u) => ({
   y: u.data.mcCabeIndex,
   label: u.data.shortName,
 }))
+
+const complexityRows = sorted.map((u) => ({
+  id: `${u.data.relativeFileName}:${u.data.shortName}`,
+  unit: u.data.shortName,
+  file: u.data.relativeFileName,
+  mcCabeIndex: u.data.mcCabeIndex,
+  linesOfCode: u.data.linesOfCode,
+}))
 ---
 
 <Dashboard title="Conditional Complexity" projectName={projectName}>
@@ -60,21 +69,19 @@ const scatterData = sorted.slice(0, 200).map((u) => ({
 
   <section class="section">
     <h3>Most Complex Units</h3>
-    <table>
-      <thead>
-        <tr><th>Unit</th><th>File</th><th>McCabe</th><th>LOC</th></tr>
-      </thead>
-      <tbody>
-        {sorted.slice(0, 50).map((u) => (
-          <tr>
-            <td class="unit-name">{u.data.shortName}</td>
-            <td class="filepath">{u.data.relativeFileName}</td>
-            <td class={u.data.mcCabeIndex > 10 ? "high" : ""}>{u.data.mcCabeIndex}</td>
-            <td>{u.data.linesOfCode}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ReportDataGrid
+      client:load
+      title="Complexity Table"
+      description="Search and paginate the full complexity dataset while the charts stay focused on the highest-signal views."
+      searchPlaceholder="Search unit or file path"
+      rows={complexityRows}
+      columns={[
+        { field: "unit", headerName: "Unit", minWidth: 260, flex: 1.1 },
+        { field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.2 },
+        { field: "mcCabeIndex", headerName: "McCabe", type: "number", minWidth: 120, sort: "desc" },
+        { field: "linesOfCode", headerName: "LOC", type: "number", minWidth: 120 },
+      ]}
+    />
   </section>
 </Dashboard>
 
@@ -82,11 +89,4 @@ const scatterData = sorted.slice(0, 200).map((u) => ({
   .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
-  .unit-name { font-weight: 500; max-width: min(300px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: min(350px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .high { color: #ef4444; font-weight: 600; }
 </style>

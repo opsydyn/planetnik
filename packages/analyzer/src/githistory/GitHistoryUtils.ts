@@ -61,9 +61,14 @@ export class AuthorCommit {
     if (this.date.length < 10) return ""
     const parts = this.date.substring(0, 10).split("-")
     if (parts.length !== 3) return ""
-    const year = Number.parseInt(parts[0], 10)
-    const month = Number.parseInt(parts[1], 10) - 1
-    const day = Number.parseInt(parts[2], 10)
+    const yearPart = parts[0]
+    const monthPart = parts[1]
+    const dayPart = parts[2]
+    if (!yearPart || !monthPart || !dayPart) return ""
+
+    const year = Number.parseInt(yearPart, 10)
+    const month = Number.parseInt(monthPart, 10) - 1
+    const day = Number.parseInt(dayPart, 10)
     if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return ""
 
     const d = new Date(year, month, day)

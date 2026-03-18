@@ -1,6 +1,6 @@
 import { Schema } from "@effect/schema"
 import { SourceFileFilter } from "../core/SourceFileFilter.js"
-import type { SourceFileType } from "./SourceFile.js"
+import type { SourceFile } from "./SourceFile.js"
 
 const NamedSourceCodeAspectSchema = Schema.Struct({
   name: Schema.optionalWith(Schema.String, { default: () => "" }),
@@ -9,14 +9,14 @@ const NamedSourceCodeAspectSchema = Schema.Struct({
 })
 
 export type NamedSourceCodeAspectType = typeof NamedSourceCodeAspectSchema.Type & {
-  sourceFiles: SourceFileType[]
+  sourceFiles: SourceFile[]
 }
 
 export class NamedSourceCodeAspect {
   readonly name: string
-  readonly sourceFileFilters: ReturnType<typeof SourceFileFilter.make>[]
-  readonly files: string[]
-  sourceFiles: SourceFileType[] = []
+  sourceFileFilters: ReturnType<typeof SourceFileFilter.make>[]
+  files: string[]
+  sourceFiles: SourceFile[] = []
   filtering: string = ""
 
   constructor(

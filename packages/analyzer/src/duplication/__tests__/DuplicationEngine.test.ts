@@ -73,9 +73,9 @@ describe("Block", () => {
     const block = new Block([10, 20, 30, 40])
     const subs = block.extractAllPossibleSubBlocks(2)
     expect(subs).toHaveLength(3)
-    expect(subs[0].lineIndexes).toEqual([10, 20])
-    expect(subs[1].lineIndexes).toEqual([20, 30])
-    expect(subs[2].lineIndexes).toEqual([30, 40])
+    expect(subs[0]!.lineIndexes).toEqual([10, 20])
+    expect(subs[1]!.lineIndexes).toEqual([20, 30])
+    expect(subs[2]!.lineIndexes).toEqual([30, 40])
   })
 
   test("equals compares line indexes", () => {
@@ -98,8 +98,8 @@ describe("FileInfoForDuplication", () => {
     info.lineIDs = [1, 2, 3, -1, 4, 5, 6, 7]
     const blocks = info.extractBlocks(3)
     expect(blocks).toHaveLength(2)
-    expect(blocks[0].lineIndexes).toEqual([1, 2, 3])
-    expect(blocks[1].lineIndexes).toEqual([4, 5, 6, 7])
+    expect(blocks[0]!.lineIndexes).toEqual([1, 2, 3])
+    expect(blocks[1]!.lineIndexes).toEqual([4, 5, 6, 7])
   })
 
   test("filters out blocks smaller than minimum", () => {
@@ -107,7 +107,7 @@ describe("FileInfoForDuplication", () => {
     info.lineIDs = [1, 2, -1, 3, 4, 5]
     const blocks = info.extractBlocks(3)
     expect(blocks).toHaveLength(1)
-    expect(blocks[0].lineIndexes).toEqual([3, 4, 5])
+    expect(blocks[0]!.lineIndexes).toEqual([3, 4, 5])
   })
 
   test("indexesOf finds all occurrences of a block pattern", () => {
@@ -246,7 +246,7 @@ describe("DuplicationAggregator", () => {
 
     const result = DuplicationAggregator.getDuplicationPerSourceFile([instance])
     expect(result).toHaveLength(1)
-    expect(result[0].duplicatedLineIndexes).toHaveLength(6) // 1,2,3 + 10,11,12
+    expect(result[0]!.duplicatedLineIndexes).toHaveLength(6) // 1,2,3 + 10,11,12
   })
 
   test("aggregates duplication per extension", () => {
@@ -259,9 +259,9 @@ describe("DuplicationAggregator", () => {
 
     const metrics = DuplicationAggregator.getDuplicationPerExtension([file1, file2], fileDups)
     expect(metrics).toHaveLength(1)
-    expect(metrics[0].key).toBe("java")
-    expect(metrics[0].cleanedLinesOfCode).toBe(5)
-    expect(metrics[0].duplicatedLinesOfCode).toBe(2)
+    expect(metrics[0]!.key).toBe("java")
+    expect(metrics[0]!.cleanedLinesOfCode).toBe(5)
+    expect(metrics[0]!.duplicatedLinesOfCode).toBe(2)
   })
 })
 
@@ -301,7 +301,7 @@ describe("UnitDuplicatesExtractor", () => {
     const extractor = new UnitDuplicatesExtractor()
     const result = extractor.findDuplicatedUnits([unit1, unit2], 3)
     expect(result).toHaveLength(1)
-    expect(result[0].duplicatedFileBlocks).toHaveLength(2)
+    expect(result[0]!.duplicatedFileBlocks).toHaveLength(2)
   })
 
   test("filters out units below threshold", () => {

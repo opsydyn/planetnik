@@ -9,6 +9,7 @@ import {
   Metric,
   MetricRangeControl,
   MetricsWithGoal,
+  NamedSourceCodeAspect,
   NumericMetric,
   Range,
   RiskDistributionStats,
@@ -657,8 +658,8 @@ describe("FileExportInfo", () => {
   test("creates export info from source file", () => {
     const sf = new SourceFile("src/main/App.java")
     sf.linesOfCode = 100
-    sf.logicalComponents = [{ name: "core", sourceFiles: [], filters: [] }]
-    sf.concerns = [{ name: "logging", sourceFiles: [], filters: [] }]
+    sf.logicalComponents = [new NamedSourceCodeAspect("core")]
+    sf.concerns = [new NamedSourceCodeAspect("logging")]
     const info = fileExportInfoFromSourceFile(sf)
     expect(info.relativePath).toBe("src/main/App.java")
     expect(info.extension).toBe("java")

@@ -1,6 +1,10 @@
+import { SourceCodeAspectUtils } from "../aspects/SourceCodeAspectUtils.js"
 import type { CodeConfiguration } from "../core/CodeConfiguration.js"
+import type { Dependency } from "../dependencies/Dependency.js"
+import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js"
 import { DependenciesFinderExtractor } from "../dependencies/DependenciesFinderExtractor.js"
 import { DependencyUtils } from "../dependencies/DependencyUtils.js"
+import { LanguageAnalyzerFactory } from "../lang/LanguageAnalyzerFactory.js"
 import type { MetricsList } from "../metrics/MetricsList.js"
 import { AspectAnalysisResults } from "../results/AspectAnalysisResults.js"
 import type { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
@@ -10,6 +14,7 @@ import { AnalysisUtils } from "./AnalysisUtils.js"
 import { SourceCodeFiles } from "./SourceCodeFiles.js"
 
 export class LogicalDecompositionAnalyzer {
+  private results: CodeAnalysisResults
   private codeConfiguration: CodeConfiguration
   private metricsList: MetricsList
   private logicalDecompositionResults: LogicalDecompositionAnalysisResults[]
@@ -17,6 +22,7 @@ export class LogicalDecompositionAnalyzer {
   private start: number
 
   constructor(results: CodeAnalysisResults) {
+    this.results = results
     this.logicalDecompositionResults = results.logicalDecompositionsAnalysisResults
     this.codeConfiguration = results.codeConfiguration!
     this.metricsList = results.metricsList
@@ -25,6 +31,9 @@ export class LogicalDecompositionAnalyzer {
   }
 
   analyze(): void {
+    const allDependencies = this.shouldExtractBuiltInDependencies() ? this.extractBuiltInDependencies() : []
+    this.results.allDependencies = allDependencies
+
     for (const logicalDecomposition of this.codeConfiguration.logicalDecompositions) {
       const ldResults = new LDResults(logicalDecomposition.name)
       ldResults.logicalDecomposition = logicalDecomposition
@@ -48,10 +57,16 @@ export class LogicalDecompositionAnalyzer {
         )
       }
 
-      // Run dependency analysis via DependenciesFinderExtractor
+      const componentDependencies = logicalDecomposition.dependenciesFinder.useBuiltInDependencyFinders
+        ? DependencyUtils.getComponentDependencies(allDependencies, logicalDecomposition.name)
+        : []
+
+      // Run dependency analysis via DependenciesFinderExtractor for explicit/simple/meta rules.
       const finder = new DependenciesFinderExtractor(logicalDecomposition)
       const finderDependencies = finder.findComponentDependencies(this.codeConfiguration.main)
-      ldResults.componentDependencies.push(...finderDependencies)
+      componentDependencies.push(...finderDependencies)
+
+      ldResults.componentDependencies.push(...componentDependencies)
       ldResults.allDependencies.push(...finder.allDependencies)
 
       const metricFriendlyName = logicalDecomposition.name.toUpperCase().replace(/ /g, "_").replace(/-/g, "_")
@@ -59,15 +74,47 @@ export class LogicalDecompositionAnalyzer {
       this.metricsList
         .addMetric()
         .setId(AnalysisUtils.getMetricId(`NUMBER_OF_DEPENDENCIES_DECOMPOSITION_${metricFriendlyName}`))
-        .setValue(finderDependencies.length)
+        .setValue(componentDependencies.length)
 
       this.metricsList
         .addMetric()
         .setId(
           AnalysisUtils.getMetricId(`NUMBER_OF_PLACES_WITH_CYCLIC_DEPENDENCIES_DECOMPOSITION_${metricFriendlyName}`),
         )
-        .setValue(DependencyUtils.getCyclicDependencyPlacesCount(finderDependencies))
+        .setValue(DependencyUtils.getCyclicDependencyPlacesCount(componentDependencies))
     }
+  }
+
+  private shouldExtractBuiltInDependencies(): boolean {
+    if (this.codeConfiguration.analysis.skipDependencies) {
+      return false
+    }
+
+    return this.codeConfiguration.logicalDecompositions.some(
+      (logicalDecomposition) => logicalDecomposition.dependenciesFinder.useBuiltInDependencyFinders,
+    )
+  }
+
+  private extractBuiltInDependencies(): Dependency[] {
+    const dependenciesAnalysis = new DependenciesAnalysis()
+
+    for (const aspectPerExtension of SourceCodeAspectUtils.getAspectsPerExtensions(this.codeConfiguration.main)) {
+      if (aspectPerExtension.sourceFiles.length === 0) {
+        continue
+      }
+
+      const sourceFileSample = aspectPerExtension.sourceFiles[0]
+      if (!sourceFileSample) {
+        continue
+      }
+
+      const languageAnalyzer = LanguageAnalyzerFactory.getInstance().getLanguageAnalyzer(sourceFileSample.extension)
+      const localAnalysis = languageAnalyzer.extractDependencies(aspectPerExtension.sourceFiles)
+      dependenciesAnalysis.dependencies.push(...localAnalysis.dependencies)
+      dependenciesAnalysis.errors.push(...localAnalysis.errors)
+    }
+
+    return dependenciesAnalysis.dependencies
   }
 
   private getScopeSourceFiles(scope: string): typeof this.codeConfiguration.main.sourceFiles {

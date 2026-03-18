@@ -98,7 +98,10 @@ export class DuplicationAnalyzer {
     const sorted = Array.from(mergedConsolidated.values()).sort((a, b) => b.blockSize - a.blockSize)
     const max = Math.min(this.codeConfiguration.analysis.maxTopListSize, sorted.length)
     for (let i = 0; i < max; i++) {
-      this.duplicationResults.longestDuplicates.push(sorted[i])
+      const instance = sorted[i]
+      if (instance) {
+        this.duplicationResults.longestDuplicates.push(instance)
+      }
     }
   }
 
@@ -106,8 +109,9 @@ export class DuplicationAnalyzer {
     const sorted = [...duplicates].sort((a, b) => b.duplicatedFileBlocks.length - a.duplicatedFileBlocks.length)
     const max = Math.min(this.codeConfiguration.analysis.maxTopListSize, sorted.length)
     for (let i = 0; i < max; i++) {
-      if (sorted[i].duplicatedFileBlocks.length > 2) {
-        this.duplicationResults.mostFrequentDuplicates.push(sorted[i])
+      const instance = sorted[i]
+      if (instance && instance.duplicatedFileBlocks.length > 2) {
+        this.duplicationResults.mostFrequentDuplicates.push(instance)
       }
     }
   }
@@ -151,6 +155,7 @@ export class DuplicationAnalyzer {
 
       const block1 = instance.duplicatedFileBlocks[0]
       const block2 = instance.duplicatedFileBlocks[1]
+      if (!block1 || !block2) continue
       let offset = 1
 
       while (true) {
@@ -160,6 +165,7 @@ export class DuplicationAnalyzer {
 
         let nextBlock1 = nextInstance.duplicatedFileBlocks[0]
         let nextBlock2 = nextInstance.duplicatedFileBlocks[1]
+        if (!nextBlock1 || !nextBlock2) break
 
         if (nextBlock1.sourceFile?.relativePath !== block1.sourceFile?.relativePath) {
           const temp = nextBlock1

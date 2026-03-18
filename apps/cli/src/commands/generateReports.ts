@@ -10,6 +10,7 @@ import {
   DEFAULT_CONFIGURATION_FOLDER,
   LogicalDecomposition,
   NamedSourceCodeAspect,
+  SourceFileFilter,
 } from "@planetnik/analyzer"
 import { BasicSourceCodeReportGenerator, DataExporter, ReportFileExporter } from "@planetnik/reports"
 import { Effect } from "effect"
@@ -56,7 +57,7 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
             (c: Record<string, unknown>) =>
               new NamedSourceCodeAspect(
                 (c.name as string) ?? "",
-                (c.sourceFileFilters as ReturnType<typeof NamedSourceCodeAspect.make>[]) ?? [],
+                (c.sourceFileFilters as ReturnType<typeof SourceFileFilter.make>[]) ?? [],
                 (c.files as string[]) ?? [],
               ),
           )
@@ -74,7 +75,7 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
             (c: Record<string, unknown>) =>
               new Concern(
                 (c.name as string) ?? "",
-                (c.sourceFileFilters as ReturnType<typeof NamedSourceCodeAspect.make>[]) ?? [],
+                (c.sourceFileFilters as ReturnType<typeof SourceFileFilter.make>[]) ?? [],
               ),
           )
         }

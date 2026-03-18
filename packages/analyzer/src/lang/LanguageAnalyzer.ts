@@ -21,3 +21,4 @@ export const FEATURE_ADVANCED_CODE_CLEANING =
   "Advanced code cleaning (empty lines and comments removed for LOC calculations, additional cleaning for duplication calculations)"
 export const FEATURE_UNIT_SIZE_ANALYSIS = "Unit size analysis"
 export const FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS = "Conditional complexity analysis"
+export const FEATURE_ADVANCED_DEPENDENCIES_ANALYSIS = "Advanced heuristic dependency analysis"

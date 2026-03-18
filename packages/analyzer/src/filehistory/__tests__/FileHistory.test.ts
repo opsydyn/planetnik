@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { CommitInfo } from "../../githistory/CommitInfo.js"
-import { GitHistoryUtils } from "../../githistory/GitHistoryUtils.js"
+import { FileUpdate, GitHistoryUtils } from "../../githistory/GitHistoryUtils.js"
 import { DateUtils, FileHistoryUtils } from "../FileHistoryUtils.js"
 import { FileModificationHistory } from "../FileModificationHistory.js"
 
@@ -147,9 +147,9 @@ describe("GitHistoryUtils", () => {
 
   test("getAuthorCommits deduplicates by commitId", () => {
     const updates = [
-      { date: "2024-01-01", email: "alice@example.com", commitId: "abc", path: "a.ts" },
-      { date: "2024-01-01", email: "alice@example.com", commitId: "abc", path: "b.ts" },
-      { date: "2024-01-02", email: "bob@example.com", commitId: "def", path: "c.ts" },
+      new FileUpdate("2024-01-01", "alice@example.com", "abc", "a.ts"),
+      new FileUpdate("2024-01-01", "alice@example.com", "abc", "b.ts"),
+      new FileUpdate("2024-01-02", "bob@example.com", "def", "c.ts"),
     ]
 
     const commits = GitHistoryUtils.getAuthorCommits(updates)
@@ -159,9 +159,9 @@ describe("GitHistoryUtils", () => {
 
   test("getFileHistories groups commits by path", () => {
     const updates = [
-      { date: "2024-01-01", email: "alice@example.com", commitId: "abc", path: "a.ts" },
-      { date: "2024-01-02", email: "bob@example.com", commitId: "def", path: "a.ts" },
-      { date: "2024-01-03", email: "alice@example.com", commitId: "ghi", path: "b.ts" },
+      new FileUpdate("2024-01-01", "alice@example.com", "abc", "a.ts"),
+      new FileUpdate("2024-01-02", "bob@example.com", "def", "a.ts"),
+      new FileUpdate("2024-01-03", "alice@example.com", "ghi", "b.ts"),
     ]
 
     const histories = GitHistoryUtils.getFileHistories(updates)

@@ -92,6 +92,7 @@ export class FileHistoryAnalyzer {
 
     const firstDateString = uniqueDates[0]
     const latestDateString = uniqueDates[uniqueDates.length - 1]
+    if (!firstDateString || !latestDateString) return
 
     const firstDate = FileHistoryUtils.getDateFromString(firstDateString)
     const latestDate = FileHistoryUtils.getDateFromString(latestDateString)

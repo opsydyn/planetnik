@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
 import DonutChart from "../../components/charts/DonutChart"
+import ReportDataGrid from "../../components/tables/ReportDataGrid"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -30,6 +31,19 @@ const distData = ageCategories.map((cat, i) => {
   const val = getMetric(cat.metric)
   return { label: cat.label, value: val ?? 0, detail: (val ?? 0).toLocaleString() + " files", color: riskColors[i] }
 }).filter((d) => d.value > 0)
+
+const ageDetailRows = ageCategories
+  .map((cat) => {
+    const val = getMetric(cat.metric)
+    return val === null
+      ? null
+      : {
+          id: cat.metric,
+          category: cat.label,
+          files: val,
+        }
+  })
+  .filter((row): row is NonNullable<typeof row> => row !== null)
 ---
 
 <Dashboard title="File Age" projectName={projectName}>
@@ -71,22 +85,18 @@ const distData = ageCategories.map((cat, i) => {
 
   <section class="section">
     <h3>File Age Detail</h3>
-    <table>
-      <thead>
-        <tr><th>Category</th><th>Files</th></tr>
-      </thead>
-      <tbody>
-        {ageCategories.map((cat) => {
-          const val = getMetric(cat.metric)
-          return val !== null ? (
-            <tr>
-              <td>{cat.label}</td>
-              <td>{val.toLocaleString()}</td>
-            </tr>
-          ) : null
-        })}
-      </tbody>
-    </table>
+    <ReportDataGrid
+      client:load
+      title="Age Categories"
+      description="Search and sort age-risk categories without losing the summary charts above."
+      searchPlaceholder="Search age category"
+      rows={ageDetailRows}
+      columns={[
+        { field: "category", headerName: "Category", minWidth: 240, flex: 1.1 },
+        { field: "files", headerName: "Files", type: "number", minWidth: 140, sort: "desc" },
+      ]}
+      paginationPageSize={10}
+    />
     {ageInDays === null && (
       <div class="empty">
         <p>No file history data available.</p>
@@ -103,10 +113,6 @@ const distData = ageCategories.map((cat, i) => {
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
