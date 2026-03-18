@@ -1,4 +1,6 @@
-import { startTransition, useDeferredValue, useId, useState } from "react"
+import { startTransition, useDeferredValue, useId, useMemo, useState } from "react"
+import { buildTemporalForceGraph } from "../lib/forceGraph"
+import ForceGraph from "./graphs/ForceGraph"
 import HorizontalBarChart from "./charts/HorizontalBarChart"
 import ReportDataGrid from "./tables/ReportDataGrid"
 import "./TemporalDependenciesExplorer.css"
@@ -94,6 +96,7 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
   const activeSection = availableSections.find((section) => section.periodKey === selectedPeriod) ?? allPeriodsSection
   const activeRows = sortRows(activeSection.dependencies)
   const filteredRows = deferredQuery ? activeRows.filter((row) => matchesQuery(row, deferredQuery)) : activeRows
+  const temporalForceGraph = useMemo(() => buildTemporalForceGraph(filteredRows), [filteredRows])
 
   const uniqueFiles = new Set(filteredRows.flatMap((row) => [row.file1, row.file2])).size
   const strongestPair = filteredRows[0] ?? null
@@ -187,6 +190,22 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
           <small>average shared commits {averageSharedCommits.toLocaleString()}</small>
         </article>
       </div>
+
+      <section className="temporal-force-section">
+        <div className="temporal-force-header">
+          <h3>Force-Directed File Couplings</h3>
+          <p>
+            Dense clusters show files that travel together through the current filtered dataset. The graph updates with the same period and search controls as the table.
+          </p>
+        </div>
+        <ForceGraph
+          nodes={temporalForceGraph.nodes}
+          edges={temporalForceGraph.edges}
+          height={520}
+          emptyMessage="Not enough matching file couplings to render a force graph for the current filter."
+          footerNote={`Showing ${filteredRows.length.toLocaleString()} filtered pair${filteredRows.length === 1 ? "" : "s"} in ${activeSection.periodLabel}.`}
+        />
+      </section>
 
       <div className="temporal-chart-grid">
         <section className="temporal-chart-panel">

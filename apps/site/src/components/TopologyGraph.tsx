@@ -1,8 +1,11 @@
 import { RegistryProvider, Result, useAtom, useAtomValue } from "@effect-atom/atom-react"
+import { navigate } from "astro:transitions/client"
 import dagre from "@dagrejs/dagre"
 import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesState } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import ForceGraph from "./graphs/ForceGraph"
+import { buildContributorForceGraph } from "../lib/forceGraph"
 import {
   type PeopleDep,
   currentEdgesAtom,
@@ -255,6 +258,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
   }, [])
 
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => buildGraph(currentEdges), [currentEdges])
+  const contributorForceGraph = useMemo(() => buildContributorForceGraph(currentEdges), [currentEdges])
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges)
@@ -272,7 +276,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
   }, [])
 
   const onNodeClick = useCallback((_event: unknown, node: Node) => {
-    window.location.href = getContributorHref(node.id)
+    void navigate(getContributorHref(node.id))
   }, [])
 
   const contentResult = useMemo(
@@ -370,6 +374,22 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
               <Background color="#e2e8f0" gap={20} />
             </ReactFlow>
           </div>
+        </div>
+
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "grid", gap: "0.4rem", marginBottom: "0.75rem" }}>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Force-Directed View</h3>
+            <p style={{ margin: 0, color: "#64748b", fontSize: "0.92rem" }}>
+              A second graph view for the same period. Dense clusters surface collaboration hotspots, while longer bridges make cross-team touch points easier to spot.
+            </p>
+          </div>
+          <ForceGraph
+            nodes={contributorForceGraph.nodes}
+            edges={contributorForceGraph.edges}
+            height={520}
+            emptyMessage="Not enough contributor links are available to render the force-directed view for this period."
+            footerNote={`Showing ${currentEdges.length.toLocaleString()} contributor link${currentEdges.length === 1 ? "" : "s"} for ${selectedPeriod}.`}
+          />
         </div>
 
         {/* Strongest connections table */}

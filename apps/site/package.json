@@ -19,6 +19,7 @@
     "@iconify-json/devicon": "^1.2.61",
     "@phosphor-icons/react": "^2.1.10",
     "@phosphor-icons/web": "^2.1.2",
+    "@react-sigma/core": "^5.0.6",
     "@visx/axis": "^3.12.0",
     "@visx/grid": "^3.12.0",
     "@visx/group": "^3.12.0",
@@ -39,8 +40,13 @@
     "d3-hierarchy": "^3.1.2",
     "effect": "catalog:",
     "fuse.js": "^7.1.0",
+    "graphology": "^0.26.0",
+    "graphology-layout": "^0.6.1",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-types": "^0.24.8",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "sigma": "^3.0.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.8",

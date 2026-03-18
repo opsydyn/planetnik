@@ -1,4 +1,5 @@
 import Fuse, { type FuseResultMatch } from "fuse.js"
+import { navigate } from "astro:transitions/client"
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass"
 import { SpinnerGapIcon } from "@phosphor-icons/react/dist/csr/SpinnerGap"
 import { XIcon } from "@phosphor-icons/react/dist/csr/X"
@@ -10,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { shouldBypassClientRouter } from "../../lib/reloadRoutes"
 import { fuseOptions } from "../../lib/search/fuseConfig"
 import type { SearchDocument, SearchDocumentKind, SearchIndexPayload } from "../../lib/search/types"
 import "./GlobalSearch.css"
@@ -115,12 +117,17 @@ export default function GlobalSearch({ projectName }: { projectName: string }) {
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<SearchResult[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
+  const [shortcutLabel, setShortcutLabel] = useState("Ctrl K")
   const inputRef = useRef<HTMLInputElement | null>(null)
   const resultRefs = useRef<Array<HTMLButtonElement | null>>([])
   const documentsRef = useRef<SearchDocument[]>([])
   const fuseRef = useRef<Fuse<SearchDocument> | null>(null)
   const deferredQuery = useDeferredValue(query.trim())
   const dialogTitleId = useId()
+
+  useEffect(() => {
+    setShortcutLabel(/mac|iphone|ipad|ipod/i.test(navigator.userAgent) ? "⌘K" : "Ctrl K")
+  }, [])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -229,8 +236,15 @@ export default function GlobalSearch({ projectName }: { projectName: string }) {
 
   function openResult(result: SearchResult | undefined) {
     if (!result) return
+    const route = result.item.route
     closeSearch()
-    window.location.assign(result.item.route)
+
+    if (shouldBypassClientRouter(route)) {
+      window.location.assign(route)
+      return
+    }
+
+    void navigate(route)
   }
 
   function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -253,7 +267,6 @@ export default function GlobalSearch({ projectName }: { projectName: string }) {
   }
 
   const groupedResults = groupResults(results)
-  const shortcutLabel = typeof navigator !== "undefined" && /mac|iphone|ipad|ipod/i.test(navigator.userAgent) ? "⌘K" : "Ctrl K"
 
   return (
     <div className="global-search-root">

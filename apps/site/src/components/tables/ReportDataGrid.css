@@ -125,6 +125,13 @@
   color: var(--color-text-muted);
 }
 
+.report-grid__icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
 .report-grid__num {
   justify-content: end;
   font-family: "SF Mono", "Fira Code", monospace;

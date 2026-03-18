@@ -27,7 +27,9 @@ export default defineConfig({
     },
   ],
   security: {
-    csp: true,
+    csp: {
+      directives: ["font-src 'self' data:"],
+    },
   },
   experimental: {
     rustCompiler: true,

@@ -138,11 +138,18 @@
   gap: 1rem;
 }
 
+.temporal-force-section,
+.temporal-force-header {
+  display: grid;
+  gap: 0.8rem;
+}
+
 .temporal-chart-panel {
   display: grid;
   gap: 0.8rem;
 }
 
+.temporal-force-header h3,
 .temporal-chart-panel h3,
 .temporal-table-header h3 {
   margin: 0;
@@ -151,6 +158,7 @@
   color: #1e293b;
 }
 
+.temporal-force-header p,
 .temporal-chart-panel p,
 .temporal-table-header p {
   margin: 0;

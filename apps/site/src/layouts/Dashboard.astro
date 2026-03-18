@@ -1,6 +1,8 @@
 ---
+import { ClientRouter } from "astro:transitions"
 import GlobalSearch from "../components/search/GlobalSearch"
 import SystemIcon from "../components/icons/SystemIcon.astro"
+import { shouldBypassClientRouter } from "../lib/reloadRoutes"
 
 interface Props {
   title: string
@@ -77,6 +79,7 @@ const currentPath = Astro.url.pathname
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title} — {projectName}</title>
+    <ClientRouter />
     <style>
       * {
         margin: 0;
@@ -408,7 +411,11 @@ const currentPath = Astro.url.pathname
               <span>{section.label}</span>
             </div>
             {section.items.map((item) => (
-              <a href={item.href} class={currentPath === item.href ? "active" : ""}>
+              <a
+                href={item.href}
+                class={currentPath === item.href ? "active" : ""}
+                data-astro-reload={shouldBypassClientRouter(item.href) ? true : undefined}
+              >
                 {item.label}
               </a>
             ))}
@@ -417,38 +424,70 @@ const currentPath = Astro.url.pathname
       }
     </nav>
 
-    <main>
+    <main transition:animate="fade">
       <slot />
     </main>
 
     <GlobalSearch client:load projectName={projectName} />
 
+    <script is:inline>
+      if (!window.__planetnikRouteVersionSetup) {
+        window.__planetnikRouteVersionSetup = true
+        window.__planetnikRouteVersion = window.__planetnikRouteVersion ?? 0
+
+        document.addEventListener("astro:after-swap", () => {
+          window.__planetnikRouteVersion += 1
+          document.dispatchEvent(
+            new CustomEvent("planetnik:route-version", {
+              detail: { version: window.__planetnikRouteVersion },
+            }),
+          )
+        })
+      }
+    </script>
+
     <script>
-      const sidebar = document.getElementById("sidebar")!
-      const overlay = document.getElementById("nav-overlay")!
-      const openBtn = document.getElementById("menu-open")!
-      const closeBtn = document.getElementById("menu-close")!
+      function setupDashboardNavigation() {
+        const sidebar = document.getElementById("sidebar")
+        const overlay = document.getElementById("nav-overlay")
+        const openBtn = document.getElementById("menu-open")
+        const closeBtn = document.getElementById("menu-close")
 
-      function openNav() {
-        sidebar.classList.add("open")
-        overlay.classList.add("open")
-        document.body.style.overflow = "hidden"
+        if (!(sidebar instanceof HTMLElement)) return
+        if (!(overlay instanceof HTMLElement)) return
+        if (!(openBtn instanceof HTMLButtonElement)) return
+        if (!(closeBtn instanceof HTMLButtonElement)) return
+
+        const sidebarElement = sidebar
+        const overlayElement = overlay
+
+        function openNav() {
+          sidebarElement.classList.add("open")
+          overlayElement.classList.add("open")
+          document.body.style.overflow = "hidden"
+        }
+
+        function closeNav() {
+          sidebarElement.classList.remove("open")
+          overlayElement.classList.remove("open")
+          document.body.style.overflow = ""
+        }
+
+        openBtn.onclick = openNav
+        closeBtn.onclick = closeNav
+        overlayElement.onclick = closeNav
+
+        sidebarElement.querySelectorAll(".nav-section a").forEach((link) => {
+          if (link instanceof HTMLAnchorElement) {
+            link.onclick = closeNav
+          }
+        })
+
+        closeNav()
       }
 
-      function closeNav() {
-        sidebar.classList.remove("open")
-        overlay.classList.remove("open")
-        document.body.style.overflow = ""
-      }
-
-      openBtn.addEventListener("click", openNav)
-      closeBtn.addEventListener("click", closeNav)
-      overlay.addEventListener("click", closeNav)
-
-      // Close on nav link click (mobile)
-      sidebar.querySelectorAll(".nav-section a").forEach((link) => {
-        link.addEventListener("click", closeNav)
-      })
+      document.addEventListener("astro:page-load", setupDashboardNavigation)
+      setupDashboardNavigation()
     </script>
   </body>
 </html>

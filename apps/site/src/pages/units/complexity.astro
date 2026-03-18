@@ -40,7 +40,7 @@ const scatterData = sorted.slice(0, 200).map((u) => ({
 }))
 
 const complexityRows = sorted.map((u) => ({
-  id: `${u.data.relativeFileName}:${u.data.shortName}`,
+  id: u.id,
   unit: u.data.shortName,
   file: u.data.relativeFileName,
   mcCabeIndex: u.data.mcCabeIndex,

@@ -4,15 +4,42 @@ import {
   AllCommunityModule,
   type ICellRendererParams,
   ModuleRegistry,
-  themeQuartz,
   type ColDef,
   type FilterChangedEvent,
   type GridReadyEvent,
   type ValueFormatterParams,
 } from "ag-grid-community"
+import "ag-grid-community/styles/ag-grid.css"
+import "ag-grid-community/styles/ag-theme-quartz.css"
 import "./ReportDataGrid.css"
 
 ModuleRegistry.registerModules([AllCommunityModule])
+
+function createGridIcon(paths: string): string {
+  return `<svg class="report-grid__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`
+}
+
+const gridIcons = {
+  sortAscending: createGridIcon('<path d="M8 12V4" /><path d="M5.5 6.5L8 4l2.5 2.5" />'),
+  sortDescending: createGridIcon('<path d="M8 4v8" /><path d="M5.5 9.5 8 12l2.5-2.5" />'),
+  sortUnSort: createGridIcon('<path d="M5.5 6.5 8 4l2.5 2.5" /><path d="M5.5 9.5 8 12l2.5-2.5" />'),
+  menu: createGridIcon('<circle cx="4" cy="8" r="0.9" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="0.9" fill="currentColor" stroke="none" /><circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none" />'),
+  menuAlt: createGridIcon('<circle cx="4" cy="8" r="0.9" fill="currentColor" stroke="none" /><circle cx="8" cy="8" r="0.9" fill="currentColor" stroke="none" /><circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none" />'),
+  filter: createGridIcon('<path d="M3 4h10l-4 4.5V12l-2 1V8.5L3 4Z" />'),
+  filterActive: createGridIcon('<path d="M3 4h10l-4 4.5V12l-2 1V8.5L3 4Z" />'),
+  columns: createGridIcon('<rect x="3" y="4" width="4" height="8" rx="1" /><rect x="9" y="4" width="4" height="8" rx="1" />'),
+  first: createGridIcon('<path d="M4 4v8" /><path d="m11 4-4 4 4 4" /><path d="m13 4-4 4 4 4" />'),
+  previous: createGridIcon('<path d="m10.5 4-4 4 4 4" />'),
+  next: createGridIcon('<path d="m5.5 4 4 4-4 4" />'),
+  last: createGridIcon('<path d="M12 4v8" /><path d="m9 4 4 4-4 4" /><path d="m7 4 4 4-4 4" />'),
+  selectOpen: createGridIcon('<path d="m4 6 4 4 4-4" />'),
+  subMenuOpen: createGridIcon('<path d="m6 4 4 4-4 4" />'),
+  subMenuOpenRtl: createGridIcon('<path d="m10 4-4 4 4 4" />'),
+  panelDelimiter: createGridIcon('<path d="m6 4 4 4-4 4" />'),
+  panelDelimiterRtl: createGridIcon('<path d="m10 4-4 4 4 4" />'),
+  check: createGridIcon('<path d="m3.5 8 2.5 2.5L12.5 4" />'),
+  cancel: createGridIcon('<path d="m4.5 4.5 7 7" /><path d="m11.5 4.5-7 7" />'),
+} as const
 
 type GridCellValue = string | number | boolean | null | undefined
 
@@ -226,8 +253,9 @@ export default function ReportDataGrid({
       ) : (
         <div className="report-grid-panel__surface">
           <AgGridReact<GridRow>
-            className="report-grid"
-            theme={themeQuartz}
+            className="report-grid ag-theme-quartz"
+            theme="legacy"
+            icons={gridIcons}
             rowData={rows}
             columnDefs={columnDefs}
             quickFilterText={searchEnabled ? deferredQuery : undefined}
