@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
 import { getTechnologyIconData } from "../lib/iconography"
@@ -97,7 +98,10 @@ const langBarData = extensions.map(([ext, stats]) => ({
   {extensions.length > 0 && (
     <section class="section">
       <h3>Languages</h3>
-      <HorizontalBarChart client:load data={langBarData} valueLabel="LOC" maxItems={10} />
+      <DonutChart client:load data={extensions.map(([ext, stats]) => ({ label: `.${ext}`, value: stats.loc }))} valueLabel="LOC" />
+      <div style="margin-top: 1rem;">
+        <HorizontalBarChart client:load data={langBarData} valueLabel="LOC" maxItems={10} />
+      </div>
       <table>
         <thead>
           <tr>

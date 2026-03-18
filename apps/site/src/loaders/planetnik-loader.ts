@@ -216,6 +216,30 @@ export function commitsPerExtensionLoader(): Loader {
   }
 }
 
+export function contributorTimelineLoader(): Loader {
+  return {
+    name: "planetnik-contributor-timeline",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("contributor_timeline.json") as {
+        perYear?: Array<Record<string, unknown>>
+        perMonth?: Array<Record<string, unknown>>
+      } | null
+      if (!raw) return
+
+      for (const entry of raw.perYear ?? []) {
+        const id = `year-${entry.timeSlot}`
+        const data = await parseData({ id, data: { ...entry, granularity: "year" } })
+        store.set({ id, data })
+      }
+      for (const entry of raw.perMonth ?? []) {
+        const id = `month-${entry.timeSlot}`
+        const data = await parseData({ id, data: { ...entry, granularity: "month" } })
+        store.set({ id, data })
+      }
+    },
+  }
+}
+
 export function temporalDepsLoader(): Loader {
   return {
     name: "planetnik-temporal-deps",

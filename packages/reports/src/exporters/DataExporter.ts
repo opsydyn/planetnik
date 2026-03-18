@@ -39,6 +39,7 @@ export class DataExporter {
     this.exportTemporalDependencies(dataFolder)
     this.exportPeopleDependencies(dataFolder)
     this.exportCommitsPerExtension(dataFolder)
+    this.exportContributorTimeline(dataFolder)
   }
 
   private exportFileLists(dataFolder: string): void {
@@ -373,6 +374,27 @@ export class DataExporter {
     }))
 
     writeFileSync(join(dataFolder, "commits_per_extension.json"), JSON.stringify(exported, null, 2), "utf-8")
+  }
+
+  private exportContributorTimeline(dataFolder: string): void {
+    const contribResults = this.analysisResults.contributorsAnalysisResults
+
+    const exportSlots = (slots: Array<{ timeSlot: string; contributorsCount: number; commitsCount: number }>) =>
+      slots
+        .filter((s) => s.commitsCount > 0)
+        .map((s) => ({
+          timeSlot: s.timeSlot,
+          contributors: s.contributorsCount,
+          commits: s.commitsCount,
+        }))
+
+    const perYear = exportSlots(contribResults.contributorsPerYear)
+    const perMonth = exportSlots(contribResults.contributorsPerMonth)
+
+    if (perYear.length === 0 && perMonth.length === 0) return
+
+    const timeline = { perYear, perMonth }
+    writeFileSync(join(dataFolder, "contributor_timeline.json"), JSON.stringify(timeline, null, 2), "utf-8")
   }
 
   static dependenciesFileNamePrefix(

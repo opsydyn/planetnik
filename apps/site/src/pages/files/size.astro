@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -37,6 +38,11 @@ const distData = buckets.map((b) => ({
   detail: b.count + " files",
   detailSecondary: b.loc.toLocaleString() + " LOC",
 }))
+
+const largestBarData = sorted.slice(0, 15).map((f) => ({
+  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+  value: f.data.linesOfCode,
+}))
 ---
 
 <Dashboard title="File Size" projectName={projectName}>
@@ -50,6 +56,10 @@ const distData = buckets.map((b) => ({
 
   <section class="section">
     <h3>Largest Files</h3>
+    <HorizontalBarChart client:load data={largestBarData} valueLabel="LOC" />
+  </section>
+
+  <section class="section">
     <table>
       <thead>
         <tr>

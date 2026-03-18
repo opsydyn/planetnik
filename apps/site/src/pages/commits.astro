@@ -2,12 +2,14 @@
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import LineChart from "../components/charts/LineChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
 const contributors = await getCollection("contributors")
 const metrics = await getCollection("metrics")
 const commitsPerExtension = await getCollection("commitsPerExtension")
+const timeline = await getCollection("contributorTimeline")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
 function getMetric(id: string): number | null {
@@ -31,6 +33,18 @@ const activityData = [
   { label: "Past 90 days", value: activeContributors90, detail: `${activeContributors90} contributors` },
   { label: "Past year", value: activeContributors365, detail: `${activeContributors365} contributors` },
   { label: "All time", value: totalContributors, detail: `${totalContributors} contributors` },
+]
+
+const yearlyData = timeline
+  .filter((t) => t.data.granularity === "year")
+  .sort((a, b) => a.data.timeSlot.localeCompare(b.data.timeSlot))
+
+const commitsByYear = yearlyData.map((t) => ({ label: t.data.timeSlot, value: t.data.commits }))
+const contributorsByYear = yearlyData.map((t) => ({ label: t.data.timeSlot, value: t.data.contributors }))
+
+const timelineSeries = [
+  ...(commitsByYear.length > 0 ? [{ name: "Commits", data: commitsByYear, color: "#3b82f6" }] : []),
+  ...(contributorsByYear.length > 0 ? [{ name: "Contributors", data: contributorsByYear, color: "#22c55e" }] : []),
 ]
 
 const extensionBarData = [...commitsPerExtension]
@@ -85,6 +99,13 @@ const extensionBarData = [...commitsPerExtension]
       </div>
     )}
   </div>
+
+  {timelineSeries.length > 0 && (
+    <section class="section">
+      <h3>Commits &amp; Contributors Per Year</h3>
+      <LineChart client:load series={timelineSeries} xLabel="Year" yLabel="Count" />
+    </section>
+  )}
 
   <section class="section">
     <h3>Active Contributors Over Time</h3>

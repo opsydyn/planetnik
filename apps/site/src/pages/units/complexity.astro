@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
+import DonutChart from "../../components/charts/DonutChart"
 import ScatterPlot from "../../components/charts/ScatterPlot"
 import Dashboard from "../../layouts/Dashboard.astro"
 
@@ -41,6 +42,11 @@ const scatterData = sorted.slice(0, 200).map((u) => ({
 <Dashboard title="Conditional Complexity" projectName={projectName}>
   <h2>Conditional Complexity</h2>
   <p class="subtitle">{sorted.length.toLocaleString()} units analyzed</p>
+
+  <section class="section">
+    <h3>Complexity Risk</h3>
+    <DonutChart client:load data={buckets.filter((b) => b.count > 0).map((b) => ({ label: b.label, value: b.count }))} valueLabel="units" />
+  </section>
 
   <section class="section">
     <h3>McCabe Complexity Distribution</h3>

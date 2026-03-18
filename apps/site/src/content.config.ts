@@ -3,6 +3,7 @@ import { z } from "astro/zod"
 import {
   analysisLoader,
   commitsPerExtensionLoader,
+  contributorTimelineLoader,
   contributorsLoader,
   dependenciesLoader,
   duplicatesLoader,
@@ -144,6 +145,16 @@ export const collections = {
       to: z.string(),
       count: z.number(),
       files: z.array(z.string()),
+    }),
+  }),
+
+  contributorTimeline: defineCollection({
+    loader: contributorTimelineLoader(),
+    schema: z.object({
+      timeSlot: z.string(),
+      contributors: z.number(),
+      commits: z.number(),
+      granularity: z.enum(["year", "month"]),
     }),
   }),
 
