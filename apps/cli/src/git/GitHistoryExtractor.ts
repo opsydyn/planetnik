@@ -9,8 +9,9 @@ export async function extractGitHistory(root: string): Promise<number> {
   const outputPath = join(root, GIT_HISTORY_FILE)
 
   // Use raw git log with --name-only to get commit metadata + changed files
-  // Format: "date email hash" followed by blank line and file names
-  const raw = await git.raw(["log", "--name-only", "--format=%ad %ae %H", "--date=short"])
+  // Format: "date email hash authorName" followed by blank line and file names
+  // Author name is placed last since it can contain spaces; the 40-char hash anchors parsing
+  const raw = await git.raw(["log", "--name-only", "--format=%ad %ae %H %aN", "--date=short"])
 
   const lines: string[] = []
   let count = 0
@@ -26,7 +27,7 @@ export async function extractGitHistory(root: string): Promise<number> {
     } else if (currentPrefix) {
       // This is a file path belonging to the current commit
       const safePath = trimmed.replace(/ /g, "&nbsp;")
-      lines.push(`${currentPrefix} ${safePath}`)
+      lines.push(`${currentPrefix}\t${safePath}`)
       count++
     }
   }

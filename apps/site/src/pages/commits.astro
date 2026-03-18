@@ -1,11 +1,13 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
+import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
 const contributors = await getCollection("contributors")
 const metrics = await getCollection("metrics")
+const commitsPerExtension = await getCollection("commitsPerExtension")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
 function getMetric(id: string): number | null {
@@ -22,12 +24,22 @@ const activeContributors365 = contributors.filter((c) => c.data.commits365Days >
 const ageDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
 const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
 
+const rookieCount = contributors.filter((c) => c.data.isRookie).length
+
 const activityData = [
   { label: "Past 30 days", value: activeContributors30, detail: `${activeContributors30} contributors` },
   { label: "Past 90 days", value: activeContributors90, detail: `${activeContributors90} contributors` },
   { label: "Past year", value: activeContributors365, detail: `${activeContributors365} contributors` },
   { label: "All time", value: totalContributors, detail: `${totalContributors} contributors` },
 ]
+
+const extensionBarData = [...commitsPerExtension]
+  .sort((a, b) => b.data.commitsCount - a.data.commitsCount)
+  .slice(0, 15)
+  .map((e) => ({
+    label: `.${e.data.extension}`,
+    value: e.data.commitsCount,
+  }))
 ---
 
 <Dashboard title="Commits" projectName={projectName}>
@@ -60,6 +72,12 @@ const activityData = [
         <div class="card-label">Repo Age (Days)</div>
       </div>
     )}
+    {rookieCount > 0 && (
+      <div class="card">
+        <div class="card-value">{rookieCount}</div>
+        <div class="card-label">Rookies</div>
+      </div>
+    )}
     {activeDays !== null && (
       <div class="card">
         <div class="card-value">{activeDays.toLocaleString()}</div>
@@ -72,6 +90,33 @@ const activityData = [
     <h3>Active Contributors Over Time</h3>
     <DistributionChart client:load data={activityData} />
   </section>
+
+  {extensionBarData.length > 0 && (
+    <section class="section">
+      <h3>Commits by File Extension</h3>
+      <HorizontalBarChart client:load data={extensionBarData} valueLabel="commits" />
+    </section>
+  )}
+
+  {commitsPerExtension.length > 0 && (
+    <table>
+      <thead>
+        <tr><th>Extension</th><th>Commits</th><th>Committers</th><th>Files</th><th>30d Commits</th><th>90d Commits</th></tr>
+      </thead>
+      <tbody>
+        {[...commitsPerExtension].sort((a, b) => b.data.commitsCount - a.data.commitsCount).map((e) => (
+          <tr>
+            <td class="ext">.{e.data.extension}</td>
+            <td class="num">{e.data.commitsCount.toLocaleString()}</td>
+            <td class="num">{e.data.committersCount}</td>
+            <td class="num">{e.data.filesCount.toLocaleString()}</td>
+            <td class="num">{e.data.commitsCount30Days || "—"}</td>
+            <td class="num">{e.data.commitsCount90Days || "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
 </Dashboard>
 
 <style>
@@ -81,4 +126,10 @@ const activityData = [
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  td { font-size: 0.85rem; }
+  .ext { font-family: "SF Mono", "Fira Code", monospace; font-weight: 500; }
+  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
 </style>

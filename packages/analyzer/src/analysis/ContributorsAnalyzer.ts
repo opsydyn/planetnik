@@ -5,10 +5,10 @@ import { Contributor } from "../contributors/Contributor.js"
 import type { CodeConfiguration } from "../core/CodeConfiguration.js"
 import { ComponentDependency } from "../dependencies/ComponentDependency.js"
 import { DateUtils } from "../filehistory/FileHistoryUtils.js"
-import type { AuthorCommit } from "../githistory/GitHistoryUtils.js"
-import { GitHistoryUtils } from "../githistory/GitHistoryUtils.js"
+import { type AuthorCommit, type FileUpdate, GitHistoryUtils } from "../githistory/GitHistoryUtils.js"
 import type { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 import type { ContributorsAnalysisResults } from "../results/ContributorsAnalysisResults.js"
+import { GitHistoryPerExtensionUtils } from "../githistory/GitHistoryPerExtensionUtils.js"
 import { AnalysisUtils } from "./AnalysisUtils.js"
 
 const MAX_PEOPLE_DEPENDENCIES_SIZE = 10_000
@@ -27,8 +27,13 @@ export class ContributorsAnalyzer {
   }
 
   analyze(): void {
-    const authorCommits = this.loadAuthorCommits()
+    const fileUpdates = this.loadFileUpdates()
+    const authorCommits = GitHistoryUtils.getAuthorCommits(fileUpdates)
     if (authorCommits.length === 0) return
+
+    // Per-extension commit stats
+    const extensionUtils = new GitHistoryPerExtensionUtils()
+    this.analysisResults.commitsPerExtension = extensionUtils.getCommitsPerExtensions(fileUpdates)
 
     // Find date range
     let firstDate = ""
@@ -74,7 +79,7 @@ export class ContributorsAnalyzer {
       .setValue(this.analysisResults.contributors.length)
   }
 
-  private loadAuthorCommits(): AuthorCommit[] {
+  private loadFileUpdates(): FileUpdate[] {
     const configDir = dirname(this.configFilePath)
 
     let historyFile: string | null = null
@@ -89,8 +94,7 @@ export class ContributorsAnalyzer {
     if (!historyFile) return []
 
     const lines = readFileSync(historyFile, "utf-8").split("\n")
-    const updates = GitHistoryUtils.parseGitHistoryLines(lines)
-    return GitHistoryUtils.getAuthorCommits(updates)
+    return GitHistoryUtils.parseGitHistoryLines(lines)
   }
 
   private buildContributors(authorCommits: AuthorCommit[]): Contributor[] {
@@ -103,6 +107,7 @@ export class ContributorsAnalyzer {
       if (!contributor) {
         contributor = new Contributor()
         contributor.email = email
+        contributor.userName = commit.userName
         map.set(email, contributor)
         list.push(contributor)
       }

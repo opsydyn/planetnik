@@ -98,13 +98,27 @@ export class GitHistoryUtils {
 
     const email = rest.substring(0, firstSpace)
     const afterEmail = rest.substring(firstSpace + 1)
+
+    if (GitHistoryUtils.shouldIgnore(email, ignorePatterns)) return null
+
+    // New format: "hash authorName\tpath" (tab separates header from path)
+    const tabIdx = afterEmail.indexOf("\t")
+    if (tabIdx >= 0) {
+      // Hash is the first 40 hex chars (or until first space)
+      const headerPart = afterEmail.substring(0, tabIdx)
+      const spaceInHeader = headerPart.indexOf(" ")
+      const commitId = spaceInHeader >= 0 ? headerPart.substring(0, spaceInHeader) : headerPart
+      const userName = spaceInHeader >= 0 ? headerPart.substring(spaceInHeader + 1) : ""
+      const path = afterEmail.substring(tabIdx + 1).replace(/&nbsp;/g, " ")
+      return new FileUpdate(date, email, commitId, path, userName)
+    }
+
+    // Legacy format: "hash path" (space separated, no author name)
     const secondSpace = afterEmail.indexOf(" ")
     if (secondSpace < 0) return null
 
     const commitId = afterEmail.substring(0, secondSpace)
     const path = afterEmail.substring(secondSpace + 1).replace(/&nbsp;/g, " ")
-
-    if (GitHistoryUtils.shouldIgnore(email, ignorePatterns)) return null
 
     return new FileUpdate(date, email, commitId, path)
   }
@@ -126,7 +140,7 @@ export class GitHistoryUtils {
 
   static parseGitHistoryLines(lines: string[], ignorePatterns: string[] = []): FileUpdate[] {
     const updates: FileUpdate[] = []
-    let currentCommit: { date: string; email: string; commitId: string } | null = null
+    let currentCommit: { date: string; email: string; commitId: string; userName: string } | null = null
 
     for (const line of lines) {
       const trimmed = line.trim()
@@ -139,14 +153,14 @@ export class GitHistoryUtils {
       if (/^\d{4}-\d{2}-\d{2} /.test(trimmed)) {
         const parsed = GitHistoryUtils.parseLine(trimmed, ignorePatterns)
         if (parsed) {
-          currentCommit = { date: parsed.date, email: parsed.email, commitId: parsed.commitId }
+          currentCommit = { date: parsed.date, email: parsed.email, commitId: parsed.commitId, userName: parsed.userName }
           updates.push(parsed)
         } else {
           currentCommit = null
         }
       } else if (currentCommit) {
         // It's a file path line belonging to the current commit
-        updates.push(new FileUpdate(currentCommit.date, currentCommit.email, currentCommit.commitId, trimmed))
+        updates.push(new FileUpdate(currentCommit.date, currentCommit.email, currentCommit.commitId, trimmed, currentCommit.userName))
       }
     }
 

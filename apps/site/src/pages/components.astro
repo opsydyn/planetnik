@@ -9,12 +9,15 @@ const filesMain = await getCollection("filesMain")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
 // Aggregate components from files
-const componentMap = new Map<string, { files: number; loc: number }>()
+const componentMap = new Map<string, { files: number; loc: number; contributors: Set<string> }>()
 for (const f of filesMain) {
   for (const comp of f.data.components) {
-    const entry = componentMap.get(comp) ?? { files: 0, loc: 0 }
+    const entry = componentMap.get(comp) ?? { files: 0, loc: 0, contributors: new Set<string>() }
     entry.files++
     entry.loc += f.data.linesOfCode
+    if (f.data.contributors) {
+      for (const c of f.data.contributors) entry.contributors.add(c)
+    }
     componentMap.set(comp, entry)
   }
 }
@@ -51,14 +54,20 @@ const treemapData = components.map(([name, s]) => ({
       </section>
       <table>
         <thead>
-          <tr><th>Component</th><th>Files</th><th>LOC</th></tr>
+          <tr><th>Component</th><th>Files</th><th>LOC</th><th>Contributors</th></tr>
         </thead>
         <tbody>
           {components.map(([name, s]) => (
             <tr>
-              <td class="comp-name">{name}</td>
+              <td class="comp-name">
+                {name}
+                {s.contributors.size > 0 && s.contributors.size <= 2 && (
+                  <span class="bus-factor" title={`Only ${s.contributors.size} contributor${s.contributors.size === 1 ? "" : "s"} — bus factor risk`}>!</span>
+                )}
+              </td>
               <td>{s.files.toLocaleString()}</td>
               <td>{s.loc.toLocaleString()}</td>
+              <td class="num">{s.contributors.size > 0 ? s.contributors.size : "—"}</td>
             </tr>
           ))}
           {unassigned.length > 0 && (
@@ -66,6 +75,7 @@ const treemapData = components.map(([name, s]) => ({
               <td>(unassigned)</td>
               <td>{unassigned.length.toLocaleString()}</td>
               <td>{unassigned.reduce((s, f) => s + f.data.linesOfCode, 0).toLocaleString()}</td>
+              <td>—</td>
             </tr>
           )}
         </tbody>
@@ -85,6 +95,8 @@ const treemapData = components.map(([name, s]) => ({
   th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
   td { font-size: 0.85rem; }
   .comp-name { font-weight: 500; }
+  .bus-factor { display: inline-block; margin-left: 0.4rem; background: #fbbf24; color: #78350f; font-size: 0.65rem; font-weight: 700; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 50%; cursor: help; }
+  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
   .muted td { color: var(--color-text-muted); font-style: italic; }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

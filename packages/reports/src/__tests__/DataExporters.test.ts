@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test"
 import {
   CodeAnalysisResults,
+  CommitInfo,
   Dependency,
   DependencyAnchor,
   DuplicatedFileBlock,
   DuplicationInstance,
+  FileModificationHistory,
   SourceFile,
   SourceFileDependency,
 } from "@planetnik/analyzer"
 import { DataExportUtils } from "../exporters/DataExportUtils"
 import { DependenciesExporter } from "../exporters/DependenciesExportInfo"
 import { DuplicationExporter } from "../exporters/DuplicationExportInfo"
+import { fileExportInfoFromSourceFile } from "../exporters/FileExportInfo"
 import { FileListExporter } from "../exporters/FilesExportInfo"
 import { MetricsTrendExporter } from "../exporters/MetricsTrendExporter"
 import { UnitListExporter } from "../exporters/UnitsExportInfo"
@@ -23,6 +26,45 @@ describe("DataExportUtils", () => {
 
   test("getAspectFileName sanitizes names", () => {
     expect(DataExportUtils.getAspectFileName("prefix_", "my aspect")).toBe("prefix_my_aspect")
+  })
+})
+
+describe("fileExportInfoFromSourceFile", () => {
+  test("exports basic fields without history", () => {
+    const file = new SourceFile("src/main.ts")
+    file.linesOfCode = 100
+
+    const info = fileExportInfoFromSourceFile(file)
+
+    expect(info.relativePath).toBe("src/main.ts")
+    expect(info.linesOfCode).toBe(100)
+    expect(info.commitsCount).toBeUndefined()
+    expect(info.contributorsCount).toBeUndefined()
+    expect(info.contributors).toBeUndefined()
+  })
+
+  test("exports history fields when FileModificationHistory is present", () => {
+    const file = new SourceFile("src/main.ts")
+    file.linesOfCode = 100
+
+    const history = new FileModificationHistory("src/main.ts")
+    history.commits.push(new CommitInfo("abc1", "2024-01-10", "alice@test.com"))
+    history.commits.push(new CommitInfo("abc2", "2024-03-15", "bob@test.com"))
+    history.commits.push(new CommitInfo("abc3", "2024-06-20", "alice@test.com"))
+    history.dates.push("2024-01-10", "2024-03-15", "2024-06-20")
+    file.fileModificationHistory = history
+
+    const info = fileExportInfoFromSourceFile(file)
+
+    expect(info.commitsCount).toBe(3)
+    expect(info.contributorsCount).toBe(2)
+    expect(info.firstDate).toBe("2024-01-10")
+    expect(info.latestDate).toBe("2024-06-20")
+    expect(info.contributors).toContain("alice@test.com")
+    expect(info.contributors).toContain("bob@test.com")
+    expect(info.contributors).toHaveLength(2)
+    expect(info.daysSinceFirstUpdate).toBeGreaterThan(0)
+    expect(info.daysSinceLatestUpdate).toBeGreaterThan(0)
   })
 })
 

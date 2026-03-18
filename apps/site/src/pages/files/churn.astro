@@ -1,9 +1,12 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import ScatterPlot from "../../components/charts/ScatterPlot"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
 const metrics = await getCollection("metrics")
+const filesMain = await getCollection("filesMain")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 
 function getMetric(id: string): number | null {
@@ -14,6 +17,22 @@ function getMetric(id: string): number | null {
 const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
 const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS")
 const estimatedWorkingDays = getMetric("FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS")
+
+// Files with history data, sorted by commits
+const filesWithHistory = filesMain
+  .filter((f) => f.data.commitsCount && f.data.commitsCount > 0)
+  .sort((a, b) => (b.data.commitsCount ?? 0) - (a.data.commitsCount ?? 0))
+
+const scatterData = filesWithHistory.slice(0, 200).map((f) => ({
+  x: f.data.commitsCount ?? 0,
+  y: f.data.contributorsCount ?? 0,
+  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+}))
+
+const mostChangedBarData = filesWithHistory.slice(0, 15).map((f) => ({
+  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+  value: f.data.commitsCount ?? 0,
+}))
 ---
 
 <Dashboard title="File Churn" projectName={projectName}>
@@ -38,14 +57,49 @@ const estimatedWorkingDays = getMetric("FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DA
         <div class="card-label">Est. Working Days</div>
       </div>
     )}
+    {filesWithHistory.length > 0 && (
+      <div class="card">
+        <div class="card-value">{filesWithHistory.length.toLocaleString()}</div>
+        <div class="card-label">Files With History</div>
+      </div>
+    )}
   </div>
 
-  {activeDays === null && (
+  {filesWithHistory.length > 0 ? (
+    <>
+      <section class="section">
+        <h3>Commits vs Contributors per File</h3>
+        <ScatterPlot client:load data={scatterData} xLabel="Commits" yLabel="Contributors" thresholds={{ x: 20, y: 5 }} />
+      </section>
+
+      <section class="section">
+        <h3>Most Changed Files</h3>
+        <HorizontalBarChart client:load data={mostChangedBarData} valueLabel="commits" />
+      </section>
+
+      <table>
+        <thead>
+          <tr><th>File</th><th>Commits</th><th>Contributors</th><th>First Change</th><th>Last Change</th></tr>
+        </thead>
+        <tbody>
+          {filesWithHistory.slice(0, 100).map((f) => (
+            <tr>
+              <td class="filepath">{f.data.relativePath}</td>
+              <td class="num">{f.data.commitsCount}</td>
+              <td class="num">{f.data.contributorsCount}</td>
+              <td class="date">{f.data.firstDate ?? "—"}</td>
+              <td class="date">{f.data.latestDate ?? "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  ) : activeDays === null ? (
     <div class="empty">
       <p>No file history data available.</p>
       <p class="hint">Run <code>planetnik extractGitHistory</code> then <code>planetnik generateReports</code>.</p>
     </div>
-  )}
+  ) : null}
 </Dashboard>
 
 <style>
@@ -53,8 +107,16 @@ const estimatedWorkingDays = getMetric("FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DA
   .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
   .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
+  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
+  .filepath { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--color-text-muted); max-width: min(350px, 40vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
+  .date { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; color: var(--color-text-muted); }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

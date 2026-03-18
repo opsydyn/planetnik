@@ -38,6 +38,7 @@ export class DataExporter {
     this.exportDependencies(dataFolder)
     this.exportTemporalDependencies(dataFolder)
     this.exportPeopleDependencies(dataFolder)
+    this.exportCommitsPerExtension(dataFolder)
   }
 
   private exportFileLists(dataFolder: string): void {
@@ -122,13 +123,13 @@ export class DataExporter {
     const total = contributors.reduce((sum: number, c: Contributor) => sum + c.commitsCount, 0)
     const lines: string[] = []
     lines.push(
-      "Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit",
+      "Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit\tpercentage\tuserName\tisRookie\tisActive",
     )
 
     for (const c of contributors) {
       const percentage = total > 0 ? FormattingUtils.getFormattedPercentage((100.0 * c.commitsCount) / total) : "0%"
       lines.push(
-        `${c.email}\t${c.commitsCount}\t${c.commitsCount30Days}\t${c.commitsCount90Days}\t${c.commitsCount180Days}\t${c.commitsCount365Days}\t${c.firstCommitDate}\t${c.latestCommitDate}\t${percentage}`,
+        `${c.email}\t${c.commitsCount}\t${c.commitsCount30Days}\t${c.commitsCount90Days}\t${c.commitsCount180Days}\t${c.commitsCount365Days}\t${c.firstCommitDate}\t${c.latestCommitDate}\t${percentage}\t${c.userName}\t${c.isRookie()}\t${c.isActive()}`,
       )
     }
 
@@ -352,6 +353,26 @@ export class DataExporter {
     exportDeps(contribResults.peopleDependencies180Days, "people_dependencies_180d.json")
     exportDeps(contribResults.peopleDependencies365Days, "people_dependencies_365d.json")
     exportDeps(contribResults.peopleDependenciesAllTime, "people_dependencies.json")
+  }
+
+  private exportCommitsPerExtension(dataFolder: string): void {
+    const commitsPerExtension = this.analysisResults.contributorsAnalysisResults.commitsPerExtension
+    if (commitsPerExtension.length === 0) return
+
+    const exported = commitsPerExtension.map((cpe) => ({
+      extension: cpe.extension,
+      commitsCount: cpe.commitsCount,
+      committersCount: cpe.committers.length,
+      filesCount: cpe.filesCount,
+      commitsCount30Days: cpe.commitsCount30Days,
+      committersCount30Days: cpe.committers30Days.length,
+      filesCount30Days: cpe.filesCount30Days,
+      commitsCount90Days: cpe.commitsCount90Days,
+      committersCount90Days: cpe.committers90Days.length,
+      filesCount90Days: cpe.filesCount90Days,
+    }))
+
+    writeFileSync(join(dataFolder, "commits_per_extension.json"), JSON.stringify(exported, null, 2), "utf-8")
   }
 
   static dependenciesFileNamePrefix(

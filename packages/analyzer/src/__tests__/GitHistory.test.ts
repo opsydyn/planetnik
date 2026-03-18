@@ -113,6 +113,31 @@ describe("GitHistoryUtils.parseLine", () => {
     const result = GitHistoryUtils.parseLine(line)
     expect(result!.path).toBe("src/my file.ts")
   })
+
+  test("parses new tab-separated format with author name", () => {
+    const line = "2024-01-15 alice@test.com abc12345678901234567890123456789012345678 Alice Smith\tsrc/app.ts"
+    const result = GitHistoryUtils.parseLine(line)
+    expect(result).not.toBeNull()
+    expect(result!.date).toBe("2024-01-15")
+    expect(result!.email).toBe("alice@test.com")
+    expect(result!.commitId).toBe("abc12345678901234567890123456789012345678")
+    expect(result!.userName).toBe("Alice Smith")
+    expect(result!.path).toBe("src/app.ts")
+  })
+
+  test("parses tab format with author name containing spaces", () => {
+    const line = "2024-01-15 a@b.com abc123 Jean-Claude Van Damme\tsrc/main.ts"
+    const result = GitHistoryUtils.parseLine(line)
+    expect(result!.userName).toBe("Jean-Claude Van Damme")
+    expect(result!.path).toBe("src/main.ts")
+  })
+
+  test("parses tab format with no author name", () => {
+    const line = "2024-01-15 a@b.com abc123\tsrc/main.ts"
+    const result = GitHistoryUtils.parseLine(line)
+    expect(result!.userName).toBe("")
+    expect(result!.path).toBe("src/main.ts")
+  })
 })
 
 describe("GitHistoryUtils.parseGitHistoryLines", () => {
@@ -143,6 +168,23 @@ describe("GitHistoryUtils.parseGitHistoryLines", () => {
     const lines = ["2024-01-15 bot@ci.com abc123 src/main.ts", "src/util.ts"]
     const updates = GitHistoryUtils.parseGitHistoryLines(lines, ["bot@"])
     expect(updates.length).toBe(0)
+  })
+
+  test("parses tab-separated format and propagates userName", () => {
+    const lines = [
+      "2024-01-15 alice@test.com abc123 Alice Smith\tsrc/main.ts",
+      "src/util.ts",
+      "",
+      "2024-01-14 bob@test.com def456 Bob Jones\tsrc/other.ts",
+    ]
+    const updates = GitHistoryUtils.parseGitHistoryLines(lines)
+    expect(updates.length).toBe(3)
+    expect(updates[0].userName).toBe("Alice Smith")
+    expect(updates[0].path).toBe("src/main.ts")
+    // Subsequent file lines inherit userName
+    expect(updates[1].userName).toBe("Alice Smith")
+    expect(updates[1].path).toBe("src/util.ts")
+    expect(updates[2].userName).toBe("Bob Jones")
   })
 })
 

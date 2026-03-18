@@ -2,6 +2,7 @@ import { defineCollection } from "astro:content"
 import { z } from "astro/zod"
 import {
   analysisLoader,
+  commitsPerExtensionLoader,
   contributorsLoader,
   dependenciesLoader,
   duplicatesLoader,
@@ -18,6 +19,13 @@ const fileSchema = z.object({
   linesOfCode: z.number(),
   components: z.array(z.string()),
   concerns: z.array(z.string()),
+  commitsCount: z.number().optional(),
+  contributorsCount: z.number().optional(),
+  daysSinceFirstUpdate: z.number().optional(),
+  daysSinceLatestUpdate: z.number().optional(),
+  firstDate: z.string().optional(),
+  latestDate: z.string().optional(),
+  contributors: z.array(z.string()).optional(),
 })
 
 const duplicateFileBlockSchema = z.object({
@@ -112,6 +120,9 @@ export const collections = {
       firstCommit: z.string(),
       lastCommit: z.string(),
       percentage: z.string(),
+      userName: z.string().optional(),
+      isRookie: z.boolean().optional(),
+      isActive: z.boolean().optional(),
     }),
   }),
 
@@ -133,6 +144,22 @@ export const collections = {
       to: z.string(),
       count: z.number(),
       files: z.array(z.string()),
+    }),
+  }),
+
+  commitsPerExtension: defineCollection({
+    loader: commitsPerExtensionLoader(),
+    schema: z.object({
+      extension: z.string(),
+      commitsCount: z.number(),
+      committersCount: z.number(),
+      filesCount: z.number(),
+      commitsCount30Days: z.number(),
+      committersCount30Days: z.number(),
+      filesCount30Days: z.number(),
+      commitsCount90Days: z.number(),
+      committersCount90Days: z.number(),
+      filesCount90Days: z.number(),
     }),
   }),
 }

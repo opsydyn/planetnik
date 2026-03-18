@@ -1,6 +1,7 @@
 import type { ContributionTimeSlot } from "../contributors/ContributionTimeSlot.js"
 import type { Contributor } from "../contributors/Contributor.js"
 import type { ComponentDependency } from "../dependencies/ComponentDependency.js"
+import type { CommitsPerExtension } from "../githistory/CommitsPerExtension.js"
 
 export class ContributorsAnalysisResults {
   latestCommitDate: string = ""
@@ -10,6 +11,7 @@ export class ContributorsAnalysisResults {
   contributorsPerMonth: ContributionTimeSlot[] = []
   contributorsPerDay: ContributionTimeSlot[] = []
   contributorsPerWeek: ContributionTimeSlot[] = []
+  commitsPerExtension: CommitsPerExtension[] = []
 
   peopleDependencies: ComponentDependency[] = []
   peopleDependencies30Days: ComponentDependency[] = []

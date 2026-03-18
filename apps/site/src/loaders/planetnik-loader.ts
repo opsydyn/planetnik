@@ -158,7 +158,7 @@ export function contributorsLoader(): Loader {
         const cols = lines[i].split("\t")
         if (cols.length < 8) continue
         const email = cols[0].trim()
-        const rec = {
+        const rec: Record<string, unknown> = {
           email,
           commitsAllTime: parseInt(cols[1], 10) || 0,
           commits30Days: parseInt(cols[2], 10) || 0,
@@ -169,6 +169,10 @@ export function contributorsLoader(): Loader {
           lastCommit: cols[7].trim(),
           percentage: cols[8] ? cols[8].trim() : "",
         }
+        // New columns: userName, isRookie, isActive
+        if (cols[9] !== undefined) rec.userName = cols[9].trim()
+        if (cols[10] !== undefined) rec.isRookie = cols[10].trim() === "true"
+        if (cols[11] !== undefined) rec.isActive = cols[11].trim() === "true"
         const data = await parseData({ id: email, data: rec })
         store.set({ id: email, data })
       }
@@ -189,6 +193,22 @@ export function peopleDependenciesLoader(): Loader {
       if (!raw || !Array.isArray(raw)) return
       for (const entry of raw) {
         const id = `${entry.from}::${entry.to}`
+        const data = await parseData({ id, data: entry })
+        store.set({ id, data })
+      }
+    },
+  }
+}
+
+export function commitsPerExtensionLoader(): Loader {
+  return {
+    name: "planetnik-commits-per-extension",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("commits_per_extension.json") as Array<Record<string, unknown>> | null
+      if (!raw || !Array.isArray(raw)) return
+      for (const entry of raw) {
+        const ext = entry.extension as string
+        const id = ext || "no-extension"
         const data = await parseData({ id, data: entry })
         store.set({ id, data })
       }

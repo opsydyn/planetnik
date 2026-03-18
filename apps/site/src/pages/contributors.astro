@@ -11,18 +11,28 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
 const sorted = [...contributors].sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
 const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0)
 
-const contribBarData = sorted.slice(0, 15).map((c) => {
-  const at = c.data.email.indexOf("@")
-  return {
-    label: at > 0 ? c.data.email.slice(0, at) : c.data.email,
-    value: c.data.commitsAllTime,
-  }
-})
+function displayName(c: { email: string; userName?: string }): string {
+  if (c.userName) return c.userName
+  const at = c.email.indexOf("@")
+  return at > 0 ? c.email.slice(0, at) : c.email
+}
+
+const contribBarData = sorted.slice(0, 15).map((c) => ({
+  label: displayName(c.data),
+  value: c.data.commitsAllTime,
+}))
+
+const rookieCount = sorted.filter((c) => c.data.isRookie).length
+const activeCount = sorted.filter((c) => c.data.isActive).length
 ---
 
 <Dashboard title="Contributors" projectName={projectName}>
   <h2>Contributors</h2>
-  <p class="subtitle">{sorted.length} contributors, {totalCommits.toLocaleString()} total commits</p>
+  <p class="subtitle">
+    {sorted.length} contributors, {totalCommits.toLocaleString()} total commits
+    {activeCount > 0 && <> &middot; {activeCount} active</>}
+    {rookieCount > 0 && <> &middot; {rookieCount} rookies</>}
+  </p>
 
   <section class="section">
     <HorizontalBarChart client:load data={contribBarData} valueLabel="commits" />
@@ -44,8 +54,12 @@ const contribBarData = sorted.slice(0, 15).map((c) => {
     </thead>
     <tbody>
       {sorted.map((c) => (
-        <tr>
-          <td class="email">{c.data.email}</td>
+        <tr class={c.data.isActive ? "" : "inactive"}>
+          <td class="contributor">
+            <span class="name">{displayName(c.data)}</span>
+            {c.data.isRookie && <span class="badge rookie" title="First commit less than a year ago">rookie</span>}
+            {c.data.userName && <div class="email-sub">{c.data.email}</div>}
+          </td>
           <td>{c.data.commitsAllTime}</td>
           <td>{c.data.commits30Days || ""}</td>
           <td>{c.data.commits90Days || ""}</td>
@@ -92,10 +106,12 @@ const contribBarData = sorted.slice(0, 15).map((c) => {
     color: var(--color-text-muted);
   }
 
-  .email {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 0.8rem;
-  }
+  .contributor { min-width: 160px; }
+  .name { font-weight: 500; }
+  .email-sub { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 1px; }
+  .badge { display: inline-block; margin-left: 0.4rem; padding: 1px 6px; border-radius: 9999px; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; }
+  .rookie { background: #dbeafe; color: #1e40af; }
+  .inactive td { opacity: 0.55; }
 
   .section { margin-bottom: 1.5rem; }
   .date {
