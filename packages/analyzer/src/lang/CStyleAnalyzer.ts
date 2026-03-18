@@ -3,6 +3,7 @@ import type { CleanedContent } from "../cleaners/CleanedContent.js"
 import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js"
 import { SourceCodeCleanerUtils } from "../cleaners/SourceCodeCleanerUtils.js"
 import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js"
+import type { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js"
 import { CStyleHeuristicUnitsExtractor } from "../units/CStyleHeuristicUnitsExtractor.js"
 import type { UnitInfo } from "../units/UnitInfo.js"
 import {
@@ -49,6 +50,10 @@ export class CStyleAnalyzer implements LanguageAnalyzer {
 
   extractDependencies(_sourceFiles: readonly SourceFile[]): DependenciesAnalysis {
     return new DependenciesAnalysis()
+  }
+
+  getMetaDependencyRules(): MetaDependencyRule[] {
+    return []
   }
 
   getFeaturesDescription(): string[] {

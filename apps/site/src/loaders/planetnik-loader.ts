@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Loader } from "astro/loaders"
@@ -46,6 +46,20 @@ function readTextFile(filename: string): string | null {
   const path = join(resolveDataDir(), filename)
   if (!existsSync(path)) return null
   return readFileSync(path, "utf-8")
+}
+
+function readJsonFilesInDirectory(directoryName: string): Array<{ id: string; data: Record<string, unknown> }> {
+  const directoryPath = join(resolveDataDir(), directoryName)
+  if (!existsSync(directoryPath)) return []
+
+  return readdirSync(directoryPath)
+    .filter((fileName) => fileName.endsWith(".json"))
+    .map((fileName) => {
+      const path = join(directoryPath, fileName)
+      const data = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>
+      const id = typeof data.email === "string" && data.email ? data.email : decodeURIComponent(fileName.replace(/\.json$/, ""))
+      return { id, data }
+    })
 }
 
 export function analysisLoader(): Loader {
@@ -240,6 +254,19 @@ export function contributorTimelineLoader(): Loader {
   }
 }
 
+export function contributorDetailsLoader(): Loader {
+  return {
+    name: "planetnik-contributor-details",
+    async load({ store, parseData }) {
+      const records = readJsonFilesInDirectory("contributor_details")
+      for (const record of records) {
+        const data = await parseData({ id: record.id, data: record.data })
+        store.set({ id: record.id, data })
+      }
+    },
+  }
+}
+
 export function temporalDepsLoader(): Loader {
   return {
     name: "planetnik-temporal-deps",
@@ -265,4 +292,3 @@ export function temporalDepsLoader(): Loader {
     },
   }
 }
-

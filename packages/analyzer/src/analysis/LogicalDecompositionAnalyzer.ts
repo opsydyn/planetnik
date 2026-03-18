@@ -7,6 +7,7 @@ import type { CodeAnalysisResults } from "../results/CodeAnalysisResults.js"
 import type { LogicalDecompositionAnalysisResults } from "../results/LogicalDecompositionAnalysisResults.js"
 import { LogicalDecompositionAnalysisResults as LDResults } from "../results/LogicalDecompositionAnalysisResults.js"
 import { AnalysisUtils } from "./AnalysisUtils.js"
+import { SourceCodeFiles } from "./SourceCodeFiles.js"
 
 export class LogicalDecompositionAnalyzer {
   private codeConfiguration: CodeConfiguration
@@ -30,6 +31,9 @@ export class LogicalDecompositionAnalyzer {
       this.logicalDecompositionResults.push(ldResults)
 
       for (const component of logicalDecomposition.components) {
+        component.sourceFiles = SourceCodeFiles.getSourceFilesFromScope(component, this.getScopeSourceFiles(logicalDecomposition.scope))
+        component.filtering = logicalDecomposition.name
+        this.attachComponentToSourceFiles(component)
         const componentResults = new AspectAnalysisResults(component.name)
         ldResults.components.push(componentResults)
         AnalysisUtils.analyze(
@@ -63,6 +67,37 @@ export class LogicalDecompositionAnalyzer {
           AnalysisUtils.getMetricId(`NUMBER_OF_PLACES_WITH_CYCLIC_DEPENDENCIES_DECOMPOSITION_${metricFriendlyName}`),
         )
         .setValue(DependencyUtils.getCyclicDependencyPlacesCount(finderDependencies))
+    }
+  }
+
+  private getScopeSourceFiles(scope: string): typeof this.codeConfiguration.main.sourceFiles {
+    switch (scope) {
+      case "test":
+        return this.codeConfiguration.test.sourceFiles
+      case "generated":
+        return this.codeConfiguration.generated.sourceFiles
+      case "buildAndDeployment":
+        return this.codeConfiguration.buildAndDeployment.sourceFiles
+      case "other":
+        return this.codeConfiguration.other.sourceFiles
+      case "main":
+      default:
+        return this.codeConfiguration.main.sourceFiles
+    }
+  }
+
+  private attachComponentToSourceFiles(component: {
+    name: string
+    filtering: string
+    sourceFiles: Array<{ logicalComponents: Array<{ name: string; filtering: string }> }>
+  }): void {
+    for (const sourceFile of component.sourceFiles) {
+      const alreadyAssigned = sourceFile.logicalComponents.some(
+        (existing) => existing.name === component.name && existing.filtering === component.filtering,
+      )
+      if (!alreadyAssigned) {
+        sourceFile.logicalComponents.push(component)
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { CodeAnalysisResults, ComponentDependency, Contributor, DuplicationInstance } from "@planetnik/analyzer"
+import type { CodeAnalysisResults, ComponentDependency, Contributor, DuplicationInstance, SourceFile } from "@planetnik/analyzer"
 import { Range } from "@planetnik/analyzer"
 import { FormattingUtils } from "@planetnik/common"
 import { DataExportUtils } from "./DataExportUtils.js"
@@ -32,6 +32,7 @@ export class DataExporter {
     this.exportMetrics(dataFolder)
     this.exportControls(dataFolder)
     this.exportContributors(dataFolder)
+    this.exportContributorDetails(dataFolder)
     this.exportJson(dataFolder)
     this.exportDuplicates(dataFolder)
     this.exportUnits(dataFolder)
@@ -135,6 +136,25 @@ export class DataExporter {
     }
 
     writeFileSync(join(dataFolder, "contributors.txt"), lines.join("\n"), "utf-8")
+  }
+
+  private exportContributorDetails(dataFolder: string): void {
+    const contributors = this.analysisResults.contributorsAnalysisResults.contributors
+    if (contributors.length === 0) return
+
+    const detailsFolder = join(dataFolder, "contributor_details")
+    if (!existsSync(detailsFolder)) {
+      mkdirSync(detailsFolder, { recursive: true })
+    }
+
+    const sourceFiles = this.getAllSourceFiles()
+    const collaboratorMap = this.getCollaboratorsByContributor()
+
+    for (const contributor of contributors) {
+      const exportInfo = this.buildContributorDetailExport(contributor, sourceFiles, collaboratorMap.get(contributor.email) ?? [])
+      const fileName = `${encodeURIComponent(contributor.email)}.json`
+      writeFileSync(join(detailsFolder, fileName), JSON.stringify(exportInfo, null, 2), "utf-8")
+    }
   }
 
   private exportJson(dataFolder: string): void {
@@ -395,6 +415,159 @@ export class DataExporter {
 
     const timeline = { perYear, perMonth }
     writeFileSync(join(dataFolder, "contributor_timeline.json"), JSON.stringify(timeline, null, 2), "utf-8")
+  }
+
+  private buildContributorDetailExport(
+    contributor: Contributor,
+    sourceFiles: SourceFile[],
+    collaborators: Array<{ email: string; sharedFiles: number }>,
+  ) {
+    const dailyActivity = new Map<string, number>()
+    const seenCommitIds = new Set<string>()
+    const extensionStats = new Map<string, { commitIds: Set<string>; files: Set<string> }>()
+    const logicalComponentStats = new Map<string, { files: Set<string>; linesOfCode: number }>()
+    const concernStats = new Map<string, { files: Set<string>; linesOfCode: number }>()
+
+    const files = sourceFiles
+      .map((file) => {
+        const commits = file.fileModificationHistory?.commits ?? []
+        const matchingCommits = commits.filter((commit) => commit.email === contributor.email)
+        if (matchingCommits.length === 0) return null
+
+        const fileCommitIds = new Set<string>()
+
+        for (const [index, commit] of matchingCommits.entries()) {
+          const commitId = this.getContributorCommitId(commit.id, commit.date, file.relativePath, index)
+          fileCommitIds.add(commitId)
+
+          if (!seenCommitIds.has(commitId)) {
+            seenCommitIds.add(commitId)
+            dailyActivity.set(commit.date, (dailyActivity.get(commit.date) ?? 0) + 1)
+          }
+
+          const extensionKey = file.extension || ""
+          const extension = extensionStats.get(extensionKey) ?? { commitIds: new Set<string>(), files: new Set<string>() }
+          extension.commitIds.add(commitId)
+          extension.files.add(file.relativePath)
+          extensionStats.set(extensionKey, extension)
+        }
+
+        for (const component of file.logicalComponents) {
+          this.addFootprintEntry(logicalComponentStats, component.name, file.relativePath, file.linesOfCode)
+        }
+        for (const concern of file.concerns) {
+          this.addFootprintEntry(concernStats, concern.name, file.relativePath, file.linesOfCode)
+        }
+
+        return {
+          relativePath: file.relativePath,
+          extension: file.extension,
+          commits: fileCommitIds.size,
+          logicalComponents: file.logicalComponents.map((component) => component.name).sort(),
+          concerns: file.concerns.map((concern) => concern.name).sort(),
+        }
+      })
+      .filter((file): file is NonNullable<typeof file> => file !== null)
+      .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
+
+    return {
+      email: contributor.email,
+      userName: contributor.userName,
+      commitsCount: contributor.commitsCount,
+      commitsCount30Days: contributor.commitsCount30Days,
+      commitsCount90Days: contributor.commitsCount90Days,
+      commitsCount180Days: contributor.commitsCount180Days,
+      commitsCount365Days: contributor.commitsCount365Days,
+      firstCommitDate: contributor.firstCommitDate,
+      latestCommitDate: contributor.latestCommitDate,
+      isActive: contributor.isActive(),
+      isRookie: contributor.isRookie(),
+      dailyActivity: Array.from(dailyActivity.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, commits]) => ({ date, commits })),
+      files,
+      extensions: Array.from(extensionStats.entries())
+        .map(([extension, stats]) => ({
+          extension,
+          commits: stats.commitIds.size,
+          files: stats.files.size,
+        }))
+        .sort((a, b) => a.extension.localeCompare(b.extension)),
+      logicalComponents: this.getSortedFootprint(logicalComponentStats),
+      concerns: this.getSortedFootprint(concernStats),
+      collaborators,
+    }
+  }
+
+  private getAllSourceFiles(): SourceFile[] {
+    const config = this.analysisResults.codeConfiguration
+    if (!config) return []
+
+    const files = [
+      ...config.main.sourceFiles,
+      ...config.test.sourceFiles,
+      ...config.generated.sourceFiles,
+      ...config.buildAndDeployment.sourceFiles,
+      ...config.other.sourceFiles,
+    ] as SourceFile[]
+
+    const uniqueFiles = new Map<string, SourceFile>()
+    for (const file of files) {
+      uniqueFiles.set(file.relativePath, file)
+    }
+    return Array.from(uniqueFiles.values())
+  }
+
+  private getCollaboratorsByContributor(): Map<string, Array<{ email: string; sharedFiles: number }>> {
+    const collaborators = new Map<string, Array<{ email: string; sharedFiles: number }>>()
+
+    const addCollaborator = (contributorEmail: string, collaboratorEmail: string, sharedFiles: number) => {
+      const entries = collaborators.get(contributorEmail) ?? []
+      entries.push({ email: collaboratorEmail, sharedFiles })
+      collaborators.set(contributorEmail, entries)
+    }
+
+    for (const dependency of this.analysisResults.contributorsAnalysisResults.peopleDependenciesAllTime) {
+      addCollaborator(dependency.fromComponent, dependency.toComponent, dependency.count)
+      addCollaborator(dependency.toComponent, dependency.fromComponent, dependency.count)
+    }
+
+    for (const [email, entries] of collaborators.entries()) {
+      entries.sort((a, b) => b.sharedFiles - a.sharedFiles || a.email.localeCompare(b.email))
+      collaborators.set(email, entries)
+    }
+
+    return collaborators
+  }
+
+  private addFootprintEntry(
+    footprint: Map<string, { files: Set<string>; linesOfCode: number }>,
+    name: string,
+    filePath: string,
+    linesOfCode: number,
+  ): void {
+    if (!name) return
+    const entry = footprint.get(name) ?? { files: new Set<string>(), linesOfCode: 0 }
+    if (!entry.files.has(filePath)) {
+      entry.files.add(filePath)
+      entry.linesOfCode += linesOfCode
+    }
+    footprint.set(name, entry)
+  }
+
+  private getSortedFootprint(footprint: Map<string, { files: Set<string>; linesOfCode: number }>) {
+    return Array.from(footprint.entries())
+      .map(([name, info]) => ({
+        name,
+        files: info.files.size,
+        linesOfCode: info.linesOfCode,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  private getContributorCommitId(commitId: string, date: string, filePath: string, index: number): string {
+    if (commitId) return commitId
+    return `${filePath}:${date}:${index}`
   }
 
   static dependenciesFileNamePrefix(

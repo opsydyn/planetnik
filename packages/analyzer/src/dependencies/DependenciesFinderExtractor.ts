@@ -1,6 +1,7 @@
 import type { LogicalDecomposition } from "../aspects/LogicalDecomposition.js"
 import type { NamedSourceCodeAspect } from "../aspects/NamedSourceCodeAspect.js"
 import type { SourceFile } from "../aspects/SourceFile.js"
+import { LanguageAnalyzerFactory } from "../lang/LanguageAnalyzerFactory.js"
 import { ComplexOperation } from "../operations/ComplexOperation.js"
 import { ComponentDependency } from "./ComponentDependency.js"
 import { DependencyEvidence } from "./DependencyEvidence.js"
@@ -36,6 +37,21 @@ export class DependenciesFinderExtractor {
     }
 
     const dependenciesFinder = this.logicalDecomposition.dependenciesFinder
+
+    // Apply built-in language-specific dependency rules
+    if (dependenciesFinder.useBuiltInDependencyFinders) {
+      const factory = LanguageAnalyzerFactory.getInstance()
+      for (const sourceFile of aspect.sourceFiles) {
+        const sf = sourceFile as SourceFile
+        const analyzer = factory.getLanguageAnalyzer(sf.extension)
+        const builtInRules = analyzer.getMetaDependencyRules()
+        if (builtInRules.length > 0) {
+          this.findComponentDependenciesViaMetaRules(builtInRules, sf)
+        }
+      }
+    }
+
+    // Apply user-configured meta-rules
     for (const sourceFile of aspect.sourceFiles) {
       this.findComponentDependenciesViaMetaRules(dependenciesFinder.metaRules, sourceFile as SourceFile)
     }
@@ -100,12 +116,15 @@ export class DependenciesFinderExtractor {
   ): void {
     if (!toComponent || !toComponent.trim()) return
 
-    if (
-      !this.logicalDecomposition.includeExternalComponents &&
-      !this.logicalDecomposition.getComponentByName(toComponent)
-    ) {
+    // Try exact match first, then fuzzy match (package path contains component name)
+    const resolved = this.resolveComponentName(toComponent)
+
+    if (!this.logicalDecomposition.includeExternalComponents && !resolved) {
       return
     }
+
+    // Use resolved name if found, otherwise use the raw extracted string
+    toComponent = resolved ?? toComponent
 
     const duplicationKey = `${color} / ${sourceFile.relativePath} -> ${toComponent}`
     if (this.fileComponentDependencies.has(duplicationKey)) return
@@ -150,6 +169,37 @@ export class DependenciesFinderExtractor {
         this.dependenciesMap.set(key, dep)
       }
     }
+  }
+
+  /**
+   * Resolve an extracted dependency string to a known component name.
+   * First tries exact match, then checks if any component name appears as a
+   * segment in the extracted string (e.g., "nl.obren.sokrates.common.utils" matches component "common").
+   */
+  private resolveComponentName(extracted: string): string | null {
+    // Exact match
+    const exact = this.logicalDecomposition.getComponentByName(extracted)
+    if (exact) return exact.name
+
+    // Segment match: split the extracted string by dots and slashes,
+    // check if any component name matches a segment
+    const segments = extracted.replace(/\./g, "/").split("/")
+    for (const component of this.logicalDecomposition.components) {
+      const compSegments = component.name.replace(/\./g, "/").split("/")
+      // Check if component name segments appear contiguously in the extracted segments
+      for (let i = 0; i <= segments.length - compSegments.length; i++) {
+        let match = true
+        for (let j = 0; j < compSegments.length; j++) {
+          if (segments[i + j].toLowerCase() !== compSegments[j].toLowerCase()) {
+            match = false
+            break
+          }
+        }
+        if (match) return component.name
+      }
+    }
+
+    return null
   }
 
   private pathMatches(pattern: string, path: string): boolean {

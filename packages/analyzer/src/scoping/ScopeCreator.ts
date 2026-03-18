@@ -257,7 +257,7 @@ export class ScopeCreator {
 
       // Add exclusion filters for nested paths to avoid overlap
       for (const other of paths) {
-        if (other !== p && other.startsWith(p + "/")) {
+        if (other !== p && other.startsWith(`${p}/`)) {
           filters.push(SourceFileFilter.make({ pathPattern: `${other}/.*`, exception: true }))
         }
       }
@@ -298,9 +298,7 @@ export class ScopeCreator {
   private addDefaultConcerns(config: CodeConfiguration): void {
     if (config.concernGroups.length > 0) return
 
-    const todosConcern = new Concern("TODOs", [
-      SourceFileFilter.make({ contentPattern: ".*(TODO|FIXME)( |:|\\t).*" }),
-    ])
+    const todosConcern = new Concern("TODOs", [SourceFileFilter.make({ contentPattern: ".*(TODO|FIXME)( |:|\\t).*" })])
 
     const group = new ConcernsGroup("general")
     group.concerns.push(todosConcern)

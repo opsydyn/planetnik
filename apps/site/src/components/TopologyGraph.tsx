@@ -11,6 +11,7 @@ import {
   topologyPeriodsAtom,
   topologyStatsAtom,
 } from "../state/topologyGraphState"
+import { getContributorHref } from "../lib/contributors"
 
 interface TopologyGraphProps {
   periods: Record<string, PeopleDep[]>
@@ -85,6 +86,7 @@ function buildGraph(rawEdges: PeopleDep[]) {
         fontWeight: 500,
         width: NODE_WIDTH,
         textAlign: "center" as const,
+        cursor: "pointer",
       },
     }
   })
@@ -269,6 +271,10 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
     }, 50)
   }, [])
 
+  const onNodeClick = useCallback((_event: unknown, node: Node) => {
+    window.location.href = getContributorHref(node.id)
+  }, [])
+
   const contentResult = useMemo(
     () => ready
       ? Result.success({
@@ -304,6 +310,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
             onInit={onInit}
             fitView
             proOptions={{ hideAttribution: true }}
@@ -353,6 +360,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onNodeClick={onNodeClick}
               onInit={onInit}
               fitView
               minZoom={0.2}
@@ -378,8 +386,12 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
             <tbody>
               {sortedEdges.map((e, i) => (
                 <tr key={i}>
-                  <td style={emailStyle}>{e.from}</td>
-                  <td style={emailStyle}>{e.to}</td>
+                  <td style={emailStyle}>
+                    <a href={getContributorHref(e.from)} style={emailLinkStyle}>{e.from}</a>
+                  </td>
+                  <td style={emailStyle}>
+                    <a href={getContributorHref(e.to)} style={emailLinkStyle}>{e.to}</a>
+                  </td>
                   <td style={numStyle}>{e.count}</td>
                 </tr>
               ))}
@@ -466,4 +478,9 @@ const numStyle: React.CSSProperties = {
   ...tdBase,
   textAlign: "right",
   fontFamily: '"SF Mono", "Fira Code", monospace',
+}
+
+const emailLinkStyle: React.CSSProperties = {
+  color: "#4f46e5",
+  textDecoration: "none",
 }

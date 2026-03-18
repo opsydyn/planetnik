@@ -230,3 +230,185 @@ describe("LogicalDecomposition", () => {
     expect(ld.getComponentByName("nonexistent")).toBeNull()
   })
 })
+
+describe("JavaAnalyzer — getMetaDependencyRules", () => {
+  test("returns rules for Java import detection", () => {
+    const { JavaAnalyzer } = require("../lang/JavaAnalyzer.js")
+    const analyzer = new JavaAnalyzer()
+    const rules = analyzer.getMetaDependencyRules()
+    expect(rules.length).toBeGreaterThan(0)
+    expect(rules[0].contentPattern).toBe("import .*;")
+    expect(rules[0].nameOperations.length).toBeGreaterThan(0)
+  })
+
+  test("nameOperations extract package from import statement", () => {
+    const { JavaAnalyzer } = require("../lang/JavaAnalyzer.js")
+    const analyzer = new JavaAnalyzer()
+    const rules = analyzer.getMetaDependencyRules()
+    const op = new ComplexOperation(rules[0].nameOperations)
+
+    // Standard import
+    expect(op.exec("import nl.obren.sokrates.common.utils.FormattingUtils;")).toBe("nl.obren.sokrates.common.utils")
+
+    // Wildcard import
+    expect(op.exec("import nl.obren.sokrates.reports.*;")).toBe("nl.obren.sokrates.reports")
+
+    // Static import
+    expect(op.exec("import static org.junit.Assert.assertEquals;")).toBe("org.junit.Assert")
+  })
+})
+
+describe("Built-in dependency detection — Java imports", () => {
+  test("detects cross-component Java import dependencies", () => {
+    const ld = new LogicalDecomposition("primary")
+    ld.includeExternalComponents = false
+
+    // Create components matching Sokrates structure
+    const codeanalyzer = new NamedSourceCodeAspect("codeanalyzer")
+    codeanalyzer.filtering = "primary"
+    const common = new NamedSourceCodeAspect("common")
+    common.filtering = "primary"
+    const reports = new NamedSourceCodeAspect("reports")
+    reports.filtering = "primary"
+    ld.components = [codeanalyzer, common, reports]
+
+    // A file in codeanalyzer that imports from common
+    const file1 = new SourceFile(
+      "codeanalyzer/src/main/java/nl/obren/sokrates/sourcecode/Analyzer.java",
+      [
+        "package nl.obren.sokrates.sourcecode;",
+        "import nl.obren.sokrates.common.utils.FormattingUtils;",
+        "import nl.obren.sokrates.common.io.JsonMapper;",
+        "import java.util.List;",
+        "public class Analyzer {}",
+      ].join("\n"),
+    )
+    file1.extension = "java"
+    file1.linesOfCode = 5
+    file1.logicalComponents = [codeanalyzer]
+    codeanalyzer.sourceFiles = [file1]
+
+    // A file in reports that imports from codeanalyzer
+    const file2 = new SourceFile(
+      "reports/src/main/java/nl/obren/sokrates/reports/ReportGen.java",
+      [
+        "package nl.obren.sokrates.reports;",
+        "import nl.obren.sokrates.sourcecode.SourceFile;",
+        "public class ReportGen {}",
+      ].join("\n"),
+    )
+    file2.extension = "java"
+    file2.linesOfCode = 3
+    file2.logicalComponents = [reports]
+    reports.sourceFiles = [file2]
+
+    ld.dependenciesFinder.useBuiltInDependencyFinders = true
+
+    const main = new NamedSourceCodeAspect("main")
+    main.sourceFiles = [file1, file2]
+
+    const extractor = new DependenciesFinderExtractor(ld)
+    const deps = extractor.findComponentDependencies(main)
+
+    // Should not detect java.util.List (no "java" component, includeExternalComponents=false)
+    // Should detect: codeanalyzer → common (2 imports resolved via segment matching)
+    // Should detect: reports → codeanalyzer (via "sourcecode" segment matching "codeanalyzer"?)
+    // Actually "nl.obren.sokrates.sourcecode" has segment "sourcecode" not "codeanalyzer",
+    // so reports → codeanalyzer won't match. Only codeanalyzer → common should match.
+    expect(deps.length).toBe(1)
+    expect(deps[0].fromComponent).toBe("codeanalyzer")
+    expect(deps[0].toComponent).toBe("common")
+  })
+
+  test("detects dependencies when component names match extracted package segments", () => {
+    const ld = new LogicalDecomposition("packages")
+    ld.includeExternalComponents = true // allow external components
+
+    const utils = new NamedSourceCodeAspect("com.example.utils")
+    utils.filtering = "packages"
+    const service = new NamedSourceCodeAspect("com.example.service")
+    service.filtering = "packages"
+    ld.components = [utils, service]
+
+    const file = new SourceFile(
+      "src/main/java/com/example/service/UserService.java",
+      ["package com.example.service;", "import com.example.utils.StringHelper;", "public class UserService {}"].join(
+        "\n",
+      ),
+    )
+    file.extension = "java"
+    file.linesOfCode = 3
+    file.logicalComponents = [service]
+    service.sourceFiles = [file]
+
+    ld.dependenciesFinder.useBuiltInDependencyFinders = true
+
+    const main = new NamedSourceCodeAspect("main")
+    main.sourceFiles = [file]
+
+    const extractor = new DependenciesFinderExtractor(ld)
+    const deps = extractor.findComponentDependencies(main)
+
+    expect(deps.length).toBe(1)
+    expect(deps[0].fromComponent).toBe("com.example.service")
+    expect(deps[0].toComponent).toBe("com.example.utils")
+  })
+
+  test("does not detect self-dependencies", () => {
+    const ld = new LogicalDecomposition("packages")
+    ld.includeExternalComponents = true
+
+    const service = new NamedSourceCodeAspect("com.example.service")
+    service.filtering = "packages"
+    ld.components = [service]
+
+    const file = new SourceFile(
+      "src/main/java/com/example/service/UserService.java",
+      [
+        "package com.example.service;",
+        "import com.example.service.BaseService;",
+        "public class UserService extends BaseService {}",
+      ].join("\n"),
+    )
+    file.extension = "java"
+    file.linesOfCode = 3
+    file.logicalComponents = [service]
+    service.sourceFiles = [file]
+
+    ld.dependenciesFinder.useBuiltInDependencyFinders = true
+
+    const main = new NamedSourceCodeAspect("main")
+    main.sourceFiles = [file]
+
+    const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
+    expect(deps.length).toBe(0)
+  })
+
+  test("skips built-in rules when useBuiltInDependencyFinders is false", () => {
+    const ld = new LogicalDecomposition("packages")
+    ld.includeExternalComponents = true
+
+    const utils = new NamedSourceCodeAspect("com.example.utils")
+    utils.filtering = "packages"
+    const service = new NamedSourceCodeAspect("com.example.service")
+    service.filtering = "packages"
+    ld.components = [utils, service]
+
+    const file = new SourceFile(
+      "src/main/java/com/example/service/UserService.java",
+      ["package com.example.service;", "import com.example.utils.StringHelper;"].join("\n"),
+    )
+    file.extension = "java"
+    file.linesOfCode = 2
+    file.logicalComponents = [service]
+    service.sourceFiles = [file]
+
+    ld.dependenciesFinder.useBuiltInDependencyFinders = false
+
+    const main = new NamedSourceCodeAspect("main")
+    main.sourceFiles = [file]
+
+    const deps = new DependenciesFinderExtractor(ld).findComponentDependencies(main)
+    expect(deps.length).toBe(0)
+  })
+})

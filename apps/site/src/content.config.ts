@@ -3,6 +3,7 @@ import { z } from "astro/zod"
 import {
   analysisLoader,
   commitsPerExtensionLoader,
+  contributorDetailsLoader,
   contributorTimelineLoader,
   contributorsLoader,
   dependenciesLoader,
@@ -36,6 +37,12 @@ const duplicateFileBlockSchema = z.object({
   endLine: z.number(),
   cleanedStartLine: z.number(),
   cleanedEndLine: z.number(),
+})
+
+const contributorFootprintSchema = z.object({
+  name: z.string(),
+  files: z.number(),
+  linesOfCode: z.number(),
 })
 
 export const collections = {
@@ -124,6 +131,53 @@ export const collections = {
       userName: z.string().optional(),
       isRookie: z.boolean().optional(),
       isActive: z.boolean().optional(),
+    }),
+  }),
+
+  contributorDetails: defineCollection({
+    loader: contributorDetailsLoader(),
+    schema: z.object({
+      email: z.string(),
+      userName: z.string(),
+      commitsCount: z.number(),
+      commitsCount30Days: z.number(),
+      commitsCount90Days: z.number(),
+      commitsCount180Days: z.number(),
+      commitsCount365Days: z.number(),
+      firstCommitDate: z.string(),
+      latestCommitDate: z.string(),
+      isActive: z.boolean(),
+      isRookie: z.boolean(),
+      dailyActivity: z.array(
+        z.object({
+          date: z.string(),
+          commits: z.number(),
+        }),
+      ),
+      files: z.array(
+        z.object({
+          relativePath: z.string(),
+          extension: z.string(),
+          commits: z.number(),
+          logicalComponents: z.array(z.string()),
+          concerns: z.array(z.string()),
+        }),
+      ),
+      extensions: z.array(
+        z.object({
+          extension: z.string(),
+          commits: z.number(),
+          files: z.number(),
+        }),
+      ),
+      logicalComponents: z.array(contributorFootprintSchema),
+      concerns: z.array(contributorFootprintSchema),
+      collaborators: z.array(
+        z.object({
+          email: z.string(),
+          sharedFiles: z.number(),
+        }),
+      ),
     }),
   }),
 

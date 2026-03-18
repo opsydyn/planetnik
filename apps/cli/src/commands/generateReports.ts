@@ -8,6 +8,7 @@ import {
   Concern,
   ConcernsGroup,
   DEFAULT_CONFIGURATION_FOLDER,
+  LogicalDecomposition,
   NamedSourceCodeAspect,
 } from "@planetnik/analyzer"
 import { BasicSourceCodeReportGenerator, DataExporter, ReportFileExporter } from "@planetnik/reports"
@@ -44,19 +45,25 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
       }
     }
 
-    // Reconstruct component NamedSourceCodeAspect instances in logical decompositions
-    for (const decomposition of codeConfiguration.logicalDecompositions) {
-      if (Array.isArray(decomposition.components)) {
-        decomposition.components = decomposition.components.map(
-          (c: Record<string, unknown>) =>
-            new NamedSourceCodeAspect(
-              (c.name as string) ?? "",
-              (c.sourceFileFilters as ReturnType<typeof NamedSourceCodeAspect.make>[]) ?? [],
-              (c.files as string[]) ?? [],
-            ),
-        )
-      }
-    }
+    // Reconstruct LogicalDecomposition instances with proper class methods
+    codeConfiguration.logicalDecompositions = (parsed.logicalDecompositions ?? []).map(
+      (d: Record<string, unknown>) => {
+        const ld = new LogicalDecomposition((d.name as string) ?? "")
+        Object.assign(ld, d)
+        // Reconstruct component NamedSourceCodeAspect instances
+        if (Array.isArray(d.components)) {
+          ld.components = d.components.map(
+            (c: Record<string, unknown>) =>
+              new NamedSourceCodeAspect(
+                (c.name as string) ?? "",
+                (c.sourceFileFilters as ReturnType<typeof NamedSourceCodeAspect.make>[]) ?? [],
+                (c.files as string[]) ?? [],
+              ),
+          )
+        }
+        return ld
+      },
+    )
 
     // Reconstruct concern instances in concernGroups
     if (Array.isArray(parsed.concernGroups)) {

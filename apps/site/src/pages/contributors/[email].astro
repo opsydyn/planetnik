@@ -1,0 +1,468 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import CommitHeatmap from "../../components/charts/CommitHeatmap"
+import DonutChart from "../../components/charts/DonutChart"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import LineChart from "../../components/charts/LineChart"
+import Dashboard from "../../layouts/Dashboard.astro"
+import { getContributorDisplayName, getContributorHref, getContributorMonthlyActivity, getContributorRouteParam } from "../../lib/contributors"
+
+export async function getStaticPaths() {
+  const contributorDetails = await getCollection("contributorDetails")
+
+  return contributorDetails.map((entry) => ({
+    params: { email: getContributorRouteParam(entry.id) },
+    props: { contributorId: entry.id },
+  }))
+}
+
+const { contributorId } = Astro.props as { contributorId: string }
+
+const summary = await getEntry("analysis", "summary")
+const contributor = await getEntry("contributorDetails", contributorId)
+const contributorSummary = await getEntry("contributors", contributorId)
+
+if (!contributor) {
+  throw new Error(`Contributor detail entry not found for ${contributorId}`)
+}
+
+const projectName = summary?.data.metadata.name ?? "Unknown"
+const contributorName = getContributorDisplayName({
+  email: contributor.data.email,
+  userName: contributor.data.userName,
+})
+
+const monthlyActivity = getContributorMonthlyActivity(contributor.data.dailyActivity)
+const extensionChartData = [...contributor.data.extensions]
+  .sort((a, b) => b.commits - a.commits || a.extension.localeCompare(b.extension))
+  .map((entry) => ({
+    label: entry.extension ? `.${entry.extension}` : "No Extension",
+    value: entry.commits,
+  }))
+
+const componentBarData = [...contributor.data.logicalComponents]
+  .sort((a, b) => b.linesOfCode - a.linesOfCode || a.name.localeCompare(b.name))
+  .slice(0, 10)
+  .map((entry) => ({
+    label: entry.name,
+    value: entry.linesOfCode,
+  }))
+
+const collaboratorBarData = contributor.data.collaborators.slice(0, 10).map((entry) => ({
+  label: getContributorDisplayName({ email: entry.email }),
+  value: entry.sharedFiles,
+}))
+
+const touchedFiles = [...contributor.data.files].sort((a, b) => b.commits - a.commits || a.relativePath.localeCompare(b.relativePath))
+const activeDays = contributor.data.dailyActivity.length
+const topCollaborator = contributor.data.collaborators[0]
+const hasSourceFileDetail = contributor.data.files.length > 0
+const commitShare = contributorSummary?.data.percentage ?? null
+---
+
+<Dashboard title={contributorName} projectName={projectName}>
+  <a class="back-link" href="/contributors">&larr; Back to contributors</a>
+
+  <header class="page-header">
+    <div>
+      <h2>{contributorName}</h2>
+      <p class="subtitle">
+        <span class="email">{contributor.data.email}</span>
+        {commitShare && <> &middot; {commitShare} of all commits</>}
+      </p>
+    </div>
+    <div class="status-list">
+      {contributor.data.isActive && <span class="badge active">active</span>}
+      {contributor.data.isRookie && <span class="badge rookie">rookie</span>}
+    </div>
+  </header>
+
+  <section class="stats-grid">
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.commitsCount.toLocaleString()}</div>
+      <div class="stat-label">All-Time Commits</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{activeDays.toLocaleString()}</div>
+      <div class="stat-label">Active Days</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.files.length.toLocaleString()}</div>
+      <div class="stat-label">Source Files Touched</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.collaborators.length.toLocaleString()}</div>
+      <div class="stat-label">Collaborators</div>
+    </article>
+  </section>
+
+  <section class="detail-grid">
+    <article class="detail-card">
+      <div class="detail-label">First Commit</div>
+      <div class="detail-value">{contributor.data.firstCommitDate || "Unknown"}</div>
+    </article>
+    <article class="detail-card">
+      <div class="detail-label">Latest Commit</div>
+      <div class="detail-value">{contributor.data.latestCommitDate || "Unknown"}</div>
+    </article>
+    <article class="detail-card">
+      <div class="detail-label">30 / 90 / 180 / 365 Days</div>
+      <div class="detail-value monospace">
+        {contributor.data.commitsCount30Days} / {contributor.data.commitsCount90Days} / {contributor.data.commitsCount180Days} / {contributor.data.commitsCount365Days}
+      </div>
+    </article>
+    <article class="detail-card">
+      <div class="detail-label">Top Collaborator</div>
+      <div class="detail-value">
+        {topCollaborator ? (
+          <a href={getContributorHref(topCollaborator.email)}>{getContributorDisplayName({ email: topCollaborator.email })}</a>
+        ) : (
+          "None"
+        )}
+      </div>
+    </article>
+  </section>
+
+  {!hasSourceFileDetail && (
+    <div class="empty-state">
+      <p>No source-file detail is available for this contributor in the current configured scope.</p>
+      <p class="hint">This usually means their commits only touched non-source files such as build, docs, or repository metadata.</p>
+    </div>
+  )}
+
+  {monthlyActivity.length > 0 && (
+    <section class="section">
+      <h3>Commit Heatmap</h3>
+      <p class="section-intro">Daily commit activity across the last 53 weeks ending on {contributor.data.latestCommitDate || contributor.data.firstCommitDate || "the latest available snapshot"}.</p>
+      <CommitHeatmap
+        client:load
+        data={contributor.data.dailyActivity}
+        endDate={contributor.data.latestCommitDate || contributor.data.firstCommitDate || undefined}
+      />
+    </section>
+  )}
+
+  {monthlyActivity.length > 0 && (
+    <section class="section">
+      <h3>Commit Activity</h3>
+      <LineChart
+        client:load
+        series={[{ name: "Commits", data: monthlyActivity }]}
+        xLabel="Month"
+        yLabel="Commits"
+      />
+    </section>
+  )}
+
+  <section class="chart-grid">
+    {extensionChartData.length > 0 && (
+      <div class="chart-panel">
+        <h3>Language Footprint</h3>
+        <DonutChart client:load data={extensionChartData} valueLabel="commits" />
+      </div>
+    )}
+
+    {componentBarData.length > 0 && (
+      <div class="chart-panel">
+        <h3>Component Footprint</h3>
+        <HorizontalBarChart client:load data={componentBarData} valueLabel="loc" maxItems={10} />
+      </div>
+    )}
+  </section>
+
+  {collaboratorBarData.length > 0 && (
+    <section class="section">
+      <h3>Top Collaborators</h3>
+      <HorizontalBarChart client:load data={collaboratorBarData} valueLabel="shared files" maxItems={10} />
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Contributor</th>
+            <th class="numeric">Shared Files</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contributor.data.collaborators.map((entry) => (
+            <tr>
+              <td>
+                <a href={getContributorHref(entry.email)}>{getContributorDisplayName({ email: entry.email })}</a>
+                <div class="email-sub">{entry.email}</div>
+              </td>
+              <td class="numeric">{entry.sharedFiles.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+
+  {touchedFiles.length > 0 && (
+    <section class="section">
+      <h3>Files Touched</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th class="numeric">Commits</th>
+            <th>Components</th>
+            <th>Concerns</th>
+          </tr>
+        </thead>
+        <tbody>
+          {touchedFiles.map((file) => (
+            <tr>
+              <td class="file-path">
+                <span class="monospace">{file.relativePath}</span>
+              </td>
+              <td class="numeric">{file.commits.toLocaleString()}</td>
+              <td>
+                <div class="tag-list">
+                  {file.logicalComponents.length > 0 ? file.logicalComponents.map((component) => <span class="tag">{component}</span>) : <span class="placeholder">None</span>}
+                </div>
+              </td>
+              <td>
+                <div class="tag-list">
+                  {file.concerns.length > 0 ? file.concerns.map((concern) => <span class="tag concern">{concern}</span>) : <span class="placeholder">None</span>}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  )}
+</Dashboard>
+
+<style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link:hover {
+    color: var(--color-accent);
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    font-size: 0.95rem;
+  }
+
+  .email {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85em;
+  }
+
+  .status-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .badge.active {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .badge.rookie {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .stats-grid,
+  .detail-grid,
+  .chart-grid {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .detail-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    align-items: start;
+  }
+
+  .stat-card,
+  .detail-card,
+  .chart-panel,
+  .empty-state {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .stat-label,
+  .detail-label {
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .detail-value {
+    margin-top: 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .section {
+    margin-bottom: 1.5rem;
+  }
+
+  .section h3,
+  .chart-panel h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.85rem;
+  }
+
+  .section-intro {
+    margin-bottom: 0.85rem;
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.9rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+
+  .table th {
+    background: #f8fafc;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+  }
+
+  .table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .numeric {
+    text-align: right !important;
+    font-family: "SF Mono", "Fira Code", monospace;
+  }
+
+  .email-sub,
+  .placeholder {
+    margin-top: 0.2rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+
+  .monospace,
+  .file-path {
+    font-family: "SF Mono", "Fira Code", monospace;
+  }
+
+  .tag-list {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .tag.concern {
+    background: #ecfeff;
+    color: #0f766e;
+  }
+
+  .empty-state p {
+    color: var(--color-text-muted);
+  }
+
+  .hint {
+    margin-top: 0.35rem;
+    font-size: 0.88rem;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+    }
+
+    .table {
+      font-size: 0.88rem;
+    }
+
+    .table th,
+    .table td {
+      padding: 0.65rem 0.7rem;
+    }
+  }
+</style>

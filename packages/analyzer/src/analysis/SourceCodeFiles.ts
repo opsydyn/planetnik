@@ -124,10 +124,10 @@ export class SourceCodeFiles {
   }
 
   getSourceFiles(aspect: NamedSourceCodeAspect): SourceFile[] {
-    return this.getSourceFilesFromScope(aspect, this.filesInBroadScope)
+    return SourceCodeFiles.getSourceFilesFromScope(aspect, this.filesInBroadScope)
   }
 
-  getSourceFilesFromScope(aspect: NamedSourceCodeAspect, scopeSourceFiles: SourceFile[]): SourceFile[] {
+  static getSourceFilesFromScope(aspect: NamedSourceCodeAspect, scopeSourceFiles: SourceFile[]): SourceFile[] {
     aspect.sourceFiles = []
     const sourceFiles: SourceFile[] = []
 

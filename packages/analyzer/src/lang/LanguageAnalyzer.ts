@@ -1,6 +1,7 @@
 import type { SourceFile } from "../aspects/SourceFile.js"
 import type { CleanedContent } from "../cleaners/CleanedContent.js"
 import type { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js"
+import type { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js"
 import type { UnitInfo } from "../units/UnitInfo.js"
 
 export interface LanguageAnalyzer {
@@ -8,6 +9,7 @@ export interface LanguageAnalyzer {
   cleanForDuplicationCalculations(sourceFile: SourceFile): CleanedContent
   extractUnits(sourceFile: SourceFile): UnitInfo[]
   extractDependencies(sourceFiles: readonly SourceFile[]): DependenciesAnalysis
+  getMetaDependencyRules(): MetaDependencyRule[]
   getFeaturesDescription(): string[]
 }
 

@@ -1,16 +1,24 @@
 import { describe, expect, test } from "bun:test"
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import {
   CodeAnalysisResults,
+  CodeConfiguration,
   CommitInfo,
+  ComponentDependency,
+  Contributor,
   Dependency,
   DependencyAnchor,
   DuplicatedFileBlock,
   DuplicationInstance,
   FileModificationHistory,
+  NamedSourceCodeAspect,
   SourceFile,
   SourceFileDependency,
 } from "@planetnik/analyzer"
 import { DataExportUtils } from "../exporters/DataExportUtils"
+import { DataExporter } from "../exporters/DataExporter"
 import { DependenciesExporter } from "../exporters/DependenciesExportInfo"
 import { DuplicationExporter } from "../exporters/DuplicationExportInfo"
 import { fileExportInfoFromSourceFile } from "../exporters/FileExportInfo"
@@ -310,5 +318,124 @@ describe("MetricsTrendExporter", () => {
     const trends = exporter.getMetricTrends()
 
     expect(trends[0]!.values[1]!.value).toBe(0) // defaults to 0
+  })
+})
+
+describe("DataExporter", () => {
+  test("exportData writes per-contributor detail files with deduplicated activity and structure footprint", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
+    config.srcRoot = "/repo/src"
+
+    const billing = new NamedSourceCodeAspect("Billing")
+    const checkout = new NamedSourceCodeAspect("Checkout")
+    const payments = new NamedSourceCodeAspect("Payments")
+
+    const orderService = new SourceFile("src/orders/OrderService.java")
+    orderService.linesOfCode = 120
+    orderService.logicalComponents = [billing]
+    orderService.concerns = [payments]
+    orderService.fileModificationHistory = new FileModificationHistory(orderService.relativePath)
+    orderService.fileModificationHistory.commits.push(
+      new CommitInfo("c1", "2025-01-10", "alice@example.com"),
+      new CommitInfo("c2", "2025-01-12", "alice@example.com"),
+      new CommitInfo("c3", "2025-01-13", "bob@example.com"),
+    )
+    orderService.fileModificationHistory.dates.push("2025-01-10", "2025-01-12", "2025-01-13")
+
+    const cartService = new SourceFile("src/cart/cart.js")
+    cartService.linesOfCode = 40
+    cartService.logicalComponents = [checkout]
+    cartService.concerns = [payments]
+    cartService.fileModificationHistory = new FileModificationHistory(cartService.relativePath)
+    cartService.fileModificationHistory.commits.push(
+      new CommitInfo("c2", "2025-01-12", "alice@example.com"),
+      new CommitInfo("c4", "2025-01-14", "alice@example.com"),
+    )
+    cartService.fileModificationHistory.dates.push("2025-01-12", "2025-01-14")
+
+    config.main.sourceFiles = [orderService, cartService]
+    results.codeConfiguration = config
+
+    const alice = new Contributor("alice@example.com")
+    alice.userName = "Alice"
+    alice.commitsCount = 3
+    alice.firstCommitDate = "2025-01-10"
+    alice.latestCommitDate = "2025-01-14"
+    alice.activeYears = ["2025"]
+    alice.commitDates = ["2025-01-10", "2025-01-12", "2025-01-14"]
+    results.contributorsAnalysisResults.contributors = [alice]
+
+    const sharedWithBob = new ComponentDependency("alice@example.com", "bob@example.com")
+    sharedWithBob.count = 2
+    sharedWithBob.data = [orderService.relativePath, cartService.relativePath]
+    results.contributorsAnalysisResults.peopleDependenciesAllTime = [sharedWithBob]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-data-export-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const contributorFile = join(
+        reportsFolder,
+        "data",
+        "contributor_details",
+        `${encodeURIComponent("alice@example.com")}.json`,
+      )
+
+      expect(existsSync(contributorFile)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(contributorFile, "utf-8")) as {
+        email: string
+        userName: string
+        dailyActivity: Array<{ date: string; commits: number }>
+        files: Array<{
+          relativePath: string
+          extension: string
+          commits: number
+          logicalComponents: string[]
+          concerns: string[]
+        }>
+        extensions: Array<{ extension: string; commits: number; files: number }>
+        logicalComponents: Array<{ name: string; files: number; linesOfCode: number }>
+        concerns: Array<{ name: string; files: number; linesOfCode: number }>
+        collaborators: Array<{ email: string; sharedFiles: number }>
+      }
+
+      expect(exported.email).toBe("alice@example.com")
+      expect(exported.userName).toBe("Alice")
+      expect(exported.dailyActivity).toEqual([
+        { date: "2025-01-10", commits: 1 },
+        { date: "2025-01-12", commits: 1 },
+        { date: "2025-01-14", commits: 1 },
+      ])
+      expect(exported.files).toHaveLength(2)
+      expect(exported.files[0]).toEqual({
+        relativePath: "src/cart/cart.js",
+        extension: "js",
+        commits: 2,
+        logicalComponents: ["Checkout"],
+        concerns: ["Payments"],
+      })
+      expect(exported.files[1]).toEqual({
+        relativePath: "src/orders/OrderService.java",
+        extension: "java",
+        commits: 2,
+        logicalComponents: ["Billing"],
+        concerns: ["Payments"],
+      })
+      expect(exported.extensions).toEqual([
+        { extension: "java", commits: 2, files: 1 },
+        { extension: "js", commits: 2, files: 1 },
+      ])
+      expect(exported.logicalComponents).toEqual([
+        { name: "Billing", files: 1, linesOfCode: 120 },
+        { name: "Checkout", files: 1, linesOfCode: 40 },
+      ])
+      expect(exported.concerns).toEqual([{ name: "Payments", files: 2, linesOfCode: 160 }])
+      expect(exported.collaborators).toEqual([{ email: "bob@example.com", sharedFiles: 2 }])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
   })
 })

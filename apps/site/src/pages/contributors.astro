@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import Dashboard from "../layouts/Dashboard.astro"
+import { getContributorDisplayName, getContributorHref } from "../lib/contributors"
 
 const summary = await getEntry("analysis", "summary")
 const contributors = await getCollection("contributors")
@@ -12,14 +13,8 @@ const projectName = summary?.data.metadata.name ?? "Unknown"
 const sorted = [...contributors].sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
 const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0)
 
-function displayName(c: { email: string; userName?: string }): string {
-  if (c.userName) return c.userName
-  const at = c.email.indexOf("@")
-  return at > 0 ? c.email.slice(0, at) : c.email
-}
-
 const contribBarData = sorted.slice(0, 15).map((c) => ({
-  label: displayName(c.data),
+  label: getContributorDisplayName(c.data),
   value: c.data.commitsAllTime,
 }))
 
@@ -72,7 +67,7 @@ const segmentData = [
       {sorted.map((c) => (
         <tr class={c.data.isActive ? "" : "inactive"}>
           <td class="contributor">
-            <span class="name">{displayName(c.data)}</span>
+            <a class="name" href={getContributorHref(c.data.email)}>{getContributorDisplayName(c.data)}</a>
             {c.data.isRookie && <span class="badge rookie" title="First commit less than a year ago">rookie</span>}
             {c.data.userName && <div class="email-sub">{c.data.email}</div>}
           </td>
@@ -123,7 +118,8 @@ const segmentData = [
   }
 
   .contributor { min-width: 160px; }
-  .name { font-weight: 500; }
+  .name { font-weight: 500; color: inherit; text-decoration: none; }
+  .name:hover { color: var(--color-accent); }
   .email-sub { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 1px; }
   .badge { display: inline-block; margin-left: 0.4rem; padding: 1px 6px; border-radius: 9999px; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; }
   .rookie { background: #dbeafe; color: #1e40af; }

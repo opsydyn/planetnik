@@ -3,6 +3,7 @@ import type { CleanedContent } from "../cleaners/CleanedContent.js"
 import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js"
 import { SourceCodeCleanerUtils } from "../cleaners/SourceCodeCleanerUtils.js"
 import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js"
+import type { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js"
 import type { UnitInfo } from "../units/UnitInfo.js"
 import {
   FEATURE_ADVANCED_CODE_CLEANING,
@@ -43,6 +44,10 @@ export class PythonAnalyzer implements LanguageAnalyzer {
 
   extractDependencies(_sourceFiles: readonly SourceFile[]): DependenciesAnalysis {
     return new DependenciesAnalysis()
+  }
+
+  getMetaDependencyRules(): MetaDependencyRule[] {
+    return []
   }
 
   getFeaturesDescription(): string[] {
