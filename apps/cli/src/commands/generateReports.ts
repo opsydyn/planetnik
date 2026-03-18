@@ -5,6 +5,8 @@ import {
   CodeAnalyzer,
   CodeAnalyzerSettings,
   CodeConfiguration,
+  Concern,
+  ConcernsGroup,
   DEFAULT_CONFIGURATION_FOLDER,
   NamedSourceCodeAspect,
 } from "@planetnik/analyzer"
@@ -40,6 +42,37 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
         aspect.sourceFiles = parsed[key].sourceFiles ?? []
         codeConfiguration[key] = aspect
       }
+    }
+
+    // Reconstruct component NamedSourceCodeAspect instances in logical decompositions
+    for (const decomposition of codeConfiguration.logicalDecompositions) {
+      if (Array.isArray(decomposition.components)) {
+        decomposition.components = decomposition.components.map(
+          (c: Record<string, unknown>) =>
+            new NamedSourceCodeAspect(
+              (c.name as string) ?? "",
+              (c.sourceFileFilters as ReturnType<typeof NamedSourceCodeAspect.make>[]) ?? [],
+              (c.files as string[]) ?? [],
+            ),
+        )
+      }
+    }
+
+    // Reconstruct concern instances in concernGroups
+    if (Array.isArray(parsed.concernGroups)) {
+      codeConfiguration.concernGroups = parsed.concernGroups.map((g: Record<string, unknown>) => {
+        const group = new ConcernsGroup((g.name as string) ?? "")
+        if (Array.isArray(g.concerns)) {
+          group.concerns = g.concerns.map(
+            (c: Record<string, unknown>) =>
+              new Concern(
+                (c.name as string) ?? "",
+                (c.sourceFileFilters as ReturnType<typeof NamedSourceCodeAspect.make>[]) ?? [],
+              ),
+          )
+        }
+        return group
+      })
     }
 
     yield* Effect.log(`Reports folder: ${reportsFolder}`)

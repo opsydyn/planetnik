@@ -4,6 +4,7 @@ import type { SourceFileFilterType } from "../../core/SourceFileFilter.js"
 import { createConvention } from "../Convention.js"
 import { ConventionUtils } from "../ConventionUtils.js"
 import { ScopingConventions } from "../ScopingConventions.js"
+import { ScopeCreator } from "../ScopeCreator.js"
 
 describe("Convention", () => {
   test("createConvention creates a convention with defaults", () => {
@@ -103,5 +104,92 @@ describe("ScopingConventions", () => {
       }
     })
     expect(hasMatch).toBe(true)
+  })
+})
+
+describe("ScopeCreator.greatestCommonPrefix", () => {
+  test("returns empty for empty input", () => {
+    expect(ScopeCreator.greatestCommonPrefix([])).toBe("")
+  })
+
+  test("returns common folder prefix", () => {
+    const paths = ["src/main/java", "src/main/resources", "src/test/java"]
+    expect(ScopeCreator.greatestCommonPrefix(paths)).toBe("src/")
+  })
+
+  test("returns empty when no common folder", () => {
+    const paths = ["common", "reports", "cli"]
+    expect(ScopeCreator.greatestCommonPrefix(paths)).toBe("")
+  })
+
+  test("returns full common prefix with trailing slash", () => {
+    const paths = ["codeanalyzer/src", "codeanalyzer/test"]
+    expect(ScopeCreator.greatestCommonPrefix(paths)).toBe("codeanalyzer/")
+  })
+})
+
+describe("ScopeCreator.getComponentsAtDepth", () => {
+  const files = [
+    new SourceFile("codeanalyzer/src/main/Foo.java"),
+    new SourceFile("codeanalyzer/src/test/FooTest.java"),
+    new SourceFile("common/src/main/Bar.java"),
+    new SourceFile("reports/src/main/Baz.java"),
+  ]
+
+  test("depth 1 groups by top-level folder", () => {
+    const components = ScopeCreator.getComponentsAtDepth(files, 1)
+    const names = components.map((c) => c.name)
+    expect(names).toEqual(["codeanalyzer", "common", "reports"])
+  })
+
+  test("depth 2 groups by two levels", () => {
+    const components = ScopeCreator.getComponentsAtDepth(files, 2)
+    const names = components.map((c) => c.name)
+    // Common prefix is empty since all share different top-level
+    // At depth 2: codeanalyzer/src, common/src, reports/src
+    expect(names.length).toBe(3)
+    expect(names).toContain("codeanalyzer/src")
+    expect(names).toContain("common/src")
+    expect(names).toContain("reports/src")
+  })
+
+  test("creates path filters for each component", () => {
+    const components = ScopeCreator.getComponentsAtDepth(files, 1)
+    const first = components[0]
+    expect(first.sourceFileFilters.length).toBeGreaterThanOrEqual(1)
+    expect(first.sourceFileFilters[0].pathPattern).toBe("codeanalyzer/.*")
+  })
+
+  test("files at root level are excluded", () => {
+    // A file with no directory should not create a component
+    const files = [
+      new SourceFile("Makefile"),
+      new SourceFile("src/main/Foo.java"),
+    ]
+    const components = ScopeCreator.getComponentsAtDepth(files, 1)
+    const names = components.map((c) => c.name)
+    expect(names).toEqual(["src"])
+  })
+})
+
+describe("ScopeCreator.getComponentsFromFolderDepth", () => {
+  test("searches deeper when minCount not met", () => {
+    // At depth 1, only 1 component (src). At depth 2, two components.
+    const files = [
+      new SourceFile("src/main/Foo.java"),
+      new SourceFile("src/test/Bar.java"),
+    ]
+    const components = ScopeCreator.getComponentsFromFolderDepth(files, 1, 2)
+    // Should auto-increment to depth 2 where it finds main + test
+    expect(components.length).toBeGreaterThanOrEqual(2)
+  })
+
+  test("returns components at start depth when minCount is 0", () => {
+    const files = [
+      new SourceFile("src/Foo.java"),
+      new SourceFile("lib/Bar.java"),
+    ]
+    const components = ScopeCreator.getComponentsFromFolderDepth(files, 1, 0)
+    expect(components.length).toBe(2)
   })
 })
