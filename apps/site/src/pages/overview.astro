@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import DonutChart from "../components/charts/DonutChart"
 import TreemapChart from "../components/charts/Treemap"
+import StaticReportTable from "../components/tables/StaticReportTable.astro"
 import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
 import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
@@ -75,9 +76,9 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
     <DonutChart client:load data={donutData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageMix} />
     <TreemapChart client:load data={treemapData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageTreemap} />
     <HorizontalBarChart client:load data={mainBarData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageBars} />
-    <table>
+    <StaticReportTable ariaLabel="Main scope by language">
       <thead>
-        <tr><th>Extension</th><th>Files</th><th>LOC</th><th>%</th></tr>
+        <tr><th><span>Extension</span></th><th><span>Files</span></th><th><span>LOC</span></th><th><span>%</span></th></tr>
       </thead>
       <tbody>
         {extensions.map(([ext, s]) => (
@@ -85,16 +86,16 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
             <td>
               <span class="language-cell">
                 <TechnologyIcon extension={ext} size={18} class="language-icon" />
-                <code>.{ext}</code>
+                <code class="report-static-table__code">.{ext}</code>
               </span>
             </td>
-            <td>{s.files.toLocaleString()}</td>
-            <td>{s.loc.toLocaleString()}</td>
-            <td>{totalLoc > 0 ? ((s.loc / totalLoc) * 100).toFixed(1) : 0}%</td>
+            <td class="report-static-table__num">{s.files.toLocaleString()}</td>
+            <td class="report-static-table__num">{s.loc.toLocaleString()}</td>
+            <td class="report-static-table__num">{totalLoc > 0 ? ((s.loc / totalLoc) * 100).toFixed(1) : 0}%</td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </StaticReportTable>
   </section>
 
   {testExtensions.length > 0 && (
@@ -107,9 +108,9 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
         barColor="#8b5cf6"
         helpText={chartHelp.overview.testLanguageBars}
       />
-      <table>
+      <StaticReportTable ariaLabel="Test scope by language">
         <thead>
-          <tr><th>Extension</th><th>Files</th><th>LOC</th></tr>
+          <tr><th><span>Extension</span></th><th><span>Files</span></th><th><span>LOC</span></th></tr>
         </thead>
         <tbody>
           {testExtensions.map(([ext, s]) => (
@@ -117,15 +118,15 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
               <td>
                 <span class="language-cell">
                   <TechnologyIcon extension={ext} size={18} class="language-icon" />
-                  <code>.{ext}</code>
+                  <code class="report-static-table__code">.{ext}</code>
                 </span>
               </td>
-              <td>{s.files.toLocaleString()}</td>
-              <td>{s.loc.toLocaleString()}</td>
+              <td class="report-static-table__num">{s.files.toLocaleString()}</td>
+              <td class="report-static-table__num">{s.loc.toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </StaticReportTable>
     </section>
   )}
 </Dashboard>
@@ -139,9 +140,4 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .language-cell { display: inline-flex; align-items: center; gap: 0.55rem; }
   .language-icon { flex: none; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
-  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

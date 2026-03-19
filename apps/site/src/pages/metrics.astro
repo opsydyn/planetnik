@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DonutChart from "../components/charts/DonutChart"
+import StaticReportTable from "../components/tables/StaticReportTable.astro"
 import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -174,22 +175,22 @@ const testVsMainPercentage = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
   {sortedGroups.map(([group, items]) => (
     <section class="section">
       <h3>{formatGroupLabel(group)}</h3>
-      <table>
+      <StaticReportTable ariaLabel={`${formatGroupLabel(group)} metrics`}>
         <thead>
           <tr>
-            <th>Metric</th>
-            <th>Value</th>
+            <th><span>Metric</span></th>
+            <th><span>Value</span></th>
           </tr>
         </thead>
         <tbody>
           {items.map((m) => (
             <tr>
               <td class="metric-id">{m.id}</td>
-              <td class="metric-value">{m.value.toLocaleString()}</td>
+              <td class="metric-value report-static-table__num">{m.value.toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </StaticReportTable>
     </section>
   ))}
 </Dashboard>
@@ -287,34 +288,10 @@ const testVsMainPercentage = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
     text-transform: capitalize;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-  }
-
-  th, td {
-    padding: 0.4rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  th {
-    background: #f8fafc;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-  }
-
   .metric-id {
     font-family: "SF Mono", "Fira Code", monospace;
     font-size: 0.78rem;
+    color: var(--color-text);
   }
 
   .metric-value {

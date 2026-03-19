@@ -1,6 +1,5 @@
 import { Drawer } from "@base-ui/react/drawer"
 import { useEffect, useState } from "react"
-import { chartTheme } from "../charts/theme"
 import "./HelpTooltip.css"
 
 interface HelpTooltipProps {
@@ -82,11 +81,7 @@ export default function HelpTooltip({
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClick={handleClick}
-        style={{
-          border: `1px solid ${chartTheme.colors.border}`,
-          color: chartTheme.colors.textMuted,
-          boxShadow: tooltipOpen || drawerOpen ? "0 8px 24px rgba(15, 23, 42, 0.12)" : "none",
-        }}
+        data-open={tooltipOpen || drawerOpen ? "true" : "false"}
       >
         ?
       </button>
@@ -95,10 +90,6 @@ export default function HelpTooltip({
         <div
           role="tooltip"
           className="help-tooltip__bubble"
-          style={{
-            border: `1px solid ${chartTheme.colors.border}`,
-            color: chartTheme.colors.text,
-          }}
         >
           {text}
         </div>

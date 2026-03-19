@@ -141,9 +141,9 @@ const placeholderFrameStyle: CSSProperties = {
   position: "relative",
   overflow: "hidden",
   borderRadius: "16px",
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--color-border)",
   background:
-    "radial-gradient(circle at top left, rgba(99, 102, 241, 0.1), transparent 28%), radial-gradient(circle at top right, rgba(168, 85, 247, 0.1), transparent 24%), #fbfdff",
+    "radial-gradient(circle at top left, rgba(99, 102, 241, 0.1), transparent 28%), radial-gradient(circle at top right, rgba(168, 85, 247, 0.1), transparent 24%), var(--color-card)",
 }
 
 const placeholderGlowStyle: CSSProperties = {
@@ -159,7 +159,7 @@ const placeholderNodeStyle: CSSProperties = {
   position: "absolute",
   height: "1.6rem",
   borderRadius: "999px",
-  background: "#e0e7ff",
+  background: "var(--color-accent-soft)",
   animation: "force-graph-skeleton-pulse 1.8s ease-in-out infinite",
 }
 
@@ -172,7 +172,7 @@ const placeholderFooterStyle: CSSProperties = {
 const placeholderLineStyle: CSSProperties = {
   height: "0.85rem",
   borderRadius: "999px",
-  background: "#e2e8f0",
+  background: "var(--color-surface-muted)",
 }
 
 const placeholderNodes = [

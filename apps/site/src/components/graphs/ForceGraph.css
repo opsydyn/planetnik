@@ -24,10 +24,10 @@
   justify-content: center;
   width: 2.4rem;
   height: 2.4rem;
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #334155;
+  background: color-mix(in srgb, var(--color-card) 94%, transparent);
+  color: var(--color-text);
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
   cursor: pointer;
   transition:
@@ -39,6 +39,7 @@
 .force-graph-sigma .react-sigma-control button:hover {
   transform: translateY(-1px);
   border-color: rgba(99, 102, 241, 0.45);
+  background: var(--color-surface-subtle);
   box-shadow: 0 14px 28px rgba(79, 70, 229, 0.14);
 }
 

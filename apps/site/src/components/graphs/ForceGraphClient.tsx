@@ -40,6 +40,52 @@ type HoverState = {
   detail: string
 }
 
+type ForceGraphTheme = {
+  theme: "light" | "dark"
+  card: string
+  border: string
+  text: string
+  textMuted: string
+  surfaceSubtle: string
+  surfaceMuted: string
+  accent: string
+  accentStrong: string
+}
+
+function getCssVar(name: string, fallback: string) {
+  if (typeof window === "undefined") return fallback
+  const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
+
+function readForceGraphTheme(): ForceGraphTheme {
+  if (typeof window === "undefined") {
+    return {
+      theme: "light",
+      card: "#ffffff",
+      border: "#e2e8f0",
+      text: "#1e293b",
+      textMuted: "#64748b",
+      surfaceSubtle: "#f8fafc",
+      surfaceMuted: "#f1f5f9",
+      accent: "#6366f1",
+      accentStrong: "#4338ca",
+    }
+  }
+
+  return {
+    theme: document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light",
+    card: getCssVar("--color-card", "#ffffff"),
+    border: getCssVar("--color-border", "#e2e8f0"),
+    text: getCssVar("--color-text", "#1e293b"),
+    textMuted: getCssVar("--color-text-muted", "#64748b"),
+    surfaceSubtle: getCssVar("--color-surface-subtle", "#f8fafc"),
+    surfaceMuted: getCssVar("--color-surface-muted", "#f1f5f9"),
+    accent: getCssVar("--color-accent", "#6366f1"),
+    accentStrong: getCssVar("--color-accent-strong", "#4338ca"),
+  }
+}
+
 function normalizeGraphPositions(graph: UndirectedGraph<SigmaNodeAttributes, SigmaEdgeAttributes>) {
   if (graph.order === 0) return
 
@@ -266,10 +312,24 @@ export default function ForceGraphClient({
   footerNote,
 }: ForceGraphClientProps) {
   const [hovered, setHovered] = useState<HoverState | null>(null)
+  const [theme, setTheme] = useState<ForceGraphTheme>(readForceGraphTheme)
   const graph = useMemo(() => buildSigmaGraph(nodes, edges), [edges, nodes])
   const hasGraph = nodes.length > 1 && edges.length > 0
   const footerHeight = 54
   const graphHeight = Math.max(height - footerHeight, 220)
+
+  useEffect(() => {
+    const syncTheme = () => setTheme(readForceGraphTheme())
+
+    window.addEventListener("planetnik:theme-change", syncTheme)
+    document.addEventListener("astro:after-swap", syncTheme)
+    syncTheme()
+
+    return () => {
+      window.removeEventListener("planetnik:theme-change", syncTheme)
+      document.removeEventListener("astro:after-swap", syncTheme)
+    }
+  }, [])
 
   const summaryText = hovered
     ? hovered.title
@@ -287,9 +347,9 @@ export default function ForceGraphClient({
           placeItems: "center",
           padding: "1rem",
           borderRadius: "14px",
-          border: "1px dashed #cbd5e1",
-          background: "#fff",
-          color: "#64748b",
+          border: `1px dashed ${theme.border}`,
+          background: theme.card,
+          color: theme.textMuted,
           textAlign: "center",
         }}
       >
@@ -318,9 +378,11 @@ export default function ForceGraphClient({
           height: `${graphHeight}px`,
           borderRadius: "16px",
           overflow: "hidden",
-          border: "1px solid #e2e8f0",
+          border: `1px solid ${theme.border}`,
           background:
-            "radial-gradient(circle at top left, rgba(99, 102, 241, 0.12), transparent 30%), radial-gradient(circle at top right, rgba(168, 85, 247, 0.12), transparent 26%), #fbfdff",
+            theme.theme === "dark"
+              ? `radial-gradient(circle at top left, rgba(129, 140, 248, 0.16), transparent 30%), radial-gradient(circle at top right, rgba(168, 85, 247, 0.14), transparent 26%), ${theme.surfaceSubtle}`
+              : `radial-gradient(circle at top left, rgba(99, 102, 241, 0.12), transparent 30%), radial-gradient(circle at top right, rgba(168, 85, 247, 0.12), transparent 26%), ${theme.card}`,
         }}
       >
         <SigmaContainer
@@ -338,8 +400,8 @@ export default function ForceGraphClient({
             labelFont: "var(--font-sans, Inter, system-ui, sans-serif)",
             labelSize: 13,
             labelWeight: "600",
-            labelColor: { color: "#0f172a" },
-            defaultEdgeColor: "rgba(67, 56, 202, 0.38)",
+            labelColor: { color: theme.text },
+            defaultEdgeColor: theme.theme === "dark" ? "rgba(167, 139, 250, 0.44)" : "rgba(67, 56, 202, 0.38)",
             defaultNodeColor: "#6366f1",
           }}
         >
@@ -349,10 +411,10 @@ export default function ForceGraphClient({
 
       <div style={footerStyle}>
         <div style={{ minWidth: 0 }}>
-          <div style={summaryStyle}>{summaryText}</div>
-          <div style={detailStyle}>{detailText}</div>
+          <div style={summaryStyle(theme)}>{summaryText}</div>
+          <div style={detailStyle(theme)}>{detailText}</div>
         </div>
-        <div style={hintStyle}>Force-directed</div>
+        <div style={hintStyle(theme)}>Force-directed</div>
       </div>
     </div>
   )
@@ -371,28 +433,28 @@ const footerStyle: CSSProperties = {
   minWidth: 0,
 }
 
-const summaryStyle: CSSProperties = {
-  color: "#0f172a",
+const summaryStyle = (theme: ForceGraphTheme): CSSProperties => ({
+  color: theme.text,
   fontSize: "0.92rem",
   fontWeight: 700,
   lineHeight: 1.25,
-}
+})
 
-const detailStyle: CSSProperties = {
+const detailStyle = (theme: ForceGraphTheme): CSSProperties => ({
   marginTop: "0.2rem",
-  color: "#64748b",
+  color: theme.textMuted,
   fontSize: "0.84rem",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-}
+})
 
-const hintStyle: CSSProperties = {
+const hintStyle = (theme: ForceGraphTheme): CSSProperties => ({
   flexShrink: 0,
   padding: "0.36rem 0.7rem",
   borderRadius: "999px",
-  background: "#eef2ff",
-  color: "#4338ca",
+  background: theme.surfaceMuted,
+  color: theme.accentStrong,
   fontSize: "0.78rem",
   fontWeight: 700,
-}
+})

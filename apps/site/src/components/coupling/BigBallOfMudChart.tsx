@@ -359,7 +359,7 @@ function BigBallOfMudInner({
                   marginLeft: "0.5rem",
                   padding: "0.12rem 0.45rem",
                   borderRadius: "999px",
-                  background: "#fee2e2",
+                  background: "var(--color-danger-soft)",
                   color: chartTheme.colors.red,
                   fontSize: "0.72rem",
                   fontWeight: 800,
@@ -398,7 +398,7 @@ function BigBallOfMudInner({
             style={{
               justifySelf: "start",
               border: `1px solid ${alertsEnabled ? chartTheme.colors.red : chartTheme.colors.border}`,
-              background: alertsEnabled ? "#fef2f2" : "#ffffff",
+              background: alertsEnabled ? "var(--color-danger-soft)" : chartTheme.colors.card,
               color: alertsEnabled ? chartTheme.colors.red : chartTheme.colors.textMuted,
               borderRadius: "999px",
               padding: "0.38rem 0.8rem",
@@ -434,7 +434,7 @@ function BigBallOfMudInner({
                 border: `1px solid ${chartTheme.colors.border}`,
                 borderRadius: "12px",
                 padding: "0.6rem 0.75rem",
-                background: "#ffffff",
+                background: chartTheme.colors.card,
               }}
             >
               <div

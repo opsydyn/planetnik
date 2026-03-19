@@ -52,13 +52,18 @@
   padding: 0.7rem 0.95rem;
   font-size: 0.95rem;
   color: var(--color-text);
-  background: #fff;
+  background: var(--color-card);
+}
+
+.report-grid-panel__search input::placeholder,
+.report-grid-table__filters input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .report-grid-panel__count {
   border: 1px solid var(--color-border);
   border-radius: 9999px;
-  background: #fff;
+  background: var(--color-card);
   padding: 0.65rem 0.9rem;
   font-size: 0.85rem;
   color: var(--color-text-muted);
@@ -68,7 +73,7 @@
 .report-grid-panel__toggle {
   border: 1px solid var(--color-border);
   border-radius: 9999px;
-  background: #fff;
+  background: var(--color-card);
   padding: 0.65rem 0.9rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -77,7 +82,7 @@
 }
 
 .report-grid-panel__toggle[aria-pressed="true"] {
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--color-accent-soft);
   border-color: rgba(99, 102, 241, 0.24);
   color: var(--color-accent);
 }
@@ -92,7 +97,7 @@
 .report-grid-panel__empty {
   border: 1px solid var(--color-border);
   border-radius: 18px;
-  background: #fff;
+  background: var(--color-card);
   overflow: hidden;
 }
 
@@ -121,9 +126,9 @@
   background:
     linear-gradient(
       90deg,
-      rgba(226, 232, 240, 0.42) 0%,
-      rgba(241, 245, 249, 0.92) 50%,
-      rgba(226, 232, 240, 0.42) 100%
+      color-mix(in srgb, var(--color-surface-muted) 42%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface-subtle) 92%, transparent) 50%,
+      color-mix(in srgb, var(--color-surface-muted) 42%, transparent) 100%
     );
   background-size: 220% 100%;
   animation: report-grid-shimmer 1.4s ease-in-out infinite;
@@ -139,9 +144,9 @@
   background:
     linear-gradient(
       90deg,
-      rgba(248, 250, 252, 0.96) 0%,
-      rgba(241, 245, 249, 0.92) 50%,
-      rgba(248, 250, 252, 0.96) 100%
+      color-mix(in srgb, var(--color-surface-subtle) 96%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface-muted) 92%, transparent) 50%,
+      color-mix(in srgb, var(--color-surface-subtle) 96%, transparent) 100%
     );
   background-size: 220% 100%;
   animation: report-grid-shimmer 1.4s ease-in-out infinite;
@@ -159,7 +164,7 @@
 
 .report-grid-table thead th {
   border-bottom: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-surface-subtle);
   padding: 0;
   vertical-align: top;
 }
@@ -183,23 +188,25 @@
   gap: 0.75rem;
   border: 0;
   background: transparent;
-  padding: 0.95rem 1rem;
+  padding: 0.9rem 1rem;
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 750;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-muted);
   text-align: left;
+  line-height: 1.15;
 }
 
 .report-grid-table__sort-indicator {
-  font-size: 0.8rem;
-  color: #94a3b8;
+  flex: none;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
 }
 
 .report-grid-table__filters th {
   border-bottom: 1px solid var(--color-border);
-  background: #f8fafc;
+  background: var(--color-surface-subtle);
   padding: 0.65rem 0.85rem 0.75rem;
 }
 
@@ -209,7 +216,7 @@
   border-radius: 10px;
   padding: 0.55rem 0.7rem;
   font-size: 0.85rem;
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
 }
 
@@ -226,7 +233,7 @@
   gap: 1rem;
   padding: 0.9rem 1rem;
   border-top: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
 }
 
 .report-grid-footer__meta {
@@ -245,7 +252,7 @@
 .report-grid-footer__page-size select {
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--color-card);
   padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
   color: var(--color-text);
@@ -253,6 +260,31 @@
 
 .report-grid-footer__controls button:disabled {
   opacity: 0.45;
+}
+
+html[data-theme="dark"] .report-grid-panel__search input,
+html[data-theme="dark"] .report-grid-panel__count,
+html[data-theme="dark"] .report-grid-panel__toggle,
+html[data-theme="dark"] .report-grid-panel__surface,
+html[data-theme="dark"] .report-grid-panel__empty,
+html[data-theme="dark"] .report-grid-table thead th,
+html[data-theme="dark"] .report-grid-table__filters th,
+html[data-theme="dark"] .report-grid-table__filters input,
+html[data-theme="dark"] .report-grid-footer,
+html[data-theme="dark"] .report-grid-footer__controls button,
+html[data-theme="dark"] .report-grid-footer__page-size select,
+html[data-theme="dark"] .report-grid__code {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] .report-grid-table__filters th {
+  background: #111c2f;
+}
+
+html[data-theme="dark"] .report-grid-panel__toggle[aria-pressed="true"] {
+  background: rgba(129, 140, 248, 0.18);
+  border-color: rgba(129, 140, 248, 0.26);
+  color: #a5b4fc;
 }
 
 .report-grid-footer__page-size {
@@ -290,7 +322,7 @@
 .report-grid__code {
   font-family: "SF Mono", "Fira Code", monospace;
   font-size: 0.85em;
-  background: #f1f5f9;
+  background: var(--color-surface-muted);
   padding: 0.15em 0.4em;
   border-radius: 9999px;
 }

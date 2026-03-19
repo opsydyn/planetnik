@@ -103,9 +103,9 @@ function buildGraph(rawEdges: PeopleDep[]) {
       source: e.from,
       target: e.to,
       label: `${e.count}`,
-      style: { strokeWidth: thickness, stroke: "#94a3b8" },
-      labelStyle: { fontSize: 10, fill: "#64748b" },
-      labelBgStyle: { fill: "#fff", fillOpacity: 0.8 },
+      style: { strokeWidth: thickness, stroke: "var(--color-border)" },
+      labelStyle: { fontSize: 10, fill: "var(--color-text-muted)" },
+      labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.92 },
     }
   })
 
@@ -125,7 +125,7 @@ function SkeletonBlock({ width, height, style }: { width: string | number; heigh
       style={{
         width,
         height,
-        background: "#e2e8f0",
+        background: "var(--color-surface-muted)",
         borderRadius: "6px",
         animation: "skeleton-pulse 1.8s ease-in-out infinite",
         ...style,
@@ -150,7 +150,7 @@ function GraphSkeleton() {
   ]
 
   return (
-    <div style={{ width: "100%", height: "600px", background: "#fafafa", borderRadius: "8px", border: "1px solid #e2e8f0", position: "relative", overflow: "hidden" }}>
+    <div style={{ width: "100%", height: "600px", background: "var(--color-card)", borderRadius: "8px", border: "1px solid var(--color-border)", position: "relative", overflow: "hidden" }}>
       <svg width="100%" height="100%" style={{ position: "absolute", inset: 0 }}>
         {skeletonEdges.map(([from, to], i) => {
           const f = skeletonNodes[from]
@@ -160,7 +160,7 @@ function GraphSkeleton() {
               key={i}
               x1={f.x + 90} y1={f.y + 25}
               x2={t.x + 90} y2={t.y + 25}
-              stroke="#e2e8f0"
+              stroke="var(--color-border)"
               strokeWidth={2}
               style={{ animation: "skeleton-pulse 1.8s ease-in-out infinite", animationDelay: `${i * 0.15}s` }}
             />
@@ -176,7 +176,7 @@ function GraphSkeleton() {
             top: pos.y,
             width: NODE_WIDTH,
             height: NODE_HEIGHT,
-            background: "#e2e8f0",
+            background: "var(--color-surface-muted)",
             borderRadius: "8px",
             animation: "skeleton-pulse 1.8s ease-in-out infinite",
             animationDelay: `${i * 0.12}s`,
@@ -359,7 +359,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
               ))}
             </select>
           </div>
-          <div style={{ width: "100%", height: "600px", background: "#fafafa", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          <div style={{ width: "100%", height: "600px", background: "var(--color-card)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -372,7 +372,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
               maxZoom={2}
               proOptions={{ hideAttribution: true }}
             >
-              <Background color="#e2e8f0" gap={20} />
+              <Background color="var(--color-border)" gap={20} />
             </ReactFlow>
           </div>
         </div>
@@ -380,7 +380,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "grid", gap: "0.4rem", marginBottom: "0.75rem" }}>
             <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Force-Directed View</h3>
-            <p style={{ margin: 0, color: "#64748b", fontSize: "0.92rem" }}>
+            <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: "0.92rem" }}>
               A second graph view for the same period. Dense clusters surface collaboration hotspots, while longer bridges make cross-team touch points easier to spot.
             </p>
           </div>
@@ -426,8 +426,8 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
 }
 
 const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
+  background: "var(--color-card)",
+  border: "1px solid var(--color-border)",
   borderRadius: "8px",
   padding: "1.25rem",
 }
@@ -435,13 +435,13 @@ const cardStyle: React.CSSProperties = {
 const cardValueStyle: React.CSSProperties = {
   fontSize: "1.75rem",
   fontWeight: 700,
-  color: "#6366f1",
+  color: "var(--color-accent)",
   lineHeight: 1,
 }
 
 const cardLabelStyle: React.CSSProperties = {
   fontSize: "0.8rem",
-  color: "#64748b",
+  color: "var(--color-text-muted)",
   marginTop: "0.35rem",
   textTransform: "uppercase",
   letterSpacing: "0.04em",
@@ -450,10 +450,10 @@ const cardLabelStyle: React.CSSProperties = {
 const selectStyle: React.CSSProperties = {
   padding: "0.4rem 0.75rem",
   fontSize: "0.85rem",
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--color-border)",
   borderRadius: "6px",
-  background: "#fff",
-  color: "#1e293b",
+  background: "var(--color-card)",
+  color: "var(--color-text)",
   cursor: "pointer",
   outline: "none",
 }
@@ -461,8 +461,8 @@ const selectStyle: React.CSSProperties = {
 const tableStyle: React.CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
-  background: "#fff",
-  border: "1px solid #e2e8f0",
+  background: "var(--color-card)",
+  border: "1px solid var(--color-border)",
   borderRadius: "8px",
   overflow: "hidden",
 }
@@ -470,26 +470,27 @@ const tableStyle: React.CSSProperties = {
 const thStyle: React.CSSProperties = {
   padding: "0.5rem 0.75rem",
   textAlign: "left",
-  borderBottom: "1px solid #e2e8f0",
-  background: "#f8fafc",
+  borderBottom: "1px solid var(--color-border)",
+  background: "var(--color-surface-subtle)",
   fontSize: "0.7rem",
   fontWeight: 600,
   textTransform: "uppercase",
   letterSpacing: "0.04em",
-  color: "#64748b",
+  color: "var(--color-text-muted)",
 }
 
 const tdBase: React.CSSProperties = {
   padding: "0.5rem 0.75rem",
-  borderBottom: "1px solid #e2e8f0",
+  borderBottom: "1px solid var(--color-border)",
   fontSize: "0.85rem",
+  color: "var(--color-text)",
 }
 
 const emailStyle: React.CSSProperties = {
   ...tdBase,
   fontFamily: '"SF Mono", "Fira Code", monospace',
   fontSize: "0.75rem",
-  color: "#64748b",
+  color: "var(--color-text-muted)",
   maxWidth: "min(300px, 40vw)",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -503,6 +504,6 @@ const numStyle: React.CSSProperties = {
 }
 
 const emailLinkStyle: React.CSSProperties = {
-  color: "#4f46e5",
+  color: "var(--color-accent)",
   textDecoration: "none",
 }

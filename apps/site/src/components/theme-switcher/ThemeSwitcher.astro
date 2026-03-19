@@ -1,0 +1,147 @@
+---
+import SystemIcon from "../icons/SystemIcon.astro";
+---
+
+<div class="theme-switcher-root" data-theme-switcher>
+  <div class="theme-switcher" role="group" aria-label="Theme">
+    <button type="button" class="theme-switcher-button" data-theme-option="light" aria-label="Use light theme" title="Light theme">
+      <SystemIcon name="sun" size={16} />
+    </button>
+    <button type="button" class="theme-switcher-button" data-theme-option="dark" aria-label="Use dark theme" title="Dark theme">
+      <SystemIcon name="moon" size={16} />
+    </button>
+    <button type="button" class="theme-switcher-button" data-theme-option="system" aria-label="Use system theme" title="System theme">
+      <SystemIcon name="desktop" size={16} />
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+  (() => {
+    if (window.__planetnikThemeSwitcherSetup) {
+      window.__planetnikSyncThemeSwitchers?.()
+      return
+    }
+
+    window.__planetnikThemeSwitcherSetup = true
+
+    const STORAGE_KEY = "planetnik-theme-preference"
+    const THEME_ATTR = "data-theme"
+    const PREFERENCE_ATTR = "data-theme-preference"
+    const QUERY = "[data-theme-switcher]"
+    const OPTION_QUERY = "[data-theme-option]"
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+
+    const isPreference = (value) => value === "light" || value === "dark" || value === "system"
+    const getSystemTheme = () => (mediaQuery.matches ? "dark" : "light")
+    const getPreference = () => {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (isPreference(stored)) return stored
+      const current = document.documentElement.getAttribute(PREFERENCE_ATTR)
+      return isPreference(current) ? current : "system"
+    }
+
+    const syncSwitchers = () => {
+      const preference = getPreference()
+      document.querySelectorAll(QUERY).forEach((root) => {
+        root.querySelectorAll(OPTION_QUERY).forEach((button) => {
+          const isActive = button.getAttribute("data-theme-option") === preference
+          button.setAttribute("data-active", isActive ? "true" : "false")
+          button.setAttribute("aria-pressed", isActive ? "true" : "false")
+        })
+      })
+    }
+
+    const applyTheme = (preference) => {
+      const effectiveTheme = preference === "system" ? getSystemTheme() : preference
+      document.documentElement.setAttribute(PREFERENCE_ATTR, preference)
+      document.documentElement.setAttribute(THEME_ATTR, effectiveTheme)
+      document.documentElement.style.colorScheme = effectiveTheme
+      localStorage.setItem(STORAGE_KEY, preference)
+      syncSwitchers()
+      window.dispatchEvent(
+        new CustomEvent("planetnik:theme-change", {
+          detail: {
+            theme: effectiveTheme,
+            preference,
+          },
+        }),
+      )
+    }
+
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target.closest(OPTION_QUERY) : null
+      if (!target) return
+
+      const preference = target.getAttribute("data-theme-option")
+      if (!isPreference(preference)) return
+      applyTheme(preference)
+    })
+
+    mediaQuery.addEventListener("change", () => {
+      if (getPreference() === "system") {
+        applyTheme("system")
+      }
+    })
+
+    document.addEventListener("astro:after-swap", () => {
+      applyTheme(getPreference())
+    })
+
+    window.__planetnikSyncThemeSwitchers = syncSwitchers
+    syncSwitchers()
+  })()
+</script>
+
+<style>
+  .theme-switcher-root {
+    display: none;
+  }
+
+  .theme-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .theme-switcher-button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  }
+
+  .theme-switcher-button:hover {
+    background: var(--chart-bar-bg);
+    color: var(--color-text);
+  }
+
+  .theme-switcher-button[data-active="true"] {
+    background: var(--color-accent);
+    color: #ffffff;
+  }
+
+  .theme-switcher-button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 768px) {
+    .theme-switcher-root {
+      display: block;
+    }
+  }
+</style>

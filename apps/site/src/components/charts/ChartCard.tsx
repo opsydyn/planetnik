@@ -112,7 +112,7 @@ export default function ChartCard({ title, helpText, height = 200, children }: C
                 borderRadius: "14px",
                 border: `1px solid ${chartTheme.colors.border}`,
                 background:
-                  "linear-gradient(110deg, #f8fafc 10%, #eef2ff 28%, #f8fafc 44%, #eef2ff 60%, #f8fafc 76%)",
+                  "linear-gradient(110deg, var(--color-surface-subtle) 10%, var(--color-accent-soft) 28%, var(--color-surface-subtle) 44%, var(--color-accent-soft) 60%, var(--color-surface-subtle) 76%)",
                 backgroundSize: "200% 100%",
                 animation: "planetnik-chart-skeleton 1.6s ease-in-out infinite",
               }}
@@ -126,7 +126,7 @@ export default function ChartCard({ title, helpText, height = 200, children }: C
                       width: "2.75rem",
                       height: "0.75rem",
                       borderRadius: "999px",
-                      background: index === 0 ? "#dbeafe" : "#e2e8f0",
+                      background: index === 0 ? "var(--color-accent-soft)" : "var(--color-surface-muted)",
                     }}
                   />
                 ))}
@@ -136,7 +136,7 @@ export default function ChartCard({ title, helpText, height = 200, children }: C
                   width: "4.25rem",
                   height: "0.85rem",
                   borderRadius: "999px",
-                  background: "#e2e8f0",
+                  background: "var(--color-surface-muted)",
                 }}
               />
             </div>

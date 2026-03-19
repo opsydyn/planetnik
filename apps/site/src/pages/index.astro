@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
+import StaticReportTable from "../components/tables/StaticReportTable.astro"
 import { chartHelp } from "../lib/chartHelp"
 import { getTechnologyIconData } from "../lib/iconography"
 import Dashboard from "../layouts/Dashboard.astro"
@@ -108,31 +109,33 @@ const langBarData = extensions.map(([ext, stats]) => ({
       <div style="margin-top: 1rem;">
         <HorizontalBarChart client:load data={langBarData} valueLabel="LOC" maxItems={10} helpText={chartHelp.home.languageBars} />
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Extension</th>
-            <th>Files</th>
-            <th>Lines of Code</th>
-            <th>% of Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {extensions.map(([ext, stats]) => (
+      <div class="language-table">
+        <StaticReportTable ariaLabel="Dashboard language breakdown">
+          <thead>
             <tr>
-              <td>
-                <span class="language-cell">
-                  <TechnologyIcon extension={ext} size={18} class="language-icon" />
-                  <code>.{ext}</code>
-                </span>
-              </td>
-              <td>{stats.files.toLocaleString()}</td>
-              <td>{stats.loc.toLocaleString()}</td>
-              <td>{((stats.loc / totalLoc) * 100).toFixed(1)}%</td>
+              <th><span>Extension</span></th>
+              <th><span>Files</span></th>
+              <th><span>Lines of Code</span></th>
+              <th><span>% of Total</span></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {extensions.map(([ext, stats]) => (
+              <tr>
+                <td>
+                  <span class="language-cell">
+                    <TechnologyIcon extension={ext} size={18} class="language-icon" />
+                    <code class="report-static-table__code">.{ext}</code>
+                  </span>
+                </td>
+                <td class="report-static-table__num">{stats.files.toLocaleString()}</td>
+                <td class="report-static-table__num">{stats.loc.toLocaleString()}</td>
+                <td class="report-static-table__num">{((stats.loc / totalLoc) * 100).toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </StaticReportTable>
+      </div>
     </section>
   )}
 
@@ -219,40 +222,8 @@ const langBarData = extensions.map(([ext, stats]) => ({
     flex: none;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  th, td {
-    padding: 0.6rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  th {
-    background: #f8fafc;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-  }
-
-  td {
-    font-size: 0.875rem;
-  }
-
-  code {
-    font-family: "SF Mono", "Fira Code", monospace;
-    font-size: 0.85em;
-    background: #f1f5f9;
-    padding: 0.15em 0.4em;
-    border-radius: 3px;
+  .language-table {
+    margin-top: 1.35rem;
   }
 
   p {

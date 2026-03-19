@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content"
 import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import StaticReportTable from "../components/tables/StaticReportTable.astro"
 import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -50,20 +51,20 @@ const donutData = concerns.map(([name, s]) => ({
       <h3>Top Concerns by Size</h3>
       <HorizontalBarChart client:load data={concernBarData} valueLabel="LOC" helpText={chartHelp.concerns.topConcerns} />
     </section>
-    <table>
+    <StaticReportTable ariaLabel="Concern inventory">
       <thead>
-        <tr><th>Concern</th><th>Files</th><th>LOC</th></tr>
+        <tr><th><span>Concern</span></th><th><span>Files</span></th><th><span>LOC</span></th></tr>
       </thead>
       <tbody>
         {concerns.map(([name, s]) => (
           <tr>
             <td class="concern-name">{name}</td>
-            <td>{s.files.toLocaleString()}</td>
-            <td>{s.loc.toLocaleString()}</td>
+            <td class="report-static-table__num">{s.files.toLocaleString()}</td>
+            <td class="report-static-table__num">{s.loc.toLocaleString()}</td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </StaticReportTable>
     </>
   )}
 </Dashboard>
@@ -72,12 +73,8 @@ const donutData = concerns.map(([name, s]) => ({
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .concern-name { font-weight: 500; }
-  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: var(--color-surface-muted); padding: 0.15em 0.4em; border-radius: 999px; }
 </style>

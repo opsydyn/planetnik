@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import LineChart from "../components/charts/LineChart"
+import StaticReportTable from "../components/tables/StaticReportTable.astro"
 import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
@@ -127,23 +128,30 @@ const extensionBarData = [...commitsPerExtension]
   )}
 
   {commitsPerExtension.length > 0 && (
-    <table>
+    <StaticReportTable ariaLabel="Commits by file extension">
       <thead>
-        <tr><th>Extension</th><th>Commits</th><th>Committers</th><th>Files</th><th>30d Commits</th><th>90d Commits</th></tr>
+        <tr>
+          <th><span>Extension</span></th>
+          <th><span>Commits</span></th>
+          <th><span>Committers</span></th>
+          <th><span>Files</span></th>
+          <th><span>30d Commits</span></th>
+          <th><span>90d Commits</span></th>
+        </tr>
       </thead>
       <tbody>
         {[...commitsPerExtension].sort((a, b) => b.data.commitsCount - a.data.commitsCount).map((e) => (
           <tr>
-            <td class="ext">.{e.data.extension}</td>
-            <td class="num">{e.data.commitsCount.toLocaleString()}</td>
-            <td class="num">{e.data.committersCount}</td>
-            <td class="num">{e.data.filesCount.toLocaleString()}</td>
-            <td class="num">{e.data.commitsCount30Days || "—"}</td>
-            <td class="num">{e.data.commitsCount90Days || "—"}</td>
+            <td class="ext"><span class="report-static-table__code">.{e.data.extension}</span></td>
+            <td class="num report-static-table__num">{e.data.commitsCount.toLocaleString()}</td>
+            <td class="num report-static-table__num">{e.data.committersCount}</td>
+            <td class="num report-static-table__num">{e.data.filesCount.toLocaleString()}</td>
+            <td class="num report-static-table__num">{e.data.commitsCount30Days || "—"}</td>
+            <td class="num report-static-table__num">{e.data.commitsCount90Days || "—"}</td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </StaticReportTable>
   )}
 </Dashboard>
 
@@ -154,10 +162,6 @@ const extensionBarData = [...commitsPerExtension]
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
   .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
-  table { width: 100%; border-collapse: collapse; background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
-  th { background: #f8fafc; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); }
-  td { font-size: 0.85rem; }
   .ext { font-family: "SF Mono", "Fira Code", monospace; font-weight: 500; }
   .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
 </style>

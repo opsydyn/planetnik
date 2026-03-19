@@ -4,6 +4,7 @@ import CommitHeatmap from "../../components/charts/CommitHeatmap"
 import DonutChart from "../../components/charts/DonutChart"
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
 import LineChart from "../../components/charts/LineChart"
+import StaticReportTable from "../../components/tables/StaticReportTable.astro"
 import Dashboard from "../../layouts/Dashboard.astro"
 import { chartHelp } from "../../lib/chartHelp"
 import { getContributorDisplayName, getContributorHref, getContributorMonthlyActivity, getContributorRouteParam } from "../../lib/contributors"
@@ -190,11 +191,11 @@ const commitShare = contributorSummary?.data.percentage ?? null
         helpText={chartHelp.contributorDetail.collaborators}
       />
 
-      <table class="table">
+      <StaticReportTable ariaLabel="Top collaborators">
         <thead>
           <tr>
-            <th>Contributor</th>
-            <th class="numeric">Shared Files</th>
+            <th><span>Contributor</span></th>
+            <th><span>Shared Files</span></th>
           </tr>
         </thead>
         <tbody>
@@ -208,20 +209,20 @@ const commitShare = contributorSummary?.data.percentage ?? null
             </tr>
           ))}
         </tbody>
-      </table>
+      </StaticReportTable>
     </section>
   )}
 
   {touchedFiles.length > 0 && (
     <section class="section">
       <h3>Files Touched</h3>
-      <table class="table">
+      <StaticReportTable ariaLabel="Files touched">
         <thead>
           <tr>
-            <th>File</th>
-            <th class="numeric">Commits</th>
-            <th>Components</th>
-            <th>Concerns</th>
+            <th><span>File</span></th>
+            <th><span>Commits</span></th>
+            <th><span>Components</span></th>
+            <th><span>Concerns</span></th>
           </tr>
         </thead>
         <tbody>
@@ -244,7 +245,7 @@ const commitShare = contributorSummary?.data.percentage ?? null
             </tr>
           ))}
         </tbody>
-      </table>
+      </StaticReportTable>
     </section>
   )}
 </Dashboard>
@@ -376,37 +377,6 @@ const commitShare = contributorSummary?.data.percentage ?? null
     margin-bottom: 0.85rem;
     color: var(--color-text-muted);
     font-size: 0.92rem;
-  }
-
-  .table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 1rem;
-  }
-
-  .table th,
-  .table td {
-    padding: 0.75rem 0.9rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border);
-    vertical-align: top;
-  }
-
-  .table th {
-    background: #f8fafc;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
-  }
-
-  .table tr:last-child td {
-    border-bottom: none;
   }
 
   .numeric {
