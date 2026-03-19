@@ -1,0 +1,243 @@
+---
+const quadrants = [
+  {
+    id: "strategic",
+    title: "Strategic work",
+    subtitleLines: ["High effort", "High impact"],
+    x: 694,
+    y: 242,
+    subtitleStartY: 280,
+    align: "middle",
+  },
+  {
+    id: "leverage",
+    title: "Leverage edits",
+    subtitleLines: ["Low effort", "High impact"],
+    x: 266,
+    y: 182,
+    subtitleStartY: 220,
+    align: "middle",
+  },
+  {
+    id: "ghosts",
+    title: "Ghost work",
+    subtitleLines: ["High effort", "Low impact"],
+    x: 694,
+    y: 486,
+    subtitleStartY: 524,
+    align: "middle",
+  },
+  {
+    id: "snacks",
+    title: "Snacks",
+    subtitleLines: ["Low effort", "Low impact"],
+    x: 266,
+    y: 516,
+    subtitleStartY: 554,
+    align: "middle",
+  },
+] as const
+
+const detailStacks = [
+  {
+    tone: "warning",
+    items: [
+      { x: 82, y: 364, width: 312, height: 54, color: "var(--impact-danger)", lines: ["Visible activity", "without structural leverage"] },
+      { x: 82, y: 428, width: 312, height: 54, color: "var(--impact-warning)", lines: ["Feels productive, but rarely", "changes the system's future"] },
+    ],
+  },
+  {
+    tone: "accent",
+    items: [
+      { x: 564, y: 90, width: 282, height: 54, color: "var(--impact-success)", lines: ["Harder work with", "durable system payoff"] },
+      { x: 564, y: 154, width: 282, height: 54, color: "var(--impact-accent)", lines: ["The kind of change", "Planetnik is designed to surface"] },
+    ],
+  },
+] as const
+---
+
+<figure class="impact-matrix">
+  <svg viewBox="0 0 960 640" role="img" aria-labelledby="impact-matrix-title impact-matrix-desc">
+    <title id="impact-matrix-title">Impact versus effort matrix</title>
+    <desc id="impact-matrix-desc">
+      A four-quadrant diagram comparing effort and structural impact, highlighting snack work in the low-effort,
+      low-impact quadrant and strategic work in the high-effort, high-impact quadrant.
+    </desc>
+
+    <defs>
+      <linearGradient id="impact-grid-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="var(--impact-surface-strong)" />
+        <stop offset="100%" stop-color="var(--impact-surface-subtle)" />
+      </linearGradient>
+      <linearGradient id="impact-snack-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="var(--impact-danger-soft)" />
+        <stop offset="100%" stop-color="var(--impact-warning-soft)" />
+      </linearGradient>
+      <linearGradient id="impact-strategic-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="var(--impact-accent-soft)" />
+        <stop offset="100%" stop-color="var(--impact-success-soft)" />
+      </linearGradient>
+    </defs>
+
+    <rect x="32" y="32" width="896" height="576" rx="28" fill="url(#impact-grid-bg)" stroke="var(--impact-border)" stroke-width="2" />
+
+    <rect x="32" y="320" width="896" height="288" rx="0" fill="var(--impact-surface-muted)" opacity="0.18" />
+    <rect x="32" y="32" width="448" height="576" rx="28" fill="var(--impact-surface-muted)" opacity="0.12" />
+
+    <line x1="480" y1="104" x2="480" y2="548" stroke="var(--impact-axis)" stroke-width="3" stroke-linecap="round" />
+    <line x1="132" y1="320" x2="828" y2="320" stroke="var(--impact-axis)" stroke-width="3" stroke-linecap="round" />
+
+    <polygon points="480,84 468,110 492,110" fill="var(--impact-axis)" />
+    <polygon points="480,568 468,542 492,542" fill="var(--impact-axis)" />
+    <polygon points="112,320 138,308 138,332" fill="var(--impact-axis)" />
+    <polygon points="848,320 822,308 822,332" fill="var(--impact-axis)" />
+
+    <text x="480" y="68" text-anchor="middle" class="axis-label">Impact</text>
+    <text x="880" y="312" text-anchor="end" class="axis-label">Effort</text>
+
+    <rect x="72" y="356" width="336" height="192" rx="24" fill="url(#impact-snack-fill)" opacity="0.55" />
+    <rect x="552" y="92" width="336" height="192" rx="24" fill="url(#impact-strategic-fill)" opacity="0.55" />
+
+    {quadrants.map((quadrant) => (
+      <g>
+        <text x={quadrant.x} y={quadrant.y} text-anchor={quadrant.align} class:list={["quadrant-title", quadrant.id === "snacks" && "quadrant-title--warning", quadrant.id === "strategic" && "quadrant-title--accent"]}>
+          {quadrant.title}
+        </text>
+        <text x={quadrant.x} y={quadrant.subtitleStartY} text-anchor={quadrant.align} class="quadrant-subtitle">
+          {quadrant.subtitleLines.map((line, index) => (
+            <tspan x={quadrant.x} dy={index === 0 ? 0 : 26}>{line}</tspan>
+          ))}
+        </text>
+      </g>
+    ))}
+
+    {detailStacks.map((stack) => (
+      <g>
+        {stack.items.map((item) => {
+          const baseY = item.y + 20
+          return (
+            <g>
+              <rect
+                x={item.x}
+                y={item.y}
+                width={item.width}
+                height={item.height}
+                rx="18"
+                class:list={[
+                  "callout-card",
+                  stack.tone === "warning" ? "callout-card--warning" : "callout-card--accent",
+                ]}
+              />
+              <circle cx={item.x + 20} cy={baseY - 2} r="8" fill={item.color} />
+              <text x={item.x + 38} y={baseY + 4} class="callout">
+                {item.lines.map((line, lineIndex) => (
+                  <tspan x={item.x + 38} dy={lineIndex === 0 ? 0 : 18}>{line}</tspan>
+                ))}
+              </text>
+            </g>
+          )
+        })}
+      </g>
+    ))}
+  </svg>
+  <figcaption>
+    Snacks are attractive because they are visible and cheap. Strategic and leverage work matters because it changes
+    how safely and quickly the system can evolve afterward.
+  </figcaption>
+</figure>
+
+<style>
+  .impact-matrix {
+    --impact-surface-strong: var(--color-card);
+    --impact-surface-subtle: var(--color-surface-subtle);
+    --impact-surface-muted: var(--color-surface-muted);
+    --impact-border: var(--color-border);
+    --impact-axis: var(--color-text);
+    --impact-accent: var(--color-accent);
+    --impact-danger: var(--chart-red);
+    --impact-warning: var(--chart-orange);
+    --impact-success: var(--chart-green);
+    --impact-accent-soft: var(--color-accent-soft);
+    --impact-danger-soft: rgba(248, 113, 113, 0.22);
+    --impact-warning-soft: rgba(251, 146, 60, 0.18);
+    --impact-success-soft: rgba(74, 222, 128, 0.18);
+    margin: 0;
+  }
+
+  .impact-matrix svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .axis-label {
+    fill: var(--color-text-muted);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .quadrant-title {
+    fill: var(--color-text);
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .quadrant-title--warning {
+    fill: var(--impact-danger);
+  }
+
+  .quadrant-title--accent {
+    fill: var(--impact-accent);
+  }
+
+  .quadrant-subtitle {
+    fill: var(--color-text-muted);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .callout {
+    fill: var(--color-text);
+    font-size: 15px;
+  }
+
+  .callout-card {
+    stroke: var(--impact-border);
+    stroke-width: 1;
+  }
+
+  .callout-card--warning {
+    fill: rgba(248, 113, 113, 0.08);
+  }
+
+  .callout-card--accent {
+    fill: rgba(129, 140, 248, 0.09);
+  }
+
+  .impact-matrix figcaption {
+    margin-top: 0.85rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    max-width: 72ch;
+  }
+
+  @media (max-width: 720px) {
+    .axis-label {
+      font-size: 16px;
+    }
+
+    .quadrant-title {
+      font-size: 20px;
+    }
+
+    .quadrant-subtitle {
+      font-size: 12px;
+    }
+
+    .callout {
+      font-size: 11px;
+    }
+  }
+</style>

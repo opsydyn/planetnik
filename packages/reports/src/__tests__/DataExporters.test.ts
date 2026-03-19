@@ -334,12 +334,7 @@ describe("DataExporter", () => {
     config.analysis = AnalysisConfig.make({ maxTemporalDependenciesDepthDays: 180 })
     results.codeConfiguration = config
 
-    const makePair = (
-      file1: string,
-      file2: string,
-      sharedCommits: number,
-      latestCommit: string,
-    ) => ({
+    const makePair = (file1: string, file2: string, sharedCommits: number, latestCommit: string) => ({
       sourceFile1Path: file1,
       sourceFile2Path: file2,
       commitsCountFile1: sharedCommits + 2,
@@ -719,8 +714,8 @@ describe("DataExporter", () => {
       expect(exported.fileHotspots[0]!.reasons).toContain("single-contributor knowledge concentration")
       expect(exported.fileHotspots[0]!.dominantDimension).toBe("knowledgeRisk")
       expect(exported.fileHotspots[0]!.suggestedAction).toContain("Broaden ownership")
-      expect((exported.fileHotspots[0]!.dimensions as Record<string, number>).knowledgeRisk).toBeGreaterThan(
-        (exported.fileHotspots[0]!.dimensions as Record<string, number>).coordinationCost,
+      expect((exported.fileHotspots[0]!.dimensions as Record<string, number>).knowledgeRisk ?? 0).toBeGreaterThan(
+        (exported.fileHotspots[0]!.dimensions as Record<string, number>).coordinationCost ?? 0,
       )
       expect(exported.unitHotspots[0]!.id).toBe(`unit:${orderService.relativePath}:20`)
       expect(exported.unitHotspots[0]!.reasons).toContain("high conditional complexity (14)")
@@ -728,6 +723,270 @@ describe("DataExporter", () => {
       expect(exported.componentHotspots[0]!.id).toBe("component:primary:Billing")
       expect(exported.componentHotspots[0]!.reasons).toContain("low contributor backup")
       expect(exported.componentHotspots[0]!.dominantDimension).toBe("knowledgeRisk")
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes structured impact JSON with canonical dimensions and snacking candidates", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
+
+    const billing = new NamedSourceCodeAspect("Billing")
+    billing.filtering = "primary"
+    billing.sourceFiles = []
+
+    const catalog = new NamedSourceCodeAspect("Catalog")
+    catalog.filtering = "primary"
+    catalog.sourceFiles = []
+
+    const orderService = new SourceFile("src/orders/OrderService.java")
+    orderService.linesOfCode = 620
+    orderService.logicalComponents = [billing]
+    orderService.fileModificationHistory = new FileModificationHistory(orderService.relativePath)
+    for (let index = 1; index <= 12; index += 1) {
+      const day = `${9 + index}`.padStart(2, "0")
+      orderService.fileModificationHistory.commits.push(
+        new CommitInfo(`c${index}`, `2025-01-${day}`, "alice@example.com"),
+      )
+      orderService.fileModificationHistory.dates.push(`2025-01-${day}`)
+    }
+
+    const helper = new SourceFile("src/orders/Helper.java")
+    helper.linesOfCode = 120
+    helper.logicalComponents = [billing]
+    helper.fileModificationHistory = new FileModificationHistory(helper.relativePath)
+    helper.fileModificationHistory.commits.push(new CommitInfo("c13", "2025-01-11", "bob@example.com"))
+    helper.fileModificationHistory.dates.push("2025-01-11")
+
+    const statusFile = new SourceFile("src/orders/Status.java")
+    statusFile.linesOfCode = 20
+    statusFile.logicalComponents = [billing]
+    statusFile.fileModificationHistory = new FileModificationHistory(statusFile.relativePath)
+    const statusCommits = [
+      new CommitInfo("s1", "2025-01-05", "alice@example.com"),
+      new CommitInfo("s2", "2025-01-06", "bob@example.com"),
+      new CommitInfo("s3", "2025-01-07", "carol@example.com"),
+      new CommitInfo("s4", "2025-01-08", "alice@example.com"),
+      new CommitInfo("s5", "2025-01-09", "bob@example.com"),
+      new CommitInfo("s6", "2025-01-10", "carol@example.com"),
+      new CommitInfo("s7", "2025-01-11", "alice@example.com"),
+      new CommitInfo("s8", "2025-01-12", "bob@example.com"),
+    ]
+    statusFile.fileModificationHistory.commits.push(...statusCommits)
+    statusFile.fileModificationHistory.dates.push(...statusCommits.map((commit) => commit.date))
+
+    const catalogService = new SourceFile("src/catalog/CatalogService.java")
+    catalogService.linesOfCode = 200
+    catalogService.logicalComponents = [catalog]
+    catalogService.fileModificationHistory = new FileModificationHistory(catalogService.relativePath)
+    catalogService.fileModificationHistory.commits.push(
+      new CommitInfo("k1", "2025-01-09", "carol@example.com"),
+      new CommitInfo("k2", "2025-01-14", "carol@example.com"),
+    )
+    catalogService.fileModificationHistory.dates.push("2025-01-09", "2025-01-14")
+
+    config.main.sourceFiles = [orderService, helper, statusFile, catalogService]
+    results.codeConfiguration = config
+
+    const unit = {
+      shortName: "calculateTotals",
+      longName: "calculateTotals(Order order)",
+      linesOfCode: 70,
+      mcCabeIndex: 14,
+      numberOfParameters: 5,
+      startLine: 20,
+      endLine: 90,
+      sourceFile: orderService,
+      cleanedBody: "",
+      body: "",
+      children: [],
+    }
+    results.unitsAnalysisResults.allUnits = [unit as any]
+
+    const duplicateBlock = new DuplicatedFileBlock()
+    duplicateBlock.sourceFile = orderService
+    duplicateBlock.startLine = 10
+    duplicateBlock.endLine = 20
+    duplicateBlock.cleanedStartLine = 10
+    duplicateBlock.cleanedEndLine = 20
+    duplicateBlock.sourceFileCleanedLinesOfCode = 50
+    const duplicateInstance = new DuplicationInstance()
+    duplicateInstance.blockSize = 10
+    duplicateInstance.duplicatedFileBlocks = [duplicateBlock]
+    results.duplicationAnalysisResults.allDuplicates = [duplicateInstance]
+
+    results.filesHistoryAnalysisResults.filePairsChangedTogether180Days = [
+      {
+        sourceFile1Path: orderService.relativePath,
+        sourceFile2Path: helper.relativePath,
+        commitsCountFile1: 12,
+        commitsCountFile2: 1,
+        commits: ["c1", "c2", "c3", "c4"],
+        latestCommit: "2025-01-20",
+      },
+      {
+        sourceFile1Path: orderService.relativePath,
+        sourceFile2Path: statusFile.relativePath,
+        commitsCountFile1: 12,
+        commitsCountFile2: 8,
+        commits: ["c5", "c6", "c7"],
+        latestCommit: "2025-01-19",
+      },
+    ]
+
+    billing.sourceFiles = [orderService, helper, statusFile]
+    catalog.sourceFiles = [catalogService]
+
+    const decomposition = new LogicalDecompositionAnalysisResults("primary")
+    decomposition.components = [
+      {
+        name: "Billing",
+        filesCount: 3,
+        linesOfCode: 760,
+        aspect: billing,
+      } as any,
+      {
+        name: "Catalog",
+        filesCount: 1,
+        linesOfCode: 200,
+        aspect: catalog,
+      } as any,
+    ]
+
+    const billingToCatalog = new ComponentDependency("Billing", "Catalog")
+    billingToCatalog.count = 3
+    const catalogToBilling = new ComponentDependency("Catalog", "Billing")
+    catalogToBilling.count = 1
+    decomposition.componentDependencies = [billingToCatalog, catalogToBilling]
+    results.logicalDecompositionsAnalysisResults = [decomposition]
+
+    const aliceToBob = new ComponentDependency("alice@example.com", "bob@example.com")
+    aliceToBob.count = 4
+    const bobToCarol = new ComponentDependency("bob@example.com", "carol@example.com")
+    bobToCarol.count = 2
+    results.contributorsAnalysisResults.peopleDependenciesAllTime = [aliceToBob, bobToCarol]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-impact-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const exportPath = join(reportsFolder, "data", "impact.json")
+      expect(existsSync(exportPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(exportPath, "utf-8")) as {
+        title: string
+        visible_activity: {
+          commits: number
+          contributors: number
+          changed_files: number
+          changed_units: number
+        }
+        structural_impact: {
+          summary: {
+            overall_score: number
+            dominant_dimension: string
+          }
+          dimensions: Record<string, number>
+        }
+        impact_dimensions: Array<{
+          id: string
+          label: string
+          score: number
+          reasons: string[]
+        }>
+        impact_opportunities: Array<{
+          id: string
+          kind: string
+          dominant_dimension: string
+          dimensions: Record<string, number>
+          route: string
+          reasons: string[]
+        }>
+        concept_mappings: Array<{
+          concept: string
+          dimension: string
+          evidence_count: number
+          example_ids: string[]
+        }>
+        snacking_candidates: Array<{
+          id: string
+          kind: string
+          name: string
+          visible_activity_score: number
+          structural_impact_score: number
+        }>
+      }
+
+      expect(exported.title).toBe("Work on What Matters")
+      expect(exported.visible_activity).toEqual({
+        commits: 23,
+        contributors: 3,
+        changed_files: 4,
+        changed_units: 1,
+      })
+
+      expect(exported.structural_impact.summary.overall_score).toBeGreaterThan(0)
+      expect([
+        "complexity_reduction",
+        "boundary_shaping",
+        "knowledge_spread",
+        "coordination_relief",
+        "change_enablement",
+      ]).toContain(exported.structural_impact.summary.dominant_dimension)
+      expect(Object.keys(exported.structural_impact.dimensions)).toEqual([
+        "complexity_reduction",
+        "boundary_shaping",
+        "knowledge_spread",
+        "coordination_relief",
+        "change_enablement",
+      ])
+
+      expect(exported.impact_dimensions.map((dimension) => dimension.id)).toEqual([
+        "complexity_reduction",
+        "boundary_shaping",
+        "knowledge_spread",
+        "coordination_relief",
+        "change_enablement",
+      ])
+      expect(exported.impact_dimensions.every((dimension) => dimension.reasons.length > 0)).toBe(true)
+
+      expect(exported.impact_opportunities).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "component:primary:Billing",
+            kind: "component",
+            route: "/components",
+          }),
+          expect.objectContaining({
+            id: `file:${orderService.relativePath}`,
+            kind: "file",
+            route: "/files/churn",
+          }),
+        ]),
+      )
+
+      const billingOpportunity = exported.impact_opportunities.find(
+        (opportunity) => opportunity.id === "component:primary:Billing",
+      )
+      expect(billingOpportunity).toBeDefined()
+      expect(billingOpportunity!.dimensions.change_enablement).toBeGreaterThan(0)
+      expect(billingOpportunity!.reasons.length).toBeGreaterThan(0)
+
+      expect(exported.concept_mappings.map((mapping) => mapping.dimension)).toEqual([
+        "complexity_reduction",
+        "boundary_shaping",
+        "knowledge_spread",
+        "coordination_relief",
+        "change_enablement",
+      ])
+
+      expect(
+        exported.snacking_candidates.every(
+          (candidate) => candidate.visible_activity_score > candidate.structural_impact_score,
+        ),
+      ).toBe(true)
     } finally {
       rmSync(reportsFolder, { recursive: true, force: true })
     }
@@ -845,6 +1104,130 @@ describe("DataExporter", () => {
       ])
       expect(exported.concerns).toEqual([{ name: "Payments", files: 2, linesOfCode: 160 }])
       expect(exported.collaborators).toEqual([{ email: "bob@example.com", sharedFiles: 2 }])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes contributor impact JSON with period summaries and glue/snacking flags", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
+    config.srcRoot = "/repo/src"
+
+    const core = new NamedSourceCodeAspect("Core")
+    const checkout = new NamedSourceCodeAspect("Checkout")
+    const docs = new NamedSourceCodeAspect("Docs")
+
+    const serviceFile = new SourceFile("src/core/Service.java")
+    serviceFile.linesOfCode = 180
+    serviceFile.logicalComponents = [core]
+    serviceFile.fileModificationHistory = new FileModificationHistory(serviceFile.relativePath)
+    serviceFile.fileModificationHistory.commits.push(
+      new CommitInfo("c1", "2026-03-10", "alice@example.com"),
+      new CommitInfo("c2", "2026-03-11", "alice@example.com"),
+      new CommitInfo("c3", "2026-03-11", "bob@example.com"),
+    )
+    serviceFile.fileModificationHistory.dates.push("2026-03-10", "2026-03-11", "2026-03-11")
+
+    const checkoutFile = new SourceFile("src/checkout/Flow.java")
+    checkoutFile.linesOfCode = 140
+    checkoutFile.logicalComponents = [checkout]
+    checkoutFile.fileModificationHistory = new FileModificationHistory(checkoutFile.relativePath)
+    checkoutFile.fileModificationHistory.commits.push(
+      new CommitInfo("c10", "2026-03-12", "alice@example.com"),
+      new CommitInfo("c11", "2026-03-12", "carol@example.com"),
+    )
+    checkoutFile.fileModificationHistory.dates.push("2026-03-12", "2026-03-12")
+
+    const docsFile = new SourceFile("src/docs/rename.js")
+    docsFile.linesOfCode = 20
+    docsFile.logicalComponents = [docs]
+    docsFile.fileModificationHistory = new FileModificationHistory(docsFile.relativePath)
+    docsFile.fileModificationHistory.commits.push(
+      new CommitInfo("c4", "2026-03-12", "dave@example.com"),
+      new CommitInfo("c5", "2026-03-13", "dave@example.com"),
+      new CommitInfo("c6", "2026-03-14", "dave@example.com"),
+      new CommitInfo("c7", "2026-03-15", "dave@example.com"),
+      new CommitInfo("c8", "2026-03-16", "dave@example.com"),
+      new CommitInfo("c9", "2026-03-17", "dave@example.com"),
+      new CommitInfo("c12", "2026-03-18", "dave@example.com"),
+      new CommitInfo("c13", "2026-03-18", "dave@example.com"),
+      new CommitInfo("c14", "2026-03-19", "dave@example.com"),
+      new CommitInfo("c15", "2026-03-19", "dave@example.com"),
+      new CommitInfo("c16", "2026-03-19", "dave@example.com"),
+      new CommitInfo("c17", "2026-03-19", "dave@example.com"),
+    )
+    docsFile.fileModificationHistory.dates.push(
+      "2026-03-12",
+      "2026-03-13",
+      "2026-03-14",
+      "2026-03-15",
+      "2026-03-16",
+      "2026-03-17",
+      "2026-03-18",
+      "2026-03-18",
+      "2026-03-19",
+      "2026-03-19",
+      "2026-03-19",
+      "2026-03-19",
+    )
+
+    config.main.sourceFiles = [serviceFile, checkoutFile, docsFile]
+    results.codeConfiguration = config
+
+    const alice = new Contributor("alice@example.com")
+    alice.userName = "Alice"
+    const bob = new Contributor("bob@example.com")
+    bob.userName = "Bob"
+    const carol = new Contributor("carol@example.com")
+    carol.userName = "Carol"
+    const dave = new Contributor("dave@example.com")
+    dave.userName = "Dave"
+    results.contributorsAnalysisResults.contributors = [alice, bob, carol, dave]
+
+    const aliceBob = new ComponentDependency("alice@example.com", "bob@example.com")
+    aliceBob.count = 3
+    const aliceCarol = new ComponentDependency("alice@example.com", "carol@example.com")
+    aliceCarol.count = 2
+    results.contributorsAnalysisResults.peopleDependenciesAllTime = [aliceBob, aliceCarol]
+    results.contributorsAnalysisResults.peopleDependencies30Days = [aliceBob, aliceCarol]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-contributor-impact-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const exportPath = join(reportsFolder, "data", "contributor_impact.json")
+      expect(existsSync(exportPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(exportPath, "utf-8")) as {
+        title: string
+        periods: Array<{
+          period_key: string
+          period_label: string
+          contributors: Array<{
+            email: string
+            display_name: string
+            glue_score: number
+            snacking_score: number
+            is_glue: boolean
+            is_snacking: boolean
+            top_routes: string[]
+          }>
+        }>
+      }
+
+      expect(exported.title).toBe("Contributor Impact")
+      expect(exported.periods.map((period) => period.period_key)).toEqual(["all_time", "30d", "90d", "180d", "365d"])
+
+      const allTime = exported.periods[0]!
+      const aliceImpact = allTime.contributors.find((contributor) => contributor.email === "alice@example.com")
+      const daveImpact = allTime.contributors.find((contributor) => contributor.email === "dave@example.com")
+
+      expect(aliceImpact?.is_glue).toBe(true)
+      expect(aliceImpact?.top_routes).toContain("/topology")
+      expect(daveImpact?.is_snacking).toBe(true)
+      expect(daveImpact?.snacking_score).toBeGreaterThan(0)
     } finally {
       rmSync(reportsFolder, { recursive: true, force: true })
     }

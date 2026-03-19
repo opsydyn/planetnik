@@ -23,6 +23,7 @@ const { contributorId } = Astro.props as { contributorId: string }
 const summary = await getEntry("analysis", "summary")
 const contributor = await getEntry("contributorDetails", contributorId)
 const contributorSummary = await getEntry("contributors", contributorId)
+const contributorImpact = await getEntry("contributorImpact", contributorId)
 
 if (!contributor) {
   throw new Error(`Contributor detail entry not found for ${contributorId}`)
@@ -60,10 +61,39 @@ const activeDays = contributor.data.dailyActivity.length
 const topCollaborator = contributor.data.collaborators[0]
 const hasSourceFileDetail = contributor.data.files.length > 0
 const commitShare = contributorSummary?.data.percentage ?? null
+const dominantImpactLabel = contributorImpact
+  ? contributorImpact.data.dominant_dimension.replace(/_/g, " ")
+  : null
 ---
 
 <Dashboard title={contributorName} projectName={projectName}>
-  <a class="back-link" href="/contributors">&larr; Back to contributors</a>
+  <a
+    id="contributor-back-link"
+    class="back-link"
+    href="/contributors"
+    data-default-href="/contributors"
+    data-default-label="Back to contributors"
+    data-topology-href="/topology"
+    data-topology-label="Back to team topology"
+  >&larr; Back to contributors</a>
+  <script is:inline data-astro-rerun>
+    (() => {
+      const link = document.getElementById("contributor-back-link")
+      if (!(link instanceof HTMLAnchorElement)) return
+
+      const searchParams = new URLSearchParams(window.location.search)
+      const from = searchParams.get("from")
+
+      if (from === "topology") {
+        link.href = link.dataset.topologyHref || "/topology"
+        link.textContent = `\u2190 ${link.dataset.topologyLabel || "Back to team topology"}`
+        return
+      }
+
+      link.href = link.dataset.defaultHref || "/contributors"
+      link.textContent = `\u2190 ${link.dataset.defaultLabel || "Back to contributors"}`
+    })()
+  </script>
 
   <header class="page-header">
     <div>
@@ -123,6 +153,35 @@ const commitShare = contributorSummary?.data.percentage ?? null
         )}
       </div>
     </article>
+    {contributorImpact && (
+      <>
+        <article class="detail-card impact-summary-card">
+          <div class="detail-label">Contributor Impact</div>
+          <div class="impact-badges">
+            {contributorImpact.data.is_glue && <span class="impact-badge impact-badge--glue">Glue contributor</span>}
+            {contributorImpact.data.is_snacking && <span class="impact-badge impact-badge--snack">Snacking risk</span>}
+            {dominantImpactLabel && <span class="impact-badge impact-badge--neutral">{dominantImpactLabel}</span>}
+          </div>
+          <p class="impact-reasons">{contributorImpact.data.reasons.join(" • ")}</p>
+        </article>
+        <article class="detail-card impact-score-card">
+          <div class="detail-label">Glue Score</div>
+          <div class="detail-value impact-score impact-score--glue">{contributorImpact.data.glue_score.toFixed(1)}</div>
+        </article>
+        <article class="detail-card impact-score-card">
+          <div class="detail-label">Snack Risk</div>
+          <div class="detail-value impact-score impact-score--snack">{contributorImpact.data.snacking_score.toFixed(1)}</div>
+        </article>
+        <article class="detail-card impact-score-card">
+          <div class="detail-label">Structural Impact</div>
+          <div class="detail-value impact-score impact-score--structural">{contributorImpact.data.structural_impact_score.toFixed(1)}</div>
+        </article>
+        <article class="detail-card impact-score-card">
+          <div class="detail-label">Visible Activity</div>
+          <div class="detail-value impact-score impact-score--visible">{contributorImpact.data.visible_activity_score.toFixed(1)}</div>
+        </article>
+      </>
+    )}
   </section>
 
   {!hasSourceFileDetail && (
@@ -362,6 +421,74 @@ const commitShare = contributorSummary?.data.percentage ?? null
     font-weight: 600;
   }
 
+  .impact-summary-card {
+    display: grid;
+    gap: 0.85rem;
+    grid-column: span 2;
+  }
+
+  .impact-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .impact-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.62rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
+  }
+
+  .impact-badge--glue {
+    background: color-mix(in srgb, var(--chart-green) 18%, transparent);
+    border-color: color-mix(in srgb, var(--chart-green) 40%, transparent);
+    color: var(--chart-green);
+  }
+
+  .impact-badge--snack {
+    background: color-mix(in srgb, var(--chart-orange) 18%, transparent);
+    border-color: color-mix(in srgb, var(--chart-orange) 40%, transparent);
+    color: var(--chart-orange);
+  }
+
+  .impact-reasons {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  .impact-score-card {
+    min-height: 132px;
+  }
+
+  .impact-score {
+    font-size: 1.95rem;
+    line-height: 1;
+  }
+
+  .impact-score--glue {
+    color: var(--chart-green);
+  }
+
+  .impact-score--snack {
+    color: var(--chart-orange);
+  }
+
+  .impact-score--structural {
+    color: var(--color-accent);
+  }
+
+  .impact-score--visible {
+    color: var(--chart-accent-light);
+  }
+
   .section {
     margin-bottom: 1.5rem;
   }
@@ -439,6 +566,10 @@ const commitShare = contributorSummary?.data.percentage ?? null
   @media (max-width: 768px) {
     .page-header {
       flex-direction: column;
+    }
+
+    .impact-summary-card {
+      grid-column: span 1;
     }
 
     .table {

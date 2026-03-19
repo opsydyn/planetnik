@@ -158,6 +158,14 @@ const pageDefinitions: PageDefinition[] = [
     section: "Quality",
   },
   {
+    title: "Impact",
+    subtitle: "Work on what matters",
+    description: "Structural impact view connecting visible activity to complexity reduction, boundary shaping, knowledge spread, coordination relief, and change enablement.",
+    keywords: ["impact", "work on what matters", "staff engineering", "structural impact", "snacking", "leverage"],
+    route: "/impact",
+    section: "Quality",
+  },
+  {
     title: "Features of Interest",
     subtitle: "Concerns and tagged areas",
     description: "Concern-oriented view of files matching configured features of interest.",

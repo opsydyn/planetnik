@@ -15,9 +15,9 @@ const tutorialSteps = [
   },
   {
     title: "Find the next thing to fix",
-    body: "Use hotspots to identify files, units, and components where structural risk, churn, ownership, and coupling are overlapping.",
-    href: "/hotspots",
-    label: "Open Hotspots",
+    body: "Use impact and hotspots to distinguish visible activity from structural leverage, then identify where risk, churn, ownership, and coupling are overlapping.",
+    href: "/impact",
+    label: "Open Impact",
   },
   {
     title: "Validate with evidence",
@@ -114,6 +114,7 @@ const referenceSections = [
       ["/contributors", "Contributor activity, ownership, and knowledge spread."],
       ["/commits", "Commit trends and extension-level change."],
       ["/topology", "Contributor collaboration topology."],
+      ["/impact", "Visible activity versus structural impact and snacking signals."],
       ["/hotspots", "Ranked queue of risky files, units, and components."],
       ["/controls", "Quality controls and goal coverage."],
       ["/findings", "Configured findings, when exported."],
@@ -219,7 +220,7 @@ const referenceSections = [
     <h4>start with queues, not charts</h4>
     <p>
       Planetnik contains many charts, but the product is most useful when it helps you choose a better engineering action.
-      That is why <a href="/hotspots">Hotspots</a>, <a href="/controls">Goals &amp; Controls</a>, and
+      That is why <a href="/impact">Impact</a>, <a href="/hotspots">Hotspots</a>, <a href="/controls">Goals &amp; Controls</a>, and
       <a href="/findings">Findings</a> should usually anchor triage.
     </p>
 

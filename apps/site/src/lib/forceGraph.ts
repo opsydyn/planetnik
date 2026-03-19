@@ -80,7 +80,12 @@ export function shortForceGraphPath(path: string): string {
   return parts.length > 2 ? `.../${parts.slice(-2).join("/")}` : path
 }
 
-export function buildContributorForceGraph(rows: ContributorDependencyRow[]): ForceGraphData {
+export function buildContributorForceGraph(
+  rows: ContributorDependencyRow[],
+  options?: {
+    contributorSource?: string
+  },
+): ForceGraphData {
   const nodeWeights = new Map<string, number>()
   const aggregatedEdges = new Map<
     string,
@@ -126,7 +131,7 @@ export function buildContributorForceGraph(rows: ContributorDependencyRow[]): Fo
         id,
         label: getContributorLabel(id),
         meta: id,
-        href: getContributorHref(id),
+        href: getContributorHref(id, options?.contributorSource ? { source: options.contributorSource } : undefined),
         size: Math.round(scaleRange(weight, minNodeWeight, maxNodeWeight, 9, 18) * 10) / 10,
         color: interpolateColor([165, 180, 252], [67, 56, 202], intensity),
       }

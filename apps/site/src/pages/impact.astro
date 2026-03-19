@@ -1,0 +1,602 @@
+---
+import { getEntry } from "astro:content"
+import { basename } from "node:path"
+import DistributionChart from "../components/charts/DistributionChart"
+import HorizontalBarChart from "../components/charts/HorizontalBarChart"
+import ImpactMatrix from "../components/impact/ImpactMatrix.astro"
+import ReportDataGrid from "../components/tables/ReportDataGrid"
+import { chartHelp } from "../lib/chartHelp"
+import Dashboard from "../layouts/Dashboard.astro"
+
+const summary = await getEntry("analysis", "summary")
+const impact = await getEntry("impact", "impact")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const dimensionLabels = {
+  complexity_reduction: "Complexity reduction",
+  boundary_shaping: "Boundary shaping",
+  knowledge_spread: "Knowledge spread",
+  coordination_relief: "Coordination relief",
+  change_enablement: "Change enablement",
+} as const
+
+function truncateLabel(value: string, max = 34): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+}
+
+function formatEvidenceExample(id: string): string {
+  if (id.startsWith("component:")) {
+    const [, decompositionKey = "", componentName = ""] = id.split(":")
+    return `component · ${componentName || decompositionKey}`
+  }
+
+  if (id.startsWith("file:")) {
+    const relativePath = id.slice("file:".length)
+    return `file · ${basename(relativePath)}`
+  }
+
+  if (id.startsWith("unit:")) {
+    const unitPath = id.slice("unit:".length)
+    const lineSeparator = unitPath.lastIndexOf(":")
+    const relativePath = lineSeparator >= 0 ? unitPath.slice(0, lineSeparator) : unitPath
+    const line = lineSeparator >= 0 ? unitPath.slice(lineSeparator + 1) : ""
+    const fileName = basename(relativePath)
+    return line ? `unit · ${fileName}:${line}` : `unit · ${fileName}`
+  }
+
+  return truncateLabel(id, 40)
+}
+
+const opportunityRows =
+  impact?.data.impact_opportunities.map((item) => ({
+    id: item.id,
+    name: item.name,
+    href: item.route,
+    kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+    parent: item.parent || "System-wide",
+    impactScore: item.impact_score,
+    visibleActivity: item.visible_activity_score,
+    structuralImpact: item.structural_impact_score,
+    dominantDimension: dimensionLabels[item.dominant_dimension],
+    complexityReduction: item.dimensions.complexity_reduction,
+    boundaryShaping: item.dimensions.boundary_shaping,
+    knowledgeSpread: item.dimensions.knowledge_spread,
+    coordinationRelief: item.dimensions.coordination_relief,
+    changeEnablement: item.dimensions.change_enablement,
+    suggestedAction: item.suggested_action,
+    reasons: item.reasons.join(" • "),
+  })) ?? []
+
+const snackingRows =
+  impact?.data.snacking_candidates.map((item) => ({
+    id: item.id,
+    name: item.name,
+    href: item.route,
+    kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+    visibleActivity: item.visible_activity_score,
+    structuralImpact: item.structural_impact_score,
+    delta: Math.max(item.visible_activity_score - item.structural_impact_score, 0),
+    reason: item.reason,
+  })) ?? []
+
+const dimensionChartData =
+  impact?.data.impact_dimensions.map((dimension) => ({
+    label: dimension.label,
+    value: dimension.score,
+  })) ?? []
+
+const topOpportunityData =
+  impact?.data.impact_opportunities.slice(0, 12).map((item) => ({
+    label: truncateLabel(item.name),
+    value: item.impact_score,
+  })) ?? []
+
+const snackingChartData =
+  impact?.data.snacking_candidates.slice(0, 8).map((item) => ({
+    label: truncateLabel(item.name),
+    value: Math.max(item.visible_activity_score - item.structural_impact_score, 0),
+    detail: `activity ${item.visible_activity_score.toFixed(1)}`,
+    detailSecondary: `impact ${item.structural_impact_score.toFixed(1)}`,
+  })) ?? []
+
+const conceptCards =
+  impact?.data.concept_mappings.map((mapping) => ({
+    concept: mapping.concept,
+    dimension: dimensionLabels[mapping.dimension],
+    evidenceCount: mapping.evidence_count,
+    examples: mapping.example_ids.slice(0, 3).map((id) => formatEvidenceExample(id)),
+  })) ?? []
+
+const playbookItems = [
+  {
+    title: "Reduce complexity in hotspot cores",
+    body: "Start where large units, duplication, and structural hotspot pressure overlap. Those are usually the fastest durable wins.",
+    href: "/hotspots",
+    label: "Open Hotspots",
+  },
+  {
+    title: "Stabilize overloaded boundaries",
+    body: "Use coupling and dependency evidence together to tighten components that pull too much coordination across the system.",
+    href: "/coupling",
+    label: "Open Balanced Coupling",
+  },
+  {
+    title: "Spread knowledge in fragile areas",
+    body: "Large components with thin backup coverage raise delivery and offboarding risk. Use people signals before the next major change lands there.",
+    href: "/contributors",
+    label: "Open Contributors",
+  },
+  {
+    title: "Hold the line after improvement",
+    body: "After a structural improvement, turn the insight into a control so the system does not slide back into the same failure mode.",
+    href: "/controls",
+    label: "Open Goals & Controls",
+  },
+] as const
+---
+
+<Dashboard title="Impact" projectName={projectName}>
+  <h2>Impact</h2>
+  <p class="subtitle">Activity is visible. Impact is structural.</p>
+
+  {impact ? (
+    <>
+      <section class="manifesto">
+        <div class="manifesto-card">
+          <p class="eyebrow">{impact.data.title}</p>
+          <h3>Work on what matters</h3>
+          <p>
+            Not all work has equal impact. Planetnik highlights the code paths where reducing complexity, reshaping
+            boundaries, spreading knowledge, relieving coordination, and enabling future change matter more than raw
+            activity volume.
+          </p>
+        </div>
+        <div class="manifesto-card manifesto-callout">
+          <p class="eyebrow">Reading the signal</p>
+          <p>
+            Use this page to separate structurally meaningful work from visible but weakly leveraged work. The top queue
+            is where the system is most likely to benefit from deliberate engineering intervention.
+          </p>
+        </div>
+      </section>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{impact.data.visible_activity.commits}</div>
+          <div class="card-label">Visible Commits</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{impact.data.visible_activity.changed_files}</div>
+          <div class="card-label">Changed Files</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{impact.data.visible_activity.changed_units}</div>
+          <div class="card-label">Changed Units</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{impact.data.visible_activity.contributors}</div>
+          <div class="card-label">Contributors</div>
+        </div>
+        <div class="card card-impact">
+          <div class="card-value">{impact.data.structural_impact.summary.overall_score.toFixed(1)}</div>
+          <div class="card-label">Structural Impact</div>
+        </div>
+        <div class="card">
+          <div class="card-value card-value--text">
+            {dimensionLabels[impact.data.structural_impact.summary.dominant_dimension]}
+          </div>
+          <div class="card-label">Dominant Dimension</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{impact.data.impact_opportunities.length}</div>
+          <div class="card-label">Impact Opportunities</div>
+        </div>
+        <div class="card card-snacking">
+          <div class="card-value">{impact.data.snacking_candidates.length}</div>
+          <div class="card-label">Snacking Candidates</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h3>Visible Activity vs Structural Impact</h3>
+        <div class="contrast-grid">
+          <article class="contrast-card">
+            <div class="contrast-kicker">Visible activity</div>
+            <h4>Easy to count, easy to overvalue</h4>
+            <ul>
+              <li>{impact.data.visible_activity.commits} commits recorded in the exported history</li>
+              <li>{impact.data.visible_activity.changed_files} changed files and {impact.data.visible_activity.changed_units} changed units</li>
+              <li>{impact.data.visible_activity.contributors} contributors visible in the current activity window</li>
+            </ul>
+          </article>
+          <article class="contrast-card contrast-card--accent">
+            <div class="contrast-kicker">Structural impact</div>
+            <h4>Harder to see, more useful to prioritize</h4>
+            <ul>
+              <li>{impact.data.impact_opportunities.length} ranked opportunities with system-level leverage</li>
+              <li>{dimensionLabels[impact.data.structural_impact.summary.dominant_dimension]} is the strongest current impact dimension</li>
+              <li>{impact.data.snacking_candidates.length} places where visible motion currently outpaces structural payoff</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>Avoid Snacking</h3>
+        <p class="section-copy">
+          Low-effort work is often attractive because it is visible, easy to start, and easy to report. Planetnik is
+          most valuable when it helps teams notice where effort is turning into structural leverage instead.
+        </p>
+        <ImpactMatrix />
+      </section>
+
+      <section class="section">
+        <h3>Impact Dimensions</h3>
+        <HorizontalBarChart client:visible data={dimensionChartData} valueLabel="score" helpText={chartHelp.impact.dimensionMix} />
+      </section>
+
+      {topOpportunityData.length > 0 && (
+        <section class="section">
+          <h3>Top Structural Opportunities</h3>
+          <HorizontalBarChart client:visible data={topOpportunityData} valueLabel="impact" helpText={chartHelp.impact.topOpportunities} />
+        </section>
+      )}
+
+      <section class="section">
+        <h3>Concept Mappings</h3>
+        <div class="concept-grid">
+          {conceptCards.map((card) => (
+            <article class="concept-card">
+              <div class="concept-topline">{card.dimension}</div>
+              <h4>{card.concept}</h4>
+              <p>{card.evidenceCount} evidence points in the current ranked queue.</p>
+              {card.examples.length > 0 && (
+                <ul>
+                  {card.examples.map((example) => (
+                    <li>{example}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {snackingChartData.length > 0 && (
+        <section class="section">
+          <h3>Snacking Candidates</h3>
+          <p class="section-copy">
+            These are not necessarily bad changes. They are warnings that high visible activity is landing in places with weak
+            structural leverage, so teams should ask whether the work is shaping the system or only feeding local motion.
+          </p>
+          <DistributionChart client:visible data={snackingChartData} helpText={chartHelp.impact.snacking} />
+        </section>
+      )}
+
+      <section class="section">
+        <h3>Impact Playbook</h3>
+        <div class="playbook-grid">
+          {playbookItems.map((item) => (
+            <article class="playbook-card">
+              <h4>{item.title}</h4>
+              <p>{item.body}</p>
+              <a href={item.href}>{item.label}</a>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <ReportDataGrid
+        client:visible
+        title="Impact Opportunities"
+        description="Search by item, parent, dimension, suggested action, or reason while keeping the structural queue above."
+        searchPlaceholder="Search opportunity, parent, or dimension"
+        rows={opportunityRows}
+        columns={[
+          { field: "name", headerName: "Item", type: "link", hrefField: "href", secondaryField: "parent", minWidth: 320, flex: 1.5, sort: "asc" },
+          { field: "kind", headerName: "Kind", minWidth: 110 },
+          { field: "impactScore", headerName: "Impact", type: "number", minWidth: 100, sort: "desc" },
+          { field: "visibleActivity", headerName: "Activity", type: "number", minWidth: 100 },
+          { field: "structuralImpact", headerName: "Structural", type: "number", minWidth: 110 },
+          { field: "dominantDimension", headerName: "Primary Dimension", minWidth: 180 },
+          { field: "complexityReduction", headerName: "Complexity", type: "number", minWidth: 115 },
+          { field: "boundaryShaping", headerName: "Boundaries", type: "number", minWidth: 115 },
+          { field: "knowledgeSpread", headerName: "Knowledge", type: "number", minWidth: 115 },
+          { field: "coordinationRelief", headerName: "Coordination", type: "number", minWidth: 130 },
+          { field: "changeEnablement", headerName: "Change", type: "number", minWidth: 100 },
+          { field: "suggestedAction", headerName: "Suggested Action", type: "multiline", minWidth: 300, flex: 1.2 },
+          { field: "reasons", headerName: "Evidence", type: "multiline", minWidth: 340, flex: 1.6 },
+        ]}
+      />
+
+      {snackingRows.length > 0 && (
+        <ReportDataGrid
+          client:visible
+          title="Snacking Queue"
+          description="These items attract visible activity but currently offer weak structural leverage."
+          searchPlaceholder="Search snacking candidate"
+          rows={snackingRows}
+          columns={[
+            { field: "name", headerName: "Item", type: "link", hrefField: "href", minWidth: 320, flex: 1.4, sort: "asc" },
+            { field: "kind", headerName: "Kind", minWidth: 110 },
+            { field: "visibleActivity", headerName: "Activity", type: "number", minWidth: 110, sort: "desc" },
+            { field: "structuralImpact", headerName: "Structural", type: "number", minWidth: 110 },
+            { field: "delta", headerName: "Gap", type: "number", minWidth: 90 },
+            { field: "reason", headerName: "Why It Matters", type: "multiline", minWidth: 320, flex: 1.4 },
+          ]}
+        />
+      )}
+    </>
+  ) : (
+    <div class="empty">
+      <p>No impact data exported yet.</p>
+      <p class="hint">Generate reports with the latest Planetnik CLI to produce <code>impact.json</code>.</p>
+    </div>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .manifesto {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .manifesto-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .manifesto-card h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .manifesto-card p {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  .manifesto-card .eyebrow {
+    color: var(--color-accent);
+  }
+
+  .manifesto-callout {
+    background: var(--color-accent-soft);
+  }
+
+  .eyebrow {
+    font-size: 0.8rem;
+    color: var(--color-accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.65rem;
+    font-weight: 700;
+  }
+
+  .empty {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .empty p {
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .hint {
+    font-size: 0.85rem;
+  }
+
+  code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85em;
+    background: var(--color-surface-muted);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1.05;
+  }
+
+  .card-value--text {
+    font-size: 1.05rem;
+    line-height: 1.3;
+  }
+
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .card-impact .card-value {
+    color: var(--chart-green);
+  }
+
+  .card-snacking .card-value {
+    color: var(--chart-orange);
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-copy {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    max-width: 72ch;
+  }
+
+  .contrast-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .contrast-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .contrast-card--accent {
+    background: var(--color-accent-soft);
+  }
+
+  .contrast-kicker {
+    color: var(--color-accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.55rem;
+  }
+
+  .contrast-card h4 {
+    font-size: 1.05rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .contrast-card ul {
+    display: grid;
+    gap: 0.5rem;
+    margin-left: 1rem;
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .concept-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .concept-topline {
+    color: var(--color-accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .concept-card h4 {
+    font-size: 1rem;
+    margin-bottom: 0.55rem;
+    line-height: 1.3;
+  }
+
+  .concept-card p {
+    color: var(--color-text-muted);
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+  }
+
+  .concept-card ul {
+    margin-left: 1rem;
+    color: var(--color-text-muted);
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.45;
+  }
+
+  .concept-card li {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .playbook-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .playbook-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .playbook-card h4 {
+    font-size: 1rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .playbook-card p {
+    color: var(--color-text-muted);
+    line-height: 1.55;
+    margin-bottom: 0.8rem;
+  }
+
+  .playbook-card a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .playbook-card a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 900px) {
+    .manifesto {
+      grid-template-columns: 1fr;
+    }
+
+    .contrast-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

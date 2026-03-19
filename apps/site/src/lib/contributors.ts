@@ -20,8 +20,18 @@ export function getContributorRouteParam(email: string): string {
   return encodeURIComponent(email).replace(/%/g, "$")
 }
 
-export function getContributorHref(email: string): string {
-  return `/contributors/${getContributorRouteParam(email)}`
+export function getContributorHref(
+  email: string,
+  options?: {
+    source?: string
+  },
+): string {
+  const basePath = `/contributors/${getContributorRouteParam(email)}`
+  if (!options?.source) return basePath
+
+  const searchParams = new URLSearchParams()
+  searchParams.set("from", options.source)
+  return `${basePath}?${searchParams.toString()}`
 }
 
 export function getContributorEmailFromParam(param: string): string {

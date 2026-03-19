@@ -3,9 +3,11 @@ import { z } from "astro/zod"
 import {
   analysisLoader,
   commitsPerExtensionLoader,
+  contributorImpactLoader,
   controlsLoader,
   findingsLoader,
   hotspotsLoader,
+  impactLoader,
   contributorDetailsLoader,
   contributorTimelineLoader,
   contributorsLoader,
@@ -47,6 +49,14 @@ const contributorFootprintSchema = z.object({
   files: z.number(),
   linesOfCode: z.number(),
 })
+
+const impactDimensionKeySchema = z.enum([
+  "complexity_reduction",
+  "boundary_shaping",
+  "knowledge_spread",
+  "coordination_relief",
+  "change_enablement",
+])
 
 export const collections = {
   analysis: defineCollection({
@@ -177,6 +187,82 @@ export const collections = {
     }),
   }),
 
+  impact: defineCollection({
+    loader: impactLoader(),
+    schema: z.object({
+      title: z.string(),
+      timestamp: z.string(),
+      visible_activity: z.object({
+        commits: z.number(),
+        contributors: z.number(),
+        changed_files: z.number(),
+        changed_units: z.number(),
+      }),
+      structural_impact: z.object({
+        summary: z.object({
+          overall_score: z.number(),
+          dominant_dimension: impactDimensionKeySchema,
+        }),
+        dimensions: z.object({
+          complexity_reduction: z.number(),
+          boundary_shaping: z.number(),
+          knowledge_spread: z.number(),
+          coordination_relief: z.number(),
+          change_enablement: z.number(),
+        }),
+      }),
+      impact_dimensions: z.array(
+        z.object({
+          id: impactDimensionKeySchema,
+          label: z.string(),
+          score: z.number(),
+          reasons: z.array(z.string()),
+        }),
+      ),
+      impact_opportunities: z.array(
+        z.object({
+          id: z.string(),
+          kind: z.enum(["file", "unit", "component"]),
+          name: z.string(),
+          parent: z.string(),
+          route: z.string(),
+          impact_score: z.number(),
+          visible_activity_score: z.number(),
+          structural_impact_score: z.number(),
+          dominant_dimension: impactDimensionKeySchema,
+          dimensions: z.object({
+            complexity_reduction: z.number(),
+            boundary_shaping: z.number(),
+            knowledge_spread: z.number(),
+            coordination_relief: z.number(),
+            change_enablement: z.number(),
+          }),
+          reasons: z.array(z.string()),
+          suggested_action: z.string(),
+        }),
+      ),
+      concept_mappings: z.array(
+        z.object({
+          concept: z.string(),
+          dimension: impactDimensionKeySchema,
+          evidence_count: z.number(),
+          example_ids: z.array(z.string()),
+        }),
+      ),
+      snacking_candidates: z.array(
+        z.object({
+          id: z.string(),
+          kind: z.enum(["file", "unit", "component"]),
+          name: z.string(),
+          route: z.string(),
+          visible_activity_score: z.number(),
+          structural_impact_score: z.number(),
+          reason: z.string(),
+        }),
+      ),
+    }),
+  }),
+
   contributors: defineCollection({
     loader: contributorsLoader(),
     schema: z.object({
@@ -239,6 +325,42 @@ export const collections = {
           sharedFiles: z.number(),
         }),
       ),
+    }),
+  }),
+
+  contributorImpact: defineCollection({
+    loader: contributorImpactLoader(),
+    schema: z.object({
+      email: z.string(),
+      display_name: z.string(),
+      glue_score: z.number(),
+      snacking_score: z.number(),
+      structural_impact_score: z.number(),
+      visible_activity_score: z.number(),
+      collaborator_count: z.number(),
+      shared_files_count: z.number(),
+      commits_count: z.number(),
+      files_touched: z.number(),
+      components_touched: z.number(),
+      dominant_dimension: impactDimensionKeySchema,
+      dimensions: z.object({
+        complexity_reduction: z.number(),
+        boundary_shaping: z.number(),
+        knowledge_spread: z.number(),
+        coordination_relief: z.number(),
+        change_enablement: z.number(),
+      }),
+      top_components: z.array(
+        z.object({
+          name: z.string(),
+          files: z.number(),
+          commits: z.number(),
+        }),
+      ),
+      top_routes: z.array(z.string()),
+      reasons: z.array(z.string()),
+      is_glue: z.boolean(),
+      is_snacking: z.boolean(),
     }),
   }),
 

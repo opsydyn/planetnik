@@ -20,6 +20,12 @@ describe("contributors helpers", () => {
     expect(getContributorHref("alice+bot@example.com")).toBe("/contributors/alice$2Bbot$40example.com")
   })
 
+  test("getContributorHref can carry a source query param", () => {
+    expect(getContributorHref("alice+bot@example.com", { source: "topology" })).toBe(
+      "/contributors/alice$2Bbot$40example.com?from=topology",
+    )
+  })
+
   test("getContributorRouteParam encodes email path segments", () => {
     expect(getContributorRouteParam("alice+bot@example.com")).toBe("alice$2Bbot$40example.com")
   })

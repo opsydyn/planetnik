@@ -147,9 +147,11 @@ describe("generateReports CLI contract", () => {
       `${encodeURIComponent("alice@example.com")}.json`,
     )
     const findingsFile = join(workspace.reportsFolder, "data", "findings.json")
+    const impactFile = join(workspace.reportsFolder, "data", "impact.json")
 
     expect(existsSync(contributorFile)).toBe(true)
     expect(existsSync(findingsFile)).toBe(true)
+    expect(existsSync(impactFile)).toBe(true)
 
     const exported = JSON.parse(readFileSync(contributorFile, "utf-8")) as {
       email: string
@@ -164,7 +166,24 @@ describe("generateReports CLI contract", () => {
       files: Array<{ relativePath: string; components: string[]; concerns: string[] }>
     }
     const findings = JSON.parse(readFileSync(findingsFile, "utf-8")) as {
-      items: Array<{ summary: string; bodyText: string }>
+      items: Array<{ id: string; summary: string; bodyHtml: string; bodyText: string }>
+    }
+    const impact = JSON.parse(readFileSync(impactFile, "utf-8")) as {
+      visible_activity: {
+        commits: number
+        contributors: number
+        changed_files: number
+        changed_units: number
+      }
+      structural_impact: {
+        summary: {
+          overall_score: number
+          dominant_dimension: string
+        }
+        dimensions: Record<string, number>
+      }
+      impact_dimensions: Array<{ id: string; score: number }>
+      impact_opportunities: Array<{ id: string; kind: string; route: string }>
     }
 
     expect(exported.email).toBe("alice@example.com")
@@ -217,5 +236,35 @@ describe("generateReports CLI contract", () => {
         bodyText: "OrderService needs a deeper review.",
       },
     ])
+    expect(impact.visible_activity).toEqual({
+      commits: 3,
+      contributors: 2,
+      changed_files: 2,
+      changed_units: 2,
+    })
+    expect(Object.keys(impact.structural_impact.dimensions)).toEqual([
+      "complexity_reduction",
+      "boundary_shaping",
+      "knowledge_spread",
+      "coordination_relief",
+      "change_enablement",
+    ])
+    expect(impact.structural_impact.summary.overall_score).toBeGreaterThan(0)
+    expect(impact.impact_dimensions.map((dimension) => dimension.id)).toEqual([
+      "complexity_reduction",
+      "boundary_shaping",
+      "knowledge_spread",
+      "coordination_relief",
+      "change_enablement",
+    ])
+    expect(impact.impact_opportunities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "component:primary:orders",
+          kind: "component",
+          route: "/components",
+        }),
+      ]),
+    )
   })
 })

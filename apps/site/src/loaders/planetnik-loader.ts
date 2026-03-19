@@ -231,6 +231,18 @@ export function hotspotsLoader(): Loader {
   }
 }
 
+export function impactLoader(): Loader {
+  return {
+    name: "planetnik-impact",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("impact.json")
+      if (!raw || typeof raw !== "object") return
+      const data = await parseData({ id: "impact", data: raw as Record<string, unknown> })
+      store.set({ id: "impact", data })
+    },
+  }
+}
+
 export function findingsLoader(): Loader {
   return {
     name: "planetnik-findings",
@@ -356,6 +368,32 @@ export function contributorDetailsLoader(): Loader {
       for (const record of records) {
         const data = await parseData({ id: record.id, data: record.data })
         store.set({ id: record.id, data })
+      }
+    },
+  }
+}
+
+export function contributorImpactLoader(): Loader {
+  return {
+    name: "planetnik-contributor-impact",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("contributor_impact.json") as {
+        periods?: Array<{
+          period_key?: string
+          period_label?: string
+          contributors?: Array<Record<string, unknown>>
+        }>
+      } | null
+      if (!raw?.periods) return
+
+      const allTimePeriod = raw.periods.find((period) => period.period_key === "all_time")
+      if (!allTimePeriod?.contributors) return
+
+      for (const contributor of allTimePeriod.contributors) {
+        const email = typeof contributor.email === "string" ? contributor.email : ""
+        if (!email) continue
+        const data = await parseData({ id: email, data: contributor })
+        store.set({ id: email, data })
       }
     },
   }

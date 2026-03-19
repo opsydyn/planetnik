@@ -1,13 +1,22 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { CodeAnalysisResults, ComponentDependency, Contributor, DuplicationInstance, SourceFile, UnitInfo } from "@planetnik/analyzer"
+import type {
+  CodeAnalysisResults,
+  ComponentDependency,
+  Contributor,
+  DuplicationInstance,
+  SourceFile,
+  UnitInfo,
+} from "@planetnik/analyzer"
 import { Range } from "@planetnik/analyzer"
 import { FormattingUtils } from "@planetnik/common"
 import { ComponentDependenciesExporter } from "./ComponentDependenciesExportInfo.js"
+import { ContributorImpactExporter } from "./ContributorImpactExportInfo.js"
 import { DataExportUtils } from "./DataExportUtils.js"
 import { DependenciesExporter } from "./DependenciesExportInfo.js"
 import { DuplicationExporter } from "./DuplicationExportInfo.js"
 import { FileListExporter } from "./FilesExportInfo.js"
+import { ImpactExporter, type ImpactSourceHotspot } from "./ImpactExportInfo.js"
 import { TemporalDependenciesExporter } from "./TemporalDependenciesExportInfo.js"
 import { UnitListExporter } from "./UnitsExportInfo.js"
 
@@ -36,7 +45,10 @@ export class DataExporter {
     this.exportMetrics(dataFolder)
     this.exportControls(dataFolder)
     this.exportFindings(dataFolder)
-    this.exportHotspots(dataFolder)
+    const hotspotData = this.buildHotspotData()
+    this.exportHotspots(dataFolder, hotspotData)
+    this.exportImpact(dataFolder, hotspotData)
+    this.exportContributorImpact(dataFolder, hotspotData)
     this.exportContributors(dataFolder)
     this.exportContributorDetails(dataFolder)
     this.exportJson(dataFolder)
@@ -168,7 +180,70 @@ export class DataExporter {
     )
   }
 
-  private exportHotspots(dataFolder: string): void {
+  private exportHotspots(
+    dataFolder: string,
+    hotspotData: {
+      fileHotspots: ImpactSourceHotspot[]
+      unitHotspots: ImpactSourceHotspot[]
+      componentHotspots: ImpactSourceHotspot[]
+    },
+  ): void {
+    writeFileSync(
+      join(dataFolder, "hotspots.json"),
+      JSON.stringify(
+        {
+          title: "Planetnik Hotspots",
+          timestamp: new Date().toISOString(),
+          fileHotspots: hotspotData.fileHotspots,
+          unitHotspots: hotspotData.unitHotspots,
+          componentHotspots: hotspotData.componentHotspots,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    )
+  }
+
+  private exportImpact(
+    dataFolder: string,
+    hotspotData: {
+      fileHotspots: ImpactSourceHotspot[]
+      unitHotspots: ImpactSourceHotspot[]
+      componentHotspots: ImpactSourceHotspot[]
+    },
+  ): void {
+    const timestamp = new Date().toISOString()
+    const impactExport = ImpactExporter.exportImpact(this.analysisResults, hotspotData, timestamp)
+    writeFileSync(join(dataFolder, "impact.json"), JSON.stringify(impactExport, null, 2), "utf-8")
+  }
+
+  private exportContributorImpact(
+    dataFolder: string,
+    hotspotData: {
+      fileHotspots: ImpactSourceHotspot[]
+      unitHotspots: ImpactSourceHotspot[]
+      componentHotspots: ImpactSourceHotspot[]
+    },
+  ): void {
+    const timestamp = new Date().toISOString()
+    const contributorImpactExport = ContributorImpactExporter.exportContributorImpact(
+      this.analysisResults,
+      hotspotData,
+      timestamp,
+    )
+    writeFileSync(
+      join(dataFolder, "contributor_impact.json"),
+      JSON.stringify(contributorImpactExport, null, 2),
+      "utf-8",
+    )
+  }
+
+  private buildHotspotData(): {
+    fileHotspots: ImpactSourceHotspot[]
+    unitHotspots: ImpactSourceHotspot[]
+    componentHotspots: ImpactSourceHotspot[]
+  } {
     const sourceFiles = this.getAllSourceFiles()
     const units = this.analysisResults.unitsAnalysisResults.allUnits
     const duplicationPaths = this.getDuplicatedPaths()
@@ -184,7 +259,9 @@ export class DataExporter {
     }
 
     const fileHotspots = sourceFiles
-      .map((file) => this.buildFileHotspot(file, unitsByFile.get(file.relativePath) ?? [], duplicationPaths, temporalLinkCounts))
+      .map((file) =>
+        this.buildFileHotspot(file, unitsByFile.get(file.relativePath) ?? [], duplicationPaths, temporalLinkCounts),
+      )
       .sort((a, b) => b.score - a.score)
 
     const unitHotspots = units
@@ -193,24 +270,24 @@ export class DataExporter {
       .sort((a, b) => b.score - a.score)
 
     const componentHotspots = this.analysisResults.logicalDecompositionsAnalysisResults
-      .flatMap((results) => results.components.map((component) => this.buildComponentHotspot(results.key, component.name, component.aspect?.sourceFiles ?? [], results.componentDependencies, temporalLinkCounts)))
+      .flatMap((results) =>
+        results.components.map((component) =>
+          this.buildComponentHotspot(
+            results.key,
+            component.name,
+            component.aspect?.sourceFiles ?? [],
+            results.componentDependencies,
+            temporalLinkCounts,
+          ),
+        ),
+      )
       .sort((a, b) => b.score - a.score)
 
-    writeFileSync(
-      join(dataFolder, "hotspots.json"),
-      JSON.stringify(
-        {
-          title: "Planetnik Hotspots",
-          timestamp: new Date().toISOString(),
-          fileHotspots,
-          unitHotspots,
-          componentHotspots,
-        },
-        null,
-        2,
-      ),
-      "utf-8",
-    )
+    return {
+      fileHotspots,
+      unitHotspots,
+      componentHotspots,
+    }
   }
 
   private exportContributors(dataFolder: string): void {
@@ -246,7 +323,11 @@ export class DataExporter {
     const collaboratorMap = this.getCollaboratorsByContributor()
 
     for (const contributor of contributors) {
-      const exportInfo = this.buildContributorDetailExport(contributor, sourceFiles, collaboratorMap.get(contributor.email) ?? [])
+      const exportInfo = this.buildContributorDetailExport(
+        contributor,
+        sourceFiles,
+        collaboratorMap.get(contributor.email) ?? [],
+      )
       const fileName = `${encodeURIComponent(contributor.email)}.json`
       writeFileSync(join(detailsFolder, fileName), JSON.stringify(exportInfo, null, 2), "utf-8")
     }
@@ -602,7 +683,10 @@ export class DataExporter {
           }
 
           const extensionKey = file.extension || ""
-          const extension = extensionStats.get(extensionKey) ?? { commitIds: new Set<string>(), files: new Set<string>() }
+          const extension = extensionStats.get(extensionKey) ?? {
+            commitIds: new Set<string>(),
+            files: new Set<string>(),
+          }
           extension.commitIds.add(commitId)
           extension.files.add(file.relativePath)
           extensionStats.set(extensionKey, extension)
@@ -768,7 +852,7 @@ export class DataExporter {
     units: UnitInfo[],
     duplicationPaths: Set<string>,
     temporalLinkCounts: Map<string, number>,
-  ) {
+  ): ImpactSourceHotspot {
     const commitsCount = file.fileModificationHistory?.dates.length ?? 0
     const contributorsCount = file.fileModificationHistory?.countContributors() ?? 0
     const temporalLinks = temporalLinkCounts.get(file.relativePath) ?? 0
@@ -792,16 +876,11 @@ export class DataExporter {
 
     const dimensions = this.buildRiskDimensions({
       structuralRisk:
-        this.scaledScore(file.linesOfCode, 800, 45)
-        + this.scaledScore(maxComplexity, 20, 35)
-        + (duplicated ? 20 : 0),
+        this.scaledScore(file.linesOfCode, 800, 45) + this.scaledScore(maxComplexity, 20, 35) + (duplicated ? 20 : 0),
       changePressure: this.scaledScore(commitsCount, 25, 70),
       coordinationCost:
-        this.scaledScore(temporalLinks, 8, 70)
-        + this.scaledScore(Math.max(contributorsCount - 1, 0), 4, 15),
-      knowledgeRisk:
-        this.knowledgeRiskScore(contributorsCount, commitsCount)
-        + this.scaledScore(temporalLinks, 8, 10),
+        this.scaledScore(temporalLinks, 8, 70) + this.scaledScore(Math.max(contributorsCount - 1, 0), 4, 15),
+      knowledgeRisk: this.knowledgeRiskScore(contributorsCount, commitsCount) + this.scaledScore(temporalLinks, 8, 10),
     })
 
     return {
@@ -824,12 +903,12 @@ export class DataExporter {
     }
   }
 
-  private buildUnitHotspot(unit: UnitInfo, temporalLinkCounts: Map<string, number>) {
+  private buildUnitHotspot(unit: UnitInfo, temporalLinkCounts: Map<string, number>): ImpactSourceHotspot {
     const file = unit.sourceFile
     const filePath = file?.relativePath ?? ""
     const fileCommits = file?.fileModificationHistory?.dates.length ?? 0
     const fileContributors = file?.fileModificationHistory?.countContributors() ?? 0
-    const temporalLinks = filePath ? temporalLinkCounts.get(filePath) ?? 0 : 0
+    const temporalLinks = filePath ? (temporalLinkCounts.get(filePath) ?? 0) : 0
     const reasons: string[] = []
     if (unit.linesOfCode >= 40) reasons.push(`large unit (${unit.linesOfCode} LOC)`)
     if (unit.mcCabeIndex >= 10) reasons.push(`high conditional complexity (${unit.mcCabeIndex})`)
@@ -843,16 +922,14 @@ export class DataExporter {
 
     const dimensions = this.buildRiskDimensions({
       structuralRisk:
-        this.scaledScore(unit.linesOfCode, 80, 30)
-        + this.scaledScore(unit.mcCabeIndex, 20, 50)
-        + this.scaledScore(unit.numberOfParameters, 6, 20),
+        this.scaledScore(unit.linesOfCode, 80, 30) +
+        this.scaledScore(unit.mcCabeIndex, 20, 50) +
+        this.scaledScore(unit.numberOfParameters, 6, 20),
       changePressure: this.scaledScore(fileCommits, 25, 75),
       coordinationCost:
-        this.scaledScore(temporalLinks, 8, 75)
-        + this.scaledScore(Math.max(fileContributors - 1, 0), 4, 10),
+        this.scaledScore(temporalLinks, 8, 75) + this.scaledScore(Math.max(fileContributors - 1, 0), 4, 10),
       knowledgeRisk:
-        this.knowledgeRiskScore(fileContributors, fileCommits)
-        + this.scaledScore(unit.mcCabeIndex, 20, 10),
+        this.knowledgeRiskScore(fileContributors, fileCommits) + this.scaledScore(unit.mcCabeIndex, 20, 10),
     })
 
     return {
@@ -881,7 +958,7 @@ export class DataExporter {
     sourceFiles: SourceFile[],
     dependencies: ComponentDependency[],
     temporalLinkCounts: Map<string, number>,
-  ) {
+  ): ImpactSourceHotspot {
     const loc = sourceFiles.reduce((sum, file) => sum + file.linesOfCode, 0)
     const commitsCount = sourceFiles.reduce((sum, file) => sum + (file.fileModificationHistory?.dates.length ?? 0), 0)
     const contributors = new Set<string>()
@@ -901,7 +978,8 @@ export class DataExporter {
     if (sourceFiles.length >= 12) reasons.push(`many files (${sourceFiles.length})`)
     if (commitsCount >= 30) reasons.push(`high accumulated churn (${commitsCount} commits)`)
     if (temporalLinks >= 10) reasons.push(`strong co-change pressure (${temporalLinks} temporal links)`)
-    if (incomingDeps + outgoingDeps >= 4) reasons.push(`high dependency centrality (${incomingDeps + outgoingDeps} edges)`)
+    if (incomingDeps + outgoingDeps >= 4)
+      reasons.push(`high dependency centrality (${incomingDeps + outgoingDeps} edges)`)
 
     if (contributors.size <= 1 && commitsCount > 0) {
       reasons.push("single-contributor component knowledge")
@@ -910,17 +988,14 @@ export class DataExporter {
     }
 
     const dimensions = this.buildRiskDimensions({
-      structuralRisk:
-        this.scaledScore(loc, 5000, 45)
-        + this.scaledScore(sourceFiles.length, 25, 25),
+      structuralRisk: this.scaledScore(loc, 5000, 45) + this.scaledScore(sourceFiles.length, 25, 25),
       changePressure: this.scaledScore(commitsCount, 80, 70),
       coordinationCost:
-        this.scaledScore(temporalLinks, 25, 45)
-        + this.scaledScore(incomingDeps + outgoingDeps, 8, 45)
-        + this.scaledScore(Math.max(contributors.size - 1, 0), 8, 10),
+        this.scaledScore(temporalLinks, 25, 45) +
+        this.scaledScore(incomingDeps + outgoingDeps, 8, 45) +
+        this.scaledScore(Math.max(contributors.size - 1, 0), 8, 10),
       knowledgeRisk:
-        this.knowledgeRiskScore(contributors.size, commitsCount)
-        + this.scaledScore(incomingDeps + outgoingDeps, 8, 10),
+        this.knowledgeRiskScore(contributors.size, commitsCount) + this.scaledScore(incomingDeps + outgoingDeps, 8, 10),
     })
 
     return {
@@ -957,10 +1032,10 @@ export class DataExporter {
     }
     const dominantDimension = this.getDominantDimension(normalizedScores)
     const weightedScore =
-      normalizedScores.structuralRisk * 0.3
-      + normalizedScores.changePressure * 0.3
-      + normalizedScores.coordinationCost * 0.2
-      + normalizedScores.knowledgeRisk * 0.2
+      normalizedScores.structuralRisk * 0.3 +
+      normalizedScores.changePressure * 0.3 +
+      normalizedScores.coordinationCost * 0.2 +
+      normalizedScores.knowledgeRisk * 0.2
 
     return {
       score: this.roundScore(weightedScore),

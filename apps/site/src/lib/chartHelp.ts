@@ -151,4 +151,14 @@ export const chartHelp = {
     topItems:
       "Ranks the most urgent hotspots by score. Start with items that have both high score and a clear suggested action, then validate them against upcoming roadmap work.",
   },
+  impact: {
+    dimensionMix:
+      "Shows which forms of structural impact dominate the current system. Use the biggest bars to decide whether the next round of staff-level work should simplify complexity, reshape boundaries, spread knowledge, reduce coordination drag, or enable safer future change.",
+    topOpportunities:
+      "Ranks the highest-leverage structural opportunities. Start with items that combine high impact score, strong reasons, and a suggested action you can turn into a concrete engineering move.",
+    conceptMappings:
+      "Maps the staff-level ideas to concrete Planetnik evidence. Use it to explain why an item matters in system terms rather than only in ticket or commit volume terms.",
+    snacking:
+      "Shows activity-heavy work with weak structural leverage. Treat these as warning signs that engineering energy may be getting pulled into visible motion instead of lasting system improvement.",
+  },
 } as const
