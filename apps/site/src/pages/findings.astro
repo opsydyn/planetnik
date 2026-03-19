@@ -1,21 +1,164 @@
 ---
-import { getEntry } from "astro:content"
+import { getCollection, getEntry } from "astro:content"
+import ReportDataGrid from "../components/tables/ReportDataGrid"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
+const findings = await getCollection("findings")
 const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const findingRows = findings.map((finding, index) => ({
+  id: finding.id,
+  href: `#${finding.id}`,
+  sequence: index + 1,
+  summary: finding.data.summary,
+  preview: finding.data.bodyText.length > 180 ? `${finding.data.bodyText.slice(0, 177)}...` : finding.data.bodyText,
+  words: finding.data.bodyText.split(/\s+/).filter(Boolean).length,
+}))
 ---
 
 <Dashboard title="Findings" projectName={projectName}>
   <h2>Notes &amp; Findings</h2>
-  <div class="empty">
-    <p>No findings data exported yet.</p>
-    <p class="hint">Findings are pattern-based search results configured in your Planetnik config.</p>
-  </div>
+
+  {findings.length === 0 ? (
+    <div class="empty">
+      <p>No findings data exported yet.</p>
+      <p class="hint">
+        Add an optional <code>findingsHtmlPath</code> to your Planetnik config to include manual notes and findings in the report set.
+      </p>
+    </div>
+  ) : (
+    <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{findings.length}</div>
+          <div class="card-label">Findings</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{findingRows.reduce((sum, finding) => sum + finding.words, 0).toLocaleString()}</div>
+          <div class="card-label">Indexed Words</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{Math.round(findingRows.reduce((sum, finding) => sum + finding.words, 0) / Math.max(findings.length, 1))}</div>
+          <div class="card-label">Avg Words</div>
+        </div>
+      </div>
+
+      <ReportDataGrid
+        client:load
+        title="Finding Inventory"
+        description="Search summaries and note content while keeping the full findings detail below."
+        searchPlaceholder="Search finding summary or note"
+        rows={findingRows}
+        columns={[
+          { field: "sequence", headerName: "#", type: "number", minWidth: 80, sort: "asc" },
+          { field: "summary", headerName: "Summary", type: "link", hrefField: "href", minWidth: 260, flex: 1.1 },
+          { field: "preview", headerName: "Preview", type: "multiline", minWidth: 360, flex: 1.5 },
+          { field: "words", headerName: "Words", type: "number", minWidth: 100 },
+        ]}
+      />
+
+      <section class="details">
+        <h3>Details</h3>
+        <div class="finding-list">
+          {findings.map((finding, index) => (
+            <article id={finding.id} class="finding-card">
+              <div class="finding-card__eyebrow">Finding {index + 1}</div>
+              <h4>{finding.data.summary}</h4>
+              <div class="finding-card__body" set:html={finding.data.bodyHtml} />
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  )}
 </Dashboard>
 
 <style>
   .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .details {
+    margin-top: 2rem;
+  }
+
+  .details h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .finding-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .finding-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    scroll-margin-top: 6rem;
+  }
+
+  .finding-card__eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .finding-card h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+  }
+
+  .finding-card__body {
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+
+  .finding-card__body :global(p) {
+    margin-bottom: 0.75rem;
+  }
+
+  .finding-card__body :global(code) {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.85em;
+    background: #f1f5f9;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
 </style>

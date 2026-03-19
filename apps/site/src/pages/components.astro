@@ -1,5 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content"
+import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import ScatterPlot from "../components/charts/ScatterPlot"
 import ReportDataGrid from "../components/tables/ReportDataGrid"
@@ -25,6 +26,17 @@ for (const f of filesMain) {
 }
 const components = [...componentMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
 const unassigned = filesMain.filter((f) => f.data.components.length === 0)
+const singleOwnerComponents = components.filter(([, s]) => s.contributors.size === 1).length
+const lowBackupComponents = components.filter(([, s]) => s.contributors.size > 0 && s.contributors.size <= 2).length
+const distributedComponents = components.filter(([, s]) => s.contributors.size >= 3).length
+const componentCoverageData = [
+  ...(singleOwnerComponents > 0 ? [{ label: "Single owner", value: singleOwnerComponents, color: "#ef4444" }] : []),
+  ...(lowBackupComponents - singleOwnerComponents > 0
+    ? [{ label: "Two contributors", value: lowBackupComponents - singleOwnerComponents, color: "#f59e0b" }]
+    : []),
+  ...(distributedComponents > 0 ? [{ label: "3+ contributors", value: distributedComponents, color: "#22c55e" }] : []),
+  ...(unassigned.length > 0 ? [{ label: "Unassigned files", value: unassigned.length, color: "#94a3b8" }] : []),
+]
 
 const compBarData = components.slice(0, 15).map(([name, s]) => ({
   label: name,
@@ -75,6 +87,32 @@ if (unassigned.length > 0) {
     </div>
   ) : (
     <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{components.length}</div>
+          <div class="card-label">Components</div>
+        </div>
+        <div class="card card-failed">
+          <div class="card-value">{singleOwnerComponents}</div>
+          <div class="card-label">Single-Owner Components</div>
+        </div>
+        <div class="card card-tolerant">
+          <div class="card-value">{lowBackupComponents}</div>
+          <div class="card-label">Low-Backup Components</div>
+        </div>
+        <div class="card card-ok">
+          <div class="card-value">{distributedComponents}</div>
+          <div class="card-label">3+ Contributors</div>
+        </div>
+      </div>
+
+      {componentCoverageData.length > 1 && (
+        <section class="section">
+          <h3>Knowledge Coverage</h3>
+          <DonutChart client:load data={componentCoverageData} valueLabel="components" />
+        </section>
+      )}
+
       <section class="section">
         <h3>Component Size</h3>
         <TreemapChart client:load data={treemapData} valueLabel="LOC" />
@@ -112,5 +150,33 @@ if (unassigned.length > 0) {
   .hint { font-size: 0.85rem; }
   .section { margin-bottom: 2rem; }
   .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .card-failed .card-value { color: #dc2626; }
+  .card-tolerant .card-value { color: #d97706; }
+  .card-ok .card-value { color: #16a34a; }
   code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 3px; }
 </style>

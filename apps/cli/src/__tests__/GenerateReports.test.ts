@@ -17,6 +17,11 @@ function createWorkspace(): { root: string; configPath: string; reportsFolder: s
   mkdirSync(configDir, { recursive: true })
 
   writeFileSync(
+    join(configDir, "findings.html"),
+    `<finding><summary>Manual note</summary><body><p>OrderService needs a deeper review.</p></body></finding>`,
+  )
+
+  writeFileSync(
     join(srcDir, "OrderService.java"),
     `package demo;
 
@@ -56,6 +61,7 @@ public class OrderService {
           logoLink: "",
           links: [],
         },
+        findingsHtmlPath: "findings.html",
         srcRoot: "..",
         extensions: ["java", "js"],
         main: {
@@ -128,7 +134,7 @@ describe("generateReports CLI contract", () => {
     }
   })
 
-  test("runAnalysis exports contributor detail data", async () => {
+  test("runAnalysis exports contributor detail data and findings", async () => {
     const workspace = createWorkspace()
     roots.push(workspace.root)
 
@@ -140,8 +146,10 @@ describe("generateReports CLI contract", () => {
       "contributor_details",
       `${encodeURIComponent("alice@example.com")}.json`,
     )
+    const findingsFile = join(workspace.reportsFolder, "data", "findings.json")
 
     expect(existsSync(contributorFile)).toBe(true)
+    expect(existsSync(findingsFile)).toBe(true)
 
     const exported = JSON.parse(readFileSync(contributorFile, "utf-8")) as {
       email: string
@@ -154,6 +162,9 @@ describe("generateReports CLI contract", () => {
 
     const filesMain = JSON.parse(readFileSync(join(workspace.reportsFolder, "data", "files_main.json"), "utf-8")) as {
       files: Array<{ relativePath: string; components: string[]; concerns: string[] }>
+    }
+    const findings = JSON.parse(readFileSync(findingsFile, "utf-8")) as {
+      items: Array<{ summary: string; bodyText: string }>
     }
 
     expect(exported.email).toBe("alice@example.com")
@@ -198,5 +209,13 @@ describe("generateReports CLI contract", () => {
     ])
     expect(exported.concerns).toEqual([{ name: "Business Logic", files: 2, linesOfCode: 9 }])
     expect(exported.collaborators).toEqual([{ email: "bob@example.com", sharedFiles: 1 }])
+    expect(findings.items).toEqual([
+      {
+        id: "finding-1",
+        summary: "Manual note",
+        bodyHtml: "<p>OrderService needs a deeper review.</p>",
+        bodyText: "OrderService needs a deeper review.",
+      },
+    ])
   })
 })

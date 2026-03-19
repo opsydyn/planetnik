@@ -39,6 +39,21 @@ export default defineConfig({
     },
   },
   vite: {
+    optimizeDeps: {
+      include: [
+        "@visx/axis",
+        "@visx/grid",
+        "@visx/group",
+        "@visx/heatmap",
+        "@visx/hierarchy",
+        "@visx/legend",
+        "@visx/responsive",
+        "@visx/scale",
+        "@visx/shape",
+        "@visx/text",
+        "@visx/tooltip",
+      ],
+    },
     resolve: {
       dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     },

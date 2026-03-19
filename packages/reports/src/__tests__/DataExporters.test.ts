@@ -8,14 +8,19 @@ import {
   CodeConfiguration,
   CommitInfo,
   ComponentDependency,
+  ControlStatus,
   Contributor,
   Dependency,
   DependencyAnchor,
   DuplicatedFileBlock,
   DuplicationInstance,
   FileModificationHistory,
+  GoalsAnalysisResults,
   LogicalDecompositionAnalysisResults,
+  MetricRangeControl,
+  MetricsWithGoal,
   NamedSourceCodeAspect,
+  Range,
   SourceFile,
   SourceFileDependency,
 } from "@planetnik/analyzer"
@@ -461,6 +466,268 @@ describe("DataExporter", () => {
           color: "",
         },
       ])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes structured controls JSON", () => {
+    const results = new CodeAnalysisResults()
+
+    const metric = results.metricsList
+      .addMetric()
+      .setId("VERY_HIGH_RISK_FILE_SIZE_COUNT")
+      .setValue(7)
+      .setDescription("Count of very high risk files")
+
+    const goalResult = new GoalsAnalysisResults()
+    goalResult.metricsWithGoal = MetricsWithGoal.make({
+      goal: "Maintainability",
+      description: "Keep structural risk within agreed bounds",
+      controls: [
+        MetricRangeControl.make({
+          metric: "VERY_HIGH_RISK_FILE_SIZE_COUNT",
+          description: "Very high risk file count should stay low",
+          desiredRange: Range.make({ min: "0", max: "5", tolerance: "1" }),
+        }),
+      ],
+    })
+
+    const controlStatus = new ControlStatus()
+    controlStatus.control = goalResult.metricsWithGoal.controls[0]!
+    controlStatus.metric = metric
+    controlStatus.status = "FAILED"
+    goalResult.controlStatuses = [controlStatus]
+    results.controlResults.goalsAnalysisResults = [goalResult]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-controls-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const exportPath = join(reportsFolder, "data", "controls.json")
+      expect(existsSync(exportPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(exportPath, "utf-8")) as {
+        title: string
+        timestamp: string
+        goals: Array<{
+          goal: string
+          description: string
+          controls: Array<{
+            metricId: string
+            metricValue: number | null
+            metricDescription: string
+            desiredRange: { min: string; max: string; tolerance: string }
+            desiredRangeText: string
+            status: string
+            controlDescription: string
+          }>
+        }>
+      }
+
+      expect(exported.title).toBe("Goals & Controls")
+      expect(exported.goals).toEqual([
+        {
+          goal: "Maintainability",
+          description: "Keep structural risk within agreed bounds",
+          controls: [
+            {
+              metricId: "VERY_HIGH_RISK_FILE_SIZE_COUNT",
+              metricValue: 7,
+              metricDescription: "Count of very high risk files",
+              desiredRange: {
+                min: "0",
+                max: "5",
+                tolerance: "1",
+              },
+              desiredRangeText: "[0 - 5] ±1",
+              status: "FAILED",
+              controlDescription: "Very high risk file count should stay low",
+            },
+          ],
+        },
+      ])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes structured findings JSON from manual findings HTML", () => {
+    const results = new CodeAnalysisResults()
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-findings-"))
+    const findingsHtml = `
+<finding>
+  <summary>Risky payment shortcut</summary>
+  <body><p>Checkout bypasses normal validation in one path.</p><p>Review the fallback branch.</p></body>
+</finding>
+<finding>
+  <summary>Legacy retry loop</summary>
+  <body><p>There is a retry loop with unclear backoff behavior.</p></body>
+</finding>
+`
+
+    try {
+      new DataExporter(results, reportsFolder, findingsHtml).exportData()
+
+      const exportPath = join(reportsFolder, "data", "findings.json")
+      expect(existsSync(exportPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(exportPath, "utf-8")) as {
+        title: string
+        items: Array<{ id: string; summary: string; bodyHtml: string; bodyText: string }>
+      }
+
+      expect(exported.title).toBe("Notes & Findings")
+      expect(exported.items).toHaveLength(2)
+      expect(exported.items[0]).toEqual(
+        expect.objectContaining({
+          id: "finding-1",
+          summary: "Risky payment shortcut",
+        }),
+      )
+      expect(exported.items[0]!.bodyHtml).toContain("Checkout bypasses normal validation")
+      expect(exported.items[0]!.bodyText).toContain("Review the fallback branch.")
+      expect(exported.items[1]!.summary).toBe("Legacy retry loop")
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes hotspot rankings for files, units, and components", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
+
+    const billing = new NamedSourceCodeAspect("Billing")
+    billing.filtering = "primary"
+    billing.sourceFiles = []
+
+    const orderService = new SourceFile("src/orders/OrderService.java")
+    orderService.linesOfCode = 620
+    orderService.logicalComponents = [billing]
+    orderService.fileModificationHistory = new FileModificationHistory(orderService.relativePath)
+    orderService.fileModificationHistory.commits.push(
+      new CommitInfo("c1", "2025-01-10", "alice@example.com"),
+      new CommitInfo("c2", "2025-01-12", "alice@example.com"),
+      new CommitInfo("c3", "2025-01-13", "alice@example.com"),
+      new CommitInfo("c4", "2025-01-14", "alice@example.com"),
+      new CommitInfo("c5", "2025-01-15", "alice@example.com"),
+      new CommitInfo("c6", "2025-01-16", "alice@example.com"),
+      new CommitInfo("c7", "2025-01-17", "alice@example.com"),
+      new CommitInfo("c8", "2025-01-18", "alice@example.com"),
+      new CommitInfo("c9", "2025-01-19", "alice@example.com"),
+      new CommitInfo("c10", "2025-01-20", "alice@example.com"),
+      new CommitInfo("c11", "2025-01-21", "alice@example.com"),
+      new CommitInfo("c12", "2025-01-22", "alice@example.com"),
+    )
+    orderService.fileModificationHistory.dates.push(
+      "2025-01-10",
+      "2025-01-12",
+      "2025-01-13",
+      "2025-01-14",
+      "2025-01-15",
+      "2025-01-16",
+      "2025-01-17",
+      "2025-01-18",
+      "2025-01-19",
+      "2025-01-20",
+      "2025-01-21",
+      "2025-01-22",
+    )
+
+    const helper = new SourceFile("src/orders/Helper.java")
+    helper.linesOfCode = 120
+    helper.logicalComponents = [billing]
+    helper.fileModificationHistory = new FileModificationHistory(helper.relativePath)
+    helper.fileModificationHistory.commits.push(new CommitInfo("c13", "2025-01-11", "bob@example.com"))
+    helper.fileModificationHistory.dates.push("2025-01-11")
+
+    config.main.sourceFiles = [orderService, helper]
+    results.codeConfiguration = config
+
+    const unit = {
+      shortName: "calculateTotals",
+      longName: "calculateTotals(Order order)",
+      linesOfCode: 70,
+      mcCabeIndex: 14,
+      numberOfParameters: 5,
+      startLine: 20,
+      endLine: 90,
+      sourceFile: orderService,
+      cleanedBody: "",
+      body: "",
+      children: [],
+    }
+    results.unitsAnalysisResults.allUnits = [unit as any]
+
+    const duplicateBlock = new DuplicatedFileBlock()
+    duplicateBlock.sourceFile = orderService
+    duplicateBlock.startLine = 10
+    duplicateBlock.endLine = 20
+    duplicateBlock.cleanedStartLine = 10
+    duplicateBlock.cleanedEndLine = 20
+    duplicateBlock.sourceFileCleanedLinesOfCode = 50
+    const duplicateInstance = new DuplicationInstance()
+    duplicateInstance.blockSize = 10
+    duplicateInstance.duplicatedFileBlocks = [duplicateBlock]
+    results.duplicationAnalysisResults.allDuplicates = [duplicateInstance]
+
+    results.filesHistoryAnalysisResults.filePairsChangedTogether180Days = [
+      {
+        sourceFile1Path: orderService.relativePath,
+        sourceFile2Path: helper.relativePath,
+        commitsCountFile1: 12,
+        commitsCountFile2: 1,
+        commits: ["c1", "c2", "c3", "c4"],
+        latestCommit: "2025-01-22",
+      },
+    ]
+
+    billing.sourceFiles = [orderService, helper]
+
+    const decomposition = new LogicalDecompositionAnalysisResults("primary")
+    decomposition.components = [
+      {
+        name: "Billing",
+        filesCount: 2,
+        linesOfCode: 740,
+        aspect: billing,
+      } as any,
+    ]
+    const dependency = new ComponentDependency("Billing", "Catalog")
+    dependency.count = 3
+    decomposition.componentDependencies = [dependency]
+    results.logicalDecompositionsAnalysisResults = [decomposition]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-hotspots-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const exportPath = join(reportsFolder, "data", "hotspots.json")
+      expect(existsSync(exportPath)).toBe(true)
+
+      const exported = JSON.parse(readFileSync(exportPath, "utf-8")) as {
+        title: string
+        fileHotspots: Array<Record<string, unknown>>
+        unitHotspots: Array<Record<string, unknown>>
+        componentHotspots: Array<Record<string, unknown>>
+      }
+
+      expect(exported.title).toBe("Planetnik Hotspots")
+      expect(exported.fileHotspots[0]!.id).toBe(`file:${orderService.relativePath}`)
+      expect(exported.fileHotspots[0]!.reasons).toContain("single-contributor knowledge concentration")
+      expect(exported.fileHotspots[0]!.dominantDimension).toBe("knowledgeRisk")
+      expect(exported.fileHotspots[0]!.suggestedAction).toContain("Broaden ownership")
+      expect((exported.fileHotspots[0]!.dimensions as Record<string, number>).knowledgeRisk).toBeGreaterThan(
+        (exported.fileHotspots[0]!.dimensions as Record<string, number>).coordinationCost,
+      )
+      expect(exported.unitHotspots[0]!.id).toBe(`unit:${orderService.relativePath}:20`)
+      expect(exported.unitHotspots[0]!.reasons).toContain("high conditional complexity (14)")
+      expect(exported.unitHotspots[0]!.suggestedAction).toContain("Broaden ownership")
+      expect(exported.componentHotspots[0]!.id).toBe("component:primary:Billing")
+      expect(exported.componentHotspots[0]!.reasons).toContain("low contributor backup")
+      expect(exported.componentHotspots[0]!.dominantDimension).toBe("knowledgeRisk")
     } finally {
       rmSync(reportsFolder, { recursive: true, force: true })
     }

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import { Command, Options } from "@effect/cli"
 import {
   CodeAnalyzer,
@@ -85,6 +85,8 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
 
     yield* Effect.log(`Reports folder: ${reportsFolder}`)
 
+    const findingsHtml = readFindingsHtml(configPath, parsed)
+
     const settings = CodeAnalyzerSettings.selectAll()
 
     yield* Effect.log("Starting analysis...")
@@ -92,11 +94,11 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
     const analysisResults = codeAnalyzer.analyze()
 
     yield* Effect.log("Exporting data...")
-    const dataExporter = new DataExporter(analysisResults, reportsFolder)
+    const dataExporter = new DataExporter(analysisResults, reportsFolder, findingsHtml)
     dataExporter.exportData()
 
     yield* Effect.log("Generating reports...")
-    const generator = new BasicSourceCodeReportGenerator(settings, analysisResults)
+    const generator = new BasicSourceCodeReportGenerator(settings, analysisResults, findingsHtml)
     const reports = generator.report()
 
     for (const report of reports) {
@@ -110,6 +112,23 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
 
     yield* Effect.log(`Analysis complete. Reports saved to ${reportsFolder}`)
   })
+}
+
+function readFindingsHtml(configPath: string, parsed: Record<string, unknown>): string | null {
+  const findingsHtmlPath =
+    typeof parsed.findingsHtmlPath === "string" && parsed.findingsHtmlPath.trim().length > 0
+      ? parsed.findingsHtmlPath.trim()
+      : ""
+
+  if (!findingsHtmlPath) return null
+
+  const absolutePath = resolve(dirname(configPath), findingsHtmlPath)
+  if (!existsSync(absolutePath)) {
+    console.warn(`[planetnik] Findings HTML file not found: ${absolutePath}`)
+    return null
+  }
+
+  return readFileSync(absolutePath, "utf-8")
 }
 
 const confFile = Options.text("confFile").pipe(Options.optional)

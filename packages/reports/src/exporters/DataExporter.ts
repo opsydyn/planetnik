@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import type { CodeAnalysisResults, ComponentDependency, Contributor, DuplicationInstance, SourceFile } from "@planetnik/analyzer"
+import type { CodeAnalysisResults, ComponentDependency, Contributor, DuplicationInstance, SourceFile, UnitInfo } from "@planetnik/analyzer"
 import { Range } from "@planetnik/analyzer"
 import { FormattingUtils } from "@planetnik/common"
 import { ComponentDependenciesExporter } from "./ComponentDependenciesExportInfo.js"
@@ -18,10 +18,12 @@ export class DataExporter {
 
   private analysisResults: CodeAnalysisResults
   private reportsFolder: string
+  private findingsHtml: string | null
 
-  constructor(analysisResults: CodeAnalysisResults, reportsFolder: string) {
+  constructor(analysisResults: CodeAnalysisResults, reportsFolder: string, findingsHtml: string | null = null) {
     this.analysisResults = analysisResults
     this.reportsFolder = reportsFolder
+    this.findingsHtml = findingsHtml
   }
 
   exportData(): void {
@@ -33,6 +35,8 @@ export class DataExporter {
     this.exportFileLists(dataFolder)
     this.exportMetrics(dataFolder)
     this.exportControls(dataFolder)
+    this.exportFindings(dataFolder)
+    this.exportHotspots(dataFolder)
     this.exportContributors(dataFolder)
     this.exportContributorDetails(dataFolder)
     this.exportJson(dataFolder)
@@ -96,6 +100,19 @@ export class DataExporter {
 
   private exportControls(dataFolder: string): void {
     const lines: string[] = []
+    const goals = this.analysisResults.controlResults.goalsAnalysisResults.map((goal) => ({
+      goal: goal.metricsWithGoal?.goal ?? "Controls",
+      description: goal.metricsWithGoal?.description ?? "",
+      controls: goal.controlStatuses.map((status) => ({
+        metricId: status.control?.metric ?? "",
+        metricValue: status.metric?.value ?? null,
+        metricDescription: status.metric?.description ?? "",
+        desiredRange: status.control?.desiredRange ?? Range.make({}),
+        desiredRangeText: status.control ? Range.getTextDescription(status.control.desiredRange) : "",
+        status: status.status,
+        controlDescription: status.control?.description ?? "",
+      })),
+    }))
 
     for (const goal of this.analysisResults.controlResults.goalsAnalysisResults) {
       for (const status of goal.controlStatuses) {
@@ -117,7 +134,83 @@ export class DataExporter {
       }
     }
 
+    writeFileSync(
+      join(dataFolder, "controls.json"),
+      JSON.stringify(
+        {
+          title: "Goals & Controls",
+          timestamp: new Date().toISOString(),
+          goals,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    )
     writeFileSync(join(dataFolder, "controls.txt"), lines.join("\n"), "utf-8")
+  }
+
+  private exportFindings(dataFolder: string): void {
+    const findings = this.extractFindings(this.findingsHtml)
+
+    writeFileSync(
+      join(dataFolder, "findings.json"),
+      JSON.stringify(
+        {
+          title: "Notes & Findings",
+          timestamp: new Date().toISOString(),
+          items: findings,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    )
+  }
+
+  private exportHotspots(dataFolder: string): void {
+    const sourceFiles = this.getAllSourceFiles()
+    const units = this.analysisResults.unitsAnalysisResults.allUnits
+    const duplicationPaths = this.getDuplicatedPaths()
+    const temporalLinkCounts = this.getTemporalLinkCounts()
+    const unitsByFile = new Map<string, UnitInfo[]>()
+
+    for (const unit of units) {
+      const relativePath = unit.sourceFile?.relativePath
+      if (!relativePath) continue
+      const existing = unitsByFile.get(relativePath) ?? []
+      existing.push(unit)
+      unitsByFile.set(relativePath, existing)
+    }
+
+    const fileHotspots = sourceFiles
+      .map((file) => this.buildFileHotspot(file, unitsByFile.get(file.relativePath) ?? [], duplicationPaths, temporalLinkCounts))
+      .sort((a, b) => b.score - a.score)
+
+    const unitHotspots = units
+      .filter((unit) => unit.sourceFile)
+      .map((unit) => this.buildUnitHotspot(unit, temporalLinkCounts))
+      .sort((a, b) => b.score - a.score)
+
+    const componentHotspots = this.analysisResults.logicalDecompositionsAnalysisResults
+      .flatMap((results) => results.components.map((component) => this.buildComponentHotspot(results.key, component.name, component.aspect?.sourceFiles ?? [], results.componentDependencies, temporalLinkCounts)))
+      .sort((a, b) => b.score - a.score)
+
+    writeFileSync(
+      join(dataFolder, "hotspots.json"),
+      JSON.stringify(
+        {
+          title: "Planetnik Hotspots",
+          timestamp: new Date().toISOString(),
+          fileHotspots,
+          unitHotspots,
+          componentHotspots,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    )
   }
 
   private exportContributors(dataFolder: string): void {
@@ -631,6 +724,377 @@ export class DataExporter {
   private getContributorCommitId(commitId: string, date: string, filePath: string, index: number): string {
     if (commitId) return commitId
     return `${filePath}:${date}:${index}`
+  }
+
+  private getDuplicatedPaths(): Set<string> {
+    const duplicatedPaths = new Set<string>()
+    const instances = [
+      ...this.analysisResults.duplicationAnalysisResults.allDuplicates,
+      ...this.analysisResults.duplicationAnalysisResults.unitDuplicates,
+    ]
+
+    for (const instance of instances) {
+      for (const block of instance.duplicatedFileBlocks) {
+        if (block.sourceFile?.relativePath) {
+          duplicatedPaths.add(block.sourceFile.relativePath)
+        }
+      }
+    }
+
+    return duplicatedPaths
+  }
+
+  private getTemporalLinkCounts(): Map<string, number> {
+    const history = this.analysisResults.filesHistoryAnalysisResults
+    const preferredPairs =
+      history.filePairsChangedTogether180Days.length > 0
+        ? history.filePairsChangedTogether180Days
+        : history.filePairsChangedTogether90Days.length > 0
+          ? history.filePairsChangedTogether90Days
+          : history.filePairsChangedTogether30Days.length > 0
+            ? history.filePairsChangedTogether30Days
+            : history.filePairsChangedTogether
+
+    const counts = new Map<string, number>()
+    for (const pair of preferredPairs) {
+      counts.set(pair.sourceFile1Path, (counts.get(pair.sourceFile1Path) ?? 0) + 1)
+      counts.set(pair.sourceFile2Path, (counts.get(pair.sourceFile2Path) ?? 0) + 1)
+    }
+    return counts
+  }
+
+  private buildFileHotspot(
+    file: SourceFile,
+    units: UnitInfo[],
+    duplicationPaths: Set<string>,
+    temporalLinkCounts: Map<string, number>,
+  ) {
+    const commitsCount = file.fileModificationHistory?.dates.length ?? 0
+    const contributorsCount = file.fileModificationHistory?.countContributors() ?? 0
+    const temporalLinks = temporalLinkCounts.get(file.relativePath) ?? 0
+    const maxComplexity = units.reduce((max, unit) => Math.max(max, unit.mcCabeIndex), 0)
+    const duplicated = duplicationPaths.has(file.relativePath)
+    const reasons: string[] = []
+    if (file.linesOfCode >= 500) reasons.push(`large file (${file.linesOfCode} LOC)`)
+    if (commitsCount >= 12) reasons.push(`high churn (${commitsCount} commits)`)
+    if (temporalLinks >= 4) reasons.push(`high temporal coupling (${temporalLinks} linked files)`)
+    if (maxComplexity >= 10) reasons.push(`complex units inside file (max McCabe ${maxComplexity})`)
+
+    if (contributorsCount <= 1 && commitsCount > 0) {
+      reasons.push("single-contributor knowledge concentration")
+    } else if (contributorsCount === 2) {
+      reasons.push("low backup ownership")
+    }
+
+    if (duplicated) {
+      reasons.push("duplicate code present")
+    }
+
+    const dimensions = this.buildRiskDimensions({
+      structuralRisk:
+        this.scaledScore(file.linesOfCode, 800, 45)
+        + this.scaledScore(maxComplexity, 20, 35)
+        + (duplicated ? 20 : 0),
+      changePressure: this.scaledScore(commitsCount, 25, 70),
+      coordinationCost:
+        this.scaledScore(temporalLinks, 8, 70)
+        + this.scaledScore(Math.max(contributorsCount - 1, 0), 4, 15),
+      knowledgeRisk:
+        this.knowledgeRiskScore(contributorsCount, commitsCount)
+        + this.scaledScore(temporalLinks, 8, 10),
+    })
+
+    return {
+      id: `file:${file.relativePath}`,
+      kind: "file",
+      name: file.relativePath,
+      parent: file.logicalComponents[0]?.name ?? "",
+      route: "/files/churn",
+      score: dimensions.score,
+      severity: this.getSeverity(dimensions.score),
+      size: file.linesOfCode,
+      commitsCount,
+      contributorsCount,
+      temporalLinks,
+      complexity: maxComplexity,
+      dimensions: dimensions.scores,
+      dominantDimension: dimensions.dominantDimension,
+      suggestedAction: this.getSuggestedAction("file", dimensions.dominantDimension),
+      reasons,
+    }
+  }
+
+  private buildUnitHotspot(unit: UnitInfo, temporalLinkCounts: Map<string, number>) {
+    const file = unit.sourceFile
+    const filePath = file?.relativePath ?? ""
+    const fileCommits = file?.fileModificationHistory?.dates.length ?? 0
+    const fileContributors = file?.fileModificationHistory?.countContributors() ?? 0
+    const temporalLinks = filePath ? temporalLinkCounts.get(filePath) ?? 0 : 0
+    const reasons: string[] = []
+    if (unit.linesOfCode >= 40) reasons.push(`large unit (${unit.linesOfCode} LOC)`)
+    if (unit.mcCabeIndex >= 10) reasons.push(`high conditional complexity (${unit.mcCabeIndex})`)
+    if (unit.numberOfParameters >= 4) reasons.push(`many parameters (${unit.numberOfParameters})`)
+    if (fileCommits >= 12) reasons.push(`lives in a high-churn file (${fileCommits} commits)`)
+    if (temporalLinks >= 4) reasons.push(`file is temporally coupled (${temporalLinks} links)`)
+
+    if (fileContributors <= 1 && fileCommits > 0) {
+      reasons.push("narrow ownership around parent file")
+    }
+
+    const dimensions = this.buildRiskDimensions({
+      structuralRisk:
+        this.scaledScore(unit.linesOfCode, 80, 30)
+        + this.scaledScore(unit.mcCabeIndex, 20, 50)
+        + this.scaledScore(unit.numberOfParameters, 6, 20),
+      changePressure: this.scaledScore(fileCommits, 25, 75),
+      coordinationCost:
+        this.scaledScore(temporalLinks, 8, 75)
+        + this.scaledScore(Math.max(fileContributors - 1, 0), 4, 10),
+      knowledgeRisk:
+        this.knowledgeRiskScore(fileContributors, fileCommits)
+        + this.scaledScore(unit.mcCabeIndex, 20, 10),
+    })
+
+    return {
+      id: `unit:${filePath}:${unit.startLine}`,
+      kind: "unit",
+      name: unit.shortName,
+      parent: filePath,
+      route: "/units/complexity",
+      score: dimensions.score,
+      severity: this.getSeverity(dimensions.score),
+      size: unit.linesOfCode,
+      commitsCount: fileCommits,
+      contributorsCount: fileContributors,
+      temporalLinks,
+      complexity: unit.mcCabeIndex,
+      dimensions: dimensions.scores,
+      dominantDimension: dimensions.dominantDimension,
+      suggestedAction: this.getSuggestedAction("unit", dimensions.dominantDimension),
+      reasons,
+    }
+  }
+
+  private buildComponentHotspot(
+    decompositionKey: string,
+    componentName: string,
+    sourceFiles: SourceFile[],
+    dependencies: ComponentDependency[],
+    temporalLinkCounts: Map<string, number>,
+  ) {
+    const loc = sourceFiles.reduce((sum, file) => sum + file.linesOfCode, 0)
+    const commitsCount = sourceFiles.reduce((sum, file) => sum + (file.fileModificationHistory?.dates.length ?? 0), 0)
+    const contributors = new Set<string>()
+    let temporalLinks = 0
+
+    for (const file of sourceFiles) {
+      for (const commit of file.fileModificationHistory?.commits ?? []) {
+        if (commit.email) contributors.add(commit.email)
+      }
+      temporalLinks += temporalLinkCounts.get(file.relativePath) ?? 0
+    }
+
+    const outgoingDeps = dependencies.filter((dependency) => dependency.fromComponent === componentName).length
+    const incomingDeps = dependencies.filter((dependency) => dependency.toComponent === componentName).length
+    const reasons: string[] = []
+    if (loc >= 2500) reasons.push(`large component footprint (${loc} LOC)`)
+    if (sourceFiles.length >= 12) reasons.push(`many files (${sourceFiles.length})`)
+    if (commitsCount >= 30) reasons.push(`high accumulated churn (${commitsCount} commits)`)
+    if (temporalLinks >= 10) reasons.push(`strong co-change pressure (${temporalLinks} temporal links)`)
+    if (incomingDeps + outgoingDeps >= 4) reasons.push(`high dependency centrality (${incomingDeps + outgoingDeps} edges)`)
+
+    if (contributors.size <= 1 && commitsCount > 0) {
+      reasons.push("single-contributor component knowledge")
+    } else if (contributors.size === 2) {
+      reasons.push("low contributor backup")
+    }
+
+    const dimensions = this.buildRiskDimensions({
+      structuralRisk:
+        this.scaledScore(loc, 5000, 45)
+        + this.scaledScore(sourceFiles.length, 25, 25),
+      changePressure: this.scaledScore(commitsCount, 80, 70),
+      coordinationCost:
+        this.scaledScore(temporalLinks, 25, 45)
+        + this.scaledScore(incomingDeps + outgoingDeps, 8, 45)
+        + this.scaledScore(Math.max(contributors.size - 1, 0), 8, 10),
+      knowledgeRisk:
+        this.knowledgeRiskScore(contributors.size, commitsCount)
+        + this.scaledScore(incomingDeps + outgoingDeps, 8, 10),
+    })
+
+    return {
+      id: `component:${decompositionKey}:${componentName}`,
+      kind: "component",
+      name: componentName,
+      parent: decompositionKey,
+      route: "/components",
+      score: dimensions.score,
+      severity: this.getSeverity(dimensions.score),
+      size: loc,
+      commitsCount,
+      contributorsCount: contributors.size,
+      temporalLinks,
+      complexity: incomingDeps + outgoingDeps,
+      dimensions: dimensions.scores,
+      dominantDimension: dimensions.dominantDimension,
+      suggestedAction: this.getSuggestedAction("component", dimensions.dominantDimension),
+      reasons,
+    }
+  }
+
+  private buildRiskDimensions(scores: {
+    structuralRisk: number
+    changePressure: number
+    coordinationCost: number
+    knowledgeRisk: number
+  }) {
+    const normalizedScores = {
+      structuralRisk: this.capDimension(scores.structuralRisk),
+      changePressure: this.capDimension(scores.changePressure),
+      coordinationCost: this.capDimension(scores.coordinationCost),
+      knowledgeRisk: this.capDimension(scores.knowledgeRisk),
+    }
+    const dominantDimension = this.getDominantDimension(normalizedScores)
+    const weightedScore =
+      normalizedScores.structuralRisk * 0.3
+      + normalizedScores.changePressure * 0.3
+      + normalizedScores.coordinationCost * 0.2
+      + normalizedScores.knowledgeRisk * 0.2
+
+    return {
+      score: this.roundScore(weightedScore),
+      scores: normalizedScores,
+      dominantDimension,
+    }
+  }
+
+  private capDimension(score: number): number {
+    return this.roundScore(Math.min(Math.max(score, 0), 100))
+  }
+
+  private getDominantDimension(scores: {
+    structuralRisk: number
+    changePressure: number
+    coordinationCost: number
+    knowledgeRisk: number
+  }): "structuralRisk" | "changePressure" | "coordinationCost" | "knowledgeRisk" {
+    const entries = Object.entries(scores) as Array<
+      ["structuralRisk" | "changePressure" | "coordinationCost" | "knowledgeRisk", number]
+    >
+    entries.sort((a, b) => b[1] - a[1])
+    return entries[0]?.[0] ?? "structuralRisk"
+  }
+
+  private knowledgeRiskScore(contributorsCount: number, commitsCount: number): number {
+    if (commitsCount <= 0) return 0
+    if (contributorsCount <= 1) {
+      return 85 + this.scaledScore(commitsCount, 25, 15)
+    }
+    if (contributorsCount === 2) {
+      return 55 + this.scaledScore(commitsCount, 25, 10)
+    }
+    if (contributorsCount === 3) {
+      return 25 + this.scaledScore(commitsCount, 25, 10)
+    }
+    return this.scaledScore(commitsCount, 25, 8)
+  }
+
+  private getSuggestedAction(
+    kind: "file" | "unit" | "component",
+    dominantDimension: "structuralRisk" | "changePressure" | "coordinationCost" | "knowledgeRisk",
+  ): string {
+    if (dominantDimension === "structuralRisk") {
+      if (kind === "unit") return "Split or simplify this unit to reduce branching and parameter load."
+      if (kind === "component") return "Break the component into clearer seams and reduce oversized files."
+      return "Break this file down, remove duplication, and trim local complexity."
+    }
+
+    if (dominantDimension === "changePressure") {
+      if (kind === "component") return "Stabilize the component before adding more scope and review its change drivers."
+      return "Stabilize this hotspot before more features land and review why it changes so often."
+    }
+
+    if (dominantDimension === "coordinationCost") {
+      if (kind === "component") return "Reduce dependency edges and align component boundaries with change patterns."
+      return "Reduce co-change paths and cross-boundary edits around this hotspot."
+    }
+
+    if (kind === "component") {
+      return "Broaden ownership of this component and add backup maintainers."
+    }
+    return "Broaden ownership and create a clear handover path for this hotspot."
+  }
+
+  private extractFindings(findingsHtml: string | null): Array<{
+    id: string
+    summary: string
+    bodyHtml: string
+    bodyText: string
+  }> {
+    if (!findingsHtml || findingsHtml.trim().length === 0) return []
+
+    const findings: Array<{ id: string; summary: string; bodyHtml: string; bodyText: string }> = []
+    const findingRegex = /<finding>(.*?)<\/finding>/gs
+    let findingMatch: RegExpExecArray | null
+    let index = 0
+
+    while ((findingMatch = findingRegex.exec(findingsHtml)) !== null) {
+      index += 1
+      const findingContent = findingMatch[1] ?? ""
+      const summaryMatch = /<summary>(.*?)<\/summary>/is.exec(findingContent)
+      const bodyMatch = /<body>(.*?)<\/body>/is.exec(findingContent)
+      const summary = summaryMatch?.[1]?.trim() || `Finding ${index}`
+      const bodyHtml = bodyMatch?.[1]?.trim() || findingContent.trim()
+      findings.push({
+        id: `finding-${index}`,
+        summary,
+        bodyHtml,
+        bodyText: this.htmlToText(bodyHtml),
+      })
+    }
+
+    if (findings.length === 0) {
+      return [
+        {
+          id: "finding-1",
+          summary: "Notes & Findings",
+          bodyHtml: findingsHtml.trim(),
+          bodyText: this.htmlToText(findingsHtml),
+        },
+      ]
+    }
+
+    return findings
+  }
+
+  private htmlToText(html: string): string {
+    return html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
+  private scaledScore(value: number, threshold: number, weight: number): number {
+    if (value <= 0 || threshold <= 0 || weight <= 0) return 0
+    return Math.min(value / threshold, 1) * weight
+  }
+
+  private getSeverity(score: number): string {
+    if (score >= 75) return "Critical"
+    if (score >= 55) return "High"
+    if (score >= 35) return "Medium"
+    return "Low"
+  }
+
+  private roundScore(score: number): number {
+    return Math.round(score * 10) / 10
   }
 
   static dependenciesFileNamePrefix(

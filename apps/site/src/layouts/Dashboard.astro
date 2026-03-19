@@ -62,6 +62,7 @@ const navSections = [
     label: "Quality",
     iconName: "chart-line-up",
     items: [
+      { href: "/hotspots", label: "Hotspots" },
       { href: "/concerns", label: "Features of Interest" },
       { href: "/findings", label: "Findings" },
       { href: "/controls", label: "Goals & Controls" },
@@ -79,7 +80,7 @@ const currentPath = Astro.url.pathname
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title} — {projectName}</title>
-    <ClientRouter />
+    <!-- <ClientRouter /> -->
     <style>
       * {
         margin: 0;

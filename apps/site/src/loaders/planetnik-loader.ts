@@ -159,6 +159,100 @@ export function metricsLoader(): Loader {
   }
 }
 
+export function controlsLoader(): Loader {
+  return {
+    name: "planetnik-controls",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("controls.json") as {
+        goals?: Array<{
+          goal?: string
+          description?: string
+          controls?: Array<Record<string, unknown>>
+        }>
+      } | null
+      if (!raw?.goals) return
+
+      for (const goal of raw.goals) {
+        const goalName = goal.goal ?? "Controls"
+        const goalDescription = goal.description ?? ""
+        const controls = goal.controls ?? []
+
+        for (let i = 0; i < controls.length; i++) {
+          const control = controls[i] ?? {}
+          const metricId = typeof control.metricId === "string" ? control.metricId : ""
+          const id = `${goalName}::${metricId || `control-${i}`}`
+          const data = await parseData({
+            id,
+            data: {
+              goal: goalName,
+              goalDescription,
+              metricId,
+              metricValue: typeof control.metricValue === "number" ? control.metricValue : null,
+              metricDescription: typeof control.metricDescription === "string" ? control.metricDescription : "",
+              desiredRange: control.desiredRange ?? { min: "0", max: "0", tolerance: "0" },
+              desiredRangeText: typeof control.desiredRangeText === "string" ? control.desiredRangeText : "",
+              status: typeof control.status === "string" ? control.status : "",
+              controlDescription: typeof control.controlDescription === "string" ? control.controlDescription : "",
+            },
+          })
+          store.set({ id, data })
+        }
+      }
+    },
+  }
+}
+
+export function hotspotsLoader(): Loader {
+  return {
+    name: "planetnik-hotspots",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("hotspots.json") as {
+        fileHotspots?: Array<Record<string, unknown>>
+        unitHotspots?: Array<Record<string, unknown>>
+        componentHotspots?: Array<Record<string, unknown>>
+      } | null
+      if (!raw) return
+
+      const groups = [
+        ...(raw.fileHotspots ?? []),
+        ...(raw.unitHotspots ?? []),
+        ...(raw.componentHotspots ?? []),
+      ]
+
+      for (const entry of groups) {
+        const id =
+          typeof entry.id === "string" && entry.id
+            ? entry.id
+            : `${String(entry.kind ?? "hotspot")}:${String(entry.name ?? "unknown")}:${String(entry.parent ?? "")}`
+        const data = await parseData({ id, data: entry })
+        store.set({ id, data })
+      }
+    },
+  }
+}
+
+export function findingsLoader(): Loader {
+  return {
+    name: "planetnik-findings",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("findings.json") as {
+        items?: Array<Record<string, unknown>>
+      } | null
+      if (!raw?.items) return
+
+      for (let i = 0; i < raw.items.length; i++) {
+        const entry = raw.items[i] ?? {}
+        const id =
+          typeof entry.id === "string" && entry.id.trim().length > 0
+            ? entry.id
+            : `finding-${i + 1}`
+        const data = await parseData({ id, data: entry })
+        store.set({ id, data })
+      }
+    },
+  }
+}
+
 export function contributorsLoader(): Loader {
   return {
     name: "planetnik-contributors",

@@ -134,6 +134,14 @@ const pageDefinitions: PageDefinition[] = [
     section: "Team",
   },
   {
+    title: "Hotspots",
+    subtitle: "Ranked code health queue",
+    description: "Prioritized files, units, and components based on structural, churn, temporal, and ownership signals.",
+    keywords: ["hotspots", "code health", "priorities", "risk", "queue", "what to fix"],
+    route: "/hotspots",
+    section: "Quality",
+  },
+  {
     title: "Features of Interest",
     subtitle: "Concerns and tagged areas",
     description: "Concern-oriented view of files matching configured features of interest.",

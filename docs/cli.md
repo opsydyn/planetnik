@@ -175,6 +175,18 @@ Generates:
 - `data/` — JSON and text data exports (consumed by the Astro site)
 - `index.html` — report index page
 
+Optional config fields:
+
+- `findingsHtmlPath` — relative path from the config file to a manual findings HTML fragment. This feeds the `Notes & Findings` report and `data/findings.json`.
+
+Example:
+
+```json
+{
+  "findingsHtmlPath": "findings.html"
+}
+```
+
 ---
 
 ### `extractGitSubHistory`

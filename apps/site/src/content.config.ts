@@ -3,6 +3,9 @@ import { z } from "astro/zod"
 import {
   analysisLoader,
   commitsPerExtensionLoader,
+  controlsLoader,
+  findingsLoader,
+  hotspotsLoader,
   contributorDetailsLoader,
   contributorTimelineLoader,
   contributorsLoader,
@@ -117,6 +120,60 @@ export const collections = {
     schema: z.object({
       id: z.string(),
       value: z.number(),
+    }),
+  }),
+
+  controls: defineCollection({
+    loader: controlsLoader(),
+    schema: z.object({
+      goal: z.string(),
+      goalDescription: z.string(),
+      metricId: z.string(),
+      metricValue: z.number().nullable(),
+      metricDescription: z.string(),
+      desiredRange: z.object({
+        min: z.string(),
+        max: z.string(),
+        tolerance: z.string(),
+      }),
+      desiredRangeText: z.string(),
+      status: z.string(),
+      controlDescription: z.string(),
+    }),
+  }),
+
+  findings: defineCollection({
+    loader: findingsLoader(),
+    schema: z.object({
+      summary: z.string(),
+      bodyHtml: z.string(),
+      bodyText: z.string(),
+    }),
+  }),
+
+  hotspots: defineCollection({
+    loader: hotspotsLoader(),
+    schema: z.object({
+      kind: z.enum(["file", "unit", "component"]),
+      name: z.string(),
+      parent: z.string(),
+      route: z.string(),
+      score: z.number(),
+      severity: z.enum(["Low", "Medium", "High", "Critical"]),
+      size: z.number(),
+      commitsCount: z.number(),
+      contributorsCount: z.number(),
+      temporalLinks: z.number(),
+      complexity: z.number(),
+      dimensions: z.object({
+        structuralRisk: z.number(),
+        changePressure: z.number(),
+        coordinationCost: z.number(),
+        knowledgeRisk: z.number(),
+      }),
+      dominantDimension: z.enum(["structuralRisk", "changePressure", "coordinationCost", "knowledgeRisk"]),
+      suggestedAction: z.string(),
+      reasons: z.array(z.string()),
     }),
   }),
 

@@ -38,6 +38,7 @@ export class CodeConfiguration {
 
   fileHistoryPath: string = ""
   fileHistoryAdditionalPaths: string[] = []
+  findingsHtmlPath: string = ""
 
   static getAbsoluteSrcRoot(srcRoot: string, configFilePath: string): string {
     if (path.isAbsolute(srcRoot)) return srcRoot
