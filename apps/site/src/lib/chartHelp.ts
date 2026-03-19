@@ -67,6 +67,16 @@ export const chartHelp = {
     outgoing:
       "Ranks components with the most outward dependencies. High outgoing dependence often signals orchestration components or blurred responsibilities.",
   },
+  coupling: {
+    mudChart:
+      "Shows how static dependencies, temporal co-change, coordination overlap, and knowledge exposure combine into system pressure. Start with the outer orbit nodes that show high risk and then inspect which dimension dominates their load.",
+    dimensionMix:
+      "Shows the average coupling mix across the selected component model. If one slice dominates, make the next improvement cycle target that class of problem first.",
+    dominantBreakdown:
+      "Shows which coupling dimension dominates each component. A healthy model spreads risk instead of clustering too many components under one failure mode.",
+    topComponents:
+      "Ranks the components with the highest systemic coupling risk. Start with high-risk items that also have clear explainability reasons and existing hotspot evidence.",
+  },
   topology: {
     forceGraph:
       "Shows contributor links as a collaboration network. Dense clusters indicate tightly shared ownership, while isolated bridges highlight fragile cross-team touch points.",

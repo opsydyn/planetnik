@@ -54,6 +54,14 @@ const pageDefinitions: PageDefinition[] = [
     section: "Structure",
   },
   {
+    title: "Balanced Coupling",
+    subtitle: "Big Ball of Mud and system pressure",
+    description: "Component coupling view blending static dependencies, temporal co-change, coordination overlap, and knowledge exposure.",
+    keywords: ["coupling", "balanced coupling", "big ball of mud", "coordination", "knowledge risk", "temporal coupling"],
+    route: "/coupling",
+    section: "Structure",
+  },
+  {
     title: "Dependencies",
     subtitle: "Inter-component dependencies",
     description: "Dependency relationships between components and structural coupling signals.",

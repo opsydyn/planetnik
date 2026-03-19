@@ -50,11 +50,22 @@ const howToGuides = [
   },
   {
     title: "Review architectural boundaries",
-    text: "Use Components, Dependencies, and Features of Interest together to see whether intended boundaries match real code structure.",
+    text: "Use Components, Balanced Coupling, Dependencies, and Features of Interest together to see whether intended boundaries match real code structure and change pressure.",
     links: [
       { href: "/components", label: "Components" },
+      { href: "/coupling", label: "Balanced Coupling" },
       { href: "/dependencies", label: "Dependencies" },
       { href: "/concerns", label: "Features of Interest" },
+    ],
+  },
+  {
+    title: "Evaluate coupling overload",
+    text: "Start with Balanced Coupling to see which components are overloaded, then validate the story with static dependencies, temporal coupling, and hotspots.",
+    links: [
+      { href: "/coupling", label: "Balanced Coupling" },
+      { href: "/dependencies", label: "Dependencies" },
+      { href: "/files/temporal", label: "Temporal Dependencies" },
+      { href: "/hotspots", label: "Hotspots" },
     ],
   },
   {
@@ -81,6 +92,7 @@ const referenceSections = [
     label: "Structure",
     items: [
       ["/components", "Logical component size and knowledge coverage."],
+      ["/coupling", "Balanced coupling pressure and Big Ball of Mud view."],
       ["/dependencies", "Static component dependency relationships."],
       ["/duplication", "Duplicate blocks and repeated code signals."],
     ],
@@ -230,6 +242,12 @@ const referenceSections = [
       Use <a href="/dependencies">Dependencies</a>, <a href="/files/temporal">Temporal Dependencies</a>, and
       <a href="/duplication">Duplication</a> to build evidence for change. Refactoring is easier to defend when you can
       show structural pressure, not just discomfort.
+    </p>
+
+    <h4>treat balanced coupling as a pressure map</h4>
+    <p>
+      Use <a href="/coupling">Balanced Coupling</a> when you want one page that blends static dependencies, co-change,
+      coordination, and knowledge exposure. It is a triage surface, not a replacement for the underlying evidence views.
     </p>
   </div>
 </Dashboard>
