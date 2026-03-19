@@ -5,6 +5,7 @@ import DonutChart from "../../components/charts/DonutChart"
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
 import LineChart from "../../components/charts/LineChart"
 import Dashboard from "../../layouts/Dashboard.astro"
+import { chartHelp } from "../../lib/chartHelp"
 import { getContributorDisplayName, getContributorHref, getContributorMonthlyActivity, getContributorRouteParam } from "../../lib/contributors"
 
 export async function getStaticPaths() {
@@ -138,6 +139,7 @@ const commitShare = contributorSummary?.data.percentage ?? null
         client:load
         data={contributor.data.dailyActivity}
         endDate={contributor.data.latestCommitDate || contributor.data.firstCommitDate || undefined}
+        helpText={chartHelp.contributorDetail.heatmap}
       />
     </section>
   )}
@@ -146,10 +148,11 @@ const commitShare = contributorSummary?.data.percentage ?? null
     <section class="section">
       <h3>Commit Activity</h3>
       <LineChart
-        client:load
+        client:visible
         series={[{ name: "Commits", data: monthlyActivity }]}
         xLabel="Month"
         yLabel="Commits"
+        helpText={chartHelp.contributorDetail.activity}
       />
     </section>
   )}
@@ -158,14 +161,20 @@ const commitShare = contributorSummary?.data.percentage ?? null
     {extensionChartData.length > 0 && (
       <div class="chart-panel">
         <h3>Language Footprint</h3>
-        <DonutChart client:load data={extensionChartData} valueLabel="commits" />
+        <DonutChart client:visible data={extensionChartData} valueLabel="commits" helpText={chartHelp.contributorDetail.languageFootprint} />
       </div>
     )}
 
     {componentBarData.length > 0 && (
       <div class="chart-panel">
         <h3>Component Footprint</h3>
-        <HorizontalBarChart client:load data={componentBarData} valueLabel="loc" maxItems={10} />
+        <HorizontalBarChart
+          client:visible
+          data={componentBarData}
+          valueLabel="loc"
+          maxItems={10}
+          helpText={chartHelp.contributorDetail.componentFootprint}
+        />
       </div>
     )}
   </section>
@@ -173,7 +182,13 @@ const commitShare = contributorSummary?.data.percentage ?? null
   {collaboratorBarData.length > 0 && (
     <section class="section">
       <h3>Top Collaborators</h3>
-      <HorizontalBarChart client:load data={collaboratorBarData} valueLabel="shared files" maxItems={10} />
+      <HorizontalBarChart
+        client:visible
+        data={collaboratorBarData}
+        valueLabel="shared files"
+        maxItems={10}
+        helpText={chartHelp.contributorDetail.collaborators}
+      />
 
       <table class="table">
         <thead>

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
+import HelpTooltip from "../help/HelpTooltip"
 import { chartTheme } from "./theme"
 
 interface ChartCardProps {
   title?: string
+  helpText?: string
   height?: number
   children: (width: number, height: number) => ReactNode
 }
 
-export default function ChartCard({ title, height = 200, children }: ChartCardProps) {
+export default function ChartCard({ title, helpText, height = 200, children }: ChartCardProps) {
   const frameRef = useRef<HTMLDivElement | null>(null)
   const [width, setWidth] = useState(0)
 
@@ -48,18 +50,31 @@ export default function ChartCard({ title, height = 200, children }: ChartCardPr
         padding: "1rem",
       }}
     >
-      {title && (
+      {(title || helpText) && (
         <div
           style={{
-            fontSize: "0.8rem",
-            fontWeight: 600,
-            color: chartTheme.colors.textMuted,
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "0.75rem",
             marginBottom: "0.75rem",
+            position: "relative",
           }}
         >
-          {title}
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              color: chartTheme.colors.textMuted,
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              minHeight: "1.5rem",
+            }}
+          >
+            {title ?? ""}
+          </div>
+
+          {helpText && <HelpTooltip text={helpText} />}
         </div>
       )}
       <div

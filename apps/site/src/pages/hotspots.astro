@@ -4,6 +4,7 @@ import DistributionChart from "../components/charts/DistributionChart"
 import DonutChart from "../components/charts/DonutChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import ReportDataGrid from "../components/tables/ReportDataGrid"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -132,31 +133,31 @@ const hotspotRows = sorted.map((item) => ({
       {severityData.length > 1 && (
         <section class="section">
           <h3>Severity Mix</h3>
-          <DonutChart client:load data={severityData} valueLabel="hotspots" />
+          <DonutChart client:load data={severityData} valueLabel="hotspots" helpText={chartHelp.hotspots.severity} />
         </section>
       )}
 
       {kindData.length > 0 && (
         <section class="section">
           <h3>Hotspots by Kind</h3>
-          <DistributionChart client:load data={kindData} />
+          <DistributionChart client:visible data={kindData} helpText={chartHelp.hotspots.byKind} />
         </section>
       )}
 
       {dominantDimensionData.length > 0 && (
         <section class="section">
           <h3>Dominant Risk Type</h3>
-          <DistributionChart client:load data={dominantDimensionData} />
+          <DistributionChart client:visible data={dominantDimensionData} helpText={chartHelp.hotspots.dominantRisk} />
         </section>
       )}
 
       <section class="section">
         <h3>Top Hotspots</h3>
-        <HorizontalBarChart client:load data={topHotspotData} valueLabel="score" />
+        <HorizontalBarChart client:visible data={topHotspotData} valueLabel="score" helpText={chartHelp.hotspots.topItems} />
       </section>
 
       <ReportDataGrid
-        client:load
+        client:visible
         title="Hotspot Queue"
         description="Search by kind, score, path, component, or reason while keeping the ranked queue above."
         searchPlaceholder="Search hotspot, component, or reason"

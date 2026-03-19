@@ -4,6 +4,7 @@ import DonutChart from "../components/charts/DonutChart"
 import DistributionChart from "../components/charts/DistributionChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import ReportDataGrid from "../components/tables/ReportDataGrid"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 import { getContributorDisplayName, getContributorHref } from "../lib/contributors"
 
@@ -133,24 +134,24 @@ const contributorRows = sorted.map((c) => {
   {segmentData.length > 1 && (
     <section class="section">
       <h3>Contributor Activity</h3>
-      <DonutChart client:load data={segmentData} valueLabel="contributors" />
+      <DonutChart client:load data={segmentData} valueLabel="contributors" helpText={chartHelp.contributors.activitySegments} />
     </section>
   )}
 
   {knowledgeDistribution.length > 0 && (
     <section class="section">
       <h3>Knowledge Distribution</h3>
-      <DistributionChart client:load data={knowledgeDistribution} />
+      <DistributionChart client:visible data={knowledgeDistribution} helpText={chartHelp.contributors.knowledgeDistribution} />
     </section>
   )}
 
   <section class="section">
     <h3>Top Contributors</h3>
-    <HorizontalBarChart client:load data={contribBarData} valueLabel="commits" />
+    <HorizontalBarChart client:visible data={contribBarData} valueLabel="commits" helpText={chartHelp.contributors.topContributors} />
   </section>
 
   <ReportDataGrid
-    client:load
+    client:visible
     title="Contributor Table"
     description="Search by name, email, status, or commit window while keeping the activity charts above."
     searchPlaceholder="Search contributor, email, or status"

@@ -23,15 +23,16 @@ interface LineChartProps {
   xLabel?: string
   yLabel?: string
   height?: number
+  helpText?: string
 }
 
 const MARGIN = { top: 20, right: 20, bottom: 50, left: 50 }
 
-export default function LineChart({ series, xLabel, yLabel, height = 280 }: LineChartProps) {
+export default function LineChart({ series, xLabel, yLabel, height = 280, helpText }: LineChartProps) {
   if (series.length === 0 || series.every((s) => s.data.length === 0)) return null
 
   return (
-    <ChartCard height={height}>
+    <ChartCard height={height} helpText={helpText}>
       {(width) => <LineChartInner series={series} xLabel={xLabel} yLabel={yLabel} width={width} height={height} />}
     </ChartCard>
   )

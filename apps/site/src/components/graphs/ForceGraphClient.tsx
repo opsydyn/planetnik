@@ -143,18 +143,22 @@ function ForceGraphScene({
   const resetViewport = useCallback(() => {
     let frameOne = 0
     let frameTwo = 0
+    let frameThree = 0
 
     frameOne = window.requestAnimationFrame(() => {
       frameTwo = window.requestAnimationFrame(() => {
-        sigma.resize(true)
-        sigma.refresh()
-        void sigma.getCamera().animatedReset({ duration: 0 })
+        frameThree = window.requestAnimationFrame(() => {
+          sigma.resize(true)
+          sigma.refresh()
+          void sigma.getCamera().animatedReset({ duration: 0 })
+        })
       })
     })
 
     return () => {
       window.cancelAnimationFrame(frameOne)
       window.cancelAnimationFrame(frameTwo)
+      window.cancelAnimationFrame(frameThree)
     }
   }, [sigma])
 
@@ -188,14 +192,15 @@ function ForceGraphScene({
       frame = window.requestAnimationFrame(() => {
         sigma.resize(true)
         sigma.refresh()
+        void sigma.getCamera().animatedReset({ duration: 0 })
       })
     })
 
-    observer.observe(container)
+      observer.observe(container)
 
-    return () => {
-      window.cancelAnimationFrame(frame)
-      observer.disconnect()
+      return () => {
+        window.cancelAnimationFrame(frame)
+        observer.disconnect()
     }
   }, [sigma])
 
@@ -254,7 +259,7 @@ function ForceGraphScene({
 export default function ForceGraphClient({
   nodes,
   edges,
-  width,
+  width: _width,
   height,
   emptyMessage,
   onNodeClick,
@@ -296,7 +301,9 @@ export default function ForceGraphClient({
   return (
     <div
       style={{
-        width: `${width}px`,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
         height: `${height}px`,
         display: "grid",
         gridTemplateRows: `${graphHeight}px auto`,
@@ -306,6 +313,8 @@ export default function ForceGraphClient({
       <div
         style={{
           position: "relative",
+          width: "100%",
+          minWidth: 0,
           height: `${graphHeight}px`,
           borderRadius: "16px",
           overflow: "hidden",

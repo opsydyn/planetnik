@@ -17,13 +17,14 @@ interface ScatterPlotProps {
   xLabel: string
   yLabel: string
   thresholds?: { x?: number; y?: number }
+  helpText?: string
 }
 
 const MARGIN = { top: 16, right: 16, bottom: 40, left: 50 }
 
-export default function ScatterPlot({ data, xLabel, yLabel, thresholds }: ScatterPlotProps) {
+export default function ScatterPlot({ data, xLabel, yLabel, thresholds, helpText }: ScatterPlotProps) {
   return (
-    <ChartCard height={400}>
+    <ChartCard height={400} helpText={helpText}>
       {(width) => (
         <ScatterInner
           data={data}

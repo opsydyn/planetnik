@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
 import ScatterPlot from "../../components/charts/ScatterPlot"
 import ReportDataGrid from "../../components/tables/ReportDataGrid"
+import { chartHelp } from "../../lib/chartHelp"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -85,21 +86,35 @@ const churnRows = filesWithHistory.map((f) => ({
     <>
       <section class="section">
         <h3>Commits vs Contributors per File</h3>
-        <ScatterPlot client:load data={scatterData} xLabel="Commits" yLabel="Contributors" thresholds={{ x: 20, y: 5 }} />
+        <ScatterPlot
+          client:load
+          data={scatterData}
+          xLabel="Commits"
+          yLabel="Contributors"
+          thresholds={{ x: 20, y: 5 }}
+          helpText={chartHelp.churn.commitsVsContributors}
+        />
       </section>
 
       <section class="section">
         <h3>File Size vs Change Frequency</h3>
-        <ScatterPlot client:load data={volatilityData} xLabel="Lines of Code" yLabel="Commits" thresholds={{ x: 200, y: 20 }} />
+        <ScatterPlot
+          client:visible
+          data={volatilityData}
+          xLabel="Lines of Code"
+          yLabel="Commits"
+          thresholds={{ x: 200, y: 20 }}
+          helpText={chartHelp.churn.sizeVsFrequency}
+        />
       </section>
 
       <section class="section">
         <h3>Most Changed Files</h3>
-        <HorizontalBarChart client:load data={mostChangedBarData} valueLabel="commits" />
+        <HorizontalBarChart client:visible data={mostChangedBarData} valueLabel="commits" helpText={chartHelp.churn.mostChanged} />
       </section>
 
       <ReportDataGrid
-        client:load
+        client:visible
         title="Churn Table"
         description="Search and paginate every file with history while keeping the churn charts above."
         searchPlaceholder="Search file path or date"

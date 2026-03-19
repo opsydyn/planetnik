@@ -15,6 +15,7 @@ interface DistributionItem {
 interface DistributionChartProps {
   data: DistributionItem[]
   barColor?: string
+  helpText?: string
 }
 
 const LABEL_WIDTH = 110
@@ -24,13 +25,13 @@ const ROW_HEIGHT = 32
 const BAR_HEIGHT = 18
 const BAR_PADDING = (ROW_HEIGHT - BAR_HEIGHT) / 2
 
-export default function DistributionChart({ data, barColor }: DistributionChartProps) {
+export default function DistributionChart({ data, barColor, helpText }: DistributionChartProps) {
   const hasSecondary = data.some((d) => d.detailSecondary)
   const totalDetailWidth = DETAIL_WIDTH + (hasSecondary ? DETAIL_SECONDARY_WIDTH : 0)
   const height = data.length * ROW_HEIGHT
 
   return (
-    <ChartCard height={height}>
+    <ChartCard height={height} helpText={helpText}>
       {(width) => {
         const barAreaWidth = Math.max(width - LABEL_WIDTH - totalDetailWidth - 16, 40)
 

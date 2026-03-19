@@ -1,6 +1,7 @@
 ---
 import { getCollection, getEntry } from "astro:content"
 import DonutChart from "../components/charts/DonutChart"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -153,7 +154,7 @@ const testVsMainPercentage = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
               <h4>Lines of Code Mix</h4>
               <p>Main, test, generated, deployment, and supporting code split.</p>
             </div>
-            <DonutChart client:load data={locBreakdownData} valueLabel="LOC" />
+            <DonutChart client:load data={locBreakdownData} valueLabel="LOC" helpText={chartHelp.metrics.locMix} />
           </div>
         )}
 
@@ -163,7 +164,7 @@ const testVsMainPercentage = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
               <h4>Main LOC by Extension</h4>
               <p>Primary codebase composition by file extension.</p>
             </div>
-            <DonutChart client:load data={mainLocByExtensionData} valueLabel="LOC" />
+            <DonutChart client:load data={mainLocByExtensionData} valueLabel="LOC" helpText={chartHelp.metrics.mainLocByExtension} />
           </div>
         )}
       </div>

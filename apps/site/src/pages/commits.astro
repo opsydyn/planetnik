@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import LineChart from "../components/charts/LineChart"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -103,19 +104,25 @@ const extensionBarData = [...commitsPerExtension]
   {timelineSeries.length > 0 && (
     <section class="section">
       <h3>Commits &amp; Contributors Per Year</h3>
-      <LineChart client:load series={timelineSeries} xLabel="Year" yLabel="Count" />
+      <LineChart
+        client:load
+        series={timelineSeries}
+        xLabel="Year"
+        yLabel="Count"
+        helpText={chartHelp.commits.yearlyTrends}
+      />
     </section>
   )}
 
   <section class="section">
     <h3>Active Contributors Over Time</h3>
-    <DistributionChart client:load data={activityData} />
+    <DistributionChart client:load data={activityData} helpText={chartHelp.commits.activeContributors} />
   </section>
 
   {extensionBarData.length > 0 && (
     <section class="section">
       <h3>Commits by File Extension</h3>
-      <HorizontalBarChart client:load data={extensionBarData} valueLabel="commits" />
+      <HorizontalBarChart client:load data={extensionBarData} valueLabel="commits" helpText={chartHelp.commits.byExtension} />
     </section>
   )}
 

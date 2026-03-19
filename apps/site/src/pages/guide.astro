@@ -1,0 +1,386 @@
+---
+import Dashboard from "../layouts/Dashboard.astro"
+import { Image } from "astro:assets"
+import { getEntry } from "astro:content"
+
+const summary = await getEntry("analysis", "summary")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const tutorialSteps = [
+  {
+    title: "Read the dashboard first",
+    body: "Start on the dashboard and overview pages to understand system scale, language mix, and obvious concentration points before diving into detail.",
+    href: "/",
+    label: "Open Dashboard",
+  },
+  {
+    title: "Find the next thing to fix",
+    body: "Use hotspots to identify files, units, and components where structural risk, churn, ownership, and coupling are overlapping.",
+    href: "/hotspots",
+    label: "Open Hotspots",
+  },
+  {
+    title: "Validate with evidence",
+    body: "Cross-check hotspot candidates with dependencies, temporal coupling, contributors, and controls so you act on evidence instead of intuition.",
+    href: "/dependencies",
+    label: "Open Dependencies",
+  },
+]
+
+const howToGuides = [
+  {
+    title: "Understand a new codebase fast",
+    text: "Use Dashboard, Overview, Components, and Contributors to build an initial map of structure, size, and ownership.",
+    links: [
+      { href: "/", label: "Dashboard" },
+      { href: "/overview", label: "Overview" },
+      { href: "/components", label: "Components" },
+      { href: "/contributors", label: "Contributors" },
+    ],
+  },
+  {
+    title: "Investigate risky change areas",
+    text: "Start with Hotspots, then validate with File Churn, Temporal Dependencies, and Duplication before planning refactoring work.",
+    links: [
+      { href: "/hotspots", label: "Hotspots" },
+      { href: "/files/churn", label: "File Churn" },
+      { href: "/files/temporal", label: "Temporal Dependencies" },
+      { href: "/duplication", label: "Duplication" },
+    ],
+  },
+  {
+    title: "Review architectural boundaries",
+    text: "Use Components, Dependencies, and Features of Interest together to see whether intended boundaries match real code structure.",
+    links: [
+      { href: "/components", label: "Components" },
+      { href: "/dependencies", label: "Dependencies" },
+      { href: "/concerns", label: "Features of Interest" },
+    ],
+  },
+  {
+    title: "Assess team and knowledge risk",
+    text: "Use Contributors, Team Topology, and contributor detail pages to evaluate ownership spread, collaboration patterns, and concentration risk.",
+    links: [
+      { href: "/contributors", label: "Contributors" },
+      { href: "/topology", label: "Team Topology" },
+    ],
+  },
+]
+
+const referenceSections = [
+  {
+    label: "Overview",
+    items: [
+      ["/", "Project summary, language mix, and duplicate headline metrics."],
+      ["/overview", "Main vs test code shape and extension breakdown."],
+      ["/metrics", "Raw metric inventory and grouped numeric summaries."],
+      ["/about", "Planetnik philosophy and weather metaphor."],
+    ],
+  },
+  {
+    label: "Structure",
+    items: [
+      ["/components", "Logical component size and knowledge coverage."],
+      ["/dependencies", "Static component dependency relationships."],
+      ["/duplication", "Duplicate blocks and repeated code signals."],
+    ],
+  },
+  {
+    label: "Files & Units",
+    items: [
+      ["/files/size", "Large files by lines of code."],
+      ["/files/age", "File age and legacy concentration."],
+      ["/files/churn", "Frequently changed files and volatility."],
+      ["/files/temporal", "Files that move together over time."],
+      ["/units/size", "Large functions and methods."],
+      ["/units/complexity", "High McCabe complexity units."],
+    ],
+  },
+  {
+    label: "People & Quality",
+    items: [
+      ["/contributors", "Contributor activity, ownership, and knowledge spread."],
+      ["/commits", "Commit trends and extension-level change."],
+      ["/topology", "Contributor collaboration topology."],
+      ["/hotspots", "Ranked queue of risky files, units, and components."],
+      ["/controls", "Quality controls and goal coverage."],
+      ["/findings", "Configured findings, when exported."],
+      ["/trends", "Movement of structural signals over time."],
+    ],
+  },
+]
+---
+
+<Dashboard title="Guide" projectName={projectName}>
+  <div class="guide">
+    <div class="hero">
+      <img src="/planetnik-logo-2.png" alt="Planetnik" class="hero-logo" />
+      <p class="tagline">learn the forecast before you change the weather</p>
+    </div>
+
+    <p class="lead">
+      This guide is the fastest way to onboard into <strong>Planetnik</strong> and understand how to use the reports in a
+      practical sequence.
+    </p>
+
+    <p>
+      It follows the <strong>Diátaxis</strong> model so that help is easier to use: start with a tutorial, move into
+      task-focused how-to guidance, use the reference map when you need to locate information quickly, and read the
+      explanation sections when you want the reasoning behind the product.
+    </p>
+
+    <div class="section-banner">
+      <Image
+        src="/plantnik-banner.png"
+        alt="Planetnik guide banner"
+        width={1536}
+        height={1024}
+        class="section-banner-image"
+      />
+    </div>
+
+    <hr />
+
+    <h3>tutorials</h3>
+    <p>Use these when you are new to Planetnik and want a guided path instead of a menu of unrelated reports.</p>
+
+    <div class="guide-grid">
+      {tutorialSteps.map((step, index) => (
+        <article class="guide-card">
+          <div class="guide-card-kicker">tutorial {index + 1}</div>
+          <h4>{step.title}</h4>
+          <p>{step.body}</p>
+          <a href={step.href} class="guide-link">{step.label}</a>
+        </article>
+      ))}
+    </div>
+
+    <blockquote>
+      Recommended first pass: dashboard → hotspots → dependencies → contributors → controls.
+    </blockquote>
+
+    <hr />
+
+    <h3>how-to guides</h3>
+    <p>Use these when you already know what you are trying to accomplish and need the shortest route to the right view.</p>
+
+    <div class="guide-grid">
+      {howToGuides.map((guide) => (
+        <article class="guide-card">
+          <h4>{guide.title}</h4>
+          <p>{guide.text}</p>
+          <ul class="link-list">
+            {guide.links.map((link) => (
+              <li><a href={link.href}>{link.label}</a></li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </div>
+
+    <hr />
+
+    <h3>reference</h3>
+    <p>Use this section when you know the name of a report area and want a quick description of what each page contains.</p>
+
+    <div class="reference-grid">
+      {referenceSections.map((section) => (
+        <section class="reference-card">
+          <h4>{section.label}</h4>
+          <dl>
+            {section.items.map(([href, text]) => (
+              <>
+                <dt><a href={href}>{href}</a></dt>
+                <dd>{text}</dd>
+              </>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </div>
+
+    <hr />
+
+    <h3>explanation</h3>
+    <p>Use these notes when you want to understand why the reports are organized the way they are and how to interpret them together.</p>
+
+    <h4>start with queues, not charts</h4>
+    <p>
+      Planetnik contains many charts, but the product is most useful when it helps you choose a better engineering action.
+      That is why <a href="/hotspots">Hotspots</a>, <a href="/controls">Goals &amp; Controls</a>, and
+      <a href="/findings">Findings</a> should usually anchor triage.
+    </p>
+
+    <h4>use multiple views to validate a story</h4>
+    <p>
+      A single metric is rarely enough. A file is more interesting when it is large <em>and</em> frequently changed.
+      A component is more important when it is central <em>and</em> weakly owned. Use structure, history, and people
+      views together.
+    </p>
+
+    <h4>read people and code together</h4>
+    <p>
+      Many delivery problems are socio-technical. Use <a href="/contributors">Contributors</a> and
+      <a href="/topology">Team Topology</a> alongside code-level reports to understand knowledge spread, coordination
+      risk, and ownership concentration.
+    </p>
+
+    <h4>prefer evidence before refactoring</h4>
+    <p>
+      Use <a href="/dependencies">Dependencies</a>, <a href="/files/temporal">Temporal Dependencies</a>, and
+      <a href="/duplication">Duplication</a> to build evidence for change. Refactoring is easier to defend when you can
+      show structural pressure, not just discomfort.
+    </p>
+  </div>
+</Dashboard>
+
+<style>
+  .guide {
+    max-width: none;
+  }
+
+  .guide > :not(.section-banner):not(.guide-grid):not(.reference-grid) {
+    max-width: 760px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-logo {
+    max-width: 320px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 0.75rem;
+  }
+
+  .tagline {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--color-text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .lead {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    line-height: 1.7;
+    margin-bottom: 0.85rem;
+    color: var(--color-text);
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 2rem 0;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+    text-transform: lowercase;
+  }
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  blockquote {
+    border-left: 3px solid var(--color-accent);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: var(--color-text-muted);
+    background: rgba(99, 102, 241, 0.04);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .guide-grid,
+  .reference-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    margin: 1.25rem 0 0;
+  }
+
+  .guide-card,
+  .reference-card {
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    background: #fff;
+    padding: 1.2rem 1.2rem 1.1rem;
+  }
+
+  .guide-card p,
+  .reference-card p,
+  .reference-card dd {
+    margin-bottom: 0;
+    color: var(--color-text-muted);
+  }
+
+  .guide-card-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-accent);
+    margin-bottom: 0.6rem;
+  }
+
+  .guide-link {
+    display: inline-flex;
+    margin-top: 0.9rem;
+  }
+
+  .link-list {
+    margin: 0.85rem 0 0 1rem;
+    line-height: 1.6;
+  }
+
+  .reference-card dl {
+    margin: 0.75rem 0 0;
+  }
+
+  .reference-card dt {
+    margin-top: 0.8rem;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.8rem;
+  }
+
+  .reference-card dt:first-child {
+    margin-top: 0;
+  }
+
+  .reference-card dd {
+    margin: 0.2rem 0 0;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 720px) {
+    .guide-grid,
+    .reference-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

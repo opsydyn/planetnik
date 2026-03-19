@@ -12,6 +12,7 @@ interface Dependency {
 
 interface DependencyMatrixProps {
   data: Dependency[]
+  helpText?: string
 }
 
 const LABEL_SIZE = 11
@@ -22,7 +23,7 @@ function truncate(s: string, max: number): string {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s
 }
 
-export default function DependencyMatrix({ data }: DependencyMatrixProps) {
+export default function DependencyMatrix({ data, helpText }: DependencyMatrixProps) {
   const names = Array.from(new Set(data.flatMap((d) => [d.from, d.to]))).sort()
   const n = names.length
   if (n === 0) return null
@@ -30,7 +31,7 @@ export default function DependencyMatrix({ data }: DependencyMatrixProps) {
   const size = LABEL_AREA + n * CELL_SIZE
 
   return (
-    <ChartCard height={size}>
+    <ChartCard height={size} helpText={helpText}>
       {(width) => <MatrixInner data={data} names={names} width={Math.max(width, size)} size={size} />}
     </ChartCard>
   )

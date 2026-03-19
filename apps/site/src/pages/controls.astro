@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
 import DonutChart from "../components/charts/DonutChart"
 import ReportDataGrid from "../components/tables/ReportDataGrid"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -114,19 +115,19 @@ const controlRows = [...controls]
       {statusChartData.length > 1 && (
         <section class="section">
           <h3>Control Status</h3>
-          <DonutChart client:load data={statusChartData} valueLabel="controls" />
+          <DonutChart client:load data={statusChartData} valueLabel="controls" helpText={chartHelp.controls.status} />
         </section>
       )}
 
       {goalRows.length > 0 && (
         <section class="section">
           <h3>Goal Coverage</h3>
-          <DistributionChart client:load data={goalRows} />
+          <DistributionChart client:visible data={goalRows} helpText={chartHelp.controls.goals} />
         </section>
       )}
 
       <ReportDataGrid
-        client:load
+        client:visible
         title="Control Inventory"
         description="Search controls by goal, metric, status, or description while keeping the status summary above."
         searchPlaceholder="Search goal, metric, or status"

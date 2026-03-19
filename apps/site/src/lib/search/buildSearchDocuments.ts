@@ -22,6 +22,14 @@ const pageDefinitions: PageDefinition[] = [
     section: "Overview",
   },
   {
+    title: "Guide",
+    subtitle: "How to use Planetnik",
+    description: "Onboarding guide organized with tutorials, how-to guidance, reference, and explanation.",
+    keywords: ["guide", "help", "documentation", "tutorial", "how-to", "reference", "explanation", "onboarding"],
+    route: "/guide",
+    section: "Overview",
+  },
+  {
     title: "Source Code Overview",
     subtitle: "Main and test code shape",
     description: "Overview of source code size, tests, and repository-wide structural distribution.",

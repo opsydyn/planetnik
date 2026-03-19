@@ -7,6 +7,7 @@ interface ForceGraphProps {
   edges: ForceGraphEdge[]
   height?: number
   emptyMessage?: string
+  helpText?: string
   onNodeClick?: (node: ForceGraphNode) => void
   footerNote?: string
 }
@@ -34,6 +35,7 @@ export default function ForceGraph({
   edges,
   height = 540,
   emptyMessage = "Not enough graph data to render this view.",
+  helpText,
   onNodeClick,
   footerNote,
 }: ForceGraphProps) {
@@ -75,7 +77,7 @@ export default function ForceGraph({
   }, [])
 
   return (
-    <ChartCard height={height}>
+    <ChartCard height={height} helpText={helpText}>
       {(width, cardHeight) =>
         ClientGraph ? (
           <ClientGraph

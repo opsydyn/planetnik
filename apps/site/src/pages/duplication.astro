@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../components/charts/DistributionChart"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import ReportDataGrid from "../components/tables/ReportDataGrid"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -81,20 +82,25 @@ const duplicationRows = sorted.map((d, index) => ({
 
   <section class="section">
     <h3>Block Size Distribution</h3>
-    <DistributionChart client:load data={distData} />
+    <DistributionChart client:load data={distData} helpText={chartHelp.duplication.blockDistribution} />
   </section>
 
   {mostDuplicatedFiles.length > 0 && (
     <section class="section">
       <h3>Most Duplicated Files</h3>
-      <HorizontalBarChart client:load data={mostDuplicatedFiles} valueLabel="duplicate blocks" />
+      <HorizontalBarChart
+        client:load
+        data={mostDuplicatedFiles}
+        valueLabel="duplicate blocks"
+        helpText={chartHelp.duplication.mostDuplicatedFiles}
+      />
     </section>
   )}
 
   <section class="section">
     <h3>Largest Duplicate Blocks</h3>
     <ReportDataGrid
-      client:load
+      client:visible
       title="Duplicate Block Table"
       description="Search exact files and line ranges while paging through duplicate blocks."
       searchPlaceholder="Search duplicated file path or line range"

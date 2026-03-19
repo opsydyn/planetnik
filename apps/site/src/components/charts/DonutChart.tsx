@@ -12,6 +12,7 @@ interface DonutItem {
 interface DonutChartProps {
   data: DonutItem[]
   valueLabel?: string
+  helpText?: string
 }
 
 const PALETTE = chartTheme.colors.palette
@@ -20,11 +21,11 @@ const LEGEND_WIDTH = 160
 const CHART_GAP = 16
 const CHART_PADDING = 16
 
-export default function DonutChart({ data, valueLabel }: DonutChartProps) {
+export default function DonutChart({ data, valueLabel, helpText }: DonutChartProps) {
   if (data.length === 0) return null
 
   return (
-    <ChartCard height={300}>
+    <ChartCard height={300} helpText={helpText}>
       {(width) => <DonutInner data={data} valueLabel={valueLabel} width={width} height={300} />}
     </ChartCard>
   )

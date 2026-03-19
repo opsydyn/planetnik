@@ -4,6 +4,7 @@ import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import DonutChart from "../components/charts/DonutChart"
 import TreemapChart from "../components/charts/Treemap"
 import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -71,9 +72,9 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
 
   <section class="section">
     <h3>Main Scope — By Language</h3>
-    <DonutChart client:load data={donutData} valueLabel="LOC" />
-    <TreemapChart client:load data={treemapData} valueLabel="LOC" />
-    <HorizontalBarChart client:load data={mainBarData} valueLabel="LOC" />
+    <DonutChart client:load data={donutData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageMix} />
+    <TreemapChart client:load data={treemapData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageTreemap} />
+    <HorizontalBarChart client:load data={mainBarData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageBars} />
     <table>
       <thead>
         <tr><th>Extension</th><th>Files</th><th>LOC</th><th>%</th></tr>
@@ -99,7 +100,13 @@ const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc
   {testExtensions.length > 0 && (
     <section class="section">
       <h3>Test Scope — By Language</h3>
-      <HorizontalBarChart client:load data={testBarData} valueLabel="LOC" barColor="#8b5cf6" />
+      <HorizontalBarChart
+        client:load
+        data={testBarData}
+        valueLabel="LOC"
+        barColor="#8b5cf6"
+        helpText={chartHelp.overview.testLanguageBars}
+      />
       <table>
         <thead>
           <tr><th>Extension</th><th>Files</th><th>LOC</th></tr>

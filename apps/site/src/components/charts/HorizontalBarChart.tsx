@@ -16,6 +16,7 @@ interface HorizontalBarChartProps {
   valueLabel?: string
   maxItems?: number
   barColor?: string
+  helpText?: string
 }
 
 const LABEL_WIDTH = 140
@@ -41,13 +42,14 @@ export default function HorizontalBarChart({
   valueLabel,
   maxItems = 15,
   barColor,
+  helpText,
 }: HorizontalBarChartProps) {
   const items = data.slice(0, maxItems)
   const height = items.length * ROW_HEIGHT
   const labelWidth = items.some((item) => item.icon) ? LABEL_WIDTH_WITH_ICON : LABEL_WIDTH
 
   return (
-    <ChartCard height={height}>
+    <ChartCard height={height} helpText={helpText}>
       {(width) => {
         const barAreaWidth = Math.max(width - labelWidth - VALUE_WIDTH - 16, 40)
         const maxValue = Math.max(...items.map((d) => d.value), 1)

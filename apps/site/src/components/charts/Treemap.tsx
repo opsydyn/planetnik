@@ -13,6 +13,7 @@ interface TreemapItem {
 interface TreemapChartProps {
   data: TreemapItem[]
   valueLabel?: string
+  helpText?: string
 }
 
 interface TreeNode {
@@ -24,11 +25,11 @@ interface TreeNode {
 
 const PALETTE = chartTheme.colors.palette
 
-export default function TreemapChart({ data, valueLabel }: TreemapChartProps) {
+export default function TreemapChart({ data, valueLabel, helpText }: TreemapChartProps) {
   if (data.length === 0) return null
 
   return (
-    <ChartCard height={400}>
+    <ChartCard height={400} helpText={helpText}>
       {(width) => <TreemapInner data={data} valueLabel={valueLabel} width={width} height={400} />}
     </ChartCard>
   )

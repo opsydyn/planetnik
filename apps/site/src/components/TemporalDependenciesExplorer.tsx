@@ -1,4 +1,5 @@
 import { startTransition, useDeferredValue, useId, useMemo, useState } from "react"
+import { chartHelp } from "../lib/chartHelp"
 import { buildTemporalForceGraph } from "../lib/forceGraph"
 import ForceGraph from "./graphs/ForceGraph"
 import HorizontalBarChart from "./charts/HorizontalBarChart"
@@ -203,6 +204,7 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
           edges={temporalForceGraph.edges}
           height={520}
           emptyMessage="Not enough matching file couplings to render a force graph for the current filter."
+          helpText={chartHelp.temporalDependencies.forceGraph}
           footerNote={`Showing ${filteredRows.length.toLocaleString()} filtered pair${filteredRows.length === 1 ? "" : "s"} in ${activeSection.periodLabel}.`}
         />
       </section>
@@ -212,7 +214,12 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
           <h3>Strongest Couplings</h3>
           <p>The highest shared-commit pairs in the current view.</p>
           {pairChartData.length > 0 ? (
-            <HorizontalBarChart data={pairChartData} valueLabel="shared commits" maxItems={12} />
+            <HorizontalBarChart
+              data={pairChartData}
+              valueLabel="shared commits"
+              maxItems={12}
+              helpText={chartHelp.temporalDependencies.strongestPairs}
+            />
           ) : (
             <div className="temporal-chart-empty">No pairs match the current search.</div>
           )}
@@ -221,7 +228,13 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
           <h3>Hotspot Files</h3>
           <p>Files that appear most often across the current coupling set.</p>
           {hotspotChartData.length > 0 ? (
-            <HorizontalBarChart data={hotspotChartData} valueLabel="shared commits" maxItems={12} barColor="#8b5cf6" />
+            <HorizontalBarChart
+              data={hotspotChartData}
+              valueLabel="shared commits"
+              maxItems={12}
+              barColor="#8b5cf6"
+              helpText={chartHelp.temporalDependencies.hotspotFiles}
+            />
           ) : (
             <div className="temporal-chart-empty">No files match the current search.</div>
           )}

@@ -5,6 +5,7 @@ import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesSta
 import "@xyflow/react/dist/style.css"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ForceGraph from "./graphs/ForceGraph"
+import { chartHelp } from "../lib/chartHelp"
 import { buildContributorForceGraph } from "../lib/forceGraph"
 import {
   type PeopleDep,
@@ -388,6 +389,7 @@ function TopologyGraphContent({ periodKeys }: { periodKeys: string[] }) {
             edges={contributorForceGraph.edges}
             height={520}
             emptyMessage="Not enough contributor links are available to render the force-directed view for this period."
+            helpText={chartHelp.topology.forceGraph}
             footerNote={`Showing ${currentEdges.length.toLocaleString()} contributor link${currentEdges.length === 1 ? "" : "s"} for ${selectedPeriod}.`}
           />
         </div>

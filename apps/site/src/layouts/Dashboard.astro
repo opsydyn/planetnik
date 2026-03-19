@@ -1,8 +1,8 @@
 ---
-import { ClientRouter } from "astro:transitions"
-import GlobalSearch from "../components/search/GlobalSearch"
-import SystemIcon from "../components/icons/SystemIcon.astro"
-import { shouldBypassClientRouter } from "../lib/reloadRoutes"
+import GlobalSearch from "../components/search/GlobalSearch";
+import SystemIcon from "../components/icons/SystemIcon.astro";
+import { shouldBypassClientRouter } from "../lib/reloadRoutes";
+import { ClientRouter } from 'astro:transitions';
 
 interface Props {
   title: string
@@ -17,6 +17,7 @@ const navSections = [
     iconName: "house",
     items: [
       { href: "/about", label: "About" },
+      { href: "/guide", label: "Guide" },
       { href: "/", label: "Dashboard" },
       { href: "/overview", label: "Source Code Overview" },
       { href: "/metrics", label: "Metrics" },
@@ -80,7 +81,7 @@ const currentPath = Astro.url.pathname
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title} — {projectName}</title>
-    <!-- <ClientRouter /> -->
+    <ClientRouter />
     <style>
       * {
         margin: 0;
@@ -112,6 +113,7 @@ const currentPath = Astro.url.pathname
         background: var(--color-bg);
         color: var(--color-text);
         min-height: 100vh;
+        isolation: isolate;
       }
 
       /* ── Mobile top bar ── */
@@ -429,7 +431,7 @@ const currentPath = Astro.url.pathname
       <slot />
     </main>
 
-    <GlobalSearch client:load projectName={projectName} />
+    <GlobalSearch client:idle projectName={projectName} />
 
     <script is:inline>
       if (!window.__planetnikRouteVersionSetup) {

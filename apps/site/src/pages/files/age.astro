@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
 import DonutChart from "../../components/charts/DonutChart"
 import ReportDataGrid from "../../components/tables/ReportDataGrid"
+import { chartHelp } from "../../lib/chartHelp"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -74,11 +75,16 @@ const ageDetailRows = ageCategories
     <>
     <section class="section">
       <h3>Age Risk Overview</h3>
-      <DonutChart client:load data={distData.map((d) => ({ label: d.label, value: d.value }))} valueLabel="files" />
+      <DonutChart
+        client:load
+        data={distData.map((d) => ({ label: d.label, value: d.value }))}
+        valueLabel="files"
+        helpText={chartHelp.fileAge.overview}
+      />
     </section>
     <section class="section">
       <h3>File Age Distribution</h3>
-      <DistributionChart client:load data={distData} />
+      <DistributionChart client:visible data={distData} helpText={chartHelp.fileAge.distribution} />
     </section>
     </>
   )}
@@ -86,7 +92,7 @@ const ageDetailRows = ageCategories
   <section class="section">
     <h3>File Age Detail</h3>
     <ReportDataGrid
-      client:load
+      client:visible
       title="Age Categories"
       description="Search and sort age-risk categories without losing the summary charts above."
       searchPlaceholder="Search age category"

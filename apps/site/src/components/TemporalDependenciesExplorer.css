@@ -1,11 +1,13 @@
 .temporal-explorer {
   display: grid;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 .temporal-toolbar {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .temporal-periods {
@@ -102,6 +104,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .temporal-summary-card {
@@ -111,6 +114,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 18px;
   background: #fff;
+  min-width: 0;
 }
 
 .temporal-summary-card span {
@@ -136,17 +140,20 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .temporal-force-section,
 .temporal-force-header {
   display: grid;
   gap: 0.8rem;
+  min-width: 0;
 }
 
 .temporal-chart-panel {
   display: grid;
   gap: 0.8rem;
+  min-width: 0;
 }
 
 .temporal-force-header h3,
@@ -177,6 +184,7 @@
 .temporal-table-section {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .temporal-table-header {

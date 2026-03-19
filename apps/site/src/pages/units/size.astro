@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DistributionChart from "../../components/charts/DistributionChart"
 import DonutChart from "../../components/charts/DonutChart"
 import ReportDataGrid from "../../components/tables/ReportDataGrid"
+import { chartHelp } from "../../lib/chartHelp"
 import Dashboard from "../../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -62,18 +63,18 @@ const unitSizeRows = sorted.map((u) => ({
 
   <section class="section">
     <h3>Size Risk</h3>
-    <DonutChart client:load data={riskData} valueLabel="units" />
+    <DonutChart client:load data={riskData} valueLabel="units" helpText={chartHelp.unitSize.risk} />
   </section>
 
   <section class="section">
     <h3>Size Distribution</h3>
-    <DistributionChart client:load data={distData} />
+    <DistributionChart client:load data={distData} helpText={chartHelp.unitSize.distribution} />
   </section>
 
   <section class="section">
     <h3>Largest Units</h3>
     <ReportDataGrid
-      client:load
+      client:visible
       title="Unit Size Table"
       description="Search across the full unit inventory instead of a fixed top-50 snapshot."
       searchPlaceholder="Search unit or file path"

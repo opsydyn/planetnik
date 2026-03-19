@@ -3,6 +3,7 @@ import { getCollection, getEntry } from "astro:content"
 import DependencyMatrix from "../components/charts/DependencyMatrix"
 import HorizontalBarChart from "../components/charts/HorizontalBarChart"
 import ReportDataGrid from "../components/tables/ReportDataGrid"
+import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 
 const summary = await getEntry("analysis", "summary")
@@ -66,23 +67,29 @@ const dependencySections = [...groupedDependencies.entries()]
         </header>
         <section class="section">
           <h4>Dependency Matrix</h4>
-          <DependencyMatrix client:load data={section.matrixData} />
+          <DependencyMatrix client:load data={section.matrixData} helpText={chartHelp.dependencies.matrix} />
         </section>
         <section class="section">
           <h4>Most Depended-On (Incoming)</h4>
-          <HorizontalBarChart client:load data={section.inDegreeData} valueLabel="incoming refs" />
+          <HorizontalBarChart
+            client:visible
+            data={section.inDegreeData}
+            valueLabel="incoming refs"
+            helpText={chartHelp.dependencies.incoming}
+          />
         </section>
         <section class="section">
           <h4>Most Dependent (Outgoing)</h4>
           <HorizontalBarChart
-            client:load
+            client:visible
             data={section.outDegreeData}
             valueLabel="outgoing refs"
             barColor="#8b5cf6"
+            helpText={chartHelp.dependencies.outgoing}
           />
         </section>
         <ReportDataGrid
-          client:load
+          client:visible
           title="Dependency Links"
           description="Search and paginate component links for this decomposition without losing the matrix view."
           searchPlaceholder="Search source or target component"

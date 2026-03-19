@@ -11,6 +11,7 @@ interface CommitHeatmapProps {
   endDate?: string
   weeks?: number
   height?: number
+  helpText?: string
 }
 
 const DAY_LABEL_WIDTH = 40
@@ -24,13 +25,13 @@ const MAX_CELL_SIZE = 14
 const CELL_COLORS = ["#e0e7ff", "#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1", "#4338ca"]
 const VISIBLE_WEEKDAY_INDICES = new Set([0, 2, 4])
 
-export default function CommitHeatmap({ data, endDate, weeks = 53, height = 250 }: CommitHeatmapProps) {
+export default function CommitHeatmap({ data, endDate, weeks = 53, height = 250, helpText }: CommitHeatmapProps) {
   if (data.length === 0) return null
 
   const heatmap = buildContributorHeatmap(data, { endDate, weeks })
 
   return (
-    <ChartCard height={height}>
+    <ChartCard height={height} helpText={helpText}>
       {(width) => <CommitHeatmapInner width={width} height={height} heatmap={heatmap} />}
     </ChartCard>
   )
