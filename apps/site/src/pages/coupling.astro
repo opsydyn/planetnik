@@ -209,7 +209,12 @@ const couplingRows = model.snapshots.map((snapshot) => ({
       {riskTierData.length > 1 && (
         <section class="section">
           <h3>Risk Tier Mix</h3>
-          <DonutChart client:visible data={riskTierData} valueLabel="components" />
+          <DonutChart
+            client:visible
+            data={riskTierData}
+            valueLabel="components"
+            helpText={chartHelp.coupling.riskTierMix}
+          />
         </section>
       )}
 
