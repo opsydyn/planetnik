@@ -74,6 +74,8 @@ export const chartHelp = {
       "Shows the average coupling mix across the selected component model. If one slice dominates, make the next improvement cycle target that class of problem first.",
     dominantBreakdown:
       "Shows which coupling dimension dominates each component. A healthy model spreads risk instead of clustering too many components under one failure mode.",
+    riskTierMix:
+      "Shows how the current component set splits across coupling risk tiers. If the high or critical share grows, reduce system pressure in those boundaries before pushing more change through them.",
     topComponents:
       "Ranks the components with the highest systemic coupling risk. Start with high-risk items that also have clear explainability reasons and existing hotspot evidence.",
   },
