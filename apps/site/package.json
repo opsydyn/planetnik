@@ -10,7 +10,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "typecheck": "astro check"
+    "typecheck": "astro check",
+    "optimize-images": "sharp -i public/*.png -o public/ -f webp -- resize 1024"
   },
   "dependencies": {
     "@astrojs/react": "^5.0.0",
@@ -54,6 +55,7 @@
     "@types/d3-hierarchy": "^3.1.7",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "sharp-cli": "^5.2.0",
     "typescript": "^5.9.3"
   }
 }
