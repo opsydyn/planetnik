@@ -1,0 +1,236 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
+import { getContributorDisplayName } from "../../../../lib/contributors"
+import {
+  getLandscapeRepoRouteParam,
+  getLandscapeRepositoryContributorHref,
+  getLandscapeRepositoryHref,
+  readLandscapeRepoJson,
+} from "../../../../lib/landscape"
+import Dashboard from "../../../../layouts/Dashboard.astro"
+
+interface RepoAnalysisSummary {
+  metadata?: {
+    name?: string
+    description?: string
+  }
+}
+
+interface RepoContributorSummary {
+  email: string
+  userName?: string
+  commitsCount: number
+  commitsCount30Days: number
+  commitsCount90Days: number
+  firstCommitDate: string
+  latestCommitDate: string
+  isBot?: boolean
+}
+
+interface RepoContributorsExport {
+  contributorCount?: number
+  contributors?: RepoContributorSummary[]
+}
+
+interface RepoContributorImpactEntry {
+  email: string
+  glue_score: number
+  snacking_score: number
+  structural_impact_score: number
+  visible_activity_score: number
+  dominant_dimension: string
+  is_glue: boolean
+  is_snacking: boolean
+}
+
+interface RepoContributorImpactExport {
+  periods?: Array<{
+    period_key?: string
+    contributors?: RepoContributorImpactEntry[]
+  }>
+}
+
+export async function getStaticPaths() {
+  const repositories = await getCollection("landscapeRepositories")
+
+  return repositories.map((repository) => ({
+    params: { repo: getLandscapeRepoRouteParam(repository.data.repoKey) },
+    props: {
+      repositoryId: repository.id,
+      repoKey: repository.data.repoKey,
+    },
+  }))
+}
+
+const { repositoryId, repoKey } = Astro.props as {
+  repositoryId: string
+  repoKey: string
+}
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const repository = await getEntry("landscapeRepositories", repositoryId)
+if (!repository) {
+  throw new Error(`Landscape repository entry not found for ${repositoryId}`)
+}
+
+const repoSummary = readLandscapeRepoJson<RepoAnalysisSummary>(repoKey, "analysisResults.json")
+const repoContributors = readLandscapeRepoJson<RepoContributorsExport>(repoKey, "contributors.json")
+const repoContributorImpact = readLandscapeRepoJson<RepoContributorImpactExport>(repoKey, "contributor_impact.json")
+
+const impactByEmail = new Map(
+  (repoContributorImpact?.periods?.find((period) => period.period_key === "all_time")?.contributors ?? []).map((entry) => [
+    entry.email,
+    entry,
+  ]),
+)
+
+const contributorRows = (repoContributors?.contributors ?? [])
+  .slice()
+  .sort((left, right) => right.commitsCount - left.commitsCount || left.email.localeCompare(right.email))
+  .map((contributor) => {
+    const impact = impactByEmail.get(contributor.email)
+    return {
+      id: contributor.email,
+      contributor: getContributorDisplayName({ email: contributor.email, userName: contributor.userName }),
+      href: getLandscapeRepositoryContributorHref(repoKey, contributor.email),
+      email: contributor.userName ? contributor.email : "",
+      commitsCount: contributor.commitsCount,
+      commits30d: contributor.commitsCount30Days,
+      commits90d: contributor.commitsCount90Days,
+      latestCommitDate: contributor.latestCommitDate,
+      firstCommitDate: contributor.firstCommitDate,
+      type: contributor.isBot ? "Bot" : "Human",
+      glueScore: impact ? impact.glue_score.toFixed(1) : "—",
+      structuralImpact: impact ? impact.structural_impact_score.toFixed(1) : "—",
+      snackRisk: impact ? impact.snacking_score.toFixed(1) : "—",
+      signal: impact?.is_glue ? "Glue" : impact?.is_snacking ? "Snacking" : impact ? impact.dominant_dimension.replace(/_/g, " ") : "—",
+    }
+  })
+
+const projectName = reportContext.data.title
+const repoName = repository.data.name
+const repoDescription = repository.data.description || repoSummary?.metadata?.description || "Contributor inventory for the selected repository."
+const botCount = (repoContributors?.contributors ?? []).filter((contributor) => contributor.isBot).length
+const humanCount = Math.max(contributorRows.length - botCount, 0)
+const topContributor = contributorRows[0]
+---
+
+<Dashboard
+  title={`${repoName} Contributors`}
+  projectName={projectName}
+  repoScope={{ repoKey, repoName }}
+>
+  <a class="back-link" href={getLandscapeRepositoryHref(repoKey)}>&larr; Back to {repoName}</a>
+
+  <header class="page-header">
+    <div>
+      <h2>Repository Contributors</h2>
+      <p class="subtitle">{repoDescription}</p>
+    </div>
+  </header>
+
+  <section class="stats-grid">
+    <article class="stat-card">
+      <div class="stat-value">{contributorRows.length.toLocaleString()}</div>
+      <div class="stat-label">Contributors</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{humanCount.toLocaleString()}</div>
+      <div class="stat-label">Humans</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{botCount.toLocaleString()}</div>
+      <div class="stat-label">Bots</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{topContributor?.contributor || "—"}</div>
+      <div class="stat-label">Top Committer</div>
+    </article>
+  </section>
+
+  <ReportDataGrid
+    client:visible
+    title="Repository Contributors"
+    description="Open repo-scoped contributor detail and inspect impact, collaboration, and activity inside this repository."
+    searchPlaceholder="Search contributor or impact signal"
+    rows={contributorRows}
+    columns={[
+      { field: "contributor", headerName: "Contributor", type: "link", hrefField: "href", secondaryField: "email", minWidth: 240, flex: 1.3, sort: "asc" },
+      { field: "type", headerName: "Type", minWidth: 100 },
+      { field: "commitsCount", headerName: "Commits", type: "number", minWidth: 110, sort: "desc" },
+      { field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+      { field: "commits90d", headerName: "Commits (90d)", type: "number", minWidth: 130 },
+      { field: "glueScore", headerName: "Glue Score", minWidth: 120 },
+      { field: "structuralImpact", headerName: "Structural Impact", minWidth: 150 },
+      { field: "snackRisk", headerName: "Snack Risk", minWidth: 120 },
+      { field: "signal", headerName: "Signal", minWidth: 180 },
+      { field: "firstCommitDate", headerName: "First Commit", type: "date", minWidth: 130 },
+      { field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+    ]}
+  />
+</Dashboard>
+
+<style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+
+  .back-link:hover {
+    color: var(--color-accent);
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .subtitle {
+    color: var(--color-text-muted);
+    max-width: 70ch;
+    margin-top: 0.35rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.15rem 1.2rem;
+  }
+
+  .stat-value {
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stat-label {
+    margin-top: 0.45rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.78rem;
+  }
+</style>

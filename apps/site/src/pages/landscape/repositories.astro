@@ -1,0 +1,151 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../../components/tables/ReportDataGrid"
+import { chartHelp } from "../../lib/chartHelp"
+import { getLandscapeRepositoryHref } from "../../lib/landscape"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const repositories = await getCollection("landscapeRepositories")
+const projectName = reportContext.data.title
+
+const sortedRepositories = [...repositories].sort((left, right) => right.data.mainLinesOfCode - left.data.mainLinesOfCode)
+const totalRepositories = sortedRepositories.length
+const active30d = sortedRepositories.filter((repository) => repository.data.commits30d > 0).length
+const totalMainLoc = sortedRepositories.reduce((sum, repository) => sum + repository.data.mainLinesOfCode, 0)
+const topRepositoryBars = sortedRepositories.slice(0, 12).map((repository) => ({
+  label: repository.data.name,
+  value: repository.data.mainLinesOfCode,
+}))
+
+const rows = sortedRepositories.map((repository) => ({
+  id: repository.id,
+  name: repository.data.name,
+  href: getLandscapeRepositoryHref(repository.data.repoKey),
+  description: repository.data.description || "—",
+  mainLinesOfCode: repository.data.mainLinesOfCode,
+  mainFilesCount: repository.data.mainFilesCount,
+  commits30d: repository.data.commits30d,
+  commits90d: repository.data.commits90d,
+  contributorsCount: repository.data.contributorsCount,
+  contributors30d: repository.data.contributors30d,
+  latestCommitDate: repository.data.latestCommitDate,
+  tags: repository.data.tags.map((tag) => tag.name).join(" • ") || "—",
+}))
+---
+
+<Dashboard title="Landscape Repositories" projectName={projectName}>
+  <h2>Repositories</h2>
+  <p class="subtitle">
+    Portfolio view of repository size, recent activity, contributor spread, and tag coverage.
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{totalRepositories.toLocaleString()}</div>
+      <div class="card-label">Repositories</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{active30d.toLocaleString()}</div>
+      <div class="card-label">Active (30d)</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalMainLoc.toLocaleString()}</div>
+      <div class="card-label">Main LOC</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{Math.round(totalMainLoc / Math.max(totalRepositories, 1)).toLocaleString()}</div>
+      <div class="card-label">Avg LOC per Repo</div>
+    </div>
+  </div>
+
+  {topRepositoryBars.length > 0 && (
+    <section class="section">
+      <h3>Largest Repositories</h3>
+      <HorizontalBarChart
+        client:visible
+        data={topRepositoryBars}
+        valueLabel="LOC"
+        maxItems={12}
+        helpText={chartHelp.landscape.topRepositories}
+      />
+    </section>
+  )}
+
+  <ReportDataGrid
+    client:visible
+    title="Repository Inventory"
+    description="Search repositories by name, tag, description, or recent activity."
+    searchPlaceholder="Search repository, tag, or description"
+    rows={rows}
+    columns={[
+      { field: "name", headerName: "Repository", type: "link", hrefField: "href", minWidth: 180, flex: 1 },
+      { field: "description", headerName: "Description", type: "multiline", minWidth: 280, flex: 1.4 },
+      { field: "mainLinesOfCode", headerName: "Main LOC", type: "number", minWidth: 120, sort: "desc" },
+      { field: "mainFilesCount", headerName: "Files", type: "number", minWidth: 100 },
+      { field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+      { field: "commits90d", headerName: "Commits (90d)", type: "number", minWidth: 130 },
+      { field: "contributorsCount", headerName: "Contributors", type: "number", minWidth: 120 },
+      { field: "contributors30d", headerName: "Contributors (30d)", type: "number", minWidth: 160 },
+      { field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+      { field: "tags", headerName: "Tags", type: "multiline", minWidth: 220, flex: 1 },
+    ]}
+  />
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 72ch;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .card-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    margin-top: 0.45rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .section {
+    margin-bottom: 1.75rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+
+  @media (min-width: 720px) {
+    .cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>

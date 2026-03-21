@@ -20,6 +20,7 @@ import {
   MetricRangeControl,
   MetricsWithGoal,
   NamedSourceCodeAspect,
+  NumericMetric,
   Range,
   SourceFile,
   SourceFileDependency,
@@ -1104,6 +1105,148 @@ describe("DataExporter", () => {
       ])
       expect(exported.concerns).toEqual([{ name: "Payments", files: 2, linesOfCode: 160 }])
       expect(exported.collaborators).toEqual([{ email: "bob@example.com", sharedFiles: 2 }])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData writes landscape-friendly analysis summary and structured contributors JSON", () => {
+    const results = new CodeAnalysisResults()
+    const config = new CodeConfiguration()
+    config.metadata = {
+      name: "RepoA",
+      description: "Repository A",
+      tooltip: "Example",
+      logoLink: "",
+      links: [],
+    }
+    results.codeConfiguration = config
+
+    results.mainAspectAnalysisResults.filesCount = 1
+    results.mainAspectAnalysisResults.linesOfCode = 120
+    results.mainAspectAnalysisResults.linesOfCodePerExtension = [new NumericMetric("java", 120)]
+
+    results.testAspectAnalysisResults.filesCount = 1
+    results.testAspectAnalysisResults.linesOfCode = 40
+    results.testAspectAnalysisResults.linesOfCodePerExtension = [new NumericMetric("java", 40)]
+
+    results.generatedAspectAnalysisResults.filesCount = 0
+    results.generatedAspectAnalysisResults.linesOfCode = 0
+    results.buildAndDeployAspectAnalysisResults.filesCount = 1
+    results.buildAndDeployAspectAnalysisResults.linesOfCode = 12
+    results.otherAspectAnalysisResults.filesCount = 1
+    results.otherAspectAnalysisResults.linesOfCode = 5
+
+    results.filesHistoryAnalysisResults.firstDate = "2024-01-10"
+    results.filesHistoryAnalysisResults.latestDate = "2024-06-20"
+
+    const alice = new Contributor("alice@example.com")
+    alice.userName = "Alice"
+    alice.commitsCount = 7
+    alice.commitsCount30Days = 2
+    alice.commitsCount90Days = 4
+    alice.commitsCount180Days = 6
+    alice.commitsCount365Days = 7
+    alice.firstCommitDate = "2024-01-10"
+    alice.latestCommitDate = "2024-06-20"
+    results.contributorsAnalysisResults.latestCommitDate = "2024-06-20"
+    results.contributorsAnalysisResults.contributors = [alice]
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-data-export-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const summary = JSON.parse(readFileSync(join(reportsFolder, "data", "analysisResults.json"), "utf-8")) as {
+        metadata: { name: string }
+        mainAspectAnalysisResults: {
+          filesCount: number
+          linesOfCode: number
+          linesOfCodePerExtension: Array<{ extension: string; linesOfCode: number }>
+        }
+        testAspectAnalysisResults: { linesOfCode: number }
+        buildAndDeployAspectAnalysisResults: { linesOfCode: number }
+        otherAspectAnalysisResults: { linesOfCode: number }
+        contributorsAnalysisResults: {
+          latestCommitDate: string
+          contributors: Array<{ email: string; commitsCount: number }>
+        }
+        filesHistoryAnalysisResults: { firstDate: string; latestDate: string }
+      }
+      const contributorsJson = JSON.parse(readFileSync(join(reportsFolder, "data", "contributors.json"), "utf-8")) as {
+        contributorCount: number
+        contributors: Array<{ email: string; userName: string; commitsCount: number }>
+      }
+
+      expect(summary.metadata.name).toBe("RepoA")
+      expect(summary.mainAspectAnalysisResults).toEqual({
+        filesCount: 1,
+        linesOfCode: 120,
+        linesOfCodePerExtension: [{ extension: "java", linesOfCode: 120 }],
+      })
+      expect(summary.testAspectAnalysisResults.linesOfCode).toBe(40)
+      expect(summary.buildAndDeployAspectAnalysisResults.linesOfCode).toBe(12)
+      expect(summary.otherAspectAnalysisResults.linesOfCode).toBe(5)
+      expect(summary.contributorsAnalysisResults.latestCommitDate).toBe("2024-06-20")
+      expect(summary.contributorsAnalysisResults.contributors).toEqual([
+        expect.objectContaining({
+          email: "alice@example.com",
+          commitsCount: 7,
+        }),
+      ])
+      expect(summary.filesHistoryAnalysisResults).toEqual({
+        firstDate: "2024-01-10",
+        latestDate: "2024-06-20",
+      })
+
+      expect(contributorsJson.contributorCount).toBe(1)
+      expect(contributorsJson.contributors).toEqual([
+        expect.objectContaining({
+          email: "alice@example.com",
+          userName: "Alice",
+          commitsCount: 7,
+        }),
+      ])
+    } finally {
+      rmSync(reportsFolder, { recursive: true, force: true })
+    }
+  })
+
+  test("exportData truncates duplicate JSON payloads to the maximum export size", () => {
+    const results = new CodeAnalysisResults()
+    const file = new SourceFile("src/a.ts")
+    file.linesOfCode = 100
+
+    const block = new DuplicatedFileBlock()
+    block.sourceFile = file
+    block.sourceFileCleanedLinesOfCode = 90
+    block.startLine = 1
+    block.endLine = 10
+    block.cleanedStartLine = 1
+    block.cleanedEndLine = 10
+
+    const instance = new DuplicationInstance()
+    instance.blockSize = 10
+    instance.duplicatedFileBlocks = [block]
+    results.duplicationAnalysisResults.allDuplicates = Array.from(
+      { length: DataExporter.MAX_EXPORT_LIST_SIZE + 1 },
+      () => instance,
+    )
+
+    const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-data-export-"))
+
+    try {
+      new DataExporter(results, reportsFolder).exportData()
+
+      const duplicates = JSON.parse(readFileSync(join(reportsFolder, "data", "duplicates.json"), "utf-8")) as {
+        duplicates: unknown[]
+        totalDuplicatesCount: number
+        truncated: boolean
+      }
+
+      expect(duplicates.totalDuplicatesCount).toBe(DataExporter.MAX_EXPORT_LIST_SIZE + 1)
+      expect(duplicates.truncated).toBe(true)
+      expect(duplicates.duplicates).toHaveLength(DataExporter.MAX_EXPORT_LIST_SIZE)
     } finally {
       rmSync(reportsFolder, { recursive: true, force: true })
     }

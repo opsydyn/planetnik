@@ -7,6 +7,11 @@ import Dashboard from "../layouts/Dashboard.astro"
 // Import triggers .env side-effect, ensuring PLANETNIK_DATA_DIR is set
 import { resolveDataDir } from "../loaders/planetnik-loader"
 
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode === "landscape") {
+  return Astro.redirect("/landscape/topology")
+}
+
 const summary = await getEntry("analysis", "summary")
 const projectName = summary?.data.metadata.name ?? "Unknown"
 

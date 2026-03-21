@@ -13,6 +13,11 @@ export default defineConfig({
         access: "secret",
         optional: true,
       }),
+      PLANETNIK_LANDSCAPE_DATA_DIR: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
     },
   },
   fonts: [

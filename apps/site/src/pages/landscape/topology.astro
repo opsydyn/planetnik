@@ -1,0 +1,226 @@
+---
+import { getEntry } from "astro:content"
+import ForceGraph from "../../components/graphs/ForceGraph"
+import StaticReportTable from "../../components/tables/StaticReportTable.astro"
+import { buildContributorForceGraph } from "../../lib/forceGraph"
+import { chartHelp } from "../../lib/chartHelp"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const topology = await getEntry("landscapeTopology", "topology")
+const projectName = reportContext.data.title
+const requestedPeriod = Astro.url.searchParams.get("period") ?? "all_time"
+const selectedPeriod = topology?.data.periodsByKey[requestedPeriod] ?? topology?.data.periodsByKey.all_time
+const maxVisualConnections = 1800
+const visualConnections = selectedPeriod
+  ? [...selectedPeriod.connections]
+      .sort((left, right) => {
+        if (left.sharedFilesCount !== right.sharedFilesCount) return right.sharedFilesCount - left.sharedFilesCount
+        if (left.from !== right.from) return left.from.localeCompare(right.from)
+        return left.to.localeCompare(right.to)
+      })
+      .slice(0, maxVisualConnections)
+  : []
+const isGraphTrimmed = Boolean(selectedPeriod && visualConnections.length < selectedPeriod.connectionCount)
+
+const graph = selectedPeriod
+  ? buildContributorForceGraph(
+      visualConnections.map((connection) => ({
+        from: connection.from,
+        to: connection.to,
+        count: connection.sharedFilesCount,
+        files: connection.sharedFiles,
+      })),
+    )
+  : { nodes: [], edges: [] }
+
+const graphNodes = graph.nodes.map((node) => ({ ...node, href: undefined }))
+---
+
+<Dashboard title="Landscape Team Topology" projectName={projectName}>
+  <h2>Team Topology</h2>
+  <p class="subtitle">
+    Cross-repository contributor coordination derived from shared-file work in the selected period.
+  </p>
+
+  <div class="periods">
+    {(topology?.data.periods ?? []).map((period) => (
+      <a
+        href={`/landscape/topology?period=${period.periodKey}`}
+        class:list={["period-link", { active: period.periodKey === selectedPeriod?.periodKey }]}
+      >
+        {period.periodLabel}
+        <span>{period.connectionCount}</span>
+      </a>
+    ))}
+  </div>
+
+  {selectedPeriod ? (
+    <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{selectedPeriod.contributorCount.toLocaleString()}</div>
+          <div class="card-label">Contributors</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{selectedPeriod.connectionCount.toLocaleString()}</div>
+          <div class="card-label">Connections</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{selectedPeriod.cMean.toFixed(1)}</div>
+          <div class="card-label">Mean Coordination</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{selectedPeriod.mostConnectedContributor?.displayName ?? "—"}</div>
+          <div class="card-label">Most Connected</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h3>Collaboration Graph</h3>
+        {isGraphTrimmed ? (
+          <p class="hint">
+            Visualizing the strongest {visualConnections.length.toLocaleString()} of {selectedPeriod.connectionCount.toLocaleString()} links to keep the
+            graph responsive.
+          </p>
+        ) : null}
+        <ForceGraph
+          client:only="react"
+          nodes={graphNodes}
+          edges={graph.edges}
+          helpText={chartHelp.landscape.topology}
+          footerNote={
+            isGraphTrimmed
+              ? `Showing the strongest ${visualConnections.length.toLocaleString()} of ${selectedPeriod.connectionCount.toLocaleString()} cross-repository contributor links in ${selectedPeriod.periodLabel}.`
+              : `Showing ${selectedPeriod.connectionCount.toLocaleString()} cross-repository contributor links in ${selectedPeriod.periodLabel}.`
+          }
+        />
+      </section>
+
+      <section class="section">
+        <h3>Strongest Connections</h3>
+        <StaticReportTable ariaLabel="Landscape strongest contributor connections">
+          <thead>
+            <tr>
+              <th><span>Contributor 1</span></th>
+              <th><span>Contributor 2</span></th>
+              <th><span>Shared Files</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedPeriod.strongestConnections.slice(0, 25).map((connection) => (
+              <tr>
+                <td><code class="report-static-table__code">{connection.from}</code></td>
+                <td><code class="report-static-table__code">{connection.to}</code></td>
+                <td class="report-static-table__num">{connection.sharedFilesCount.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </StaticReportTable>
+      </section>
+    </>
+  ) : (
+    <div class="empty">
+      <p>No landscape topology data was exported.</p>
+    </div>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 72ch;
+  }
+
+  .periods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .period-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    color: var(--color-text);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .period-link span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+
+  .period-link.active {
+    border-color: var(--color-accent);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card,
+  .empty {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .card-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    margin-top: 0.45rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .section {
+    margin-bottom: 1.75rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+
+  .hint {
+    margin: -0.2rem 0 0.85rem;
+    color: var(--color-text-muted);
+    max-width: 72ch;
+  }
+
+  @media (min-width: 720px) {
+    .cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>

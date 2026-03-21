@@ -1,8 +1,11 @@
 import type { ContributorRepositoryInfo } from "@planetnik/analyzer"
+import { getLandscapeRepoKey } from "./getLandscapeRepoKey.js"
 
 export class ContributorRepositoryInfoExport {
   name: string
   description: string
+  analysisResultsPath: string
+  repoKey: string
   firstCommitDate: string
   latestCommitDate: string
   commitsCount: number
@@ -14,8 +17,11 @@ export class ContributorRepositoryInfoExport {
 
   constructor(info: ContributorRepositoryInfo) {
     const metadata = info.repositoryAnalysisResult?.metadata
+    const analysisResultsPath = info.repositoryAnalysisResult?.analysisResultsPath ?? ""
     this.name = metadata?.name ?? ""
     this.description = metadata?.description ?? ""
+    this.analysisResultsPath = analysisResultsPath
+    this.repoKey = analysisResultsPath ? getLandscapeRepoKey(analysisResultsPath) : ""
     this.firstCommitDate = info.firstCommitDate
     this.latestCommitDate = info.latestCommitDate
     this.commitsCount = info.commitsCount

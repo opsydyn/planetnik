@@ -8,6 +8,11 @@ import { chartHelp } from "../lib/chartHelp"
 import { getTechnologyIconData } from "../lib/iconography"
 import Dashboard from "../layouts/Dashboard.astro"
 
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode === "landscape") {
+  return Astro.redirect("/landscape")
+}
+
 const summary = await getEntry("analysis", "summary")
 const filesMain = await getCollection("filesMain")
 const filesTest = await getCollection("filesTest")

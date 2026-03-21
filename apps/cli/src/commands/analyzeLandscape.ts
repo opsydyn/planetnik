@@ -3,22 +3,12 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { Command, Options } from "@effect/cli"
+import { LandscapeAnalysisInitiator, LandscapeAnalyzer, ScopeCreator } from "@planetnik/analyzer"
 import {
-  CodeAnalyzer,
-  CodeAnalyzerSettings,
-  CodeConfiguration,
-  LandscapeAnalysisInitiator,
-  LandscapeAnalyzer,
-  NamedSourceCodeAspect,
-  ScopeCreator,
-} from "@planetnik/analyzer"
-import {
-  BasicSourceCodeReportGenerator,
-  DataExporter,
+  LandscapeDataExport,
   LandscapeReportGenerator,
   REPORTS_HTML_FOOTER,
   REPORTS_HTML_HEADER,
-  ReportFileExporter,
   ReportRenderer,
   RichTextReport,
 } from "@planetnik/reports"
@@ -26,6 +16,10 @@ import { Effect } from "effect"
 import simpleGit from "simple-git"
 import { extractGitHistory } from "../git/GitHistoryExtractor.js"
 import { discoverRepos, type GitHubRepo, type LandscapeConfig } from "../github/GitHubRepoFinder.js"
+import { runAnalysis } from "./generateReports.js"
+import { hydrateLandscapeConfiguration, saveLandscapeConfiguration } from "./landscapeConfigHydrator.js"
+import { resolveLandscapeDataDir, resolveLandscapeReportsDir } from "./landscapePaths.js"
+import { buildLandscapeTagMap } from "./landscapeTagMap.js"
 
 const configFile = Options.text("config").pipe(Options.withDescription("Path to landscape config JSON"))
 const outputFolder = Options.text("outputFolder").pipe(
@@ -69,50 +63,13 @@ async function analyzeRepo(
       return { name: repo.name, success: false, error: "Config not created" }
     }
 
-    runAnalysisRaw(confFile, repoOutputDir)
+    await Effect.runPromise(runAnalysis(confFile, repoOutputDir))
 
     return { name: repo.name, success: true }
   } catch (e) {
     return { name: repo.name, success: false, error: String(e) }
   } finally {
     rmSync(cloneDir, { recursive: true, force: true })
-  }
-}
-
-function runAnalysisRaw(confFile: string, outputDir: string): void {
-  const jsonContent = readFileSync(confFile, "utf-8")
-  const parsed = JSON.parse(jsonContent)
-  const codeConfiguration = new CodeConfiguration()
-  Object.assign(codeConfiguration, parsed)
-
-  for (const key of ["main", "test", "generated", "buildAndDeployment", "other"] as const) {
-    if (parsed[key]) {
-      const aspect = new NamedSourceCodeAspect(
-        parsed[key].name ?? key,
-        parsed[key].sourceFileFilters ?? [],
-        parsed[key].files ?? [],
-      )
-      aspect.sourceFiles = parsed[key].sourceFiles ?? []
-      codeConfiguration[key] = aspect
-    }
-  }
-
-  const settings = CodeAnalyzerSettings.selectAll()
-  const codeAnalyzer = new CodeAnalyzer(settings, codeConfiguration, confFile)
-  const analysisResults = codeAnalyzer.analyze()
-
-  const dataExporter = new DataExporter(analysisResults, outputDir)
-  dataExporter.exportData()
-
-  const generator = new BasicSourceCodeReportGenerator(settings, analysisResults)
-  const reports = generator.report()
-
-  for (const report of reports) {
-    ReportFileExporter.exportHtml(outputDir, "html", report)
-  }
-
-  if (settings.updateIndex) {
-    ReportFileExporter.exportReportsIndex(outputDir, reports, codeConfiguration.metadata.name)
   }
 }
 
@@ -127,7 +84,8 @@ export const analyzeLandscapeCommand = Command.make(
         return
       }
 
-      const config: LandscapeConfig = JSON.parse(readFileSync(configPath, "utf-8"))
+      const rawConfig = JSON.parse(readFileSync(configPath, "utf-8"))
+      const config: LandscapeConfig = rawConfig
       const outDir = resolve(args.outputFolder)
       mkdirSync(outDir, { recursive: true })
 
@@ -212,8 +170,10 @@ export const analyzeLandscapeCommand = Command.make(
       yield* Effect.log("\nGenerating landscape report...")
 
       // Use initiator to discover all analysisResults.json files and build config
+      const landscapeConfigPath = join(outDir, "_planetnik_landscape", "config.json")
       const initiator = new LandscapeAnalysisInitiator()
-      const landscapeConfig = initiator.initConfiguration(outDir, null, true)
+      const landscapeConfig = initiator.initConfiguration(outDir, landscapeConfigPath, false)
+      hydrateLandscapeConfiguration(landscapeConfig, rawConfig)
 
       if (args.name._tag === "Some") {
         landscapeConfig.metadata = {
@@ -221,6 +181,7 @@ export const analyzeLandscapeCommand = Command.make(
           name: args.name.value,
         }
       }
+      saveLandscapeConfiguration(landscapeConfigPath, landscapeConfig)
 
       const analyzer = new LandscapeAnalyzer(landscapeConfig, outDir)
       const landscapeResults = analyzer.analyze()
@@ -229,7 +190,7 @@ export const analyzeLandscapeCommand = Command.make(
       report.displayName = landscapeResults.metadata.name || "Landscape"
       LandscapeReportGenerator.generate(report, landscapeResults)
 
-      const reportsDir = join(outDir, "_planetnik_landscape", "reports")
+      const reportsDir = resolveLandscapeReportsDir(outDir)
       mkdirSync(reportsDir, { recursive: true })
 
       const parts: string[] = []
@@ -243,17 +204,14 @@ export const analyzeLandscapeCommand = Command.make(
 
       writeFileSync(join(reportsDir, "index.html"), html, "utf-8")
 
-      const dataDir = join(reportsDir, "data")
+      const dataDir = resolveLandscapeDataDir(outDir)
       mkdirSync(dataDir, { recursive: true })
-      writeFileSync(
-        join(dataDir, "landscapeAnalysisResults.json"),
-        JSON.stringify(
-          landscapeResults,
-          (_key, value) => (value instanceof Map ? Object.fromEntries(value) : value),
-          2,
-        ),
-        "utf-8",
-      )
+      const landscapeDataExport = new LandscapeDataExport(landscapeResults, reportsDir)
+      landscapeDataExport.exportCoreContracts("analyzeLandscape")
+      landscapeDataExport.exportPeopleContracts(landscapeConfig.teamsConfig)
+      const tagMap = buildLandscapeTagMap(landscapeConfig, landscapeResults.repositoryAnalysisResults, outDir)
+      landscapeDataExport.exportRepositories(tagMap)
+      landscapeDataExport.exportTagContracts(tagMap, landscapeConfig.tagGroups)
 
       yield* Effect.log(`Landscape report: ${reportsDir}/index.html`)
       yield* Effect.log(

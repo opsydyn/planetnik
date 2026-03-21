@@ -316,7 +316,42 @@ For local developer-specific defaults, prefer `apps/site/.env.local`:
 ```env
 # Prefer an absolute path to avoid cwd ambiguity
 PLANETNIK_DATA_DIR=/absolute/path/to/report/data
+
+# Or use the landscape-specific variable for multi-repo landscape datasets
+PLANETNIK_LANDSCAPE_DATA_DIR=/absolute/path/to/_planetnik_landscape/reports/data
 ```
+
+### View the validated `Effect-TS` landscape in Astro dev
+
+If you want to inspect the real remote landscape dataset validated during development, use the generated `Effect-TS` landscape output directly:
+
+```bash
+cd /Users/alan/Projects/planetnik/apps/site
+PLANETNIK_DATA_DIR=/tmp/planetnik-effect-landscape-v2/_planetnik_landscape/reports/data bun run dev
+```
+
+Then open:
+
+- `http://localhost:4321/landscape`
+- `http://localhost:4321/landscape/repositories`
+- `http://localhost:4321/landscape/contributors`
+- `http://localhost:4321/landscape/teams`
+- `http://localhost:4321/landscape/topology`
+- `http://localhost:4321/landscape/tags`
+
+Useful validation commands against the same dataset:
+
+```bash
+cd /Users/alan/Projects/planetnik/apps/site
+PLANETNIK_DATA_DIR=/tmp/planetnik-effect-landscape-v2/_planetnik_landscape/reports/data bun run typecheck
+PLANETNIK_DATA_DIR=/tmp/planetnik-effect-landscape-v2/_planetnik_landscape/reports/data bun run build
+```
+
+Notes:
+
+- The site reads `report_context.json` and switches into landscape mode automatically.
+- In landscape mode, root single-repo routes such as `/contributors` and `/topology` redirect to their `/landscape/*` equivalents.
+- In this environment, running from `apps/site` directly was more reliable than repo-root filtered commands for landscape mode. Prefer the direct `cd apps/site && bun run ...` form until that is reviewed.
 
 ### Deploy to GitHub Pages
 
@@ -340,6 +375,7 @@ name: React
 | Variable | Description |
 |----------|-------------|
 | `PLANETNIK_DATA_DIR` | Path to the `data/` directory from a report run. Used by the Astro site and content loaders to find analysis results. |
+| `PLANETNIK_LANDSCAPE_DATA_DIR` | Optional landscape-specific data directory. Used when `PLANETNIK_DATA_DIR` is not set. Useful for keeping a single-repo default and a separate multi-repo landscape dataset side by side. |
 
 ---
 

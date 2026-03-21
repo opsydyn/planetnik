@@ -1,0 +1,223 @@
+---
+import DistributionChart from "../../../../../components/charts/DistributionChart"
+import DonutChart from "../../../../../components/charts/DonutChart"
+import ReportDataGrid from "../../../../../components/tables/ReportDataGrid"
+import ScatterPlot from "../../../../../components/charts/ScatterPlot"
+import { chartHelp } from "../../../../../lib/chartHelp"
+import { readLandscapeRepoJson } from "../../../../../lib/landscape"
+import {
+  getLandscapeRepositoryPageContext,
+  type LandscapeRepoPageProps,
+} from "../../../../../lib/landscapeRepoContext"
+import Dashboard from "../../../../../layouts/Dashboard.astro"
+
+interface RepoUnitRecord {
+  shortName: string
+  relativeFileName: string
+  linesOfCode: number
+  mcCabeIndex: number
+  numberOfParameters: number
+  startLine: number
+}
+
+interface RepoUnitsExport {
+  units?: RepoUnitRecord[]
+}
+
+const viewLabels = {
+  size: { pageTitle: "Unit Size", heading: "Unit Size" },
+  complexity: { pageTitle: "Conditional Complexity", heading: "Conditional Complexity" },
+} as const
+
+export async function getStaticPaths() {
+  const { getCollection } = await import("astro:content")
+  const { getLandscapeRepoRouteParam } = await import("../../../../../lib/landscape")
+  const repositories = await getCollection("landscapeRepositories")
+  const views = ["size", "complexity"] as const
+
+  return repositories.flatMap((repository) =>
+    views.map((view) => ({
+      params: {
+        repo: getLandscapeRepoRouteParam(repository.data.repoKey),
+        view,
+      },
+      props: {
+        repositoryId: repository.id,
+        repoKey: repository.data.repoKey,
+        view,
+      },
+    })),
+  )
+}
+
+const props = Astro.props as LandscapeRepoPageProps & { view: keyof typeof viewLabels }
+const viewMeta = viewLabels[props.view]
+
+if (!viewMeta) {
+  throw new Error(`Unsupported repository unit view: ${props.view}`)
+}
+
+const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const units = readLandscapeRepoJson<RepoUnitsExport>(props.repoKey, "units.json")?.units ?? []
+
+const sortedUnitsBySize = [...units].sort((a, b) => b.linesOfCode - a.linesOfCode)
+const totalUnitLoc = sortedUnitsBySize.reduce((sum, unit) => sum + unit.linesOfCode, 0)
+const unitSizeBuckets = [
+  { label: "1-10", min: 1, max: 10, count: 0, loc: 0 },
+  { label: "11-20", min: 11, max: 20, count: 0, loc: 0 },
+  { label: "21-50", min: 21, max: 50, count: 0, loc: 0 },
+  { label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
+  { label: "101+", min: 101, max: Infinity, count: 0, loc: 0 },
+]
+
+for (const unit of sortedUnitsBySize) {
+  for (const bucket of unitSizeBuckets) {
+    if (unit.linesOfCode >= bucket.min && unit.linesOfCode <= bucket.max) {
+      bucket.count++
+      bucket.loc += unit.linesOfCode
+      break
+    }
+  }
+}
+
+const unitSizeDistribution = unitSizeBuckets.map((bucket) => ({
+  label: `${bucket.label} LOC`,
+  value: bucket.loc,
+  detail: `${bucket.count} units`,
+  detailSecondary: `${bucket.loc.toLocaleString()} LOC`,
+}))
+
+const unitSizeRiskData = [
+  { label: "Low (1-20 LOC)", value: unitSizeBuckets[0].count + unitSizeBuckets[1].count },
+  { label: "Medium (21-50 LOC)", value: unitSizeBuckets[2].count },
+  { label: "High (51-100 LOC)", value: unitSizeBuckets[3].count },
+  { label: "Very High (101+ LOC)", value: unitSizeBuckets[4].count },
+].filter((item) => item.value > 0)
+
+const unitSizeRows = sortedUnitsBySize.map((unit) => ({
+  id: `${unit.relativeFileName}:${unit.startLine}`,
+  unit: unit.shortName,
+  file: unit.relativeFileName,
+  linesOfCode: unit.linesOfCode,
+  mcCabeIndex: unit.mcCabeIndex,
+  numberOfParameters: unit.numberOfParameters,
+}))
+
+const sortedUnitsByComplexity = [...units].sort((a, b) => b.mcCabeIndex - a.mcCabeIndex)
+const complexityBuckets = [
+  { label: "1-5 (simple)", min: 1, max: 5, count: 0, color: "#22c55e" },
+  { label: "6-10 (moderate)", min: 6, max: 10, count: 0, color: "#eab308" },
+  { label: "11-25 (complex)", min: 11, max: 25, count: 0, color: "#f97316" },
+  { label: "26+ (very complex)", min: 26, max: Infinity, count: 0, color: "#ef4444" },
+]
+
+for (const unit of sortedUnitsByComplexity) {
+  for (const bucket of complexityBuckets) {
+    if (unit.mcCabeIndex >= bucket.min && unit.mcCabeIndex <= bucket.max) {
+      bucket.count++
+      break
+    }
+  }
+}
+
+const complexityDistribution = complexityBuckets.map((bucket) => ({
+  label: bucket.label,
+  value: bucket.count,
+  detail: bucket.count.toString(),
+  color: bucket.color,
+}))
+
+const complexityScatterData = sortedUnitsByComplexity.slice(0, 200).map((unit) => ({
+  x: unit.linesOfCode,
+  y: unit.mcCabeIndex,
+  label: unit.shortName,
+}))
+
+const complexityRows = sortedUnitsByComplexity.map((unit) => ({
+  id: `${unit.relativeFileName}:${unit.startLine}`,
+  unit: unit.shortName,
+  file: unit.relativeFileName,
+  mcCabeIndex: unit.mcCabeIndex,
+  linesOfCode: unit.linesOfCode,
+}))
+---
+
+<Dashboard title={`${repoName} ${viewMeta.pageTitle}`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
+  {props.view === "size" && (
+    <div>
+      <h2>{viewMeta.heading}</h2>
+      <p class="subtitle">{sortedUnitsBySize.length.toLocaleString()} units, {totalUnitLoc.toLocaleString()} total lines in units</p>
+      <section class="section">
+        <h3>Size Risk</h3>
+        <DonutChart client:load data={unitSizeRiskData} valueLabel="units" helpText={chartHelp.unitSize.risk} />
+      </section>
+      <section class="section">
+        <h3>Size Distribution</h3>
+        <DistributionChart client:load data={unitSizeDistribution} helpText={chartHelp.unitSize.distribution} />
+      </section>
+      <section class="section">
+        <h3>Largest Units</h3>
+        <ReportDataGrid
+          client:visible
+          title="Unit Size Table"
+          description="Search across the full unit inventory instead of a fixed top snapshot."
+          searchPlaceholder="Search unit or file path"
+          rows={unitSizeRows}
+          columns={[
+            { field: "unit", headerName: "Unit", minWidth: 260, flex: 1.1 },
+            { field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.2 },
+            { field: "linesOfCode", headerName: "LOC", type: "number", minWidth: 110, sort: "desc" },
+            { field: "mcCabeIndex", headerName: "McCabe", type: "number", minWidth: 120 },
+            { field: "numberOfParameters", headerName: "Params", type: "number", minWidth: 120 },
+          ]}
+        />
+      </section>
+    </div>
+  )}
+
+  {props.view === "complexity" && (
+    <div>
+      <h2>{viewMeta.heading}</h2>
+      <p class="subtitle">{sortedUnitsByComplexity.length.toLocaleString()} units analyzed</p>
+      <section class="section">
+        <h3>Complexity Risk</h3>
+        <DonutChart client:load data={complexityBuckets.filter((bucket) => bucket.count > 0).map((bucket) => ({ label: bucket.label, value: bucket.count }))} valueLabel="units" helpText={chartHelp.unitComplexity.risk} />
+      </section>
+      <section class="section">
+        <h3>McCabe Complexity Distribution</h3>
+        <DistributionChart client:load data={complexityDistribution} helpText={chartHelp.unitComplexity.distribution} />
+      </section>
+      <section class="section">
+        <h3>LOC vs McCabe Complexity</h3>
+        <ScatterPlot client:visible data={complexityScatterData} xLabel="Lines of Code" yLabel="McCabe Index" thresholds={{ x: 50, y: 10 }} helpText={chartHelp.unitComplexity.locVsComplexity} />
+      </section>
+      <section class="section">
+        <h3>Most Complex Units</h3>
+        <ReportDataGrid
+          client:visible
+          title="Complexity Table"
+          description="Search and paginate the full complexity dataset while the charts stay focused on the highest-signal views."
+          searchPlaceholder="Search unit or file path"
+          rows={complexityRows}
+          columns={[
+            { field: "unit", headerName: "Unit", minWidth: 260, flex: 1.1 },
+            { field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.2 },
+            { field: "mcCabeIndex", headerName: "McCabe", type: "number", minWidth: 120, sort: "desc" },
+            { field: "linesOfCode", headerName: "LOC", type: "number", minWidth: 120 },
+          ]}
+        />
+      </section>
+    </div>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+</style>

@@ -295,6 +295,18 @@ export class DataExporter {
     if (contributors.length === 0) return
 
     const total = contributors.reduce((sum: number, c: Contributor) => sum + c.commitsCount, 0)
+    const contributorExport = contributors.map((c) => ({
+      email: c.email,
+      userName: c.userName,
+      commitsCount: c.commitsCount,
+      commitsCount30Days: c.commitsCount30Days,
+      commitsCount90Days: c.commitsCount90Days,
+      commitsCount180Days: c.commitsCount180Days,
+      commitsCount365Days: c.commitsCount365Days,
+      firstCommitDate: c.firstCommitDate,
+      latestCommitDate: c.latestCommitDate,
+      isBot: c.isBot,
+    }))
     const lines: string[] = []
     lines.push(
       "Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit\tpercentage\tuserName\tisRookie\tisActive",
@@ -307,6 +319,20 @@ export class DataExporter {
       )
     }
 
+    writeFileSync(
+      join(dataFolder, "contributors.json"),
+      JSON.stringify(
+        {
+          title: "Contributors",
+          timestamp: new Date().toISOString(),
+          contributorCount: contributorExport.length,
+          contributors: contributorExport,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    )
     writeFileSync(join(dataFolder, "contributors.txt"), lines.join("\n"), "utf-8")
   }
 
@@ -334,12 +360,56 @@ export class DataExporter {
   }
 
   private exportJson(dataFolder: string): void {
+    const mainAspect = this.analysisResults.mainAspectAnalysisResults
+    const testAspect = this.analysisResults.testAspectAnalysisResults
+    const generatedAspect = this.analysisResults.generatedAspectAnalysisResults
+    const buildAndDeployAspect = this.analysisResults.buildAndDeployAspectAnalysisResults
+    const otherAspect = this.analysisResults.otherAspectAnalysisResults
+    const history = this.analysisResults.filesHistoryAnalysisResults
+    const contributors = this.analysisResults.contributorsAnalysisResults.contributors.map((contributor) => ({
+      email: contributor.email,
+      userName: contributor.userName,
+      commitsCount: contributor.commitsCount,
+      commitsCount30Days: contributor.commitsCount30Days,
+      commitsCount90Days: contributor.commitsCount90Days,
+      commitsCount180Days: contributor.commitsCount180Days,
+      commitsCount365Days: contributor.commitsCount365Days,
+      firstCommitDate: contributor.firstCommitDate,
+      latestCommitDate: contributor.latestCommitDate,
+      isBot: contributor.isBot,
+    }))
+    const mapAspectSummary = (aspect: { linesOfCode: number; filesCount: number; linesOfCodePerExtension: Array<{ name: string; value: number }> }) => ({
+      linesOfCode: aspect.linesOfCode,
+      filesCount: aspect.filesCount,
+      linesOfCodePerExtension: aspect.linesOfCodePerExtension.map((metric) => ({
+        extension: metric.name.replace(/^[.]/, ""),
+        linesOfCode: metric.value,
+      })),
+    })
+    const duplicationPercentage = this.analysisResults.duplicationAnalysisResults.overallDuplication.getDuplicationPercentage()
     const summary = {
       metadata: this.analysisResults.codeConfiguration?.metadata,
-      filesCount: this.analysisResults.mainAspectAnalysisResults?.filesCount ?? 0,
-      linesOfCode: this.analysisResults.mainAspectAnalysisResults?.linesOfCode ?? 0,
+      filesCount: mainAspect.filesCount,
+      linesOfCode: mainAspect.linesOfCode,
+      extensions: mapAspectSummary(mainAspect).linesOfCodePerExtension.map((entry) => entry.extension),
+      mainAspectAnalysisResults: mapAspectSummary(mainAspect),
+      testAspectAnalysisResults: mapAspectSummary(testAspect),
+      generatedAspectAnalysisResults: mapAspectSummary(generatedAspect),
+      buildAndDeployAspectAnalysisResults: mapAspectSummary(buildAndDeployAspect),
+      otherAspectAnalysisResults: mapAspectSummary(otherAspect),
+      contributorsAnalysisResults: {
+        latestCommitDate: this.analysisResults.contributorsAnalysisResults.latestCommitDate,
+        contributors,
+      },
+      filesHistoryAnalysisResults: {
+        firstDate: history.firstDate,
+        latestDate: history.latestDate,
+      },
+      duplicationAnalysisResults: {
+        overallDuplication: duplicationPercentage,
+      },
       duplication: {
-        percentage: this.analysisResults.duplicationAnalysisResults.overallDuplication.getDuplicationPercentage(),
+        percentage: duplicationPercentage,
         duplicatedLines: this.analysisResults.duplicationAnalysisResults.overallDuplication.duplicatedLinesOfCode,
         cleanedLines: this.analysisResults.duplicationAnalysisResults.overallDuplication.cleanedLinesOfCode,
       },
@@ -372,15 +442,27 @@ export class DataExporter {
   ): void {
     if (instances.length === 0) return
 
-    const exportInfo = DuplicationExporter.exportDuplication(instances, "Duplication", timestamp)
-    writeFileSync(join(dataFolder, `${fileName}.json`), JSON.stringify(exportInfo, null, 2), "utf-8")
-
-    // Text format
-    const lines: string[] = []
     const limited =
       instances.length > DataExporter.MAX_EXPORT_LIST_SIZE
         ? instances.slice(0, DataExporter.MAX_EXPORT_LIST_SIZE)
         : instances
+    const exportInfo = DuplicationExporter.exportDuplication(limited, "Duplication", timestamp)
+    writeFileSync(
+      join(dataFolder, `${fileName}.json`),
+      JSON.stringify(
+        {
+          ...exportInfo,
+          totalDuplicatesCount: instances.length,
+          truncated: instances.length > limited.length,
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    )
+
+    // Text format
+    const lines: string[] = []
     let id = 1
     for (const dup of limited) {
       lines.push(`duplicated block id: ${id}`)

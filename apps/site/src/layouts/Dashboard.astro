@@ -1,18 +1,37 @@
 ---
-import GlobalSearch from "../components/search/GlobalSearch";
-import SystemIcon from "../components/icons/SystemIcon.astro";
-import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro";
-import { shouldBypassClientRouter } from "../lib/reloadRoutes";
-import { ClientRouter } from 'astro:transitions';
+import { getEntry } from "astro:content"
+import { ClientRouter } from "astro:transitions"
+import GlobalSearch from "../components/search/GlobalSearch"
+import SystemIcon from "../components/icons/SystemIcon.astro"
+import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro"
+import {
+  getLandscapeRepositoryCommitsHref,
+  getLandscapeRepositoryComponentsHref,
+  getLandscapeRepositoryControlsHref,
+  getLandscapeRepositoryDuplicationHref,
+  getLandscapeRepositoryFilePageHref,
+  getLandscapeRepositoryHotspotsHref,
+  getLandscapeRepositoryHref,
+  getLandscapeRepositoryImpactHref,
+  getLandscapeRepositoryMetricsHref,
+  getLandscapeRepositoryUnitPageHref,
+} from "../lib/landscape"
+import { shouldBypassClientRouter } from "../lib/reloadRoutes"
 
 interface Props {
   title: string
   projectName?: string
+  repoScope?: {
+    repoKey: string
+    repoName: string
+  }
 }
 
-const { title, projectName = "Planetnik" } = Astro.props
+const reportContext = await getEntry("reportContext", "context")
+const reportMode = reportContext?.data.reportMode ?? "single_repository"
+const { title, projectName = reportContext?.data.title ?? "Planetnik", repoScope } = Astro.props
 
-const navSections = [
+const singleRepoNavSections = [
   {
     label: "Overview",
     iconName: "house",
@@ -75,7 +94,110 @@ const navSections = [
   },
 ]
 
+const landscapeNavSections = [
+  {
+    label: "Overview",
+    iconName: "house",
+    items: [
+      { href: "/about", label: "About" },
+      { href: "/guide", label: "Guide" },
+      { href: "/landscape", label: "Landscape Dashboard" },
+    ],
+  },
+  {
+    label: "Landscape",
+    iconName: "stack",
+    items: [
+      { href: "/landscape/repositories", label: "Repositories" },
+      { href: "/landscape/contributors", label: "Contributors" },
+      { href: "/landscape/teams", label: "Teams" },
+      { href: "/landscape/topology", label: "Team Topology" },
+      { href: "/landscape/tags", label: "Tags" },
+    ],
+  },
+]
+
+function getLandscapeRepoNavSections(repoKey: string, repoName: string) {
+  const repoHref = getLandscapeRepositoryHref(repoKey)
+
+  return [
+    {
+      label: "Landscape",
+      iconName: "house",
+      items: [
+        { href: "/about", label: "About" },
+        { href: "/guide", label: "Guide" },
+        { href: "/landscape", label: "Landscape Dashboard" },
+        { href: "/landscape/repositories", label: "Repositories" },
+      ],
+    },
+    {
+      label: "Repository",
+      iconName: "house",
+      items: [
+        { href: repoHref, label: `${repoName} Dashboard` },
+        { href: getLandscapeRepositoryMetricsHref(repoKey), label: "Metrics" },
+        { href: getLandscapeRepositoryCommitsHref(repoKey), label: "Commits" },
+      ],
+    },
+    {
+      label: "Structure",
+      iconName: "stack",
+      items: [
+        { href: getLandscapeRepositoryComponentsHref(repoKey), label: "Components" },
+        { href: getLandscapeRepositoryDuplicationHref(repoKey), label: "Duplication" },
+      ],
+    },
+    {
+      label: "Files",
+      iconName: "files",
+      items: [
+        { href: getLandscapeRepositoryFilePageHref(repoKey, "size"), label: "File Size" },
+        { href: getLandscapeRepositoryFilePageHref(repoKey, "age"), label: "File Age" },
+        { href: getLandscapeRepositoryFilePageHref(repoKey, "churn"), label: "File Churn" },
+        { href: getLandscapeRepositoryFilePageHref(repoKey, "temporal"), label: "Temporal Dependencies" },
+      ],
+    },
+    {
+      label: "Units",
+      iconName: "brackets-curly",
+      items: [
+        { href: getLandscapeRepositoryUnitPageHref(repoKey, "size"), label: "Unit Size" },
+        { href: getLandscapeRepositoryUnitPageHref(repoKey, "complexity"), label: "Conditional Complexity" },
+      ],
+    },
+    {
+      label: "Team",
+      iconName: "users-three",
+      items: [
+        { href: `${repoHref}/contributors`, label: "Contributors" },
+        { href: `${repoHref}/topology`, label: "Team Topology" },
+      ],
+    },
+    {
+      label: "Quality",
+      iconName: "chart-line-up",
+      items: [
+        { href: getLandscapeRepositoryHotspotsHref(repoKey), label: "Hotspots" },
+        { href: getLandscapeRepositoryImpactHref(repoKey), label: "Impact" },
+        { href: getLandscapeRepositoryControlsHref(repoKey), label: "Goals & Controls" },
+      ],
+    },
+  ]
+}
+
 const currentPath = Astro.url.pathname
+const isLandscapeRepoScope = reportMode === "landscape" && repoScope
+const navSections = isLandscapeRepoScope
+  ? getLandscapeRepoNavSections(repoScope.repoKey, repoScope.repoName)
+  : reportMode === "landscape"
+    ? landscapeNavSections
+    : singleRepoNavSections
+const rootHref = reportMode === "landscape" ? "/landscape" : "/"
+function isActiveLink(href: string): boolean {
+  if (href === "/") return currentPath === href
+  return currentPath === href || currentPath.startsWith(`${href}/`)
+}
 ---
 
 <!doctype html>
@@ -331,6 +453,15 @@ const currentPath = Astro.url.pathname
         font-size: 0.75rem;
         color: var(--color-sidebar-text);
         margin-top: 0.35rem;
+        line-height: 1.4;
+      }
+
+      .nav-header .project-separator {
+        margin: 0 0.35rem;
+      }
+
+      .nav-header .repo-scope-name {
+        color: var(--color-sidebar-strong);
       }
 
       .nav-close {
@@ -510,10 +641,19 @@ const currentPath = Astro.url.pathname
     <nav id="sidebar">
       <div class="nav-header">
         <div class="nav-header-content">
-          <a href="/" class="nav-logo-link">
+          <a href={rootHref} class="nav-logo-link">
             <img src="/planetnik-logo-2.png" alt="Planetnik" class="nav-logo" />
           </a>
-          <div class="project-name">Report for <strong>{projectName}</strong></div>
+          <div class="project-name">
+            {reportMode === "landscape" ? "Landscape for " : "Report for "}
+            <strong>{projectName}</strong>
+            {repoScope ? (
+              <>
+                <span class="project-separator">•</span>
+                <span class="repo-scope-name">{repoScope.repoName}</span>
+              </>
+            ) : null}
+          </div>
         </div>
         <button class="nav-close" id="menu-close" aria-label="Close navigation">
           <SystemIcon name="x" size={20} />
@@ -529,7 +669,7 @@ const currentPath = Astro.url.pathname
             {section.items.map((item) => (
               <a
                 href={item.href}
-                class={currentPath === item.href ? "active" : ""}
+                class={isActiveLink(item.href) ? "active" : ""}
                 data-astro-reload={shouldBypassClientRouter(item.href) ? true : undefined}
               >
                 {item.label}

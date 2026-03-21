@@ -1,0 +1,123 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import ReportDataGrid from "../../components/tables/ReportDataGrid"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const teams = await getCollection("landscapeTeams")
+const projectName = reportContext.data.title
+const rows = teams.map((team) => ({
+  id: team.id,
+  name: team.data.name,
+  description: team.data.description || "—",
+  commitsCount: team.data.commitsCount,
+  commits30d: team.data.commits30d,
+  memberCount: team.data.memberCount,
+  repositoryCount: team.data.repositoryCount,
+  latestCommitDate: team.data.latestCommitDate,
+  members: team.data.members.join(" • ") || "—",
+  repositories: team.data.repositories.map((repository) => repository.name).join(" • ") || "—",
+}))
+---
+
+<Dashboard title="Landscape Teams" projectName={projectName}>
+  <h2>Teams</h2>
+  <p class="subtitle">
+    Team overlays for the landscape. This page is driven by `teamsConfig` in the landscape configuration.
+  </p>
+
+  {rows.length > 0 ? (
+    <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{rows.length.toLocaleString()}</div>
+          <div class="card-label">Teams</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{rows.reduce((sum, team) => sum + team.memberCount, 0).toLocaleString()}</div>
+          <div class="card-label">Mapped Members</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{rows.reduce((sum, team) => sum + team.repositoryCount, 0).toLocaleString()}</div>
+          <div class="card-label">Team Repo Touches</div>
+        </div>
+      </div>
+
+      <ReportDataGrid
+        client:visible
+        title="Team Inventory"
+        description="Search teams by member, repository, or recent activity."
+        searchPlaceholder="Search team, member, or repository"
+        rows={rows}
+        columns={[
+          { field: "name", headerName: "Team", minWidth: 180 },
+          { field: "description", headerName: "Description", type: "multiline", minWidth: 240, flex: 1.2 },
+          { field: "commitsCount", headerName: "Commits", type: "number", minWidth: 110, sort: "desc" },
+          { field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+          { field: "memberCount", headerName: "Members", type: "number", minWidth: 100 },
+          { field: "repositoryCount", headerName: "Repositories", type: "number", minWidth: 120 },
+          { field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+          { field: "members", headerName: "Members", type: "multiline", minWidth: 260, flex: 1 },
+          { field: "repositories", headerName: "Repositories", type: "multiline", minWidth: 300, flex: 1.2 },
+        ]}
+      />
+    </>
+  ) : (
+    <div class="empty">
+      <p>No team mappings were exported for this landscape.</p>
+      <p class="hint">Add `teamsConfig` to the landscape configuration to populate this page.</p>
+    </div>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 72ch;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card,
+  .empty {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .card-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    margin-top: 0.45rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .hint {
+    color: var(--color-text-muted);
+    margin-top: 0.5rem;
+  }
+
+  @media (max-width: 720px) {
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

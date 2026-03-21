@@ -1,0 +1,221 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import HorizontalBarChart from "../../../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../../../components/tables/ReportDataGrid"
+import { getContributorDisplayName, getContributorRouteParam } from "../../../lib/contributors"
+import {
+  getLandscapeRepositoryContributorHref,
+  getLandscapeRepositoryHref,
+} from "../../../lib/landscape"
+import Dashboard from "../../../layouts/Dashboard.astro"
+
+export async function getStaticPaths() {
+  const contributors = await getCollection("landscapeContributors")
+
+  return contributors.map((contributor) => ({
+    params: { email: getContributorRouteParam(contributor.data.email) },
+    props: { contributorId: contributor.id },
+  }))
+}
+
+const { contributorId } = Astro.props as {
+  contributorId: string
+}
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const contributor = await getEntry("landscapeContributors", contributorId)
+if (!contributor) {
+  throw new Error(`Landscape contributor entry not found for ${contributorId}`)
+}
+
+const projectName = reportContext.data.title
+const contributorName = getContributorDisplayName({
+  email: contributor.data.email,
+  userName: contributor.data.displayName !== contributor.data.email ? contributor.data.displayName : undefined,
+})
+
+const sortedRepositories = contributor.data.repositories
+  .slice()
+  .sort((left, right) => right.commitsCount - left.commitsCount || left.name.localeCompare(right.name))
+
+const repositoryBarData = sortedRepositories.slice(0, 10).map((repository) => ({
+  label: repository.name,
+  value: repository.commitsCount,
+}))
+
+const repositoryRows = sortedRepositories.map((repository) => ({
+  id: repository.repoKey,
+  repository: repository.name,
+  repositoryHref: getLandscapeRepositoryHref(repository.repoKey),
+  repoView: "Open repo contributor view",
+  repoViewHref: getLandscapeRepositoryContributorHref(repository.repoKey, contributor.data.email),
+  description: repository.description || "—",
+  commitsCount: repository.commitsCount,
+  commits30d: repository.commits30Days,
+  commits90d: repository.commits90Days,
+  latestCommitDate: repository.latestCommitDate,
+}))
+---
+
+<Dashboard title={contributorName} projectName={projectName}>
+  <a class="back-link" href="/landscape/contributors">&larr; Back to landscape contributors</a>
+
+  <header class="page-header">
+    <div>
+      <h2>{contributorName}</h2>
+      <p class="subtitle">
+        <span class="email">{contributor.data.email}</span>
+        &middot; {contributor.data.repositoryCount.toLocaleString()} repositories
+      </p>
+    </div>
+    <div class="status-list">
+      <span class="badge">{contributor.data.isBot ? "bot" : "human"}</span>
+    </div>
+  </header>
+
+  <section class="stats-grid">
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.commitsCount.toLocaleString()}</div>
+      <div class="stat-label">All-Time Commits</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.commits30d.toLocaleString()}</div>
+      <div class="stat-label">Commits (30d)</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.commits90d.toLocaleString()}</div>
+      <div class="stat-label">Commits (90d)</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.repositoryCount.toLocaleString()}</div>
+      <div class="stat-label">Repositories</div>
+    </article>
+    <article class="stat-card">
+      <div class="stat-value">{contributor.data.latestCommitDate || "Unknown"}</div>
+      <div class="stat-label">Latest Commit</div>
+    </article>
+  </section>
+
+  {repositoryBarData.length > 0 && (
+    <section class="section">
+      <h3>Repository Footprint</h3>
+      <HorizontalBarChart client:visible data={repositoryBarData} valueLabel="commits" maxItems={10} />
+    </section>
+  )}
+
+  <ReportDataGrid
+    client:visible
+    title="Repository Contribution Paths"
+    description="Open the repository summary or jump straight into the contributor's repo-scoped detail page."
+    searchPlaceholder="Search repository or description"
+    rows={repositoryRows}
+    columns={[
+      { field: "repository", headerName: "Repository", type: "link", hrefField: "repositoryHref", minWidth: 220, flex: 1 },
+      { field: "repoView", headerName: "Repo Contributor View", type: "link", hrefField: "repoViewHref", minWidth: 220 },
+      { field: "description", headerName: "Description", type: "multiline", minWidth: 260, flex: 1.2 },
+      { field: "commitsCount", headerName: "Commits", type: "number", minWidth: 110, sort: "desc" },
+      { field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+      { field: "commits90d", headerName: "Commits (90d)", type: "number", minWidth: 130 },
+      { field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+    ]}
+  />
+</Dashboard>
+
+<style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+
+  .back-link:hover {
+    color: var(--color-accent);
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .subtitle {
+    margin-top: 0.35rem;
+    color: var(--color-text-muted);
+  }
+
+  .email {
+    font-family: "SF Mono", "Fira Code", monospace;
+  }
+
+  .status-list {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    color: var(--color-text-muted);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.15rem 1.2rem;
+  }
+
+  .stat-value {
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-accent);
+  }
+
+  .stat-label {
+    margin-top: 0.45rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.78rem;
+  }
+
+  .section {
+    margin-bottom: 1.5rem;
+  }
+
+  .section h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+
+  @media (max-width: 820px) {
+    .page-header {
+      flex-direction: column;
+    }
+  }
+</style>

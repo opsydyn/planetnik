@@ -4,7 +4,7 @@ import type { SearchDocument } from "./types"
 
 type PageDefinition = Omit<SearchDocument, "id" | "kind" | "rank">
 
-const pageDefinitions: PageDefinition[] = [
+const singleRepoPageDefinitions: PageDefinition[] = [
   {
     title: "Dashboard",
     subtitle: "Project summary and language breakdown",
@@ -199,6 +199,73 @@ const pageDefinitions: PageDefinition[] = [
   },
 ]
 
+const landscapePageDefinitions: PageDefinition[] = [
+  {
+    title: "Landscape Dashboard",
+    subtitle: "Multi-repository organization overview",
+    description: "Landscape-wide overview of repositories, contributors, teams, languages, and recent activity.",
+    keywords: ["landscape", "dashboard", "repositories", "organization", "overview", "multi repo"],
+    route: "/landscape",
+    section: "Landscape",
+  },
+  {
+    title: "About",
+    subtitle: "Why Planetnik",
+    description: "Background, positioning, and the software weather model behind Planetnik.",
+    keywords: ["about", "planetnik", "weather", "architecture", "entropy", "drift", "turbulence"],
+    route: "/about",
+    section: "Overview",
+  },
+  {
+    title: "Guide",
+    subtitle: "How to use Planetnik",
+    description: "Onboarding guide organized with tutorials, how-to guidance, reference, and explanation.",
+    keywords: ["guide", "help", "documentation", "tutorial", "how-to", "reference", "explanation", "onboarding"],
+    route: "/guide",
+    section: "Overview",
+  },
+  {
+    title: "Landscape Repositories",
+    subtitle: "Repository activity and scale",
+    description: "Repository inventory for the landscape with size, contributor activity, and recent commits.",
+    keywords: ["landscape", "repositories", "repo inventory", "multi repo", "activity"],
+    route: "/landscape/repositories",
+    section: "Landscape",
+  },
+  {
+    title: "Landscape Contributors",
+    subtitle: "People working across repositories",
+    description: "Contributor reach, multi-repository activity, and collaboration across the landscape.",
+    keywords: ["landscape", "contributors", "people", "multi repo", "teams"],
+    route: "/landscape/contributors",
+    section: "Landscape",
+  },
+  {
+    title: "Landscape Teams",
+    subtitle: "Configured team coverage",
+    description: "Team inventory and repository ownership across the landscape.",
+    keywords: ["landscape", "teams", "ownership", "grouping", "org structure"],
+    route: "/landscape/teams",
+    section: "Landscape",
+  },
+  {
+    title: "Landscape Team Topology",
+    subtitle: "Cross-repository people dependencies",
+    description: "Contributor relationships built from shared-file work across repositories.",
+    keywords: ["landscape", "topology", "people dependencies", "coordination", "cross repo"],
+    route: "/landscape/topology",
+    section: "Landscape",
+  },
+  {
+    title: "Landscape Tags",
+    subtitle: "Repository tags and tag matrix",
+    description: "Tag coverage, grouped repositories, and tag overlap across the landscape.",
+    keywords: ["landscape", "tags", "taxonomy", "repository groups", "tag matrix"],
+    route: "/landscape/tags",
+    section: "Landscape",
+  },
+]
+
 function normalizeKeywords(values: Array<string | number | undefined | null>): string[] {
   const seen = new Set<string>()
   const result: string[] = []
@@ -220,13 +287,16 @@ function takeKeywords(values: string[] | undefined, limit: number): string[] {
   return values.slice(0, limit)
 }
 
-function makePageDocuments(projectName: string): SearchDocument[] {
-  return pageDefinitions.map((page, index) => ({
+function makePageDocuments(projectName: string, pages: PageDefinition[]): SearchDocument[] {
+  return pages.map((page, index) => ({
     id: `page:${page.route}`,
     kind: "page",
     title: page.title,
     subtitle: page.subtitle,
-    description: page.route === "/" ? `${projectName} analysis dashboard.` : page.description,
+    description:
+      page.route === "/" || page.route === "/landscape"
+        ? `${projectName} analysis dashboard.`
+        : page.description,
     keywords: normalizeKeywords([projectName, ...page.keywords]),
     route: page.route,
     section: page.section,
@@ -246,14 +316,20 @@ function humanizeMetricId(id: string): string {
 }
 
 export async function buildSearchDocuments(): Promise<SearchDocument[]> {
+  const reportContext = await getEntry("reportContext", "context")
+  const reportMode = reportContext?.data.reportMode ?? "single_repository"
   const summary = await getEntry("analysis", "summary")
+  const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
+
+  if (reportMode === "landscape") {
+    return makePageDocuments(projectName, landscapePageDefinitions)
+  }
+
   const filesMain = await getCollection("filesMain")
   const units = await getCollection("units")
   const contributors = await getCollection("contributors")
   const metrics = await getCollection("metrics")
-
-  const projectName = summary?.data.metadata.name ?? "Planetnik"
-  const documents: SearchDocument[] = [...makePageDocuments(projectName)]
+  const documents: SearchDocument[] = [...makePageDocuments(projectName, singleRepoPageDefinitions)]
 
   for (const file of filesMain) {
     const extension = file.data.extension || "unknown"

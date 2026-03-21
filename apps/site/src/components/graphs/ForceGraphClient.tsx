@@ -7,6 +7,10 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import type { ForceGraphEdge, ForceGraphNode } from "../../lib/forceGraph"
 import "./ForceGraph.css"
 
+const LARGE_GRAPH_NODE_THRESHOLD = 220
+const LARGE_GRAPH_EDGE_THRESHOLD = 1200
+const DENSE_GRAPH_EDGE_THRESHOLD = 2400
+
 type SigmaNodeAttributes = {
   x: number
   y: number
@@ -117,6 +121,8 @@ function normalizeGraphPositions(graph: UndirectedGraph<SigmaNodeAttributes, Sig
 
 function buildSigmaGraph(nodes: ForceGraphNode[], edges: ForceGraphEdge[]) {
   const graph = new UndirectedGraph<SigmaNodeAttributes, SigmaEdgeAttributes>()
+  const isLargeGraph = nodes.length >= LARGE_GRAPH_NODE_THRESHOLD || edges.length >= LARGE_GRAPH_EDGE_THRESHOLD
+  const isDenseGraph = edges.length >= DENSE_GRAPH_EDGE_THRESHOLD
 
   for (const node of nodes) {
     graph.addNode(node.id, {
@@ -158,13 +164,14 @@ function buildSigmaGraph(nodes: ForceGraphNode[], edges: ForceGraphEdge[]) {
   if (graph.order > 2 && graph.size > 0) {
     const settings = forceAtlas2.inferSettings(graph)
     forceAtlas2.assign(graph, {
-      iterations: Math.max(120, graph.order * 18),
+      iterations: isLargeGraph ? 120 : Math.max(120, graph.order * 18),
       settings: {
         ...settings,
-        gravity: 0.08,
-        strongGravityMode: false,
-        scalingRatio: Math.max(settings.scalingRatio ?? 1, 18),
-        slowDown: Math.max(settings.slowDown ?? 1, 4),
+        barnesHutOptimize: isLargeGraph,
+        gravity: isLargeGraph ? 0.14 : 0.08,
+        strongGravityMode: isDenseGraph,
+        scalingRatio: Math.max(settings.scalingRatio ?? 1, isLargeGraph ? 24 : 18),
+        slowDown: Math.max(settings.slowDown ?? 1, isLargeGraph ? 10 : 4),
       },
     })
   }
@@ -314,6 +321,8 @@ export default function ForceGraphClient({
   const [hovered, setHovered] = useState<HoverState | null>(null)
   const [theme, setTheme] = useState<ForceGraphTheme>(readForceGraphTheme)
   const graph = useMemo(() => buildSigmaGraph(nodes, edges), [edges, nodes])
+  const isLargeGraph = nodes.length >= LARGE_GRAPH_NODE_THRESHOLD || edges.length >= LARGE_GRAPH_EDGE_THRESHOLD
+  const isDenseGraph = edges.length >= DENSE_GRAPH_EDGE_THRESHOLD
   const hasGraph = nodes.length > 1 && edges.length > 0
   const footerHeight = 54
   const graphHeight = Math.max(height - footerHeight, 220)
@@ -391,14 +400,14 @@ export default function ForceGraphClient({
           settings={{
             allowInvalidContainer: true,
             renderEdgeLabels: false,
-            enableEdgeEvents: true,
+            enableEdgeEvents: !isLargeGraph,
             stagePadding: 32,
             minCameraRatio: 0.08,
             maxCameraRatio: 4,
-            labelDensity: 1.1,
-            labelRenderedSizeThreshold: 0,
+            labelDensity: isDenseGraph ? 0.18 : isLargeGraph ? 0.32 : 1.1,
+            labelRenderedSizeThreshold: isDenseGraph ? 14 : isLargeGraph ? 12 : 0,
             labelFont: "var(--font-sans, Inter, system-ui, sans-serif)",
-            labelSize: 13,
+            labelSize: isLargeGraph ? 12 : 13,
             labelWeight: "600",
             labelColor: { color: theme.text },
             defaultEdgeColor: theme.theme === "dark" ? "rgba(167, 139, 250, 0.44)" : "rgba(67, 56, 202, 0.38)",

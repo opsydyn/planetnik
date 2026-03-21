@@ -1,0 +1,259 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import DonutChart from "../../components/charts/DonutChart"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import StaticReportTable from "../../components/tables/StaticReportTable.astro"
+import TechnologyIcon from "../../components/icons/TechnologyIcon.astro"
+import { chartHelp } from "../../lib/chartHelp"
+import { getTechnologyIconData } from "../../lib/iconography"
+import Dashboard from "../../layouts/Dashboard.astro"
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const overview = await getEntry("landscapeOverview", "overview")
+const teams = await getCollection("landscapeTeams")
+const tags = await getEntry("landscapeTags", "tags")
+
+const projectName = reportContext.data.title
+const data = overview?.data
+
+const languageBars =
+  data?.languages.map((item) => ({
+    label: `.${item.extension}`,
+    value: item.linesOfCode,
+    icon: getTechnologyIconData(item.extension),
+  })) ?? []
+
+const topRepositories = (data?.topRepositories ?? []).map((repository) => ({
+  repository: repository.name,
+  mainLinesOfCode: repository.mainLinesOfCode,
+  contributors: repository.contributors,
+  latestCommitDate: repository.latestCommitDate,
+}))
+---
+
+<Dashboard title="Landscape Dashboard" projectName={projectName}>
+  <h2>{projectName}</h2>
+  <p class="subtitle">
+    Multi-repository landscape view across {data?.repositoryCount.toLocaleString() ?? "0"} repositories.
+  </p>
+
+  {data ? (
+    <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{data.repositoryCount.toLocaleString()}</div>
+          <div class="card-label">Repositories</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{data.contributorCount.toLocaleString()}</div>
+          <div class="card-label">Contributors</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{data.totals.totalLinesOfCode.toLocaleString()}</div>
+          <div class="card-label">Total LOC</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{data.totals.mainLinesOfCode.toLocaleString()}</div>
+          <div class="card-label">Main LOC</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{data.totals.commits30d.toLocaleString()}</div>
+          <div class="card-label">Commits (30d)</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{data.totals.contributorCount30Days.toLocaleString()}</div>
+          <div class="card-label">Active Contributors (30d)</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{teams.length.toLocaleString()}</div>
+          <div class="card-label">Teams</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{tags?.data.tagCount.toLocaleString() ?? "0"}</div>
+          <div class="card-label">Tags</div>
+        </div>
+      </div>
+
+      {data.languages.length > 0 && (
+        <div class="two-up">
+          <section class="section">
+            <h3>Language Mix</h3>
+            <DonutChart
+              client:visible
+              data={data.languages.map((language) => ({ label: `.${language.extension}`, value: language.linesOfCode }))}
+              valueLabel="LOC"
+              helpText={chartHelp.landscape.languageMix}
+            />
+          </section>
+
+          <section class="section">
+            <h3>Largest Languages</h3>
+            <HorizontalBarChart
+              client:visible
+              data={languageBars}
+              valueLabel="LOC"
+              maxItems={10}
+              helpText={chartHelp.landscape.languageMix}
+            />
+          </section>
+        </div>
+      )}
+
+      <section class="section">
+        <h3>Top Repositories</h3>
+        <StaticReportTable ariaLabel="Landscape top repositories">
+          <thead>
+            <tr>
+              <th><span>Repository</span></th>
+              <th><span>Main LOC</span></th>
+              <th><span>Contributors</span></th>
+              <th><span>Latest Commit</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {topRepositories.map((repository) => (
+              <tr>
+                <td>{repository.repository}</td>
+                <td class="report-static-table__num">{repository.mainLinesOfCode.toLocaleString()}</td>
+                <td class="report-static-table__num">{repository.contributors.toLocaleString()}</td>
+                <td>{repository.latestCommitDate || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </StaticReportTable>
+      </section>
+
+      {data.languages.length > 0 && (
+        <section class="section">
+          <h3>Language Inventory</h3>
+          <StaticReportTable ariaLabel="Landscape language inventory">
+            <thead>
+              <tr>
+                <th><span>Extension</span></th>
+                <th><span>Repositories</span></th>
+                <th><span>Lines of Code</span></th>
+                <th><span>% of Total</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.languages.map((language) => (
+                <tr>
+                  <td>
+                    <span class="language-cell">
+                      <TechnologyIcon extension={language.extension} size={18} class="language-icon" />
+                      <code class="report-static-table__code">.{language.extension}</code>
+                    </span>
+                  </td>
+                  <td class="report-static-table__num">{language.repositories.toLocaleString()}</td>
+                  <td class="report-static-table__num">{language.linesOfCode.toLocaleString()}</td>
+                  <td class="report-static-table__num">
+                    {((language.linesOfCode / data.totals.totalLinesOfCode) * 100).toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </StaticReportTable>
+        </section>
+      )}
+
+      <section class="section section-muted">
+        <p>
+          This landscape mode is portfolio-oriented. Use repositories, contributors, teams, topology, and tags to move
+          from repo-local analysis to organization-level structure.
+        </p>
+      </section>
+    </>
+  ) : (
+    <div class="empty">
+      <p>No landscape overview data was found.</p>
+    </div>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 72ch;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .card-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    margin-top: 0.45rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .section {
+    margin-bottom: 1.75rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+
+  .two-up {
+    display: grid;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-muted {
+    color: var(--color-text-muted);
+  }
+
+  .language-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .language-icon {
+    flex: none;
+  }
+
+  .empty {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    color: var(--color-text-muted);
+  }
+
+  @media (min-width: 720px) {
+    .cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .two-up {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

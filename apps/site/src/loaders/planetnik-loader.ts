@@ -28,10 +28,18 @@ function getLoadedEnv(): Record<string, string> {
 }
 
 export function resolveDataDir(): string {
-  const dir = process.env.PLANETNIK_DATA_DIR ?? getLoadedEnv().PLANETNIK_DATA_DIR ?? defaultDataDir
+  const env = getLoadedEnv()
+  const dir =
+    process.env.PLANETNIK_DATA_DIR ??
+    env.PLANETNIK_DATA_DIR ??
+    process.env.PLANETNIK_LANDSCAPE_DATA_DIR ??
+    env.PLANETNIK_LANDSCAPE_DATA_DIR ??
+    defaultDataDir
   if (!existsSync(dir)) {
     console.warn(`[planetnik-loader] Data directory not found: ${dir}`)
-    console.warn(`[planetnik-loader] Set PLANETNIK_DATA_DIR env var or create apps/site/.env.local`)
+    console.warn(
+      `[planetnik-loader] Set PLANETNIK_DATA_DIR or PLANETNIK_LANDSCAPE_DATA_DIR env var, or create apps/site/.env.local`,
+    )
   }
   return dir
 }
@@ -46,6 +54,147 @@ function readTextFile(filename: string): string | null {
   const path = join(resolveDataDir(), filename)
   if (!existsSync(path)) return null
   return readFileSync(path, "utf-8")
+}
+
+function readJsonArrayItems(
+  filename: string,
+  key: string,
+): Array<{
+  id: string
+  data: Record<string, unknown>
+}> {
+  const raw = readJsonFile(filename) as Record<string, unknown> | null
+  if (!raw) return []
+
+  const items = raw[key]
+  if (!Array.isArray(items)) return []
+
+  return items.map((item, index) => {
+    const data = item as Record<string, unknown>
+    const idCandidate =
+      (typeof data.id === "string" && data.id) ||
+      (typeof data.email === "string" && data.email) ||
+      (typeof data.name === "string" && data.name) ||
+      (typeof data.key === "string" && data.key)
+
+    return {
+      id: idCandidate || `${key}-${index + 1}`,
+      data,
+    }
+  })
+}
+
+function getFallbackReportContext(): Record<string, unknown> {
+  const summary = readJsonFile("analysisResults.json") as Record<string, unknown> | null
+  const metadata = summary?.metadata as Record<string, unknown> | undefined
+  const title = typeof metadata?.name === "string" && metadata.name ? metadata.name : "Planetnik"
+
+  return {
+    mode: "single_repository",
+    reportMode: "single_repository",
+    title,
+    rootRoute: "/",
+    dataVersion: 1,
+    source: "analysisResults",
+    hasLandscape: false,
+    hasSingleRepositoryAnalysis: true,
+    primaryNavigation: ["overview", "structure", "files", "units", "team", "quality"],
+  }
+}
+
+export function reportContextLoader(): Loader {
+  return {
+    name: "planetnik-report-context",
+    async load({ store, parseData }) {
+      const raw = (readJsonFile("report_context.json") as Record<string, unknown> | null) ?? getFallbackReportContext()
+      const data = await parseData({ id: "context", data: raw })
+      store.set({ id: "context", data })
+    },
+  }
+}
+
+export function landscapeOverviewLoader(): Loader {
+  return {
+    name: "planetnik-landscape-overview",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("landscape_overview.json") as Record<string, unknown> | null
+      if (!raw) return
+      const data = await parseData({ id: "overview", data: raw })
+      store.set({ id: "overview", data })
+    },
+  }
+}
+
+export function landscapeRepositoriesLoader(): Loader {
+  return {
+    name: "planetnik-landscape-repositories",
+    async load({ store, parseData }) {
+      for (const item of readJsonArrayItems("landscape_repositories.json", "repositories")) {
+        const data = await parseData(item)
+        store.set({ id: item.id, data })
+      }
+    },
+  }
+}
+
+export function landscapeContributorsLoader(): Loader {
+  return {
+    name: "planetnik-landscape-contributors",
+    async load({ store, parseData }) {
+      for (const item of readJsonArrayItems("landscape_contributors.json", "contributors")) {
+        const data = await parseData(item)
+        store.set({ id: item.id, data })
+      }
+    },
+  }
+}
+
+export function landscapeTeamsLoader(): Loader {
+  return {
+    name: "planetnik-landscape-teams",
+    async load({ store, parseData }) {
+      for (const item of readJsonArrayItems("landscape_teams.json", "teams")) {
+        const data = await parseData(item)
+        store.set({ id: item.id, data })
+      }
+    },
+  }
+}
+
+export function landscapeTopologyLoader(): Loader {
+  return {
+    name: "planetnik-landscape-topology",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("landscape_topology.json") as Record<string, unknown> | null
+      if (!raw) return
+      const data = await parseData({ id: "topology", data: raw })
+      store.set({ id: "topology", data })
+    },
+  }
+}
+
+export function landscapeTagsLoader(): Loader {
+  return {
+    name: "planetnik-landscape-tags",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("landscape_tags.json") as Record<string, unknown> | null
+      if (!raw) return
+      const data = await parseData({ id: "tags", data: raw })
+      store.set({ id: "tags", data })
+    },
+  }
+}
+
+export function landscapeTagMatrixLoader(): Loader {
+  return {
+    name: "planetnik-landscape-tag-matrix",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("landscape_tag_matrix.json") as Record<string, unknown> | null
+      if (!raw) return
+      const data = await parseData({ id: "tag-matrix", data: raw })
+      store.set({ id: "tag-matrix", data })
+    },
+  }
 }
 
 function readJsonFilesInDirectory(directoryName: string): Array<{ id: string; data: Record<string, unknown> }> {

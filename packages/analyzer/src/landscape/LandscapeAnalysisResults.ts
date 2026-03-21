@@ -41,8 +41,12 @@ export class LandscapeAnalysisResults {
   contributorsPerYear: ContributionTimeSlot[] = []
   contributorsPerMonth: ContributionTimeSlot[] = []
 
+  peopleDependencies: ComponentDependency[] = []
   peopleDependencies30Days: ComponentDependency[] = []
   peopleDependencies90Days: ComponentDependency[] = []
+  peopleDependencies180Days: ComponentDependency[] = []
+  peopleDependencies365Days: ComponentDependency[] = []
+  peopleDependenciesAllTime: ComponentDependency[] = []
 
   firstCommitDate: string = ""
   latestCommitDate: string = ""

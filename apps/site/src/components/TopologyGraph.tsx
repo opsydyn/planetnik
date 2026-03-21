@@ -1,4 +1,4 @@
-import { RegistryProvider, Result, useAtom, useAtomValue } from "@effect-atom/atom-react"
+import { RegistryProvider, useAtom, useAtomValue } from "@effect-atom/atom-react"
 import dagre from "@dagrejs/dagre"
 import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesState } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
@@ -14,11 +14,15 @@ import {
   topologyPeriodsAtom,
   topologyStatsAtom,
 } from "../state/topologyGraphState"
-import { getContributorDisplayName, getContributorHref } from "../lib/contributors"
+import { getContributorDisplayName, getContributorHref as getDefaultContributorHref } from "../lib/contributors"
+import { getLandscapeRepositoryContributorHref } from "../lib/landscapeRoutes"
 
 interface TopologyGraphProps {
   periods: Record<string, PeopleDep[]>
   impactPeriods: Record<string, ContributorImpactContributor[]>
+  getContributorHref?: (email: string) => string
+  contributorRepoKey?: string | null
+  componentsHref?: string | null
 }
 
 type ContributorImpactDimensionKey =
@@ -51,6 +55,24 @@ interface ContributorImpactContributor {
 
 const NODE_WIDTH = 180
 const NODE_HEIGHT = 72
+const DAGRE_NODE_THRESHOLD = 120
+const DAGRE_EDGE_THRESHOLD = 600
+const DAGRE_MAX_RENDERED_NODES = 84
+const DAGRE_MAX_RENDERED_EDGES = 240
+const DAGRE_SELECTED_CONTRIBUTOR_EDGE_BONUS = 12
+
+type PlanetnikWindow = Window & {
+  __planetnikRouteVersion?: number
+}
+
+type ReactFlowHandle = {
+  fitView: (options?: { padding?: number; duration?: number }) => void
+}
+
+function getRouteVersion(): number {
+  if (typeof window === "undefined") return 0
+  return (window as PlanetnikWindow).__planetnikRouteVersion ?? 0
+}
 
 const dimensionLabelMap: Record<ContributorImpactDimensionKey, string> = {
   complexity_reduction: "Complexity reduction",
@@ -80,6 +102,96 @@ function layoutWithDagre(nodes: Node[], edges: Edge[]) {
       return { ...node, position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - NODE_HEIGHT / 2 } }
     }),
     edges,
+  }
+}
+
+function getEdgeKey(edge: Pick<PeopleDep, "from" | "to">): string {
+  return [edge.from, edge.to].sort((left, right) => left.localeCompare(right)).join("::")
+}
+
+function countGraphNodes(edges: PeopleDep[]): number {
+  const nodes = new Set<string>()
+  for (const edge of edges) {
+    nodes.add(edge.from)
+    nodes.add(edge.to)
+  }
+  return nodes.size
+}
+
+function sortEdgesByStrength(edges: PeopleDep[]): PeopleDep[] {
+  return [...edges].sort((left, right) => {
+    if (left.count !== right.count) return right.count - left.count
+    return getEdgeKey(left).localeCompare(getEdgeKey(right))
+  })
+}
+
+function buildStructuredTopologyEdges(
+  rawEdges: PeopleDep[],
+  selectedContributorEmail: string | null,
+): {
+  edges: PeopleDep[]
+  isCapped: boolean
+  displayedNodeCount: number
+  totalNodeCount: number
+  hiddenConnectionCount: number
+} {
+  const totalNodeCount = countGraphNodes(rawEdges)
+
+  if (totalNodeCount <= DAGRE_NODE_THRESHOLD && rawEdges.length <= DAGRE_EDGE_THRESHOLD) {
+    return {
+      edges: rawEdges,
+      isCapped: false,
+      displayedNodeCount: totalNodeCount,
+      totalNodeCount,
+      hiddenConnectionCount: 0,
+    }
+  }
+
+  const nodeWeights = new Map<string, number>()
+  for (const edge of rawEdges) {
+    nodeWeights.set(edge.from, (nodeWeights.get(edge.from) ?? 0) + edge.count)
+    nodeWeights.set(edge.to, (nodeWeights.get(edge.to) ?? 0) + edge.count)
+  }
+
+  const preferredNodeIds = new Set(
+    [...nodeWeights.entries()]
+      .sort((left, right) => {
+        if (left[1] !== right[1]) return right[1] - left[1]
+        return left[0].localeCompare(right[0])
+      })
+      .slice(0, DAGRE_MAX_RENDERED_NODES)
+      .map(([id]) => id),
+  )
+
+  if (selectedContributorEmail) {
+    preferredNodeIds.add(selectedContributorEmail)
+
+    const selectedContributorEdges = sortEdgesByStrength(
+      rawEdges.filter((edge) => edge.from === selectedContributorEmail || edge.to === selectedContributorEmail),
+    ).slice(0, DAGRE_SELECTED_CONTRIBUTOR_EDGE_BONUS)
+
+    for (const edge of selectedContributorEdges) {
+      preferredNodeIds.add(edge.from)
+      preferredNodeIds.add(edge.to)
+    }
+  }
+
+  let structuredEdges = sortEdgesByStrength(
+    rawEdges.filter((edge) => preferredNodeIds.has(edge.from) && preferredNodeIds.has(edge.to)),
+  ).slice(0, DAGRE_MAX_RENDERED_EDGES)
+
+  if (structuredEdges.length === 0) {
+    structuredEdges = sortEdgesByStrength(rawEdges).slice(0, Math.min(DAGRE_MAX_RENDERED_EDGES, rawEdges.length))
+  }
+
+  const displayedNodeCount = countGraphNodes(structuredEdges)
+
+  return {
+    edges: structuredEdges,
+    isCapped: structuredEdges.length < rawEdges.length || displayedNodeCount < totalNodeCount,
+    displayedNodeCount,
+    totalNodeCount,
+    hiddenConnectionCount: Math.max(rawEdges.length - structuredEdges.length, 0),
   }
 }
 
@@ -357,19 +469,6 @@ function TableSkeleton() {
   )
 }
 
-function CardsSkeleton() {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-      {[0, 1, 2].map((i) => (
-        <div key={i} style={cardStyle}>
-          <SkeletonBlock width={80} height={28} style={{ animationDelay: `${i * 0.15}s` }} />
-          <SkeletonBlock width={100} height={12} style={{ marginTop: "0.5rem", animationDelay: `${i * 0.15 + 0.05}s` }} />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function getDefaultSelectedContributor(
   edges: PeopleDep[],
   contributors: ContributorImpactContributor[],
@@ -384,8 +483,27 @@ function formatScore(value: number) {
   return value.toFixed(1)
 }
 
-export default function TopologyGraph({ periods, impactPeriods }: TopologyGraphProps) {
+export default function TopologyGraph({
+  periods,
+  impactPeriods,
+  getContributorHref,
+  contributorRepoKey = null,
+  componentsHref = "/components",
+}: TopologyGraphProps) {
+  const resolvedGetContributorHref = useMemo(() => {
+    if (typeof getContributorHref === "function") {
+      return getContributorHref
+    }
+
+    if (contributorRepoKey) {
+      return (email: string) => getLandscapeRepositoryContributorHref(contributorRepoKey, email)
+    }
+
+    return (email: string) => getDefaultContributorHref(email, { source: "topology" })
+  }, [contributorRepoKey, getContributorHref])
+
   const periodKeys = Object.keys(periods)
+  const [mountVersion, setMountVersion] = useState(getRouteVersion)
   const initialValues = useMemo(
     () => [
       [topologyPeriodsAtom, periods],
@@ -394,9 +512,34 @@ export default function TopologyGraph({ periods, impactPeriods }: TopologyGraphP
     [periodKeys, periods],
   )
 
+  useEffect(() => {
+    const syncRouteVersion = (event?: Event) => {
+      const detailVersion =
+        event instanceof CustomEvent && typeof event.detail?.version === "number"
+          ? event.detail.version
+          : null
+
+      setMountVersion(detailVersion ?? getRouteVersion())
+    }
+
+    document.addEventListener("planetnik:route-version", syncRouteVersion as EventListener)
+    window.addEventListener("pageshow", syncRouteVersion)
+    syncRouteVersion()
+
+    return () => {
+      document.removeEventListener("planetnik:route-version", syncRouteVersion as EventListener)
+      window.removeEventListener("pageshow", syncRouteVersion)
+    }
+  }, [])
+
   return (
-    <RegistryProvider initialValues={initialValues}>
-      <TopologyGraphContent periodKeys={periodKeys} impactPeriods={impactPeriods} />
+    <RegistryProvider key={mountVersion} initialValues={initialValues}>
+      <TopologyGraphContent
+        periodKeys={periodKeys}
+        impactPeriods={impactPeriods}
+        getContributorHref={resolvedGetContributorHref}
+        componentsHref={componentsHref}
+      />
     </RegistryProvider>
   )
 }
@@ -404,16 +547,23 @@ export default function TopologyGraph({ periods, impactPeriods }: TopologyGraphP
 function TopologyGraphContent({
   periodKeys,
   impactPeriods,
+  getContributorHref,
+  componentsHref,
 }: {
   periodKeys: string[]
   impactPeriods: Record<string, ContributorImpactContributor[]>
+  getContributorHref: (email: string) => string
+  componentsHref: string | null
 }) {
   const [selectedPeriod, setSelectedPeriod] = useAtom(selectedPeriodAtom)
   const currentEdges = useAtomValue(currentEdgesAtom)
   const stats = useAtomValue(topologyStatsAtom)
   const sortedEdges = useAtomValue(sortedEdgesAtom)
   const [selectedContributorEmail, setSelectedContributorEmail] = useState<string | null>(null)
-  const [ready, setReady] = useState(false)
+  const [graphActivated, setGraphActivated] = useState(false)
+  const graphViewportRef = useRef<HTMLDivElement | null>(null)
+  const graphInstanceRef = useRef<ReactFlowHandle | null>(null)
+  const fitViewTimeoutRef = useRef<number | null>(null)
   const styleInjected = useRef(false)
 
   // Inject pulse animation keyframes once
@@ -452,6 +602,32 @@ function TopologyGraphContent({
     }
   }, [defaultSelectedContributor, graphContributorEmails, selectedContributorEmail])
 
+  useEffect(() => {
+    const element = graphViewportRef.current
+    if (!element || graphActivated || typeof window === "undefined") return
+
+    const inViewportSoon = element.getBoundingClientRect().top <= window.innerHeight + 240
+    if (inViewportSoon || typeof IntersectionObserver === "undefined") {
+      setGraphActivated(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setGraphActivated(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: "240px 0px" },
+    )
+
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+    }
+  }, [graphActivated])
+
   const selectedContributor = selectedContributorEmail ? contributorImpactMap.get(selectedContributorEmail) : undefined
   const glueContributors = useMemo(
     () => currentImpactContributors.filter((contributor) => contributor.is_glue),
@@ -464,9 +640,14 @@ function TopologyGraphContent({
   const topGlueContributor = glueContributors[0]
   const topSnackingContributor = [...snackingContributors].sort((left, right) => right.snacking_score - left.snacking_score)[0]
 
+  const structuredTopology = useMemo(
+    () => buildStructuredTopologyEdges(currentEdges, selectedContributorEmail),
+    [currentEdges, selectedContributorEmail],
+  )
+
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
-    () => buildGraph(currentEdges, contributorImpactMap, selectedContributorEmail),
-    [contributorImpactMap, currentEdges, selectedContributorEmail],
+    () => buildGraph(structuredTopology.edges, contributorImpactMap, selectedContributorEmail),
+    [contributorImpactMap, selectedContributorEmail, structuredTopology.edges],
   )
   const contributorForceGraph = useMemo(
     () => buildContributorForceGraph(currentEdges, { contributorSource: "topology" }),
@@ -481,61 +662,74 @@ function TopologyGraphContent({
     setEdges(layoutedEdges)
   }, [layoutedNodes, layoutedEdges, setNodes, setEdges])
 
-  const onInit = useCallback((instance: { fitView: () => void }) => {
-    setTimeout(() => {
-      instance.fitView()
-      setReady(true)
-    }, 50)
+  const scheduleFitView = useCallback(() => {
+    if (!graphActivated || typeof window === "undefined") return
+
+    if (fitViewTimeoutRef.current !== null) {
+      window.clearTimeout(fitViewTimeoutRef.current)
+    }
+
+    fitViewTimeoutRef.current = window.setTimeout(() => {
+      graphInstanceRef.current?.fitView({ padding: 0.18, duration: 240 })
+      fitViewTimeoutRef.current = null
+    }, 40)
+  }, [graphActivated])
+
+  useEffect(() => {
+    return () => {
+      if (fitViewTimeoutRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(fitViewTimeoutRef.current)
+      }
+    }
   }, [])
+
+  useEffect(() => {
+    if (!graphActivated) return
+    scheduleFitView()
+  }, [graphActivated, currentEdges, selectedPeriod, scheduleFitView])
+
+  useEffect(() => {
+    if (!graphActivated || typeof ResizeObserver === "undefined") return
+
+    const element = graphViewportRef.current
+    if (!element) return
+
+    const observer = new ResizeObserver(() => {
+      scheduleFitView()
+    })
+
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+    }
+  }, [graphActivated, scheduleFitView])
+
+  useEffect(() => {
+    if (!graphActivated) return
+
+    const handleRouteRefresh = () => {
+      scheduleFitView()
+    }
+
+    document.addEventListener("planetnik:route-version", handleRouteRefresh)
+    window.addEventListener("pageshow", handleRouteRefresh)
+
+    return () => {
+      document.removeEventListener("planetnik:route-version", handleRouteRefresh)
+      window.removeEventListener("pageshow", handleRouteRefresh)
+    }
+  }, [graphActivated, scheduleFitView])
+
+  const onInit = useCallback((instance: ReactFlowHandle) => {
+    graphInstanceRef.current = instance
+    scheduleFitView()
+  }, [scheduleFitView])
 
   const onNodeClick = useCallback((_event: unknown, node: Node) => {
     setSelectedContributorEmail(node.id)
   }, [])
 
-  const contentResult = useMemo(
-    () => ready
-      ? Result.success({
-          stats,
-          sortedEdges,
-        })
-      : Result.initial<{
-          stats: typeof stats
-          sortedEdges: typeof sortedEdges
-        }>(),
-    [ready, sortedEdges, stats],
-  )
-
-  return Result.builder(contentResult)
-    .onInitial(() => (
-      <div>
-        <CardsSkeleton />
-        <div style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Contributor Topology</h3>
-            <SkeletonBlock width={100} height={32} />
-          </div>
-          <GraphSkeleton />
-        </div>
-        <div style={{ marginBottom: "2rem" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>Strongest Connections</h3>
-          <TableSkeleton />
-        </div>
-        {/* Hidden ReactFlow to trigger onInit */}
-        <div style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={onNodeClick}
-            onInit={onInit}
-            fitView
-            proOptions={{ hideAttribution: true }}
-          />
-        </div>
-      </div>
-    ))
-    .onSuccess(({ stats, sortedEdges }) => (
+  return (
       <div>
         {/* Summary cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
@@ -582,12 +776,18 @@ function TopologyGraphContent({
         {/* Graph section with period selector */}
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Contributor Topology</h3>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              style={selectStyle}
-            >
+            <div style={{ display: "grid", gap: "0.35rem" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0 }}>Contributor Topology</h3>
+              {structuredTopology.isCapped ? (
+                <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: "0.84rem", lineHeight: 1.5 }}>
+                  Structured view is showing the strongest {structuredTopology.edges.length.toLocaleString()} link
+                  {structuredTopology.edges.length === 1 ? "" : "s"} across {structuredTopology.displayedNodeCount.toLocaleString()} of{" "}
+                  {structuredTopology.totalNodeCount.toLocaleString()} contributors for responsiveness. The force-directed view below keeps the full{" "}
+                  {currentEdges.length.toLocaleString()}-link graph.
+                </p>
+              ) : null}
+            </div>
+            <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} style={selectStyle}>
               {periodKeys.map((key) => (
                 <option key={key} value={key}>
                   {key}
@@ -595,21 +795,27 @@ function TopologyGraphContent({
               ))}
             </select>
           </div>
-          <div style={{ width: "100%", height: "600px", background: "var(--color-card)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={onNodeClick}
-              onInit={onInit}
-              fitView
-              minZoom={0.2}
-              maxZoom={2}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background color="var(--color-border)" gap={20} />
-            </ReactFlow>
+          <div ref={graphViewportRef}>
+            {graphActivated ? (
+              <div style={{ width: "100%", height: "600px", background: "var(--color-card)", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onNodeClick={onNodeClick}
+                  onInit={onInit}
+                  fitView
+                  minZoom={0.2}
+                  maxZoom={2}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background color="var(--color-border)" gap={20} />
+                </ReactFlow>
+              </div>
+            ) : (
+              <GraphSkeleton />
+            )}
           </div>
         </div>
 
@@ -634,7 +840,7 @@ function TopologyGraphContent({
                 )}
               </div>
               {selectedContributor ? (
-                <a href={getContributorHref(selectedContributor.email, { source: "topology" })} style={detailLinkStyle}>
+                <a href={getContributorHref(selectedContributor.email)} style={detailLinkStyle}>
                   Open contributor detail
                 </a>
               ) : null}
@@ -707,9 +913,11 @@ function TopologyGraphContent({
                           {component.files} files • {component.commits} commits
                         </div>
                       </div>
-                      <a href="/components" style={secondaryLinkStyle}>
-                        Components
-                      </a>
+                      {componentsHref ? (
+                        <a href={componentsHref} style={secondaryLinkStyle}>
+                          Components
+                        </a>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -742,44 +950,47 @@ function TopologyGraphContent({
         {/* Strongest connections table */}
         <div style={{ marginBottom: "2rem" }}>
           <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: "0.75rem" }}>Strongest Connections</h3>
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Contributor 1</th>
-                <th style={thStyle}>Contributor 2</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Shared Files</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEdges.map((e, i) => (
-                <tr key={i}>
-                  <td style={emailStyle}>
-                    <div style={contributorCellStyle}>
-                      <a href={getContributorHref(e.from, { source: "topology" })} style={emailLinkStyle}>{e.from}</a>
-                      <div style={chipRowStyle}>
-                        {contributorImpactMap.get(e.from)?.is_glue ? <span style={glueTableChipStyle}>Glue</span> : null}
-                        {contributorImpactMap.get(e.from)?.is_snacking ? <span style={snackingTableChipStyle}>Snack</span> : null}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={emailStyle}>
-                    <div style={contributorCellStyle}>
-                      <a href={getContributorHref(e.to, { source: "topology" })} style={emailLinkStyle}>{e.to}</a>
-                      <div style={chipRowStyle}>
-                        {contributorImpactMap.get(e.to)?.is_glue ? <span style={glueTableChipStyle}>Glue</span> : null}
-                        {contributorImpactMap.get(e.to)?.is_snacking ? <span style={snackingTableChipStyle}>Snack</span> : null}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={numStyle}>{e.count}</td>
+          {graphActivated ? (
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Contributor 1</th>
+                  <th style={thStyle}>Contributor 2</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>Shared Files</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedEdges.map((e, i) => (
+                  <tr key={i}>
+                    <td style={emailStyle}>
+                      <div style={contributorCellStyle}>
+                        <a href={getContributorHref(e.from)} style={emailLinkStyle}>{e.from}</a>
+                        <div style={chipRowStyle}>
+                          {contributorImpactMap.get(e.from)?.is_glue ? <span style={glueTableChipStyle}>Glue</span> : null}
+                          {contributorImpactMap.get(e.from)?.is_snacking ? <span style={snackingTableChipStyle}>Snack</span> : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={emailStyle}>
+                      <div style={contributorCellStyle}>
+                        <a href={getContributorHref(e.to)} style={emailLinkStyle}>{e.to}</a>
+                        <div style={chipRowStyle}>
+                          {contributorImpactMap.get(e.to)?.is_glue ? <span style={glueTableChipStyle}>Glue</span> : null}
+                          {contributorImpactMap.get(e.to)?.is_snacking ? <span style={snackingTableChipStyle}>Snack</span> : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={numStyle}>{e.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <TableSkeleton />
+          )}
         </div>
       </div>
-    ))
-    .render()
+  )
 }
 
 const cardStyle: React.CSSProperties = {

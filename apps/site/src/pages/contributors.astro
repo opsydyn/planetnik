@@ -8,6 +8,11 @@ import { chartHelp } from "../lib/chartHelp"
 import Dashboard from "../layouts/Dashboard.astro"
 import { getContributorDisplayName, getContributorHref } from "../lib/contributors"
 
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode === "landscape") {
+  return Astro.redirect("/landscape/contributors")
+}
+
 const summary = await getEntry("analysis", "summary")
 const contributors = await getCollection("contributors")
 const contributorDetails = await getCollection("contributorDetails")

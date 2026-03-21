@@ -20,6 +20,11 @@ export async function getStaticPaths() {
 
 const { contributorId } = Astro.props as { contributorId: string }
 
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode === "landscape") {
+  return Astro.redirect("/landscape/contributors")
+}
+
 const summary = await getEntry("analysis", "summary")
 const contributor = await getEntry("contributorDetails", contributorId)
 const contributorSummary = await getEntry("contributors", contributorId)

@@ -4,7 +4,8 @@ import { Image } from "astro:assets"
 import { getEntry } from "astro:content"
 
 const summary = await getEntry("analysis", "summary")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const reportContext = await getEntry("reportContext", "context")
+const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
 ---
 
 <Dashboard title="About" projectName={projectName}>

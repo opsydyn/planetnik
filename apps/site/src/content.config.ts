@@ -14,8 +14,16 @@ import {
   dependenciesLoader,
   duplicatesLoader,
   filesLoader,
+  landscapeContributorsLoader,
+  landscapeOverviewLoader,
+  landscapeRepositoriesLoader,
+  landscapeTagMatrixLoader,
+  landscapeTagsLoader,
+  landscapeTeamsLoader,
+  landscapeTopologyLoader,
   metricsLoader,
   peopleDependenciesLoader,
+  reportContextLoader,
   temporalDepsLoader,
   unitsLoader,
 } from "./loaders/planetnik-loader"
@@ -58,7 +66,118 @@ const impactDimensionKeySchema = z.enum([
   "change_enablement",
 ])
 
+const reportContextSchema = z.object({
+  mode: z.enum(["single_repository", "landscape"]),
+  reportMode: z.enum(["single_repository", "landscape"]),
+  title: z.string(),
+  rootRoute: z.string(),
+  dataVersion: z.number(),
+  source: z.string(),
+  hasLandscape: z.boolean(),
+  hasSingleRepositoryAnalysis: z.boolean(),
+  primaryNavigation: z.array(z.string()),
+})
+
+const landscapeRepositorySummarySchema = z.object({
+  name: z.string(),
+  repoKey: z.string(),
+  mainLinesOfCode: z.number(),
+  contributors: z.number(),
+  latestCommitDate: z.string(),
+  analysisResultsPath: z.string(),
+})
+
+const landscapeContributorRepositorySchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  analysisResultsPath: z.string(),
+  repoKey: z.string(),
+  firstCommitDate: z.string(),
+  latestCommitDate: z.string(),
+  commitsCount: z.number(),
+  commits30Days: z.number(),
+  commits90Days: z.number(),
+  commits180Days: z.number(),
+  commits365Days: z.number(),
+  commitDates: z.array(z.string()),
+})
+
+const landscapeContributorSchema = z.object({
+  email: z.string(),
+  displayName: z.string(),
+  name: z.string(),
+  commitsCount: z.number(),
+  commitsCount30Days: z.number(),
+  commitsCount90Days: z.number(),
+  commitsCount180Days: z.number(),
+  commitsCount365Days: z.number(),
+  commits30d: z.number(),
+  commits90d: z.number(),
+  commits180d: z.number(),
+  commits365d: z.number(),
+  firstCommitDate: z.string(),
+  latestCommitDate: z.string(),
+  isBot: z.boolean(),
+  repositoryCount: z.number(),
+  repositories: z.array(landscapeContributorRepositorySchema),
+})
+
+const landscapeTopologyPeriodSchema = z.object({
+  periodKey: z.string(),
+  periodLabel: z.string(),
+  contributorCount: z.number(),
+  connectionCount: z.number(),
+  cIndex: z.number(),
+  cMedian: z.number(),
+  cMean: z.number(),
+  mostConnectedContributor: z
+    .object({
+      email: z.string(),
+      displayName: z.string(),
+      connectionCount: z.number(),
+    })
+    .nullable(),
+  contributors: z.array(
+    z.object({
+      email: z.string(),
+      displayName: z.string(),
+      isBot: z.boolean(),
+      commitsCount: z.number(),
+      repositoryCount: z.number(),
+      repositories: z.array(
+        z.object({
+          name: z.string(),
+          commitsCount: z.number(),
+        }),
+      ),
+      connectionCount: z.number(),
+      sharedFilesCount: z.number(),
+    }),
+  ),
+  strongestConnections: z.array(
+    z.object({
+      from: z.string(),
+      to: z.string(),
+      sharedFilesCount: z.number(),
+      sharedFiles: z.array(z.string()),
+    }),
+  ),
+  connections: z.array(
+    z.object({
+      from: z.string(),
+      to: z.string(),
+      sharedFilesCount: z.number(),
+      sharedFiles: z.array(z.string()),
+    }),
+  ),
+})
+
 export const collections = {
+  reportContext: defineCollection({
+    loader: reportContextLoader(),
+    schema: reportContextSchema,
+  }),
+
   analysis: defineCollection({
     loader: analysisLoader(),
     schema: z.object({
@@ -412,6 +531,199 @@ export const collections = {
       commitsCount90Days: z.number(),
       committersCount90Days: z.number(),
       filesCount90Days: z.number(),
+    }),
+  }),
+
+  landscapeOverview: defineCollection({
+    loader: landscapeOverviewLoader(),
+    schema: z.object({
+      title: z.string(),
+      landscapeName: z.string(),
+      repositoryCount: z.number(),
+      contributorCount: z.number(),
+      totals: z.object({
+        mainLinesOfCode: z.number(),
+        testLinesOfCode: z.number(),
+        generatedLinesOfCode: z.number(),
+        buildAndDeployLinesOfCode: z.number(),
+        otherLinesOfCode: z.number(),
+        totalLinesOfCode: z.number(),
+        mainFilesCount: z.number(),
+        contributorCount30Days: z.number(),
+        contributorCount90Days: z.number(),
+        contributorCount180Days: z.number(),
+        contributorCount365Days: z.number(),
+        repositoryCount30Days: z.number(),
+        repositoryCount90Days: z.number(),
+        commits30d: z.number(),
+        commits90d: z.number(),
+      }),
+      firstCommitDate: z.string(),
+      latestCommitDate: z.string(),
+      languages: z.array(
+        z.object({
+          extension: z.string(),
+          linesOfCode: z.number(),
+          repositories: z.number(),
+        }),
+      ),
+      topRepositories: z.array(landscapeRepositorySummarySchema),
+    }),
+  }),
+
+  landscapeRepositories: defineCollection({
+    loader: landscapeRepositoriesLoader(),
+    schema: z.object({
+      metadata: z.object({
+        name: z.string(),
+        description: z.string(),
+        tooltip: z.string(),
+        logoLink: z.string(),
+        links: z.array(z.object({ label: z.string().optional(), href: z.string().optional() })),
+      }),
+      latestCommitDate: z.string(),
+      commitsCount: z.number(),
+      commitsCount30Days: z.number(),
+      commitsCount90Days: z.number(),
+      contributors: z.array(z.string()),
+      contributors30Days: z.array(z.string()),
+      contributors90Days: z.array(z.string()),
+      analysisResultsPath: z.string(),
+      repoKey: z.string(),
+      mainFilesCount: z.number(),
+      mainLinesOfCode: z.number(),
+      testFilesCount: z.number(),
+      testLinesOfCode: z.number(),
+      generatedLinesOfCode: z.number(),
+      buildAndDeployLinesOfCode: z.number(),
+      otherLinesOfCode: z.number(),
+      name: z.string(),
+      description: z.string(),
+      commits30d: z.number(),
+      commits90d: z.number(),
+      contributorsCount: z.number(),
+      contributors30d: z.number(),
+      contributors90d: z.number(),
+      contributorEmails: z.array(z.string()),
+      contributorEmails30d: z.array(z.string()),
+      contributorEmails90d: z.array(z.string()),
+      tags: z.array(
+        z.object({
+          key: z.string(),
+          group: z.string(),
+          name: z.string(),
+        }),
+      ),
+    }),
+  }),
+
+  landscapeContributors: defineCollection({
+    loader: landscapeContributorsLoader(),
+    schema: landscapeContributorSchema,
+  }),
+
+  landscapeTeams: defineCollection({
+    loader: landscapeTeamsLoader(),
+    schema: z.object({
+      name: z.string(),
+      description: z.string(),
+      commitsCount: z.number(),
+      commitsCount30Days: z.number(),
+      commitsCount90Days: z.number(),
+      commitsCount180Days: z.number(),
+      commitsCount365Days: z.number(),
+      commits30d: z.number(),
+      commits90d: z.number(),
+      commits180d: z.number(),
+      commits365d: z.number(),
+      firstCommitDate: z.string(),
+      latestCommitDate: z.string(),
+      repositoryCount: z.number(),
+      memberCount: z.number(),
+      members: z.array(z.string()),
+      repositories: z.array(landscapeContributorRepositorySchema),
+    }),
+  }),
+
+  landscapeTopology: defineCollection({
+    loader: landscapeTopologyLoader(),
+    schema: z.object({
+      title: z.string(),
+      contributorCount: z.number(),
+      periods: z.array(landscapeTopologyPeriodSchema),
+      periodsByKey: z.record(z.string(), landscapeTopologyPeriodSchema),
+    }),
+  }),
+
+  landscapeTags: defineCollection({
+    loader: landscapeTagsLoader(),
+    schema: z.object({
+      title: z.string(),
+      groupCount: z.number(),
+      tagCount: z.number(),
+      untaggedRepositoryCount: z.number(),
+      groups: z.array(
+        z.object({
+          name: z.string(),
+          description: z.string(),
+          color: z.string(),
+          tagCount: z.number(),
+          repositoryCount: z.number(),
+          tags: z.array(
+            z.object({
+              key: z.string(),
+              name: z.string(),
+              imageLink: z.string(),
+              repositoryCount: z.number(),
+              totalMainLinesOfCode: z.number(),
+              repositories: z.array(
+                z.object({
+                  name: z.string(),
+                  repoKey: z.string(),
+                  analysisResultsPath: z.string(),
+                  mainLinesOfCode: z.number(),
+                  contributors: z.number(),
+                  latestCommitDate: z.string(),
+                }),
+              ),
+            }),
+          ),
+        }),
+      ),
+      untaggedRepositories: z.array(
+        z.object({
+          name: z.string(),
+          repoKey: z.string(),
+          analysisResultsPath: z.string(),
+          mainLinesOfCode: z.number(),
+          contributors: z.number(),
+          latestCommitDate: z.string(),
+        }),
+      ),
+    }),
+  }),
+
+  landscapeTagMatrix: defineCollection({
+    loader: landscapeTagMatrixLoader(),
+    schema: z.object({
+      title: z.string(),
+      repositoryCount: z.number(),
+      repositories: z.array(
+        z.object({
+          name: z.string(),
+          repoKey: z.string(),
+          analysisResultsPath: z.string(),
+          mainLinesOfCode: z.number(),
+          tags: z.array(
+            z.object({
+              key: z.string(),
+              group: z.string(),
+              name: z.string(),
+            }),
+          ),
+          isUntagged: z.boolean(),
+        }),
+      ),
     }),
   }),
 }

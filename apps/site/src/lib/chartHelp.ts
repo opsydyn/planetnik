@@ -5,6 +5,18 @@ export const chartHelp = {
     languageBars:
       "Use this ranking to compare language footprint directly. Large secondary bars often signal integration or maintenance costs that the top-level summary can hide.",
   },
+  landscape: {
+    languageMix:
+      "Shows which languages dominate the repositories in this landscape. Use the biggest slices to focus standards, staffing, and quality work where the org carries the most code.",
+    topRepositories:
+      "Ranks repositories by main lines of code. Start here to spot the systems that will dominate maintenance cost, review effort, and structural risk.",
+    contributorActivity:
+      "Shows which contributors are active across the most repositories or commits. Use it to distinguish broad organisational glue from isolated repo-local activity.",
+    topology:
+      "Shows cross-repository contributor coordination built from shared-file work. Dense clusters suggest collaboration hotspots; bridges often reveal fragile knowledge paths between repos.",
+    tags:
+      "Shows how repository tags group the landscape. Use it to see whether the org structure and the repo portfolio are balanced or overly concentrated in a few categories.",
+  },
   overview: {
     mainLanguageMix:
       "Shows how main-scope lines of code are split by language. A dominant slice usually marks where architecture decisions and code health work will pay off fastest.",

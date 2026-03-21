@@ -1,0 +1,305 @@
+---
+import DonutChart from "../../../../components/charts/DonutChart"
+import StaticReportTable from "../../../../components/tables/StaticReportTable.astro"
+import { chartHelp } from "../../../../lib/chartHelp"
+import { readLandscapeRepoText } from "../../../../lib/landscape"
+import {
+  getLandscapeRepositoryPageContext,
+  getLandscapeRepositoryStaticPaths,
+  type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext"
+import { getMetric, parseMetricsText } from "../../../../lib/metrics"
+import Dashboard from "../../../../layouts/Dashboard.astro"
+
+export async function getStaticPaths() {
+  return getLandscapeRepositoryStaticPaths()
+}
+
+const props = Astro.props as LandscapeRepoPageProps
+const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const metrics = parseMetricsText(readLandscapeRepoText(props.repoKey, "metrics.txt"))
+
+const metricById = new Map(metrics.map((metric) => [metric.id, metric.value] as const))
+
+function getMetricStrict(id: string): number {
+  return metricById.get(id) ?? 0
+}
+
+function formatMilliseconds(ms: number): string {
+  if (ms >= 1000) {
+    return `${(ms / 1000).toFixed(1)}s`
+  }
+  return `${ms.toFixed(0)}ms`
+}
+
+function groupMetricId(id: string): string {
+  if (id === "TOTAL_NUMBER_OF_FILES" || id.startsWith("NUMBER_OF_FILES_")) return "NUMBER_OF_FILES"
+  if (id.startsWith("LINES_OF_CODE_") || id.startsWith("TEST_VS_MAIN_LINES_OF_CODE")) return "LINES_OF_CODE"
+  if (id.startsWith("NUMBER_OF_UNITS") || id.startsWith("LINES_OF_CODE_IN_UNITS") || id.startsWith("LINES_OF_CODE_OUTSIDE_UNITS")) {
+    return "UNITS"
+  }
+  if (id.includes("_RISK_FILE_SIZE_")) return "FILE_SIZE_RISK"
+  if (id.startsWith("CONDITIONAL_COMPLEXITY_")) return "CONDITIONAL_COMPLEXITY"
+  if (id.startsWith("FILE_CHANGE_HISTORY_")) return "FILE_CHANGE_HISTORY"
+  if (id.startsWith("FILE_AGE_")) return "FILE_AGE"
+  if (id.startsWith("NUMBER_OF_DEPENDENCIES_") || id.startsWith("NUMBER_OF_PLACES_WITH_CYCLIC_DEPENDENCIES_")) {
+    return "DEPENDENCIES"
+  }
+  if (id.startsWith("DUPLICATION_") || id.startsWith("UNIT_DUPLICATES_")) return "DUPLICATION"
+  if (id.startsWith("NUMBER_OF_CONTRIBUTORS")) return "TEAM"
+  if (id.startsWith("TOTAL_ANALYSIS_TIME_")) return "ANALYSIS"
+
+  const parts = id.split("_")
+  return parts.slice(0, Math.min(3, parts.length)).join("_")
+}
+
+function formatGroupLabel(group: string): string {
+  const labels: Record<string, string> = {
+    NUMBER_OF_FILES: "Files",
+    LINES_OF_CODE: "Lines of Code",
+    UNITS: "Units",
+    FILE_SIZE_RISK: "File Size Risk",
+    CONDITIONAL_COMPLEXITY: "Conditional Complexity",
+    FILE_CHANGE_HISTORY: "File Change History",
+    FILE_AGE: "File Age",
+    DEPENDENCIES: "Dependencies",
+    DUPLICATION: "Duplication",
+    TEAM: "Team",
+    ANALYSIS: "Analysis",
+  }
+
+  return labels[group] ?? group.replace(/_/g, " ").toLowerCase()
+}
+
+const groupOrder = [
+  "LINES_OF_CODE",
+  "NUMBER_OF_FILES",
+  "UNITS",
+  "CONDITIONAL_COMPLEXITY",
+  "FILE_SIZE_RISK",
+  "FILE_AGE",
+  "DEPENDENCIES",
+  "FILE_CHANGE_HISTORY",
+  "TEAM",
+  "DUPLICATION",
+  "ANALYSIS",
+]
+
+function sortGroups(a: string, b: string): number {
+  const aIndex = groupOrder.indexOf(a)
+  const bIndex = groupOrder.indexOf(b)
+  const resolvedA = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex
+  const resolvedB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex
+
+  if (resolvedA !== resolvedB) {
+    return resolvedA - resolvedB
+  }
+
+  return a.localeCompare(b)
+}
+
+const groups = new Map<string, Array<{ id: string; value: number }>>()
+for (const metric of metrics) {
+  const prefix = groupMetricId(metric.id)
+  const list = groups.get(prefix) ?? []
+  list.push(metric)
+  groups.set(prefix, list)
+}
+
+const sortedGroups = [...groups.entries()]
+  .map(([group, items]) => [group, [...items].sort((a, b) => a.id.localeCompare(b.id))] as const)
+  .sort((a, b) => sortGroups(a[0], b[0]))
+
+const locBreakdownData = [
+  { label: "Main", value: getMetricStrict("LINES_OF_CODE_MAIN") },
+  { label: "Test", value: getMetricStrict("LINES_OF_CODE_TEST") },
+  { label: "Generated", value: getMetricStrict("LINES_OF_CODE_GENERATED") },
+  { label: "Build & Deploy", value: getMetricStrict("LINES_OF_CODE_BUILDANDDEPLOYMENT") },
+  { label: "Other", value: getMetricStrict("LINES_OF_CODE_OTHER") },
+].filter((item) => item.value > 0)
+
+const mainLocByExtensionData = metrics
+  .filter((metric) => metric.id.startsWith("LINES_OF_CODE_MAIN_EXT_") && metric.value > 0)
+  .map((metric) => ({
+    label: `.${metric.id.slice("LINES_OF_CODE_MAIN_EXT_".length).toLowerCase()}`,
+    value: metric.value,
+  }))
+  .sort((a, b) => b.value - a.value)
+
+const totalAnalysisTime = getMetric(metrics, "TOTAL_ANALYSIS_TIME_IN_MILLIS") ?? 0
+const duplicatedLines = getMetric(metrics, "DUPLICATION_NUMBER_OF_DUPLICATED_LINES") ?? 0
+const testVsMainPercentage = getMetric(metrics, "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE") ?? 0
+---
+
+<Dashboard title={`${repoName} Metrics`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
+  <h2>Metrics</h2>
+  <p class="subtitle">{metrics.length} metrics for {repoName}</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{getMetricStrict("LINES_OF_CODE_MAIN").toLocaleString()}</div>
+      <div class="card-label">Main LOC</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{getMetricStrict("LINES_OF_CODE_TEST").toLocaleString()}</div>
+      <div class="card-label">Test LOC</div>
+      <div class="card-detail">{testVsMainPercentage.toFixed(1)}% of main</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{duplicatedLines.toLocaleString()}</div>
+      <div class="card-label">Duplicated Lines</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{formatMilliseconds(totalAnalysisTime)}</div>
+      <div class="card-label">Analysis Time</div>
+    </div>
+  </div>
+
+  {(locBreakdownData.length > 0 || mainLocByExtensionData.length > 0) && (
+    <section class="visual-summary">
+      <h3>Visual Summary</h3>
+      <div class="visual-grid">
+        {locBreakdownData.length > 0 && (
+          <div class="visual-item">
+            <div class="visual-copy">
+              <h4>Lines of Code Mix</h4>
+              <p>Main, test, generated, deployment, and supporting code split.</p>
+            </div>
+            <DonutChart client:load data={locBreakdownData} valueLabel="LOC" helpText={chartHelp.metrics.locMix} />
+          </div>
+        )}
+
+        {mainLocByExtensionData.length > 0 && (
+          <div class="visual-item">
+            <div class="visual-copy">
+              <h4>Main LOC by Extension</h4>
+              <p>Primary codebase composition by file extension.</p>
+            </div>
+            <DonutChart client:load data={mainLocByExtensionData} valueLabel="LOC" helpText={chartHelp.metrics.mainLocByExtension} />
+          </div>
+        )}
+      </div>
+    </section>
+  )}
+
+  {sortedGroups.map(([group, items]) => (
+    <section class="section">
+      <h3>{formatGroupLabel(group)}</h3>
+      <StaticReportTable ariaLabel={`${formatGroupLabel(group)} metrics`}>
+        <thead>
+          <tr>
+            <th><span>Metric</span></th>
+            <th><span>Value</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((metric) => (
+            <tr>
+              <td class="metric-id">{metric.id}</td>
+              <td class="metric-value report-static-table__num">{metric.value.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </StaticReportTable>
+    </section>
+  ))}
+</Dashboard>
+
+<style>
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .card-detail {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+  }
+
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .visual-summary {
+    margin-bottom: 2rem;
+  }
+
+  .visual-summary > h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+  }
+
+  .visual-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 960px) {
+    .visual-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .visual-item {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .visual-copy h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .visual-copy p {
+    color: var(--color-text-muted);
+    line-height: 1.55;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .metric-id {
+    word-break: break-word;
+  }
+</style>

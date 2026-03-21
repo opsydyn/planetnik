@@ -1,0 +1,197 @@
+---
+import DistributionChart from "../../../../components/charts/DistributionChart"
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
+import LineChart from "../../../../components/charts/LineChart"
+import StaticReportTable from "../../../../components/tables/StaticReportTable.astro"
+import { chartHelp } from "../../../../lib/chartHelp"
+import { readLandscapeRepoJson, readLandscapeRepoText } from "../../../../lib/landscape"
+import {
+  getLandscapeRepositoryPageContext,
+  getLandscapeRepositoryStaticPaths,
+  type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext"
+import { getMetric, parseMetricsText } from "../../../../lib/metrics"
+import Dashboard from "../../../../layouts/Dashboard.astro"
+
+interface RepoContributor {
+  email: string
+  commitsCount: number
+  commitsCount30Days: number
+  commitsCount90Days: number
+  commitsCount365Days: number
+  isRookie?: boolean
+}
+
+interface RepoContributorsExport {
+  contributors?: RepoContributor[]
+}
+
+interface RepoTimelineEntry {
+  timeSlot: string
+  contributors: number
+  commits: number
+}
+
+interface RepoTimelineExport {
+  perYear?: RepoTimelineEntry[]
+}
+
+interface CommitsPerExtensionEntry {
+  extension: string
+  commitsCount: number
+  committersCount: number
+  filesCount: number
+  commitsCount30Days?: number
+  commitsCount90Days?: number
+}
+
+export async function getStaticPaths() {
+  return getLandscapeRepositoryStaticPaths()
+}
+
+const props = Astro.props as LandscapeRepoPageProps
+const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect("/")
+}
+
+const contributors = readLandscapeRepoJson<RepoContributorsExport>(props.repoKey, "contributors.json")?.contributors ?? []
+const metrics = parseMetricsText(readLandscapeRepoText(props.repoKey, "metrics.txt"))
+const commitsPerExtension = readLandscapeRepoJson<CommitsPerExtensionEntry[]>(props.repoKey, "commits_per_extension.json") ?? []
+const timeline = readLandscapeRepoJson<RepoTimelineExport>(props.repoKey, "contributor_timeline.json")
+
+const totalContributors = contributors.length
+const totalCommits = contributors.reduce((sum, contributor) => sum + contributor.commitsCount, 0)
+const activeContributors30 = contributors.filter((contributor) => contributor.commitsCount30Days > 0).length
+const activeContributors90 = contributors.filter((contributor) => contributor.commitsCount90Days > 0).length
+const activeContributors365 = contributors.filter((contributor) => contributor.commitsCount365Days > 0).length
+const ageDays = getMetric(metrics, "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
+const activeDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ACTIVE_DAYS")
+const rookieCount = contributors.filter((contributor) => contributor.isRookie).length
+
+const activityData = [
+  { label: "Past 30 days", value: activeContributors30, detail: `${activeContributors30} contributors` },
+  { label: "Past 90 days", value: activeContributors90, detail: `${activeContributors90} contributors` },
+  { label: "Past year", value: activeContributors365, detail: `${activeContributors365} contributors` },
+  { label: "All time", value: totalContributors, detail: `${totalContributors} contributors` },
+]
+
+const yearlyData = [...(timeline?.perYear ?? [])].sort((left, right) => left.timeSlot.localeCompare(right.timeSlot))
+const commitsByYear = yearlyData.map((entry) => ({ label: entry.timeSlot, value: entry.commits }))
+const contributorsByYear = yearlyData.map((entry) => ({ label: entry.timeSlot, value: entry.contributors }))
+const timelineSeries = [
+  ...(commitsByYear.length > 0 ? [{ name: "Commits", data: commitsByYear, color: "#3b82f6" }] : []),
+  ...(contributorsByYear.length > 0 ? [{ name: "Contributors", data: contributorsByYear, color: "#22c55e" }] : []),
+]
+
+const extensionBarData = [...commitsPerExtension]
+  .sort((left, right) => right.commitsCount - left.commitsCount)
+  .slice(0, 15)
+  .map((entry) => ({
+    label: `.${entry.extension}`,
+    value: entry.commitsCount,
+  }))
+---
+
+<Dashboard title={`${repoName} Commits`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
+  <h2>Commits</h2>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-value">{totalCommits.toLocaleString()}</div>
+      <div class="card-label">Total Commits</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{totalContributors}</div>
+      <div class="card-label">All-Time Contributors</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{activeContributors30}</div>
+      <div class="card-label">Active (30d)</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{activeContributors90}</div>
+      <div class="card-label">Active (90d)</div>
+    </div>
+    <div class="card">
+      <div class="card-value">{activeContributors365}</div>
+      <div class="card-label">Active (1yr)</div>
+    </div>
+    {ageDays !== null && (
+      <div class="card">
+        <div class="card-value">{ageDays.toLocaleString()}</div>
+        <div class="card-label">Repo Age (Days)</div>
+      </div>
+    )}
+    {rookieCount > 0 && (
+      <div class="card">
+        <div class="card-value">{rookieCount}</div>
+        <div class="card-label">Rookies</div>
+      </div>
+    )}
+    {activeDays !== null && (
+      <div class="card">
+        <div class="card-value">{activeDays.toLocaleString()}</div>
+        <div class="card-label">Active Days</div>
+      </div>
+    )}
+  </div>
+
+  {timelineSeries.length > 0 && (
+    <section class="section">
+      <h3>Commits &amp; Contributors Per Year</h3>
+      <LineChart client:load series={timelineSeries} xLabel="Year" yLabel="Count" helpText={chartHelp.commits.yearlyTrends} />
+    </section>
+  )}
+
+  <section class="section">
+    <h3>Active Contributors Over Time</h3>
+    <DistributionChart client:load data={activityData} helpText={chartHelp.commits.activeContributors} />
+  </section>
+
+  {extensionBarData.length > 0 && (
+    <section class="section">
+      <h3>Commits by File Extension</h3>
+      <HorizontalBarChart client:load data={extensionBarData} valueLabel="commits" helpText={chartHelp.commits.byExtension} />
+    </section>
+  )}
+
+  {commitsPerExtension.length > 0 && (
+    <StaticReportTable ariaLabel="Commits by file extension">
+      <thead>
+        <tr>
+          <th><span>Extension</span></th>
+          <th><span>Commits</span></th>
+          <th><span>Committers</span></th>
+          <th><span>Files</span></th>
+          <th><span>30d Commits</span></th>
+          <th><span>90d Commits</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {[...commitsPerExtension].sort((left, right) => right.commitsCount - left.commitsCount).map((entry) => (
+          <tr>
+            <td class="ext"><span class="report-static-table__code">.{entry.extension}</span></td>
+            <td class="num report-static-table__num">{entry.commitsCount.toLocaleString()}</td>
+            <td class="num report-static-table__num">{entry.committersCount}</td>
+            <td class="num report-static-table__num">{entry.filesCount.toLocaleString()}</td>
+            <td class="num report-static-table__num">{entry.commitsCount30Days || "—"}</td>
+            <td class="num report-static-table__num">{entry.commitsCount90Days || "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </StaticReportTable>
+  )}
+</Dashboard>
+
+<style>
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
+  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .ext { font-family: "SF Mono", "Fira Code", monospace; font-weight: 500; }
+  .num { text-align: right; font-family: "SF Mono", "Fira Code", monospace; }
+</style>

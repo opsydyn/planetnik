@@ -3,6 +3,36 @@
   "githubApiUrl": "https://api.github.com",
   "githubToken": "<YOUR_GITHUB_TOKEN>",
   "reposUpdatedAfter": "2023-01-01",
+  "metadata": {
+    "name": "<YOUR_ORG> OSS Landscape",
+    "description": "Multi-repository landscape analysis"
+  },
+  "teamsConfig": {
+    "teams": [
+      {
+        "name": "Platform",
+        "description": "Shared platform work",
+        "emailPatterns": [".*@platform\\.example\\.com"]
+      }
+    ]
+  },
+  "tagGroups": [
+    {
+      "name": "Domain",
+      "description": "Repository capability tags",
+      "color": "#8b5cf6",
+      "repositoryTags": [
+        {
+          "tag": "SDK",
+          "patterns": [".*-sdk"],
+          "anyExtensions": ["ts", "js", "py"]
+        }
+      ]
+    }
+  ],
+  "mergeExtensions": [
+    { "primary": "ts", "secondary": "tsx" }
+  ],
   "githubOrgs": [
     "<YOUR_ORG>"
   ],

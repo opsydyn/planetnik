@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { DateUtils } from "../filehistory/FileHistoryUtils.js"
 import { LandscapeAnalyzer } from "../landscape/LandscapeAnalyzer.js"
 import { LandscapeConfiguration } from "../landscape/LandscapeConfiguration.js"
 import { RepositoryLink } from "../landscape/RepositoryLink.js"
@@ -61,6 +62,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  DateUtils.reset()
   if (existsSync(WORKSPACE)) rmSync(WORKSPACE, { recursive: true })
 })
 
@@ -264,5 +266,238 @@ describe("LandscapeAnalyzer", () => {
 
     const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
     expect(results.getRepositoryCount()).toBe(0)
+  })
+
+  test("loads split repository contracts when monolithic analysis results are summary-only", () => {
+    mkdirSync(join(WORKSPACE, "repos", "repoSplit", "data"), { recursive: true })
+
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoSplit", "data", "analysisResults.json"),
+      JSON.stringify({
+        metadata: { name: "repo-split", description: "", tooltip: "", logoLink: "", links: [] },
+        filesCount: 2,
+        linesOfCode: 100,
+        duplication: { percentage: 3.5 },
+      }),
+    )
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoSplit", "data", "files_main.json"),
+      JSON.stringify({
+        totalFilesCount: 2,
+        totalLinesOfCode: 100,
+        files: [
+          {
+            relativePath: "src/a.ts",
+            extension: "ts",
+            linesOfCode: 60,
+            firstDate: "2024-06-01",
+            latestDate: "2024-06-12",
+          },
+          {
+            relativePath: "src/b.ts",
+            extension: "ts",
+            linesOfCode: 40,
+            firstDate: "2024-06-03",
+            latestDate: "2024-06-15",
+          },
+        ],
+      }),
+    )
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoSplit", "data", "files_test.json"),
+      JSON.stringify({
+        totalFilesCount: 1,
+        totalLinesOfCode: 20,
+        files: [{ relativePath: "test/a.test.ts", extension: "ts", linesOfCode: 20 }],
+      }),
+    )
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoSplit", "data", "contributors.txt"),
+      [
+        "Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit\tpercentage\tuserName\tisRookie\tisActive",
+        "alice@example.com\t4\t2\t4\t4\t4\t2024-06-01\t2024-06-15\t50%\tAlice\tfalse\ttrue",
+        "bob@example.com\t2\t1\t2\t2\t2\t2024-06-05\t2024-06-12\t25%\tBob\tfalse\ttrue",
+      ].join("\n"),
+    )
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoSplit", "data", "people_dependencies.json"),
+      JSON.stringify([{ from: "alice@example.com", to: "bob@example.com", count: 1, files: ["src/a.ts"] }]),
+    )
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoSplit", "data", "people_dependencies_30d.json"),
+      JSON.stringify([{ from: "alice@example.com", to: "bob@example.com", count: 1, files: ["src/a.ts"] }]),
+    )
+
+    const config = new LandscapeConfiguration()
+    config.analysisRoot = "repos"
+    config.repositories = [new RepositoryLink("repoSplit/data/analysisResults.json")]
+
+    const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
+
+    expect(results.getRepositoryCount()).toBe(1)
+    expect(results.totalMainLoc).toBe(100)
+    expect(results.totalTestLoc).toBe(20)
+    expect(results.totalMainFilesCount).toBe(2)
+    expect(results.firstCommitDate).toBe("2024-06-01")
+    expect(results.latestCommitDate).toBe("2024-06-15")
+    expect(results.allContributors).toHaveLength(2)
+    expect(results.peopleDependenciesAllTime).toEqual([
+      expect.objectContaining({
+        fromComponent: "alice@example.com",
+        toComponent: "bob@example.com",
+        count: 1,
+        data: ["repo-split/src/a.ts"],
+      }),
+    ])
+    expect(results.peopleDependencies30Days).toEqual([
+      expect.objectContaining({
+        fromComponent: "alice@example.com",
+        toComponent: "bob@example.com",
+        count: 1,
+        data: ["repo-split/src/a.ts"],
+      }),
+    ])
+  })
+
+  test("aggregates real cross-repo people dependencies from namespaced file histories", () => {
+    DateUtils.setDateParam("2024-07-01")
+
+    mkdirSync(join(WORKSPACE, "repos", "repoA"), { recursive: true })
+    mkdirSync(join(WORKSPACE, "repos", "repoB"), { recursive: true })
+
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoA", "results.json"),
+      JSON.stringify(
+        makeRepoResults({
+          metadata: { name: "repo-a", description: "", tooltip: "", logoLink: "", links: [] },
+          contributorsAnalysisResults: {
+            latestCommitDate: "2024-06-21",
+            contributors: [
+              {
+                email: "alice@example.com",
+                commitsCount: 2,
+                firstCommitDate: "2024-06-20",
+                latestCommitDate: "2024-06-21",
+                commitsCount30Days: 2,
+                commitsCount90Days: 2,
+                commitsCount180Days: 2,
+                commitsCount365Days: 2,
+                isBot: false,
+              },
+              {
+                email: "bob@example.com",
+                commitsCount: 1,
+                firstCommitDate: "2024-06-21",
+                latestCommitDate: "2024-06-21",
+                commitsCount30Days: 1,
+                commitsCount90Days: 1,
+                commitsCount180Days: 1,
+                commitsCount365Days: 1,
+                isBot: false,
+              },
+            ],
+          },
+          filesHistoryAnalysisResults: {
+            firstDate: "2024-06-20",
+            latestDate: "2024-06-21",
+            history: [
+              {
+                path: "src/shared.ts",
+                dates: ["2024-06-20", "2024-06-21"],
+                commits: [
+                  { id: "a1", date: "2024-06-20", email: "alice@example.com" },
+                  { id: "a2", date: "2024-06-21", email: "bob@example.com" },
+                ],
+              },
+            ],
+          },
+        }),
+      ),
+    )
+
+    writeFileSync(
+      join(WORKSPACE, "repos", "repoB", "results.json"),
+      JSON.stringify(
+        makeRepoResults({
+          metadata: { name: "repo-b", description: "", tooltip: "", logoLink: "", links: [] },
+          contributorsAnalysisResults: {
+            latestCommitDate: "2024-06-24",
+            contributors: [
+              {
+                email: "charlie@example.com",
+                commitsCount: 1,
+                firstCommitDate: "2024-06-23",
+                latestCommitDate: "2024-06-23",
+                commitsCount30Days: 1,
+                commitsCount90Days: 1,
+                commitsCount180Days: 1,
+                commitsCount365Days: 1,
+                isBot: false,
+              },
+              {
+                email: "dana@example.com",
+                commitsCount: 1,
+                firstCommitDate: "2024-06-24",
+                latestCommitDate: "2024-06-24",
+                commitsCount30Days: 1,
+                commitsCount90Days: 1,
+                commitsCount180Days: 1,
+                commitsCount365Days: 1,
+                isBot: false,
+              },
+            ],
+          },
+          filesHistoryAnalysisResults: {
+            firstDate: "2024-06-23",
+            latestDate: "2024-06-24",
+            history: [
+              {
+                path: "src/shared.ts",
+                dates: ["2024-06-23", "2024-06-24"],
+                commits: [
+                  { id: "b1", date: "2024-06-23", email: "charlie@example.com" },
+                  { id: "b2", date: "2024-06-24", email: "dana@example.com" },
+                ],
+              },
+            ],
+          },
+        }),
+      ),
+    )
+
+    const config = new LandscapeConfiguration()
+    config.analysisRoot = "repos"
+    config.repositories = [new RepositoryLink("repoA/results.json"), new RepositoryLink("repoB/results.json")]
+
+    const results = new LandscapeAnalyzer(config, WORKSPACE).analyze()
+
+    expect(results.peopleDependenciesAllTime).toHaveLength(2)
+    expect(results.peopleDependencies30Days).toHaveLength(2)
+    expect(results.peopleDependencies).toEqual(results.peopleDependenciesAllTime)
+
+    expect(results.peopleDependenciesAllTime).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fromComponent: "alice@example.com",
+          toComponent: "bob@example.com",
+          count: 1,
+          data: ["repo-a/src/shared.ts"],
+        }),
+        expect.objectContaining({
+          fromComponent: "charlie@example.com",
+          toComponent: "dana@example.com",
+          count: 1,
+          data: ["repo-b/src/shared.ts"],
+        }),
+      ]),
+    )
+
+    expect(
+      results.peopleDependenciesAllTime.some(
+        (dependency) =>
+          (dependency.fromComponent === "alice@example.com" && dependency.toComponent === "charlie@example.com") ||
+          (dependency.fromComponent === "charlie@example.com" && dependency.toComponent === "alice@example.com"),
+      ),
+    ).toBe(false)
   })
 })
