@@ -333,7 +333,22 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <h3>Design Decisions</h3>
 
+    <p>
+      Many of the choices below follow the distinction Rich Hickey draws in
+      <a href="https://www.youtube.com/watch?v=SxdOUGdseq4"><em>Simple Made Easy</em></a>:
+      prefer simple over easy, separate what from how, and avoid complecting things that can stay apart.
+    </p>
+
     <dl>
+      <dt>Port first, refine second</dt>
+      <dd>
+        The initial migration ported Java classes and business logic 1:1 into TypeScript classes — not idiomatic
+        TypeScript, but <em>simple</em>. Matching the original structure let the LLM agents focus on tests and
+        straightforward porting rather than simultaneous redesign. Once the test suite was green and behaviour
+        was verified, a second pass reshaped the code toward idiomatic Effect, functional patterns, and cleaner
+        TypeScript. Two simple steps instead of one <a href="https://www.youtube.com/watch?v=SxdOUGdseq4&t=822s">complected</a> leap.
+      </dd>
+
       <dt>Run from source, not from a JAR</dt>
       <dd>Bun's native TypeScript execution means there is no build artifact to manage. The source <em>is</em> the program.</dd>
 
