@@ -45,11 +45,7 @@ jobs:
         run: bun run typecheck
 
       - name: Test
-        run: bun test
-
-      - name: Test (JUnit report)
-        if: always()
-        run: bun test --reporter=junit > test-results.xml || true
+        run: bun test --reporter=junit --reporter-outfile=test-results.xml
 
       - name: Test report
         uses: dorny/test-reporter@v2
