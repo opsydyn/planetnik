@@ -33,7 +33,11 @@ export default defineConfig({
   ],
   security: {
     csp: {
-      directives: ["font-src 'self' data:"],
+      directives: [
+        "font-src 'self' data:",
+        "style-src 'self' 'unsafe-inline'",
+        "style-src-attr 'unsafe-inline'",
+      ],
     },
   },
   experimental: {
