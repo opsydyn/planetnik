@@ -16,6 +16,7 @@ import {
 } from "../state/topologyGraphState"
 import { getContributorDisplayName, getContributorHref as getDefaultContributorHref } from "../lib/contributors"
 import { getLandscapeRepositoryContributorHref } from "../lib/landscapeRoutes"
+import { route } from "../lib/route"
 
 interface TopologyGraphProps {
   periods: Record<string, PeopleDep[]>
@@ -488,7 +489,7 @@ export default function TopologyGraph({
   impactPeriods,
   getContributorHref,
   contributorRepoKey = null,
-  componentsHref = "/components",
+  componentsHref = route("/components"),
 }: TopologyGraphProps) {
   const resolvedGetContributorHref = useMemo(() => {
     if (typeof getContributorHref === "function") {

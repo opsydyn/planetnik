@@ -1,4 +1,5 @@
 import { getContributorRouteParam } from "./contributors"
+import { route } from "./route"
 
 function encodeRouteSegment(value: string): string {
   return encodeURIComponent(value).replace(/%/g, "$")
@@ -21,7 +22,7 @@ export function getLandscapeRepoKeyFromParam(param: string): string {
 }
 
 export function getLandscapeRepositoryHref(repoKey: string): string {
-  return `/landscape/repositories/${getLandscapeRepoRouteParam(repoKey)}`
+  return route(`/landscape/repositories/${getLandscapeRepoRouteParam(repoKey)}`)
 }
 
 export function getLandscapeRepositoryPageHref(repoKey: string, suffix = ""): string {
@@ -31,7 +32,7 @@ export function getLandscapeRepositoryPageHref(repoKey: string, suffix = ""): st
 }
 
 export function getLandscapeContributorHref(email: string): string {
-  return `/landscape/contributors/${getContributorRouteParam(email)}`
+  return route(`/landscape/contributors/${getContributorRouteParam(email)}`)
 }
 
 export function getLandscapeRepositoryContributorHref(repoKey: string, email: string): string {

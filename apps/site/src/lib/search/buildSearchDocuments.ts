@@ -1,5 +1,6 @@
 // ADR-0005: Build the site-wide search corpus from Astro content collections.
 import { getCollection, getEntry } from "astro:content"
+import { route } from "../route"
 import type { SearchDocument } from "./types"
 
 type PageDefinition = Omit<SearchDocument, "id" | "kind" | "rank">
@@ -10,7 +11,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Project summary and language breakdown",
     description: "High-level analysis dashboard with key metrics, language distribution, and duplication summary.",
     keywords: ["home", "dashboard", "summary", "languages", "duplication", "overview"],
-    route: "/",
+    route: route("/"),
     section: "Overview",
   },
   {
@@ -18,7 +19,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Why Planetnik",
     description: "Background, positioning, and the software weather model behind Planetnik.",
     keywords: ["about", "planetnik", "weather", "architecture", "entropy", "drift", "turbulence"],
-    route: "/about",
+    route: route("/about"),
     section: "Overview",
   },
   {
@@ -26,7 +27,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "How to use Planetnik",
     description: "Onboarding guide organized with tutorials, how-to guidance, reference, and explanation.",
     keywords: ["guide", "help", "documentation", "tutorial", "how-to", "reference", "explanation", "onboarding"],
-    route: "/guide",
+    route: route("/guide"),
     section: "Overview",
   },
   {
@@ -34,7 +35,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Main and test code shape",
     description: "Overview of source code size, tests, and repository-wide structural distribution.",
     keywords: ["overview", "source code", "main", "test", "size", "distribution"],
-    route: "/overview",
+    route: route("/overview"),
     section: "Overview",
   },
   {
@@ -42,7 +43,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Raw and grouped analysis metrics",
     description: "Metric dashboard with grouped raw metrics and summary visualizations.",
     keywords: ["metrics", "loc", "duplication", "analysis time", "measurements"],
-    route: "/metrics",
+    route: route("/metrics"),
     section: "Overview",
   },
   {
@@ -50,7 +51,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Structural components view",
     description: "Component-oriented view of the codebase and mapped file relationships.",
     keywords: ["components", "modules", "structure", "boundaries"],
-    route: "/components",
+    route: route("/components"),
     section: "Structure",
   },
   {
@@ -58,7 +59,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Big Ball of Mud and system pressure",
     description: "Component coupling view blending static dependencies, temporal co-change, coordination overlap, and knowledge exposure.",
     keywords: ["coupling", "balanced coupling", "big ball of mud", "coordination", "knowledge risk", "temporal coupling"],
-    route: "/coupling",
+    route: route("/coupling"),
     section: "Structure",
   },
   {
@@ -66,7 +67,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Inter-component dependencies",
     description: "Dependency relationships between components and structural coupling signals.",
     keywords: ["dependencies", "coupling", "components", "edges", "structure"],
-    route: "/dependencies",
+    route: route("/dependencies"),
     section: "Structure",
   },
   {
@@ -74,7 +75,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Duplicated code overview",
     description: "Duplicate blocks and duplication-heavy parts of the codebase.",
     keywords: ["duplication", "duplicate", "copy paste", "repetition"],
-    route: "/duplication",
+    route: route("/duplication"),
     section: "Structure",
   },
   {
@@ -82,7 +83,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Largest source files",
     description: "Main source files ranked by lines of code and distribution.",
     keywords: ["files", "file size", "largest files", "loc"],
-    route: "/files/size",
+    route: route("/files/size"),
     section: "Files",
   },
   {
@@ -90,7 +91,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Oldest and newest files",
     description: "File age metrics across the codebase based on first and latest updates.",
     keywords: ["files", "age", "history", "oldest files", "newest files"],
-    route: "/files/age",
+    route: route("/files/age"),
     section: "Files",
   },
   {
@@ -98,7 +99,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Most changed files",
     description: "Files ranked by churn and change activity.",
     keywords: ["files", "churn", "change", "commits", "activity"],
-    route: "/files/churn",
+    route: route("/files/churn"),
     section: "Files",
   },
   {
@@ -106,7 +107,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Files that change together",
     description: "Temporal coupling view showing files frequently committed together.",
     keywords: ["files", "temporal", "dependencies", "co-change", "coupling"],
-    route: "/files/temporal",
+    route: route("/files/temporal"),
     section: "Files",
   },
   {
@@ -114,7 +115,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Largest functions and methods",
     description: "Units ranked by lines of code across the codebase.",
     keywords: ["units", "functions", "methods", "size", "loc"],
-    route: "/units/size",
+    route: route("/units/size"),
     section: "Units",
   },
   {
@@ -122,7 +123,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Most complex units",
     description: "McCabe complexity view for units and functions.",
     keywords: ["units", "complexity", "mccabe", "conditionals", "risk"],
-    route: "/units/complexity",
+    route: route("/units/complexity"),
     section: "Units",
   },
   {
@@ -130,7 +131,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "People active in the codebase",
     description: "Contributor activity, recency, and code ownership signals.",
     keywords: ["contributors", "people", "authors", "ownership", "activity"],
-    route: "/contributors",
+    route: route("/contributors"),
     section: "Team",
   },
   {
@@ -138,7 +139,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Commit activity and extension trends",
     description: "Commit summaries and extension-level commit activity.",
     keywords: ["commits", "activity", "extensions", "history"],
-    route: "/commits",
+    route: route("/commits"),
     section: "Team",
   },
   {
@@ -146,7 +147,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "People dependencies",
     description: "Contributor relationships built from shared file modification patterns.",
     keywords: ["topology", "team", "people dependencies", "coordination", "ownership"],
-    route: "/topology",
+    route: route("/topology"),
     section: "Team",
   },
   {
@@ -154,7 +155,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Ranked code health queue",
     description: "Prioritized files, units, and components based on structural, churn, temporal, and ownership signals.",
     keywords: ["hotspots", "code health", "priorities", "risk", "queue", "what to fix"],
-    route: "/hotspots",
+    route: route("/hotspots"),
     section: "Quality",
   },
   {
@@ -162,7 +163,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Work on what matters",
     description: "Structural impact view connecting visible activity to complexity reduction, boundary shaping, knowledge spread, coordination relief, and change enablement.",
     keywords: ["impact", "work on what matters", "staff engineering", "structural impact", "snacking", "leverage"],
-    route: "/impact",
+    route: route("/impact"),
     section: "Quality",
   },
   {
@@ -170,7 +171,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Concerns and tagged areas",
     description: "Concern-oriented view of files matching configured features of interest.",
     keywords: ["concerns", "features", "interest", "tagged code"],
-    route: "/concerns",
+    route: route("/concerns"),
     section: "Quality",
   },
   {
@@ -178,7 +179,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Pattern-based findings",
     description: "Configured findings and notable pattern-based results.",
     keywords: ["findings", "patterns", "rules", "search results"],
-    route: "/findings",
+    route: route("/findings"),
     section: "Quality",
   },
   {
@@ -186,7 +187,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Quality guardrails",
     description: "Quality goals, controls, and progress against them.",
     keywords: ["controls", "goals", "quality", "guardrails"],
-    route: "/controls",
+    route: route("/controls"),
     section: "Quality",
   },
   {
@@ -194,7 +195,7 @@ const singleRepoPageDefinitions: PageDefinition[] = [
     subtitle: "Analysis over time",
     description: "Trend view showing how key structural signals move over time.",
     keywords: ["trend", "history", "time series", "change over time"],
-    route: "/trends",
+    route: route("/trends"),
     section: "Quality",
   },
 ]
@@ -205,7 +206,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "Multi-repository organization overview",
     description: "Landscape-wide overview of repositories, contributors, teams, languages, and recent activity.",
     keywords: ["landscape", "dashboard", "repositories", "organization", "overview", "multi repo"],
-    route: "/landscape",
+    route: route("/landscape"),
     section: "Landscape",
   },
   {
@@ -213,7 +214,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "Why Planetnik",
     description: "Background, positioning, and the software weather model behind Planetnik.",
     keywords: ["about", "planetnik", "weather", "architecture", "entropy", "drift", "turbulence"],
-    route: "/about",
+    route: route("/about"),
     section: "Overview",
   },
   {
@@ -221,7 +222,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "How to use Planetnik",
     description: "Onboarding guide organized with tutorials, how-to guidance, reference, and explanation.",
     keywords: ["guide", "help", "documentation", "tutorial", "how-to", "reference", "explanation", "onboarding"],
-    route: "/guide",
+    route: route("/guide"),
     section: "Overview",
   },
   {
@@ -229,7 +230,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "Repository activity and scale",
     description: "Repository inventory for the landscape with size, contributor activity, and recent commits.",
     keywords: ["landscape", "repositories", "repo inventory", "multi repo", "activity"],
-    route: "/landscape/repositories",
+    route: route("/landscape/repositories"),
     section: "Landscape",
   },
   {
@@ -237,7 +238,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "People working across repositories",
     description: "Contributor reach, multi-repository activity, and collaboration across the landscape.",
     keywords: ["landscape", "contributors", "people", "multi repo", "teams"],
-    route: "/landscape/contributors",
+    route: route("/landscape/contributors"),
     section: "Landscape",
   },
   {
@@ -245,7 +246,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "Configured team coverage",
     description: "Team inventory and repository ownership across the landscape.",
     keywords: ["landscape", "teams", "ownership", "grouping", "org structure"],
-    route: "/landscape/teams",
+    route: route("/landscape/teams"),
     section: "Landscape",
   },
   {
@@ -253,7 +254,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "Cross-repository people dependencies",
     description: "Contributor relationships built from shared-file work across repositories.",
     keywords: ["landscape", "topology", "people dependencies", "coordination", "cross repo"],
-    route: "/landscape/topology",
+    route: route("/landscape/topology"),
     section: "Landscape",
   },
   {
@@ -261,7 +262,7 @@ const landscapePageDefinitions: PageDefinition[] = [
     subtitle: "Repository tags and tag matrix",
     description: "Tag coverage, grouped repositories, and tag overlap across the landscape.",
     keywords: ["landscape", "tags", "taxonomy", "repository groups", "tag matrix"],
-    route: "/landscape/tags",
+    route: route("/landscape/tags"),
     section: "Landscape",
   },
 ]
@@ -294,7 +295,7 @@ function makePageDocuments(projectName: string, pages: PageDefinition[]): Search
     title: page.title,
     subtitle: page.subtitle,
     description:
-      page.route === "/" || page.route === "/landscape"
+      page.route === route("/") || page.route === route("/landscape")
         ? `${projectName} analysis dashboard.`
         : page.description,
     keywords: normalizeKeywords([projectName, ...page.keywords]),
@@ -344,7 +345,7 @@ export async function buildSearchDocuments(): Promise<SearchDocument[]> {
         ...takeKeywords(file.data.components, 3),
         ...takeKeywords(file.data.concerns, 2),
       ]),
-      route: "/files/size",
+      route: route("/files/size"),
       section: "Files",
       rank: 700,
     })
@@ -361,7 +362,7 @@ export async function buildSearchDocuments(): Promise<SearchDocument[]> {
         unit.data.shortName !== unit.data.longName ? unit.data.longName : undefined,
         ...takeKeywords(unit.data.components, 3),
       ]),
-      route: "/units/size",
+      route: route("/units/size"),
       section: "Units",
       rank: 650,
     })
@@ -375,7 +376,7 @@ export async function buildSearchDocuments(): Promise<SearchDocument[]> {
       title: contributorName,
       subtitle: contributor.data.email,
       keywords: normalizeKeywords([]),
-      route: "/contributors",
+      route: route("/contributors"),
       section: "Team",
       rank: 800,
     })
@@ -389,7 +390,7 @@ export async function buildSearchDocuments(): Promise<SearchDocument[]> {
       title: humanizedId,
       subtitle: metric.data.id,
       keywords: normalizeKeywords([metric.data.id, groupMetricId(metric.data.id), humanizedId]),
-      route: "/metrics",
+      route: route("/metrics"),
       section: "Overview",
       rank: 600,
     })
@@ -411,7 +412,7 @@ export async function buildSearchDocuments(): Promise<SearchDocument[]> {
       title: `.${extension}`,
       subtitle: `${stats.files.toLocaleString()} files`,
       keywords: normalizeKeywords([extension, `.${extension}`]),
-      route: "/",
+      route: route("/"),
       section: "Overview",
       rank: 550,
     })
