@@ -39,6 +39,7 @@ const singleRepoNavSections = [
     items: [
       { href: route("/about"), label: "About" },
       { href: route("/guide"), label: "Guide" },
+      { href: route("/technology"), label: "Technology" },
       { href: route("/"), label: "Dashboard" },
       { href: route("/overview"), label: "Source Code Overview" },
       { href: route("/metrics"), label: "Metrics" },
@@ -100,9 +101,10 @@ const landscapeNavSections = [
     label: "Overview",
     iconName: "house",
     items: [
+      { href: route("/landscape"), label: "Landscape Dashboard" },
       { href: route("/about"), label: "About" },
       { href: route("/guide"), label: "Guide" },
-      { href: route("/landscape"), label: "Landscape Dashboard" },
+      { href: route("/technology"), label: "Technology" },
     ],
   },
   {
@@ -126,9 +128,10 @@ function getLandscapeRepoNavSections(repoKey: string, repoName: string) {
       label: "Landscape",
       iconName: "house",
       items: [
+        { href: route("/landscape"), label: "Landscape Dashboard" },
         { href: route("/about"), label: "About" },
         { href: route("/guide"), label: "Guide" },
-        { href: route("/landscape"), label: "Landscape Dashboard" },
+        { href: route("/technology"), label: "Technology" },
         { href: route("/landscape/repositories"), label: "Repositories" },
       ],
     },

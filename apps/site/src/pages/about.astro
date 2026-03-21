@@ -7,8 +7,6 @@ import { route } from "../lib/route"
 const summary = await getEntry("analysis", "summary")
 const reportContext = await getEntry("reportContext", "context")
 const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
-const reportMode = reportContext?.data.reportMode ?? "single_repository"
-const isLandscape = reportMode === "landscape"
 ---
 
 <Dashboard title="About" projectName={projectName}>
@@ -19,16 +17,16 @@ const isLandscape = reportMode === "landscape"
     </div>
 
     <p class="lead">
-      <strong>Planetnik</strong> is a tool for documenting and analysing the architecture of complex software systems.
+      <strong>Płanetnik</strong> is a tool for documenting and analysing the architecture of complex software systems.
     </p>
 
     <p>
-      Built in the spirit of pragmatic architectural analytics, <strong>Planetnik</strong> helps teams understand large
+      Built in the spirit of pragmatic architectural analytics, <strong>Płanetnik</strong> helps teams understand large
       codebases directly from the source. No long workshops. No endless interviews. Just show the code.
     </p>
 
     <p>
-      Planetnik extracts structural signals from source repositories and turns them into usable insight about system
+      Płanetnik extracts structural signals from source repositories and turns them into usable insight about system
       shape, technical debt, coupling, complexity, ownership, drift, and entropy.
     </p>
 
@@ -39,14 +37,14 @@ const isLandscape = reportMode === "landscape"
     </p>
 
     <p>
-      Where other tools stop at raw metrics, Planetnik aims to reveal the <strong>weather system</strong> of the
+      Where other tools stop at raw metrics, Płanetnik aims to reveal the <strong>weather system</strong> of the
       codebase: the pressure fronts, storm zones, fault lines, unstable regions, and slow entropic decay that shape
       software delivery over time.
     </p>
 
     <hr />
 
-    <h3>what is planetnik?</h3>
+    <h3>What Is Płanetnik?</h3>
 
     <p>
       In Polish folklore, a <strong>planetnik</strong> is a being associated with clouds, storms, hail, and shifting
@@ -65,18 +63,18 @@ const isLandscape = reportMode === "landscape"
       <li>entropy pulls structure away from its intended form</li>
     </ul>
 
-    <p><strong>Planetnik</strong> exists to make that weather visible.</p>
+    <p><strong>Płanetnik</strong> exists to make that weather visible.</p>
 
     <hr />
 
-    <h3>why planetnik?</h3>
+    <h3>Why Płanetnik?</h3>
 
     <p>
       Modern systems are often too large, too entangled, and too fast-moving to understand through documents alone.
     </p>
 
     <p>
-      Planetnik provides a pragmatic and relatively inexpensive way to examine source code repositories and derive
+      Płanetnik provides a pragmatic and relatively inexpensive way to examine source code repositories and derive
       meaningful architectural insight from what is actually there, not what people remember, assume, or hope is true.
     </p>
 
@@ -106,7 +104,7 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>what planetnik helps you see</h3>
+    <h3>What Płanetnik Helps You See</h3>
 
     <dl>
       <dt>size</dt>
@@ -139,17 +137,18 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>approach</h3>
+    <h3>Approach</h3>
 
-    <blockquote>do not begin with stories. begin with the code.</blockquote>
+    <blockquote>Do not begin with stories. begin with the code.</blockquote>
 
     <p>
-      The tool borrows from the spirit of code spelunking tools such as <code>grep</code>, but adds structure,
-      modelling, and analysis on top of source-code searches.
+      Płanetnik is inspired by the mighty <a href="https://www.sokrates.dev/">Sokrates</a>, a pragmatic source code examination tool
+      created by Željko Obrenović. It borrows from the same philosophy of examining codebases directly, but adds its own
+      structure, modelling, and analysis on top.
     </p>
 
     <p>
-      Rather than treating the repository as an opaque blob, Planetnik helps organise and interpret what is found:
+      Rather than treating the repository as an opaque blob, Płanetnik helps organise and interpret what is found:
       source patterns, file groups, module boundaries, dependency signals, historical pressure points, ownership clues,
       architectural zones, and areas of structural erosion.
     </p>
@@ -158,40 +157,40 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>core ideas</h3>
+    <h3>Core Ideas</h3>
 
-    <h4>1. show the code</h4>
+    <h4>1. Show the Code</h4>
     <p>The fastest path to architectural truth often starts with direct inspection of the repository.</p>
 
-    <h4>2. software has weather</h4>
+    <h4>2. Software Has Weather</h4>
     <p>
       Technical debt is not always a buried ruin. Sometimes it is atmospheric: diffuse, recurring, mobile, and only
       obvious when the pressure changes.
     </p>
 
-    <h4>3. entropy is always at work</h4>
+    <h4>3. Entropy Is Always at Work</h4>
     <p>
       Without active design, systems drift. Boundaries soften. Responsibility spreads. Local fixes accumulate. The
       architecture becomes harder to reason about.
     </p>
-    <p>Planetnik helps teams see that entropic movement before it becomes a full storm.</p>
+    <p>Płanetnik helps teams see that entropic movement before it becomes a full storm.</p>
 
-    <h4>4. structure matters</h4>
+    <h4>4. Structure Matters</h4>
     <p>
-      Files, directories, modules, packages, domains, and boundaries all leave traces. Planetnik helps interpret those
+      Files, directories, modules, packages, domains, and boundaries all leave traces. Płanetnik helps interpret those
       traces.
     </p>
 
-    <h4>5. architecture should be observable</h4>
+    <h4>5. Architecture Should Be Observable</h4>
     <p>Architecture should not live only in slide decks and memory. It should be measurable, inspectable, and reviewable.</p>
 
-    <h4>6. socio-technical systems leave patterns</h4>
+    <h4>6. Socio-Technical Systems Leave Patterns</h4>
     <p>
-      Code shape, change patterns, ownership, and team interaction often reinforce each other. Planetnik helps surface
+      Code shape, change patterns, ownership, and team interaction often reinforce each other. Płanetnik helps surface
       those relationships.
     </p>
 
-    <h4>7. evidence beats ceremony</h4>
+    <h4>7. Evidence Beats Ceremony</h4>
     <p>
       Rich architectural insight does not always require expensive process. A great deal can be learned by examining the
       codebase with care, structure, and the right lens.
@@ -199,7 +198,7 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>the weather model</h3>
+    <h3>The Weather Model</h3>
 
     <dl>
       <dt>pressure</dt>
@@ -225,7 +224,7 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>use cases</h3>
+    <h3>Use Cases</h3>
 
     <ul>
       <li>document the architecture of a large codebase</li>
@@ -244,7 +243,7 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>who it is for</h3>
+    <h3>Who It Is For</h3>
 
     <ul>
       <li>architects</li>
@@ -258,9 +257,9 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>philosophy</h3>
+    <h3>Philosophy</h3>
 
-    <p>Planetnik is not a replacement for engineering judgement.</p>
+    <p>Płanetnik is not a replacement for engineering judgement.</p>
 
     <p>It is a way to ground judgement in evidence.</p>
 
@@ -271,7 +270,7 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>design goals</h3>
+    <h3>Design Goals</h3>
 
     <dl>
       <dt>pragmatic</dt>
@@ -301,7 +300,7 @@ const isLandscape = reportMode === "landscape"
 
     <hr />
 
-    <h3>example questions</h3>
+    <h3>Example Questions</h3>
 
     <ul class="questions">
       <li>where are storm fronts forming in the codebase?</li>

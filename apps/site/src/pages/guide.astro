@@ -139,7 +139,7 @@ const referenceSections = isLandscape
         label: "Overview",
         items: [
           [route("/landscape"), "Landscape dashboard with organisation-wide summary."],
-          [route("/about"), "Planetnik philosophy and weather metaphor."],
+          [route("/about"), "Płanetnik philosophy and weather metaphor."],
         ],
       },
       {
@@ -160,7 +160,7 @@ const referenceSections = isLandscape
           [route("/"), "Project summary, language mix, and duplicate headline metrics."],
           [route("/overview"), "Main vs test code shape and extension breakdown."],
           [route("/metrics"), "Raw metric inventory and grouped numeric summaries."],
-          [route("/about"), "Planetnik philosophy and weather metaphor."],
+          [route("/about"), "Płanetnik philosophy and weather metaphor."],
         ],
       },
       {
@@ -203,11 +203,11 @@ const referenceSections = isLandscape
   <div class="guide">
     <div class="hero">
       <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="hero-logo" />
-      <p class="tagline">learn the forecast before you change the weather</p>
+      <p class="tagline">Learn the forecast before you change the weather</p>
     </div>
 
     <p class="lead">
-      This guide is the fastest way to onboard into <strong>Planetnik</strong> and understand how to use the reports in a
+      This guide is the fastest way to onboard into <strong>Płanetnik</strong> and understand how to use the reports in a
       practical sequence.
     </p>
 
@@ -229,8 +229,8 @@ const referenceSections = isLandscape
 
     <hr />
 
-    <h3>tutorials</h3>
-    <p>Use these when you are new to Planetnik and want a guided path instead of a menu of unrelated reports.</p>
+    <h3>Tutorials</h3>
+    <p>Use these when you are new to Płanetnik and want a guided path instead of a menu of unrelated reports.</p>
 
     <div class="guide-grid">
       {tutorialSteps.map((step, index) => (
@@ -251,7 +251,7 @@ const referenceSections = isLandscape
 
     <hr />
 
-    <h3>how-to guides</h3>
+    <h3>How-To Guides</h3>
     <p>Use these when you already know what you are trying to accomplish and need the shortest route to the right view.</p>
 
     <div class="guide-grid">
@@ -270,7 +270,7 @@ const referenceSections = isLandscape
 
     <hr />
 
-    <h3>reference</h3>
+    <h3>Reference</h3>
     <p>Use this section when you know the name of a report area and want a quick description of what each page contains.</p>
 
     <div class="reference-grid">
@@ -291,25 +291,25 @@ const referenceSections = isLandscape
 
     <hr />
 
-    <h3>explanation</h3>
+    <h3>Explanation</h3>
     <p>Use these notes when you want to understand why the reports are organized the way they are and how to interpret them together.</p>
 
     {isLandscape ? (
       <>
-        <h4>start from the landscape, then drill down</h4>
+        <h4>Start From the Landscape, Then Drill Down</h4>
         <p>
           The landscape dashboard gives you the organisation-wide view. When something stands out — size, contributor concentration,
           tag patterns — drill into the specific repository to investigate with the full single-repo analysis.
         </p>
 
-        <h4>read people and code together</h4>
+        <h4>Read People and Code Together</h4>
         <p>
           Many delivery problems are socio-technical. Use <a href={route("/landscape/contributors")}>Contributors</a> and
           <a href={route("/landscape/topology")}>Team Topology</a> to understand knowledge spread, coordination
           risk, and ownership concentration across the organisation.
         </p>
 
-        <h4>use repository-level views for evidence</h4>
+        <h4>Use Repository-Level Views for Evidence</h4>
         <p>
           Landscape views show the big picture. When you need evidence for a specific change, drill into a repository
           to access its hotspots, components, file metrics, and quality controls.
@@ -317,35 +317,35 @@ const referenceSections = isLandscape
       </>
     ) : (
       <>
-        <h4>start with queues, not charts</h4>
+        <h4>Start With Queues, Not Charts</h4>
         <p>
-          Planetnik contains many charts, but the product is most useful when it helps you choose a better engineering action.
+          Płanetnik contains many charts, but the product is most useful when it helps you choose a better engineering action.
           That is why <a href={route("/impact")}>Impact</a>, <a href={route("/hotspots")}>Hotspots</a>, <a href={route("/controls")}>Goals &amp; Controls</a>, and
           <a href={route("/findings")}>Findings</a> should usually anchor triage.
         </p>
 
-        <h4>use multiple views to validate a story</h4>
+        <h4>Use Multiple Views to Validate a Story</h4>
         <p>
           A single metric is rarely enough. A file is more interesting when it is large <em>and</em> frequently changed.
           A component is more important when it is central <em>and</em> weakly owned. Use structure, history, and people
           views together.
         </p>
 
-        <h4>read people and code together</h4>
+        <h4>Read People and Code Together</h4>
         <p>
           Many delivery problems are socio-technical. Use <a href={route("/contributors")}>Contributors</a> and
           <a href={route("/topology")}>Team Topology</a> alongside code-level reports to understand knowledge spread, coordination
           risk, and ownership concentration.
         </p>
 
-        <h4>prefer evidence before refactoring</h4>
+        <h4>Prefer Evidence Before Refactoring</h4>
         <p>
           Use <a href={route("/dependencies")}>Dependencies</a>, <a href={route("/files/temporal")}>Temporal Dependencies</a>, and
           <a href={route("/duplication")}>Duplication</a> to build evidence for change. Refactoring is easier to defend when you can
           show structural pressure, not just discomfort.
         </p>
 
-        <h4>treat balanced coupling as a pressure map</h4>
+        <h4>Treat Balanced Coupling as a Pressure Map</h4>
         <p>
           Use <a href={route("/coupling")}>Balanced Coupling</a> when you want one page that blends static dependencies, co-change,
           coordination, and knowledge exposure. It is a triage surface, not a replacement for the underlying evidence views.
@@ -406,7 +406,6 @@ const referenceSections = isLandscape
     font-weight: 600;
     margin-bottom: 1rem;
     color: var(--color-text);
-    text-transform: lowercase;
   }
 
   h4 {
