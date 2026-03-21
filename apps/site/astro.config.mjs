@@ -33,14 +33,7 @@ export default defineConfig({
     },
   ],
   security: {
-    csp: {
-      directives: [
-        "font-src 'self' data:",
-      ],
-      styleDirective: {
-        resources: ["'self'", "'unsafe-inline'"],
-      },
-    },
+    csp: false,
   },
   experimental: {
     rustCompiler: true,
