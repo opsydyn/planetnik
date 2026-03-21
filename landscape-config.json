@@ -1,0 +1,20 @@
+{
+  "githubCloneUrl": "https://github.com",
+  "githubApiUrl": "https://api.github.com",
+  "reposUpdatedAfter": "2024-01-01",
+  "metadata": {
+    "name": "Effect Ecosystem",
+    "description": "Multi-repository landscape analysis of the Effect-TS organisation"
+  },
+  "mergeExtensions": [
+    { "primary": "ts", "secondary": "tsx" }
+  ],
+  "githubOrgs": [
+    "effect-TS"
+  ],
+  "ignore": [
+    { "org": "", "repo": "\\.github" },
+    { "org": "", "repo": "^website$" },
+    { "org": "", "repo": "^docs$" }
+  ]
+}

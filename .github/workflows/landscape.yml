@@ -83,6 +83,11 @@ jobs:
             writeFileSync("_landscape-config.json", JSON.stringify(config, null, 2), "utf-8");
           '
 
+      - name: Configure git credentials
+        env:
+          LANDSCAPE_GITHUB_TOKEN: ${{ secrets.LANDSCAPE_GITHUB_TOKEN }}
+        run: git config --global url."https://x-access-token:${LANDSCAPE_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+
       - name: Run landscape analysis
         run: |
           ARGS="--config _landscape-config.json"
@@ -93,10 +98,16 @@ jobs:
           fi
           bun run apps/cli/src/index.ts analyzeLandscape $ARGS
 
+      - name: Build Astro site
+        env:
+          PLANETNIK_LANDSCAPE_DATA_DIR: ${{ github.workspace }}/_landscape/_planetnik_landscape/reports/data
+        working-directory: apps/site
+        run: bun run build
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _landscape/_planetnik_landscape/reports
+          path: apps/site/dist
 
   deploy:
     needs: analyze-landscape
