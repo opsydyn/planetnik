@@ -1,5 +1,6 @@
 ---
 import Dashboard from "../layouts/Dashboard.astro"
+import Hero from "../components/Hero.astro"
 import { Image } from "astro:assets"
 import { getEntry } from "astro:content"
 import { route } from "../lib/route"
@@ -11,10 +12,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
 <Dashboard title="Technology" projectName={projectName}>
   <div class="tech">
-    <div class="hero">
-      <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="hero-logo" />
-      <p class="tagline">the instruments behind the forecast</p>
-    </div>
+    <Hero tagline="The instruments behind the forecast" />
 
     <p class="lead">
       How Płanetnik is built, what it runs on, and why that matters for teams adopting it.
@@ -96,29 +94,11 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <p>
       Płanetnik is inspired by <a href="https://www.sokrates.dev/">Sokrates</a>, the pragmatic source code examination
-      tool created by Željko Obrenović. Sokrates is excellent, but running it in practice introduces operational weight
+      tool created by Željko Obrenović. Sokrates is excellent, but running it in practice introduces operational overhead
       that can slow adoption:
     </p>
-
-    <ul>
-      <li>A <strong>Java runtime</strong> (JDK 11+) must be installed on every machine or CI runner that runs the analysis</li>
-      <li><strong>Graphviz</strong> must be available at a known path (<code>/opt/local/bin/dot</code>, <code>/usr/local/bin/dot</code>,
-        <code>/usr/bin/dot</code>, or via a <code>GRAPHVIZ_DOT</code> environment variable) for dependency diagrams</li>
-      <li>Date-based analysis requires setting <code>SOKRATES_ANALYSIS_DATE</code> as a system variable</li>
-      <li>For reproducible environments, the recommended path is a <strong>Docker container</strong> with the JDK, Graphviz,
-        and Sokrates pre-installed</li>
-    </ul>
-
-    <p>
-      None of this is wrong. But for teams that want to run analysis in CI, on laptops, or across multiple repositories
-      at scale, the overhead of managing a JVM + native binaries + Docker images adds friction that has nothing to do with
-      the actual analysis.
-    </p>
-
     <hr />
-
     <h3>Płanetnik's Approach</h3>
-
     <p>
       Płanetnik replaces the Java runtime with a single <strong>Bun</strong> binary and a TypeScript codebase.
       The entire tool — CLI, analysis engine, and report site — runs from source with no compile step, no JVM, no
@@ -364,7 +344,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     max-width: none;
   }
 
-  .tech > :not(.comparison):not(.hero):not(.benchmark):not(.section-banner) {
+  .tech > :not(.comparison):not(.benchmark):not(.section-banner) {
     max-width: 720px;
   }
 
@@ -378,25 +358,6 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     width: 100%;
     height: auto;
     border-radius: 8px;
-  }
-
-  .hero {
-    text-align: center;
-    margin-bottom: 2.5rem;
-  }
-
-  .hero-logo {
-    max-width: 320px;
-    width: 100%;
-    height: auto;
-    margin-bottom: 0.75rem;
-  }
-
-  .tagline {
-    font-size: 1.1rem;
-    font-style: italic;
-    color: var(--color-text-muted);
-    letter-spacing: 0.02em;
   }
 
   .lead {

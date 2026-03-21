@@ -1,0 +1,37 @@
+---
+import { route } from "../lib/route"
+
+interface Props {
+  tagline: string
+}
+
+const { tagline } = Astro.props
+---
+
+<div class="hero">
+  <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="hero-logo" />
+  <p class="hero-tagline">{tagline}</p>
+</div>
+
+<style>
+  .hero {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    max-width: 720px;
+  }
+
+  .hero-logo {
+    max-width: 320px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-tagline {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--color-text-muted);
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+</style>

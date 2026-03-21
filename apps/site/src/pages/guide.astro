@@ -1,5 +1,6 @@
 ---
 import Dashboard from "../layouts/Dashboard.astro"
+import Hero from "../components/Hero.astro"
 import { Image } from "astro:assets"
 import { getEntry } from "astro:content"
 import { route } from "../lib/route"
@@ -201,10 +202,7 @@ const referenceSections = isLandscape
 
 <Dashboard title="Guide" projectName={projectName}>
   <div class="guide">
-    <div class="hero">
-      <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="hero-logo" />
-      <p class="tagline">Learn the forecast before you change the weather</p>
-    </div>
+    <Hero tagline="Learn the forecast before you change the weather" />
 
     <p class="lead">
       This guide is the fastest way to onboard into <strong>Płanetnik</strong> and understand how to use the reports in a
@@ -361,26 +359,7 @@ const referenceSections = isLandscape
   }
 
   .guide > :not(.section-banner):not(.guide-grid):not(.reference-grid) {
-    max-width: 760px;
-  }
-
-  .hero {
-    text-align: center;
-    margin-bottom: 2.5rem;
-  }
-
-  .hero-logo {
-    max-width: 320px;
-    width: 100%;
-    height: auto;
-    margin-bottom: 0.75rem;
-  }
-
-  .tagline {
-    font-size: 1.1rem;
-    font-style: italic;
-    color: var(--color-text-muted);
-    letter-spacing: 0.02em;
+    max-width: 720px;
   }
 
   .lead {

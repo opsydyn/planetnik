@@ -1,5 +1,6 @@
 import Fuse, { type FuseResultMatch } from "fuse.js"
 import { navigate } from "astro:transitions/client"
+import { route } from "../../lib/route"
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass"
 import { SpinnerGapIcon } from "@phosphor-icons/react/dist/csr/SpinnerGap"
 import { XIcon } from "@phosphor-icons/react/dist/csr/X"
@@ -94,7 +95,7 @@ async function loadSearchIndex() {
 
   if (!searchLoadPromise) {
     searchLoadPromise = (async () => {
-      const response = await fetch("/search-index.json")
+      const response = await fetch(route("/search-index.json"))
       if (!response.ok) {
         throw new Error(`Search index request failed with ${response.status}`)
       }
