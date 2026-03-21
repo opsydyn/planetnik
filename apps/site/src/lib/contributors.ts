@@ -1,3 +1,5 @@
+import { route } from "./route"
+
 export interface ContributorIdentity {
   email: string
   userName?: string | null
@@ -26,7 +28,7 @@ export function getContributorHref(
     source?: string
   },
 ): string {
-  const basePath = `/contributors/${getContributorRouteParam(email)}`
+  const basePath = route(`/contributors/${getContributorRouteParam(email)}`)
   if (!options?.source) return basePath
 
   const searchParams = new URLSearchParams()
