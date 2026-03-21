@@ -7,6 +7,8 @@ import { route } from "../lib/route"
 const summary = await getEntry("analysis", "summary")
 const reportContext = await getEntry("reportContext", "context")
 const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
+const reportMode = reportContext?.data.reportMode ?? "single_repository"
+const isLandscape = reportMode === "landscape"
 ---
 
 <Dashboard title="About" projectName={projectName}>
@@ -32,7 +34,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <p>
       It also aims to make a harder leadership idea tangible in code: <strong>activity is visible, impact is structural</strong>.
-      The <a href={route("/impact")}>Impact</a> page turns that principle into evidence about where engineering work is reshaping the system
+      The Impact page turns that principle into evidence about where engineering work is reshaping the system
       rather than simply adding visible motion.
     </p>
 
