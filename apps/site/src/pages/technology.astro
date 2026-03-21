@@ -95,7 +95,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <p>
       Płanetnik is inspired by <a href="https://www.sokrates.dev/">Sokrates</a>, the pragmatic source code examination
       tool created by Željko Obrenović. Sokrates is excellent, but running it in practice introduces operational overhead
-      that can slow adoption:
+      that can slow adoption.
     </p>
     <hr />
     <h3>Płanetnik's Approach</h3>
@@ -195,6 +195,20 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       <dd>
         Every chart is a browser-rendered React component — zoomable, filterable, and theme-aware.
         No static PNGs, no Graphviz dependency, no server-side rendering.
+      </dd>
+
+      <dt>Applied Usability Heuristics</dt>
+      <dd>
+        The report interface is designed around
+        <a href="https://www.nngroup.com/articles/ten-usability-heuristics/">Nielsen's ten usability heuristics</a>,
+        not just technical capability. System status is always visible — loading states, empty states, and data
+        freshness are explicit rather than ambiguous. Navigation follows real-world conventions with consistent
+        terminology across pages. Users can search globally with instant fuzzy matching, recover from wrong turns
+        via persistent breadcrumbs, and switch between light and dark themes without losing context. Layouts are
+        fully responsive — the same report reads well on a widescreen monitor during a review and on a phone
+        during an incident. Error states are descriptive, not cryptic. Where Sokrates generates functional but
+        utilitarian HTML, Płanetnik treats the report surface as a product: consistent visual hierarchy,
+        keyboard-accessible controls, and interface patterns that reduce cognitive load rather than add to it.
       </dd>
     </dl>
 
