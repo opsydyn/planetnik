@@ -6,6 +6,7 @@ import tunnel from "astro-tunnel"
 
 // https://astro.build/config
 export default defineConfig({
+  base: "/planetnik",
   env: {
     schema: {
       PLANETNIK_DATA_DIR: envField.string({
@@ -35,9 +36,10 @@ export default defineConfig({
     csp: {
       directives: [
         "font-src 'self' data:",
-        "style-src 'self' 'unsafe-inline'",
-        "style-src-attr 'unsafe-inline'",
       ],
+      styleDirective: {
+        resources: ["'self'", "'unsafe-inline'"],
+      },
     },
   },
   experimental: {
