@@ -1,4 +1,4 @@
-export type SearchDocumentKind = "page" | "file" | "unit" | "contributor" | "metric" | "extension"
+export type SearchDocumentKind = "page" | "file" | "unit" | "contributor" | "metric" | "extension" | "repository" | "team"
 
 export interface SearchDocument {
   id: string

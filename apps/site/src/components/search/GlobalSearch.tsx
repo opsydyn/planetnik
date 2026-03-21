@@ -32,6 +32,8 @@ const kindLabels: Record<SearchDocumentKind, string> = {
   contributor: "People",
   metric: "Metrics",
   extension: "Languages",
+  repository: "Repositories",
+  team: "Teams",
 }
 
 function getDefaultResults(documents: SearchDocument[]): SearchResult[] {

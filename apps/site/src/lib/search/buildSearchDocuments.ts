@@ -1,5 +1,6 @@
 // ADR-0005: Build the site-wide search corpus from Astro content collections.
 import { getCollection, getEntry } from "astro:content"
+import { getLandscapeContributorHref, getLandscapeRepositoryHref } from "../landscapeRoutes"
 import { route } from "../route"
 import type { SearchDocument } from "./types"
 
@@ -323,7 +324,62 @@ export async function buildSearchDocuments(): Promise<SearchDocument[]> {
   const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
 
   if (reportMode === "landscape") {
-    return makePageDocuments(projectName, landscapePageDefinitions)
+    const landscapeContributors = await getCollection("landscapeContributors")
+    const landscapeRepositories = await getCollection("landscapeRepositories")
+    const landscapeTeams = await getCollection("landscapeTeams")
+
+    const documents: SearchDocument[] = [...makePageDocuments(projectName, landscapePageDefinitions)]
+
+    for (const contributor of landscapeContributors) {
+      const displayName = contributor.data.displayName || contributor.data.name || contributor.data.email
+      documents.push({
+        id: `contributor:${contributor.id}`,
+        kind: "contributor",
+        title: displayName,
+        subtitle: `${contributor.data.email} · ${contributor.data.repositoryCount} ${contributor.data.repositoryCount === 1 ? "repository" : "repositories"}`,
+        keywords: normalizeKeywords([
+          contributor.data.email,
+          contributor.data.name,
+          contributor.data.displayName,
+          contributor.data.isBot ? "bot" : "human",
+        ]),
+        route: getLandscapeContributorHref(contributor.data.email),
+        section: "Landscape",
+        rank: 800,
+      })
+    }
+
+    for (const repo of landscapeRepositories) {
+      documents.push({
+        id: `repository:${repo.id}`,
+        kind: "repository",
+        title: repo.data.name,
+        subtitle: repo.data.description || `${repo.data.mainLinesOfCode.toLocaleString()} LOC`,
+        keywords: normalizeKeywords([
+          repo.data.name,
+          repo.data.description,
+          ...repo.data.tags.map((t) => t.name),
+        ]),
+        route: getLandscapeRepositoryHref(repo.data.repoKey),
+        section: "Landscape",
+        rank: 900,
+      })
+    }
+
+    for (const team of landscapeTeams) {
+      documents.push({
+        id: `team:${team.id}`,
+        kind: "team",
+        title: team.data.name,
+        subtitle: `${team.data.memberCount} members · ${team.data.repositoryCount} repositories`,
+        keywords: normalizeKeywords([team.data.name, team.data.description]),
+        route: route("/landscape/teams"),
+        section: "Landscape",
+        rank: 850,
+      })
+    }
+
+    return documents.sort((a, b) => b.rank - a.rank || a.title.localeCompare(b.title))
   }
 
   const filesMain = await getCollection("filesMain")
