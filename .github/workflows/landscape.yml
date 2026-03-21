@@ -89,14 +89,12 @@ jobs:
         run: git config --global url."https://x-access-token:${LANDSCAPE_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Run landscape analysis
-        run: |
-          ARGS="--config _landscape-config.json"
-          ARGS="$ARGS --outputFolder _landscape"
-          ARGS="$ARGS --concurrency ${{ inputs.concurrency || '4' }}"
-          if [ -n "${{ inputs.name }}" ]; then
-            ARGS="$ARGS --name '${{ inputs.name }}'"
-          fi
-          bun run apps/cli/src/index.ts analyzeLandscape $ARGS
+        run: >-
+          bun run apps/cli/src/index.ts analyzeLandscape
+          --config _landscape-config.json
+          --outputFolder _landscape
+          --concurrency ${{ inputs.concurrency || '4' }}
+          ${{ inputs.name && format('--name "{0}"', inputs.name) || '' }}
 
       - name: Build Astro site
         env:
