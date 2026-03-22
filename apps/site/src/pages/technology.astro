@@ -44,9 +44,10 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       <dd>
         Every significant technical choice — the Effect stack, the concurrency model, the content collection
         architecture, the landscape analysis pipeline — is captured in a written ADR before implementation begins.
-        Agents receive ADRs as context and are expected to follow them. This prevents architectural drift across
-        sessions and agents, and gives the human a durable record of <em>why</em> decisions were made, not just what
-        the code does.
+        Agents receive ADRs as context and are expected to follow them — and, critically, they are observed
+        to push back when implementation conflicts with a recorded decision. This prevents architectural drift
+        across sessions and agents, gives the human a durable record of <em>why</em> decisions were made, and
+        turns the ADR corpus into a living constraint system rather than passive documentation.
       </dd>
 
       <dt>Domain-Driven Design (DDD)</dt>

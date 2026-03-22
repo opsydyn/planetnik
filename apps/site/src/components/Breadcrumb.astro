@@ -1,0 +1,101 @@
+---
+import { route } from "../lib/route"
+
+interface Crumb {
+  label: string
+  href?: string
+}
+
+interface Props {
+  title: string
+  reportMode: string
+  repoScope?: {
+    repoKey: string
+    repoName: string
+  }
+}
+
+const { title, reportMode, repoScope } = Astro.props
+const isLandscape = reportMode === "landscape"
+
+const crumbs: Crumb[] = []
+
+if (isLandscape) {
+  crumbs.push({ label: "Landscape", href: route("/landscape") })
+
+  if (repoScope) {
+    crumbs.push({ label: "Repositories", href: route("/landscape/repositories") })
+    crumbs.push({
+      label: repoScope.repoName,
+      href: route(`/landscape/repositories/${encodeURIComponent(repoScope.repoKey)}`),
+    })
+  }
+} else {
+  crumbs.push({ label: "Dashboard", href: route("/") })
+}
+
+// Current page (no link)
+crumbs.push({ label: title })
+---
+
+{crumbs.length > 1 && (
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <ol>
+      {crumbs.map((crumb, i) => (
+        <li>
+          {crumb.href && i < crumbs.length - 1 ? (
+            <a href={crumb.href}>{crumb.label}</a>
+          ) : (
+            <span aria-current="page">{crumb.label}</span>
+          )}
+        </li>
+      ))}
+    </ol>
+  </nav>
+)}
+
+<style>
+  .breadcrumb {
+    margin-bottom: 0.75rem;
+  }
+
+  ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+  }
+
+  li:not(:last-child)::after {
+    content: "/";
+    margin: 0 0.45rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+  }
+
+  a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  span[aria-current] {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+</style>

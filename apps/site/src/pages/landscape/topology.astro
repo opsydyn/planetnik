@@ -1,9 +1,8 @@
 ---
 import { getEntry } from "astro:content"
-import ForceGraph from "../../components/graphs/ForceGraph"
-import StaticReportTable from "../../components/tables/StaticReportTable.astro"
-import { buildContributorForceGraph } from "../../lib/forceGraph"
+import LandscapeTopologyExplorer from "../../components/LandscapeTopologyExplorer"
 import { chartHelp } from "../../lib/chartHelp"
+import { buildContributorForceGraph } from "../../lib/forceGraph"
 import Dashboard from "../../layouts/Dashboard.astro"
 import { route } from "../../lib/route"
 
@@ -14,32 +13,49 @@ if (reportContext?.data.reportMode !== "landscape") {
 
 const topology = await getEntry("landscapeTopology", "topology")
 const projectName = reportContext.data.title
-const requestedPeriod = Astro.url.searchParams.get("period") ?? "all_time"
-const selectedPeriod = topology?.data.periodsByKey[requestedPeriod] ?? topology?.data.periodsByKey.all_time
 const maxVisualConnections = 1800
-const visualConnections = selectedPeriod
-  ? [...selectedPeriod.connections]
-      .sort((left, right) => {
-        if (left.sharedFilesCount !== right.sharedFilesCount) return right.sharedFilesCount - left.sharedFilesCount
-        if (left.from !== right.from) return left.from.localeCompare(right.from)
-        return left.to.localeCompare(right.to)
-      })
-      .slice(0, maxVisualConnections)
-  : []
-const isGraphTrimmed = Boolean(selectedPeriod && visualConnections.length < selectedPeriod.connectionCount)
 
-const graph = selectedPeriod
-  ? buildContributorForceGraph(
-      visualConnections.map((connection) => ({
-        from: connection.from,
-        to: connection.to,
-        count: connection.sharedFilesCount,
-        files: connection.sharedFiles,
-      })),
-    )
-  : { nodes: [], edges: [] }
+const sections = (topology?.data.periods ?? []).map((period) => {
+  const fullPeriod = topology?.data.periodsByKey[period.periodKey]
+  if (!fullPeriod) return null
 
-const graphNodes = graph.nodes.map((node) => ({ ...node, href: undefined }))
+  const sortedConnections = [...fullPeriod.connections]
+    .sort((left, right) => {
+      if (left.sharedFilesCount !== right.sharedFilesCount) return right.sharedFilesCount - left.sharedFilesCount
+      if (left.from !== right.from) return left.from.localeCompare(right.from)
+      return left.to.localeCompare(right.to)
+    })
+    .slice(0, maxVisualConnections)
+
+  const isTrimmed = sortedConnections.length < fullPeriod.connectionCount
+  const graph = buildContributorForceGraph(
+    sortedConnections.map((c) => ({
+      from: c.from,
+      to: c.to,
+      count: c.sharedFilesCount,
+      files: c.sharedFiles,
+    })),
+  )
+
+  return {
+    periodKey: period.periodKey,
+    periodLabel: period.periodLabel,
+    connectionCount: period.connectionCount,
+    period: {
+      periodKey: fullPeriod.periodKey,
+      periodLabel: fullPeriod.periodLabel,
+      contributorCount: fullPeriod.contributorCount,
+      connectionCount: fullPeriod.connectionCount,
+      cMean: fullPeriod.cMean,
+      mostConnectedContributor: fullPeriod.mostConnectedContributor,
+      strongestConnections: fullPeriod.strongestConnections,
+    },
+    nodes: graph.nodes.map((node) => ({ ...node, href: undefined })),
+    edges: graph.edges,
+    isTrimmed,
+    visibleCount: sortedConnections.length,
+  }
+}).filter((s): s is NonNullable<typeof s> => s !== null)
 ---
 
 <Dashboard title="Landscape Team Topology" projectName={projectName}>
@@ -48,86 +64,16 @@ const graphNodes = graph.nodes.map((node) => ({ ...node, href: undefined }))
     Cross-repository contributor coordination derived from shared-file work in the selected period.
   </p>
 
-  <div class="periods">
-    {(topology?.data.periods ?? []).map((period) => (
-      <a
-        href={`${route("/landscape/topology")}?period=${period.periodKey}`}
-        class:list={["period-link", { active: period.periodKey === selectedPeriod?.periodKey }]}
-      >
-        {period.periodLabel}
-        <span>{period.connectionCount}</span>
-      </a>
-    ))}
-  </div>
-
-  {selectedPeriod ? (
-    <>
-      <div class="cards">
-        <div class="card">
-          <div class="card-value">{selectedPeriod.contributorCount.toLocaleString()}</div>
-          <div class="card-label">Contributors</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{selectedPeriod.connectionCount.toLocaleString()}</div>
-          <div class="card-label">Connections</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{selectedPeriod.cMean.toFixed(1)}</div>
-          <div class="card-label">Mean Coordination</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{selectedPeriod.mostConnectedContributor?.displayName ?? "—"}</div>
-          <div class="card-label">Most Connected</div>
-        </div>
-      </div>
-
-      <section class="section">
-        <h3>Collaboration Graph</h3>
-        {isGraphTrimmed ? (
-          <p class="hint">
-            Visualizing the strongest {visualConnections.length.toLocaleString()} of {selectedPeriod.connectionCount.toLocaleString()} links to keep the
-            graph responsive.
-          </p>
-        ) : null}
-        <ForceGraph
-          client:only="react"
-          nodes={graphNodes}
-          edges={graph.edges}
-          helpText={chartHelp.landscape.topology}
-          footerNote={
-            isGraphTrimmed
-              ? `Showing the strongest ${visualConnections.length.toLocaleString()} of ${selectedPeriod.connectionCount.toLocaleString()} cross-repository contributor links in ${selectedPeriod.periodLabel}.`
-              : `Showing ${selectedPeriod.connectionCount.toLocaleString()} cross-repository contributor links in ${selectedPeriod.periodLabel}.`
-          }
-        />
-      </section>
-
-      <section class="section">
-        <h3>Strongest Connections</h3>
-        <StaticReportTable ariaLabel="Landscape strongest contributor connections">
-          <thead>
-            <tr>
-              <th><span>Contributor 1</span></th>
-              <th><span>Contributor 2</span></th>
-              <th><span>Shared Files</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {selectedPeriod.strongestConnections.slice(0, 25).map((connection) => (
-              <tr>
-                <td><code class="report-static-table__code">{connection.from}</code></td>
-                <td><code class="report-static-table__code">{connection.to}</code></td>
-                <td class="report-static-table__num">{connection.sharedFilesCount.toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </StaticReportTable>
-      </section>
-    </>
-  ) : (
+  {sections.length === 0 ? (
     <div class="empty">
       <p>No landscape topology data was exported.</p>
     </div>
+  ) : (
+    <LandscapeTopologyExplorer
+      client:load
+      sections={sections}
+      helpText={chartHelp.landscape.topology}
+    />
   )}
 </Dashboard>
 
@@ -138,14 +84,21 @@ const graphNodes = graph.nodes.map((node) => ({ ...node, href: undefined }))
     max-width: 72ch;
   }
 
-  .periods {
+  .empty {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  :global(.topo-periods) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.85rem;
     margin-bottom: 1.5rem;
   }
 
-  .period-link {
+  :global(.topo-period-btn) {
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
@@ -154,11 +107,18 @@ const graphNodes = graph.nodes.map((node) => ({ ...node, href: undefined }))
     border: 1px solid var(--color-border);
     background: var(--color-card);
     color: var(--color-text);
-    text-decoration: none;
     font-weight: 600;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
   }
 
-  .period-link span {
+  :global(.topo-period-btn:hover) {
+    border-color: var(--color-accent);
+  }
+
+  :global(.topo-period-count) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -169,58 +129,101 @@ const graphNodes = graph.nodes.map((node) => ({ ...node, href: undefined }))
     color: var(--color-accent);
   }
 
-  .period-link.active {
+  :global(.topo-period-btn.active) {
     border-color: var(--color-accent);
     box-shadow: inset 0 0 0 1px var(--color-accent);
   }
 
-  .cards {
+  :global(.topo-cards) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.9rem;
     margin-bottom: 1.5rem;
   }
 
-  .card,
-  .empty {
+  :global(.topo-card) {
     background: var(--color-card);
     border: 1px solid var(--color-border);
     border-radius: 16px;
     padding: 1.1rem 1.2rem;
   }
 
-  .card-value {
+  :global(.topo-card-value) {
     font-size: 1.9rem;
     font-weight: 700;
     color: var(--color-accent);
     line-height: 1;
   }
 
-  .card-label {
+  :global(.topo-card-label) {
     margin-top: 0.45rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
-  .section {
+  :global(.topo-section) {
     margin-bottom: 1.75rem;
   }
 
-  .section h3 {
+  :global(.topo-section h3) {
     font-size: 1.1rem;
     font-weight: 700;
     margin-bottom: 0.8rem;
   }
 
-  .hint {
+  :global(.topo-hint) {
     margin: -0.2rem 0 0.85rem;
     color: var(--color-text-muted);
     max-width: 72ch;
   }
 
+  :global(.topo-empty) {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+  }
+
+  :global(.topo-table-wrap) {
+    overflow-x: auto;
+  }
+
+  :global(.topo-table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  :global(.topo-table th) {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.75rem;
+  }
+
+  :global(.topo-table td) {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
+  }
+
+  :global(.topo-table code) {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.8rem;
+  }
+
+  :global(.topo-num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
   @media (min-width: 720px) {
-    .cards {
+    :global(.topo-cards) {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }

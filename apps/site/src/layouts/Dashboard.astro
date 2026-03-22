@@ -1,6 +1,7 @@
 ---
 import { getEntry } from "astro:content"
 import { ClientRouter } from "astro:transitions"
+import Breadcrumb from "../components/Breadcrumb.astro"
 import GlobalSearch from "../components/search/GlobalSearch"
 import SystemIcon from "../components/icons/SystemIcon.astro"
 import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro"
@@ -765,6 +766,7 @@ function isActiveLink(href: string): boolean {
     </button>
 
     <main transition:animate="fade">
+      <Breadcrumb title={title} reportMode={reportMode} repoScope={repoScope} />
       <slot />
     </main>
 
