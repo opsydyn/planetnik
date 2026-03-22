@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted — parked (assessed 2026-03-22, no primitives implemented yet; see [roadmap](../roadmap/structured-concurrency.md))
 
 ## Context
 
