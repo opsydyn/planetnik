@@ -28,8 +28,8 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <p>
       The majority of the codebase was written by AI coding agents — primarily
-      <a href="https://claude.com/claude-code">Claude Code</a> and
-      <a href="https://openai.com/index/introducing-codex/">Codex</a> — working under human
+      <a href="https://claude.com/claude-code" target="_blank" rel="noopener noreferrer">Claude Code</a> and
+      <a href="https://openai.com/index/introducing-codex/" target="_blank" rel="noopener noreferrer">Codex</a> — working under human
       architectural direction. The human role was not to write most of the code, but to set constraints,
       review output, and steer decisions. The agents did the implementation.
     </p>
@@ -94,7 +94,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <h3>Why Not Just Run Sokrates?</h3>
 
     <p>
-      Płanetnik is inspired by <a href="https://www.sokrates.dev/">Sokrates</a>, the pragmatic source code examination
+      Płanetnik is inspired by <a href="https://www.sokrates.dev/" target="_blank" rel="noopener noreferrer">Sokrates</a>, the pragmatic source code examination
       tool created by Željko Obrenović. Sokrates is excellent, but running it in practice introduces operational overhead
       that can slow adoption.
     </p>
@@ -147,7 +147,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <div class="benchmark">
       <div class="benchmark-value">53 seconds</div>
       <div class="benchmark-label">
-        Landscape analysis of the <a href="https://github.com/effect-TS">Effect-TS</a> organisation — 17 repositories
+        Landscape analysis of the <a href="https://github.com/effect-TS" target="_blank" rel="noopener noreferrer">Effect-TS</a> organisation — 17 repositories
         cloned, scanned, and aggregated with concurrency 4 on a standard GitHub Actions runner.
       </div>
     </div>
@@ -164,8 +164,8 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <dl>
       <dt>Balanced Coupling</dt>
       <dd>
-        Płanetnik implements the <a href="https://coupling.dev/">Balanced Coupling</a> model by
-        <a href="https://vladikk.com/">Vlad Khononov</a>, which blends static dependencies, temporal co-change,
+        Płanetnik implements the <a href="https://coupling.dev/" target="_blank" rel="noopener noreferrer">Balanced Coupling</a> model by
+        <a href="https://vladikk.com/" target="_blank" rel="noopener noreferrer">Vlad Khononov</a>, which blends static dependencies, temporal co-change,
         coordination overlap, and knowledge exposure into a single coupling pressure view. The accompanying
         Big Ball of Mud visualisation renders the coupling topology as an interactive force-directed graph,
         making it possible to see at a glance which components are overloaded and where architectural boundaries
@@ -201,7 +201,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       <dt>Applied Usability Heuristics</dt>
       <dd>
         The report interface is designed around
-        <a href="https://www.nngroup.com/articles/ten-usability-heuristics/">Nielsen's ten usability heuristics</a>,
+        <a href="https://www.nngroup.com/articles/ten-usability-heuristics/" target="_blank" rel="noopener noreferrer">Nielsen's ten usability heuristics</a>,
         not just technical capability. System status is always visible — loading states, empty states, and data
         freshness are explicit rather than ambiguous. Navigation follows real-world conventions with consistent
         terminology across pages. Users can search globally with instant fuzzy matching, recover from wrong turns
@@ -219,7 +219,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <h4>Bun</h4>
     <p>
-      <a href="https://bun.sh">Bun</a> is the runtime, package manager, test runner, and bundler.
+      <a href="https://bun.sh" target="_blank" rel="noopener noreferrer">Bun</a> is the runtime, package manager, test runner, and bundler.
       It replaces Node.js, npm, Jest, and esbuild with a single binary. Płanetnik runs directly from
       <code>.ts</code> source files — no transpilation step, no <code>dist/</code> folder in development.
       In CI, <code>bun run apps/cli/src/index.ts</code> executes the CLI directly from source.
@@ -234,7 +234,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <h4>Effect</h4>
     <p>
-      <a href="https://effect.website">Effect</a> provides the service architecture, error handling, concurrency model,
+      <a href="https://effect.website" target="_blank" rel="noopener noreferrer">Effect</a> provides the service architecture, error handling, concurrency model,
       and dependency injection. The CLI uses <code>@effect/cli</code> for command parsing. Configuration and data schemas
       use <code>@effect/schema</code> instead of manual JSON validation. File I/O uses <code>@effect/platform</code>.
     </p>
@@ -255,7 +255,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <h4>Astro</h4>
     <p>
-      <a href="https://astro.build">Astro</a> generates the report site as a fully static build. Pages are
+      <a href="https://astro.build" target="_blank" rel="noopener noreferrer">Astro</a> generates the report site as a fully static build. Pages are
       server-rendered at build time from content collections populated by the analysis output. The result is a
       zero-JavaScript-by-default site that loads fast and can be deployed anywhere static files are served —
       GitHub Pages, S3, Netlify, or a local file server.
@@ -266,13 +266,13 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       Interactive charts and tables use React islands hydrated by Astro. The visualisation stack includes:
     </p>
     <dl>
-      <dt><a href="https://airbnb.io/visx/">visx</a></dt>
+      <dt><a href="https://airbnb.io/visx/" target="_blank" rel="noopener noreferrer">visx</a></dt>
       <dd>Low-level composable primitives for bar charts, heatmaps, treemaps, axes, and scales — built on D3 without the D3 abstraction tax</dd>
-      <dt><a href="https://www.sigmajs.org/">Sigma.js</a> + <a href="https://graphology.github.io/">Graphology</a></dt>
+      <dt><a href="https://www.sigmajs.org/" target="_blank" rel="noopener noreferrer">Sigma.js</a> + <a href="https://graphology.github.io/" target="_blank" rel="noopener noreferrer">Graphology</a></dt>
       <dd>WebGL graph rendering for dependency networks, team topology, and coupling visualisations</dd>
-      <dt><a href="https://reactflow.dev/">React Flow</a></dt>
+      <dt><a href="https://reactflow.dev/" target="_blank" rel="noopener noreferrer">React Flow</a></dt>
       <dd>Node-based diagrams for component dependency graphs</dd>
-      <dt><a href="https://tanstack.com/table">TanStack Table</a></dt>
+      <dt><a href="https://tanstack.com/table" target="_blank" rel="noopener noreferrer">TanStack Table</a></dt>
       <dd>Headless table engine powering sortable, filterable data grids across all report pages</dd>
     </dl>
 
@@ -336,7 +336,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <p>
       Many of the choices below follow the distinction Rich Hickey draws in
-      <a href="https://www.youtube.com/watch?v=SxdOUGdseq4"><em>Simple Made Easy</em></a>:
+      <a href="https://www.youtube.com/watch?v=SxdOUGdseq4" target="_blank" rel="noopener noreferrer"><em>Simple Made Easy</em></a>:
       prefer simple over easy, separate what from how, and avoid complecting things that can stay apart.
     </p>
 
@@ -347,7 +347,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
         TypeScript, but <em>simple</em>. Matching the original structure let the LLM agents focus on tests and
         straightforward porting rather than simultaneous redesign. Once the test suite was green and behaviour
         was verified, a second pass reshaped the code toward idiomatic Effect, functional patterns, and cleaner
-        TypeScript. Two simple steps instead of one <a href="https://www.youtube.com/watch?v=SxdOUGdseq4&t=822s">complected</a> leap.
+        TypeScript. Two simple steps instead of one <a href="https://www.youtube.com/watch?v=SxdOUGdseq4&t=822s" target="_blank" rel="noopener noreferrer">complected</a> leap.
       </dd>
 
       <dt>Run from source, not from a JAR</dt>
