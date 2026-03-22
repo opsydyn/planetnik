@@ -14,8 +14,20 @@ import {
 } from "@planetnik/reports"
 import { Effect } from "effect"
 import simpleGit from "simple-git"
+import {
+  CloneError,
+  ConfigNotFoundError,
+  GitHistoryError,
+  GitHubDiscoveryError,
+  RepoAnalysisDone,
+  RepoAnalysisFailed,
+  RepoAnalysisSkipped,
+  type RepoWorkerOutcome,
+  UnknownWorkerError,
+} from "../domain/landscape.js"
 import { extractGitHistory } from "../git/GitHistoryExtractor.js"
 import { discoverRepos, type GitHubRepo, type LandscapeConfig } from "../github/GitHubRepoFinder.js"
+import { withPhase } from "../logger.js"
 import { runAnalysis } from "./generateReports.js"
 import { hydrateLandscapeConfiguration, saveLandscapeConfiguration } from "./landscapeConfigHydrator.js"
 import { resolveLandscapeDataDir, resolveLandscapeReportsDir } from "./landscapePaths.js"
@@ -41,12 +53,6 @@ function todayString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
-export interface RepoWorkerResult {
-  name: string
-  success: boolean
-  error?: string
-}
-
 /** Create a temp directory as a scoped resource — guaranteed cleanup on success, failure, or interruption. */
 export function acquireTempDir(prefix: string) {
   return Effect.acquireRelease(
@@ -68,18 +74,27 @@ export function analyzeRepoWorker(
   repo: GitHubRepo,
   repoOutputDir: string,
   cloneUrl: string,
-): Effect.Effect<RepoWorkerResult, never, never> {
+  org: string,
+): Effect.Effect<RepoWorkerOutcome, never, never> {
+  const repoKey = `${org}/${repo.name}`
+
   return Effect.scoped(
     Effect.gen(function* () {
       const cloneDir = yield* acquireTempDir("planetnik")
 
       const cloneResult = yield* Effect.tryPromise({
         try: () => simpleGit().clone(cloneUrl, cloneDir, ["--single-branch"]),
-        catch: (error) => new Error(`Clone failed: ${error}`),
+        catch: (error) =>
+          new CloneError({
+            type: "landscape/clone",
+            title: "Repository clone failed",
+            detail: String(error),
+            repoKey,
+          }),
       }).pipe(Effect.either)
 
       if (cloneResult._tag === "Left") {
-        return { name: repo.name, success: false, error: cloneResult.left.message }
+        return new RepoAnalysisFailed({ repoKey, name: repo.name, error: cloneResult.left })
       }
 
       const creator = new ScopeCreator(cloneDir)
@@ -87,21 +102,49 @@ export function analyzeRepoWorker(
 
       yield* Effect.tryPromise({
         try: () => extractGitHistory(cloneDir),
-        catch: (error) => new Error(`Git history extraction failed: ${error}`),
+        catch: (error) =>
+          new GitHistoryError({
+            type: "landscape/git-history",
+            title: "Git history extraction failed",
+            detail: String(error),
+            repoKey,
+          }),
       })
 
       const confFile = join(cloneDir, "_planetnik", "config.json")
       if (!existsSync(confFile)) {
-        return { name: repo.name, success: false, error: "Config not created" }
+        return new RepoAnalysisFailed({
+          repoKey,
+          name: repo.name,
+          error: new ConfigNotFoundError({
+            type: "landscape/config-not-found",
+            title: "Analysis config file not created",
+            detail: `Expected config at ${confFile}`,
+            repoKey,
+          }),
+        })
       }
 
       yield* runAnalysis(confFile, repoOutputDir)
 
-      return { name: repo.name, success: true }
+      return new RepoAnalysisDone({ repoKey, name: repo.name })
     }).pipe(
-      Effect.catchAll((error) => Effect.succeed({ name: repo.name, success: false, error: String(error) })),
+      Effect.catchAll((error) =>
+        Effect.succeed(
+          new RepoAnalysisFailed({
+            repoKey,
+            name: repo.name,
+            error: new UnknownWorkerError({
+              type: "landscape/unknown",
+              title: "Unexpected worker error",
+              detail: String(error),
+              repoKey,
+            }),
+          }),
+        ),
+      ),
     ),
-  )
+  ).pipe(Effect.annotateLogs({ org, repo: repo.name }))
 }
 
 export const analyzeLandscapeCommand = Command.make(
@@ -121,18 +164,27 @@ export const analyzeLandscapeCommand = Command.make(
       mkdirSync(outDir, { recursive: true })
 
       // 1. Discover repos
-      yield* Effect.log("Discovering repositories from GitHub...")
+      yield* Effect.logInfo("Discovering repositories from GitHub...").pipe(withPhase("discovery"))
       const orgRepos = yield* Effect.tryPromise({
         try: () => discoverRepos(config),
-        catch: (error) => new Error(`GitHub API discovery failed: ${error}`),
+        catch: (error) =>
+          new GitHubDiscoveryError({
+            type: "landscape/github-discovery",
+            title: "GitHub API discovery failed",
+            detail: String(error),
+            org: "",
+          }),
       })
 
       let totalRepos = 0
       for (const [org, repos] of orgRepos) {
-        yield* Effect.log(`  ${org}: ${repos.length} active repositories`)
+        yield* Effect.logDebug(`${org}: ${repos.length} active repositories`).pipe(
+          Effect.annotateLogs({ org, repos: String(repos.length) }),
+          withPhase("discovery"),
+        )
         totalRepos += repos.length
       }
-      yield* Effect.log(`Total: ${totalRepos} repositories to analyze`)
+      yield* Effect.logInfo(`Total: ${totalRepos} repositories to analyze`).pipe(withPhase("discovery"))
 
       // Save discovery results
       const discoveryDir = join(outDir, "_discovery")
@@ -142,13 +194,13 @@ export const analyzeLandscapeCommand = Command.make(
       }
 
       // 2. Analyze each repo
-      let analyzed = 0
-      let skipped = 0
-      let failed = 0
-      const failures: { org: string; repo: string; error: string }[] = []
+      const allOutcomes: RepoWorkerOutcome[] = []
 
       for (const [org, repos] of orgRepos) {
-        yield* Effect.log(`\nAnalyzing ${org} (${repos.length} repos)...`)
+        yield* Effect.logInfo(`Analyzing ${org} (${repos.length} repos)...`).pipe(
+          Effect.annotateLogs("org", org),
+          withPhase("analysis"),
+        )
 
         const orgDir = join(outDir, org)
         mkdirSync(orgDir, { recursive: true })
@@ -162,40 +214,61 @@ export const analyzeLandscapeCommand = Command.make(
 
             // Skip if already analyzed
             if (args.skipExisting && existsSync(join(repoOutputDir, "data", "analysisResults.json"))) {
-              skipped++
-              return Effect.succeed({ name: repo.name, success: true, skipped: true as const })
+              return Effect.succeed(new RepoAnalysisSkipped({ repoKey: `${org}/${repo.name}`, name: repo.name }))
             }
 
             mkdirSync(repoOutputDir, { recursive: true })
             const cloneUrl = `${config.githubCloneUrl}/${org}/${repo.name}.git`
-            return analyzeRepoWorker(repo, repoOutputDir, cloneUrl)
+            return analyzeRepoWorker(repo, repoOutputDir, cloneUrl, org)
           })
 
           const results = yield* Effect.all(batchEffects, { concurrency: "unbounded" })
-
-          for (const result of results) {
-            if ("skipped" in result) {
-              yield* Effect.log(`  [skip] ${result.name} (already analyzed)`)
-            } else if (result.success) {
-              analyzed++
-              yield* Effect.log(`  [done] ${result.name}`)
-            } else {
-              failed++
-              failures.push({ org, repo: result.name, error: result.error ?? "unknown" })
-              yield* Effect.log(`  [fail] ${result.name}: ${result.error}`)
-            }
-          }
+          allOutcomes.push(...results)
         }
       }
 
-      yield* Effect.log(`\nAnalysis complete: ${analyzed} analyzed, ${skipped} skipped, ${failed} failed`)
+      // Log each outcome
+      const logOutcome = (outcome: RepoWorkerOutcome) => {
+        switch (outcome._tag) {
+          case "RepoAnalysisSkipped":
+            return Effect.logDebug(`[skip] ${outcome.name} (already analyzed)`).pipe(withPhase("analysis"))
+          case "RepoAnalysisDone":
+            return Effect.logDebug(`[done] ${outcome.name}`).pipe(withPhase("analysis"))
+          case "RepoAnalysisFailed":
+            return Effect.logWarning(`[fail] ${outcome.name}: ${outcome.error.detail}`).pipe(
+              Effect.annotateLogs({ errorType: outcome.error._tag }),
+              withPhase("analysis"),
+            )
+        }
+      }
+      yield* Effect.forEach(allOutcomes, logOutcome, { discard: true })
+
+      // Tally results
+      const tally = allOutcomes.reduce(
+        (acc, o) => ({
+          analyzed: acc.analyzed + (o._tag === "RepoAnalysisDone" ? 1 : 0),
+          skipped: acc.skipped + (o._tag === "RepoAnalysisSkipped" ? 1 : 0),
+          failed: acc.failed + (o._tag === "RepoAnalysisFailed" ? 1 : 0),
+        }),
+        { analyzed: 0, skipped: 0, failed: 0 },
+      )
+      const failures = allOutcomes.filter((o): o is RepoAnalysisFailed => o._tag === "RepoAnalysisFailed")
+
+      yield* Effect.logInfo(
+        `Analysis complete: ${tally.analyzed} analyzed, ${tally.skipped} skipped, ${tally.failed} failed`,
+      ).pipe(withPhase("analysis"))
 
       if (failures.length > 0) {
-        writeFileSync(join(outDir, "_failures.json"), JSON.stringify(failures, null, 2), "utf-8")
+        const failureReport = failures.map((f) => ({
+          repoKey: f.repoKey,
+          errorType: f.error._tag,
+          detail: f.error.detail,
+        }))
+        writeFileSync(join(outDir, "_failures.json"), JSON.stringify(failureReport, null, 2), "utf-8")
       }
 
       // 3. Generate landscape report
-      yield* Effect.log("\nGenerating landscape report...")
+      yield* Effect.logInfo("Generating landscape report...").pipe(withPhase("reporting"))
 
       // Use initiator to discover all analysisResults.json files and build config
       const landscapeConfigPath = join(outDir, "_planetnik_landscape", "config.json")
@@ -241,11 +314,11 @@ export const analyzeLandscapeCommand = Command.make(
       landscapeDataExport.exportRepositories(tagMap)
       landscapeDataExport.exportTagContracts(tagMap, landscapeConfig.tagGroups)
 
-      yield* Effect.log(`Landscape report: ${reportsDir}/index.html`)
-      yield* Effect.log(
+      yield* Effect.logInfo(`Landscape report: ${reportsDir}/index.html`).pipe(withPhase("reporting"))
+      yield* Effect.logInfo(
         `${landscapeResults.getRepositoryCount()} repositories, ${landscapeResults.getTotalLoc()} total LOC`,
-      )
-      yield* Effect.log(`\nData directory: ${dataDir}`)
-      yield* Effect.log(`Run date: ${todayString()}`)
+      ).pipe(withPhase("reporting"))
+      yield* Effect.logInfo(`Data directory: ${dataDir}`).pipe(withPhase("reporting"))
+      yield* Effect.logInfo(`Run date: ${todayString()}`).pipe(withPhase("reporting"))
     }),
 )

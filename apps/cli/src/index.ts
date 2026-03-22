@@ -3,7 +3,7 @@
 
 import { Command } from "@effect/cli"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { analyzeLandscapeCommand } from "./commands/analyzeLandscape.js"
 import { analyzeRemoteCommand } from "./commands/analyzeRemote.js"
 import { exportConventionsCommand } from "./commands/exportConventions.js"
@@ -15,6 +15,7 @@ import { initCommand } from "./commands/init.js"
 import { initConventionsCommand } from "./commands/initConventions.js"
 import { updateConfigCommand } from "./commands/updateConfig.js"
 import { updateLandscapeCommand } from "./commands/updateLandscape.js"
+import { PlanetnikLoggerLayer } from "./logger.js"
 
 const command = Command.make("planetnik", {}, () =>
   Effect.log("Płanetnik — source code analysis tool. Use --help for available commands."),
@@ -39,4 +40,6 @@ const cli = Command.run(command, {
   version: "0.1.0",
 })
 
-cli(process.argv).pipe(Effect.provide(NodeContext.layer), NodeRuntime.runMain)
+const AppLayer = Layer.mergeAll(NodeContext.layer, PlanetnikLoggerLayer)
+
+cli(process.argv).pipe(Effect.provide(AppLayer), NodeRuntime.runMain)
