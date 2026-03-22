@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — parked (assessed 2026-03-22, no primitives implemented yet; see [roadmap](../roadmap/structured-concurrency.md))
+Accepted — Phase 1 complete (2026-03-22); see [roadmap](../roadmap/structured-concurrency.md)
 
 ## Context
 

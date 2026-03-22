@@ -41,36 +41,67 @@ function todayString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
-async function analyzeRepo(
+export interface RepoWorkerResult {
+  name: string
+  success: boolean
+  error?: string
+}
+
+/** Create a temp directory as a scoped resource — guaranteed cleanup on success, failure, or interruption. */
+export function acquireTempDir(prefix: string) {
+  return Effect.acquireRelease(
+    Effect.sync(() => {
+      const tmpId = randomBytes(6).toString("hex")
+      const dir = join(tmpdir(), `${prefix}-${tmpId}`)
+      mkdirSync(dir, { recursive: true })
+      return dir
+    }),
+    (dir) =>
+      Effect.sync(() => {
+        rmSync(dir, { recursive: true, force: true })
+      }),
+  )
+}
+
+/** Effect-native repo worker — runs inside a scope so temp dirs are always cleaned up. */
+export function analyzeRepoWorker(
   repo: GitHubRepo,
   repoOutputDir: string,
   cloneUrl: string,
-): Promise<{ name: string; success: boolean; error?: string }> {
-  const tmpId = randomBytes(6).toString("hex")
-  const cloneDir = join(tmpdir(), `planetnik-${tmpId}`)
+): Effect.Effect<RepoWorkerResult, never, never> {
+  return Effect.scoped(
+    Effect.gen(function* () {
+      const cloneDir = yield* acquireTempDir("planetnik")
 
-  try {
-    const git = simpleGit()
-    await git.clone(cloneUrl, cloneDir, ["--single-branch"])
+      const cloneResult = yield* Effect.tryPromise({
+        try: () => simpleGit().clone(cloneUrl, cloneDir, ["--single-branch"]),
+        catch: (error) => new Error(`Clone failed: ${error}`),
+      }).pipe(Effect.either)
 
-    const creator = new ScopeCreator(cloneDir)
-    creator.createScopeFromConventions(repo.name, repo.description ?? undefined)
+      if (cloneResult._tag === "Left") {
+        return { name: repo.name, success: false, error: cloneResult.left.message }
+      }
 
-    await extractGitHistory(cloneDir)
+      const creator = new ScopeCreator(cloneDir)
+      creator.createScopeFromConventions(repo.name, repo.description ?? undefined)
 
-    const confFile = join(cloneDir, "_planetnik", "config.json")
-    if (!existsSync(confFile)) {
-      return { name: repo.name, success: false, error: "Config not created" }
-    }
+      yield* Effect.tryPromise({
+        try: () => extractGitHistory(cloneDir),
+        catch: (error) => new Error(`Git history extraction failed: ${error}`),
+      })
 
-    await Effect.runPromise(runAnalysis(confFile, repoOutputDir))
+      const confFile = join(cloneDir, "_planetnik", "config.json")
+      if (!existsSync(confFile)) {
+        return { name: repo.name, success: false, error: "Config not created" }
+      }
 
-    return { name: repo.name, success: true }
-  } catch (e) {
-    return { name: repo.name, success: false, error: String(e) }
-  } finally {
-    rmSync(cloneDir, { recursive: true, force: true })
-  }
+      yield* runAnalysis(confFile, repoOutputDir)
+
+      return { name: repo.name, success: true }
+    }).pipe(
+      Effect.catchAll((error) => Effect.succeed({ name: repo.name, success: false, error: String(error) })),
+    ),
+  )
 }
 
 export const analyzeLandscapeCommand = Command.make(
@@ -126,24 +157,21 @@ export const analyzeLandscapeCommand = Command.make(
         for (let i = 0; i < repos.length; i += args.concurrency) {
           const batch = repos.slice(i, i + args.concurrency)
 
-          const promises = batch.map((repo) => {
+          const batchEffects = batch.map((repo) => {
             const repoOutputDir = join(orgDir, repo.name)
 
             // Skip if already analyzed
             if (args.skipExisting && existsSync(join(repoOutputDir, "data", "analysisResults.json"))) {
               skipped++
-              return Promise.resolve({ name: repo.name, success: true, skipped: true as const })
+              return Effect.succeed({ name: repo.name, success: true, skipped: true as const })
             }
 
             mkdirSync(repoOutputDir, { recursive: true })
             const cloneUrl = `${config.githubCloneUrl}/${org}/${repo.name}.git`
-            return analyzeRepo(repo, repoOutputDir, cloneUrl)
+            return analyzeRepoWorker(repo, repoOutputDir, cloneUrl)
           })
 
-          const results = yield* Effect.tryPromise({
-            try: () => Promise.all(promises),
-            catch: (error) => new Error(`Batch processing failed: ${error}`),
-          })
+          const results = yield* Effect.all(batchEffects, { concurrency: "unbounded" })
 
           for (const result of results) {
             if ("skipped" in result) {

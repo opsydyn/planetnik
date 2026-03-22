@@ -59,6 +59,14 @@ export function getLandscapeRepositoryDuplicationHref(repoKey: string): string {
   return getLandscapeRepositoryPageHref(repoKey, "/duplication")
 }
 
+export function getLandscapeRepositoryCouplingHref(repoKey: string): string {
+  return getLandscapeRepositoryPageHref(repoKey, "/coupling")
+}
+
+export function getLandscapeRepositoryDependenciesHref(repoKey: string): string {
+  return getLandscapeRepositoryPageHref(repoKey, "/dependencies")
+}
+
 export function getLandscapeRepositoryHotspotsHref(repoKey: string): string {
   return getLandscapeRepositoryPageHref(repoKey, "/hotspots")
 }
@@ -94,6 +102,8 @@ export function mapLandscapeRepositoryRoute(repoKey: string, href: string | null
     "/commits": getLandscapeRepositoryCommitsHref(repoKey),
     "/components": getLandscapeRepositoryComponentsHref(repoKey),
     "/duplication": getLandscapeRepositoryDuplicationHref(repoKey),
+    "/coupling": getLandscapeRepositoryCouplingHref(repoKey),
+    "/dependencies": getLandscapeRepositoryDependenciesHref(repoKey),
     "/hotspots": getLandscapeRepositoryHotspotsHref(repoKey),
     "/impact": getLandscapeRepositoryImpactHref(repoKey),
     "/controls": getLandscapeRepositoryControlsHref(repoKey),

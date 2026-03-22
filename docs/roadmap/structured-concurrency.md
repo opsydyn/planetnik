@@ -1,31 +1,27 @@
 # Roadmap: Effect Structured Concurrency (ADR-0010)
 
-**Status:** Parked — assessed 2026-03-22, not yet started
+**Status:** In progress — Phase 1 complete (2026-03-22)
 **ADR:** [0010-adopt-effect-structured-concurrency-for-landscape-analysis](../adr/0010-adopt-effect-structured-concurrency-for-landscape-analysis.md)
 
 ## Current State
 
-`analyzeLandscape.ts` uses none of the Effect structured concurrency primitives prescribed by ADR-0010. The command works — it successfully analyses multi-repo landscapes (e.g. Effect-TS, 17 repos in 53s) — but its internals are imperative and fragile under edge conditions.
+Phase 1 is complete. The `analyzeRepo` async function has been replaced with an Effect-native `analyzeRepoWorker` using `Effect.scoped` and `Effect.acquireRelease` for temp directory lifecycle. The nested `Effect.runPromise` call has been removed, and batch concurrency uses `Effect.all` instead of `Promise.all`.
 
-### What exists today
+### Resolved (Phase 1)
+
+| Area | Before | After |
+|---|---|---|
+| **Temp dir cleanup** | `try/finally` + `rmSync` in a plain `async function` | `Effect.acquireRelease` — guaranteed cleanup on success, failure, or interruption |
+| **Resource lifecycle** | `analyzeRepo` is a plain `async function` calling `Effect.runPromise` inside an existing Effect runtime | `analyzeRepoWorker` is an `Effect.Effect` — scoped, composable, observable by the parent fibre |
+| **Batch concurrency** | `Promise.all` | `Effect.all(batchEffects, { concurrency: "unbounded" })` |
+
+### Remaining anti-patterns
 
 | Area | Pattern | Risk |
 |---|---|---|
-| **Temp dir cleanup** | `try/finally` + `rmSync` in a plain `async function` | Not interruption-safe — Effect fiber cancellation does not guarantee JS `finally` runs |
-| **Concurrency** | Manual `repos.slice(i, i + concurrency)` + `Promise.all` | Uneven batch utilisation; no work-stealing; a slow repo blocks the entire batch |
-| **State tracking** | `let analyzed = 0; analyzed++` from concurrent branches | Mutation from inside `Promise.all` — safe only because JS is single-threaded, but semantically wrong and will break if moved to true parallel fibres |
+| **Concurrency** | Manual `repos.slice(i, i + concurrency)` batching | Uneven batch utilisation; no work-stealing; a slow repo blocks the entire batch |
+| **State tracking** | `let analyzed = 0; analyzed++` from concurrent branches | Mutation from concurrent fibres — safe only because JS is single-threaded, but semantically wrong |
 | **Retry policy** | None | A single transient `git clone` or GitHub API failure fails the entire repo with no retry |
-| **Resource lifecycle** | `analyzeRepo` is a plain `async function` calling `Effect.runPromise` inside an existing Effect runtime | Nested runtime; opaque to the parent fibre; cannot be interrupted or observed |
-
-### Key anti-patterns (with locations)
-
-- `analyzeLandscape.ts:44-74` — `analyzeRepo` is `async function` outside Effect
-- `analyzeLandscape.ts:49-50` — temp dir created with `randomBytes` + `tmpdir()`, no scope
-- `analyzeLandscape.ts:54` — `git.clone` with no retry
-- `analyzeLandscape.ts:66` — `Effect.runPromise(runAnalysis(...))` nested runtime
-- `analyzeLandscape.ts:71-72` — `rmSync` in JS `finally`, not an Effect finalizer
-- `analyzeLandscape.ts:114-117` — mutable `let` counters and `failures` array
-- `analyzeLandscape.ts:126-146` — manual batch slicing + `Promise.all`
 
 ## Target State
 
@@ -58,19 +54,21 @@ const analyzeRepoWorker = (repo: GitHubRepo) =>
 
 ## Implementation Phases
 
-### Phase 1: Scoped temp directory cleanup
+### Phase 1: Scoped temp directory cleanup — DONE (2026-03-22)
 
 **Effort:** Small
 **Impact:** Eliminates resource leak risk on interruption
 
-- Replace `analyzeRepo` async function with an Effect-native worker
-- Use `Effect.acquireRelease` for temp clone dirs
-- Remove nested `Effect.runPromise` call
-- Keep manual batching temporarily
+- [x] Replace `analyzeRepo` async function with Effect-native `analyzeRepoWorker`
+- [x] Use `Effect.acquireRelease` for temp clone dirs (`acquireTempDir`)
+- [x] Remove nested `Effect.runPromise` call
+- [x] Replace `Promise.all` with `Effect.all` for batch concurrency
+- [x] Unit tests: 4 tests in `AnalyzeRepoWorker.test.ts`
+- [x] Property tests: 4 fast-check tests in `AnalyzeRepoWorker.property.test.ts` (ADR-0012)
 
 **Verification:**
-- [ ] Interrupted run leaves no temp directories behind
-- [ ] Existing behaviour unchanged for successful runs
+- [x] Scoped cleanup verified — finalizer removes temp dir on success, failure, and concurrent use
+- [x] Existing behaviour unchanged for successful runs (typecheck passes)
 
 ### Phase 2: Effect.forEach with bounded concurrency
 
