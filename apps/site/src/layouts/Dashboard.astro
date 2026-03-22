@@ -530,6 +530,14 @@ function isActiveLink(href: string): boolean {
         font-weight: 500;
       }
 
+      .sidebar-toggle {
+        display: none;
+      }
+
+      .sidebar-expand {
+        display: none;
+      }
+
       .top-right-tools {
         position: fixed;
         top: 0.625rem;
@@ -567,7 +575,7 @@ function isActiveLink(href: string): boolean {
 
         nav {
           transform: translateX(0);
-          transition: none;
+          transition: transform 0.2s ease;
         }
 
         .nav-close {
@@ -578,6 +586,67 @@ function isActiveLink(href: string): boolean {
           max-width: 180px;
         }
 
+        .sidebar-toggle {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: none;
+          border: none;
+          color: var(--color-sidebar-text);
+          cursor: pointer;
+          padding: 0.5rem 1.25rem;
+          border-radius: 6px;
+          margin: auto 0 0;
+          font-size: 0.75rem;
+          letter-spacing: 0.02em;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        .sidebar-toggle:hover {
+          background: var(--color-sidebar-hover);
+          color: var(--color-sidebar-strong);
+        }
+
+        .sidebar-expand {
+          position: fixed;
+          top: 1rem;
+          left: 0;
+          z-index: 190;
+          display: none;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.45rem 0.7rem 0.45rem 0.55rem;
+          background: var(--color-sidebar);
+          color: var(--color-sidebar-text);
+          border: 1px solid var(--color-sidebar-divider);
+          border-left: none;
+          border-radius: 0 8px 8px 0;
+          cursor: pointer;
+          font-size: 0.75rem;
+          letter-spacing: 0.02em;
+          transition: background 0.15s, color 0.15s, opacity 0.2s;
+        }
+
+        .sidebar-expand:hover {
+          background: var(--color-sidebar-hover);
+          color: var(--color-sidebar-strong);
+        }
+
+        /* ── Collapsed state ── */
+        body.sidebar-collapsed nav {
+          transform: translateX(-100%);
+        }
+
+        body.sidebar-collapsed .sidebar-expand {
+          display: flex;
+        }
+
+        body.sidebar-collapsed main {
+          margin-left: 0;
+          max-width: 100vw;
+        }
+
+
         .top-right-tools {
           top: 1.5rem;
           right: 1.5rem;
@@ -587,6 +656,7 @@ function isActiveLink(href: string): boolean {
           margin-left: var(--sidebar-width);
           padding: 2rem 2.5rem;
           max-width: calc(100vw - var(--sidebar-width));
+          transition: margin-left 0.2s ease, max-width 0.2s ease;
         }
 
         main h2 {
@@ -682,7 +752,17 @@ function isActiveLink(href: string): boolean {
           </div>
         ))
       }
+      <button class="sidebar-toggle" id="sidebar-collapse" aria-label="Collapse sidebar">
+        <SystemIcon name="sidebar-simple" size={14} />
+        <span>Collapse</span>
+      </button>
     </nav>
+
+    <!-- Desktop sidebar re-open tab -->
+    <button class="sidebar-expand" id="sidebar-expand" aria-label="Expand sidebar">
+      <SystemIcon name="sidebar-simple" size={14} />
+      <span>Menu</span>
+    </button>
 
     <main transition:animate="fade">
       <slot />
@@ -692,6 +772,12 @@ function isActiveLink(href: string): boolean {
       <ThemeSwitcher />
       <GlobalSearch client:idle projectName={projectName} />
     </div>
+
+    <script is:inline>
+      if (localStorage.getItem("sidebar-collapsed") === "true") {
+        document.body.classList.add("sidebar-collapsed")
+      }
+    </script>
 
     <script is:inline>
       if (!window.__planetnikRouteVersionSetup) {
@@ -751,6 +837,31 @@ function isActiveLink(href: string): boolean {
 
       document.addEventListener("astro:page-load", setupDashboardNavigation)
       setupDashboardNavigation()
+
+      function setupSidebarToggle() {
+        const collapseBtn = document.getElementById("sidebar-collapse")
+        const expandBtn = document.getElementById("sidebar-expand")
+
+        if (!(collapseBtn instanceof HTMLButtonElement)) return
+        if (!(expandBtn instanceof HTMLButtonElement)) return
+
+        if (localStorage.getItem("sidebar-collapsed") === "true") {
+          document.body.classList.add("sidebar-collapsed")
+        }
+
+        collapseBtn.onclick = () => {
+          document.body.classList.add("sidebar-collapsed")
+          localStorage.setItem("sidebar-collapsed", "true")
+        }
+
+        expandBtn.onclick = () => {
+          document.body.classList.remove("sidebar-collapsed")
+          localStorage.setItem("sidebar-collapsed", "false")
+        }
+      }
+
+      document.addEventListener("astro:page-load", setupSidebarToggle)
+      setupSidebarToggle()
     </script>
   </body>
 </html>
