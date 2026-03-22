@@ -1,0 +1,404 @@
+---
+import BigBallOfMudChart from "../../../../components/coupling/BigBallOfMudChart"
+import DistributionChart from "../../../../components/charts/DistributionChart"
+import DonutChart from "../../../../components/charts/DonutChart"
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
+import { buildBalancedCouplingModel } from "../../../../lib/coupling/balancedCouplingModel"
+import { chartHelp } from "../../../../lib/chartHelp"
+import { readLandscapeRepoJson } from "../../../../lib/landscape"
+import {
+  getLandscapeRepositoryPageContext,
+  getLandscapeRepositoryStaticPaths,
+  type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext"
+import Dashboard from "../../../../layouts/Dashboard.astro"
+import { route } from "../../../../lib/route"
+
+interface FileRecord {
+  relativePath: string
+  linesOfCode: number
+  components: string[]
+  contributors?: string[]
+}
+
+interface FilesExport {
+  files?: FileRecord[]
+}
+
+interface ComponentDependencyRecord {
+  decompositionKey: string
+  fromComponent: string
+  toComponent: string
+  count: number
+  locFrom: number
+  evidenceCount: number
+  color: string
+}
+
+interface ComponentDependenciesExport {
+  dependencies?: ComponentDependencyRecord[]
+}
+
+interface TemporalDependencyRecord {
+  periodKey: string
+  periodLabel: string
+  periodDays: number
+  file1: string
+  file2: string
+  sameCommits: number
+}
+
+interface TemporalDependenciesExport {
+  dependencies?: TemporalDependencyRecord[]
+}
+
+interface HotspotRecord {
+  kind: "file" | "unit" | "component"
+  name: string
+  parent: string
+  score: number
+  dimensions: {
+    structuralRisk: number
+    changePressure: number
+    coordinationCost: number
+    knowledgeRisk: number
+  }
+  reasons: string[]
+}
+
+interface HotspotsExport {
+  hotspots?: HotspotRecord[]
+}
+
+export async function getStaticPaths() {
+  return getLandscapeRepositoryStaticPaths()
+}
+
+const props = Astro.props as LandscapeRepoPageProps
+const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect(route("/"))
+}
+
+const filesMain = readLandscapeRepoJson<FilesExport>(props.repoKey, "files_main.json")?.files ?? []
+const componentDeps = readLandscapeRepoJson<ComponentDependenciesExport>(props.repoKey, "component_dependencies.json")?.dependencies ?? []
+const temporalDepsRaw = readLandscapeRepoJson<TemporalDependenciesExport>(props.repoKey, "temporal_dependencies.json")?.dependencies ?? []
+const hotspotsRaw = readLandscapeRepoJson<HotspotsExport>(props.repoKey, "hotspots.json")?.hotspots ?? []
+
+const dependencyKeys = [...new Set(componentDeps.map((d) => d.decompositionKey).filter(Boolean))]
+const hotspotKeys = [
+  ...new Set(
+    hotspotsRaw
+      .filter((h) => h.kind === "component" && h.parent)
+      .map((h) => h.parent),
+  ),
+]
+const decompositionKey =
+  dependencyKeys.includes("primary")
+    ? "primary"
+    : hotspotKeys.includes("primary")
+      ? "primary"
+      : dependencyKeys[0] ?? hotspotKeys[0] ?? "primary"
+
+const temporalSections = [...new Set(temporalDepsRaw.map((d) => d.periodKey))]
+  .map((periodKey) => {
+    const group = temporalDepsRaw.filter((d) => d.periodKey === periodKey)
+    const first = group[0]
+    if (!first) return null
+    return {
+      periodKey,
+      periodLabel: first.periodLabel,
+      periodDays: first.periodDays,
+      items: group,
+    }
+  })
+  .filter((section): section is NonNullable<typeof section> => Boolean(section))
+  .sort((left, right) => right.periodDays - left.periodDays)
+
+const selectedTemporal = temporalSections[0]
+
+const model = buildBalancedCouplingModel({
+  decompositionKey,
+  files: filesMain.map((file) => ({
+    relativePath: file.relativePath,
+    linesOfCode: file.linesOfCode,
+    components: file.components,
+    contributors: file.contributors,
+  })),
+  dependencies: componentDeps.map((dep) => ({
+    decompositionKey: dep.decompositionKey,
+    fromComponent: dep.fromComponent,
+    toComponent: dep.toComponent,
+    count: dep.count,
+  })),
+  temporalDependencies: (selectedTemporal?.items ?? []).map((dep) => ({
+    file1: dep.file1,
+    file2: dep.file2,
+    sameCommits: dep.sameCommits,
+  })),
+  hotspots: hotspotsRaw.map((h) => ({
+    kind: h.kind,
+    name: h.name,
+    parent: h.parent,
+    score: h.score,
+    dimensions: h.dimensions,
+    reasons: h.reasons,
+  })),
+})
+
+const riskTierCounts = {
+  critical: model.snapshots.filter((s) => s.riskTier === "Critical").length,
+  high: model.snapshots.filter((s) => s.riskTier === "High").length,
+  medium: model.snapshots.filter((s) => s.riskTier === "Medium").length,
+  low: model.snapshots.filter((s) => s.riskTier === "Low").length,
+}
+
+const riskTierData = [
+  ...(riskTierCounts.critical > 0 ? [{ label: "Critical", value: riskTierCounts.critical }] : []),
+  ...(riskTierCounts.high > 0 ? [{ label: "High", value: riskTierCounts.high }] : []),
+  ...(riskTierCounts.medium > 0 ? [{ label: "Medium", value: riskTierCounts.medium }] : []),
+  ...(riskTierCounts.low > 0 ? [{ label: "Low", value: riskTierCounts.low }] : []),
+]
+
+const dimensionMixData = model.aggregate.dimensionMix.map((item) => ({
+  label: item.label,
+  value: item.value,
+}))
+
+const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map((item) => ({
+  label: item.label,
+  value: item.value,
+  detail: item.detail,
+  color: item.color,
+}))
+
+const topRiskData = model.snapshots.slice(0, 12).map((snapshot) => ({
+  label: snapshot.component,
+  value: snapshot.systemicRisk,
+}))
+
+const couplingRows = model.snapshots.map((snapshot) => ({
+  id: snapshot.id,
+  component: snapshot.component,
+  riskTier: snapshot.riskTier,
+  systemicRisk: snapshot.systemicRisk,
+  overallLoad: snapshot.overallLoad,
+  balanceScore: snapshot.balanceScore,
+  dominantDimension:
+    snapshot.dominantDimension === "staticCoupling"
+      ? "Static"
+      : snapshot.dominantDimension === "temporalCoupling"
+        ? "Temporal"
+        : snapshot.dominantDimension === "coordinationCoupling"
+          ? "Coordination"
+          : "Knowledge",
+  files: snapshot.files,
+  loc: snapshot.loc,
+  contributors: snapshot.contributors,
+  incomingDependencies: snapshot.incomingDependencies,
+  outgoingDependencies: snapshot.outgoingDependencies,
+  temporalPartners: snapshot.temporalPartners,
+  contributorOverlap: snapshot.contributorOverlap,
+  staticCoupling: snapshot.staticCoupling,
+  temporalCoupling: snapshot.temporalCoupling,
+  coordinationCoupling: snapshot.coordinationCoupling,
+  knowledgeRisk: snapshot.knowledgeRisk,
+  explainability: snapshot.explainability.join(" • "),
+}))
+---
+
+<Dashboard title={`${repoName} Balanced Coupling`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
+  <h2>Balanced Coupling</h2>
+  <p class="subtitle">
+    First-pass system coupling view built from the current logical component map, static dependencies,
+    {selectedTemporal ? ` ${selectedTemporal.periodLabel.toLowerCase()} temporal coupling,` : ""} and component hotspots.
+  </p>
+
+  {model.snapshots.length === 0 ? (
+    <div class="empty">
+      <p>No component coupling model could be derived yet.</p>
+      <p class="hint">
+        Export logical components, component dependencies, and hotspot data first, then regenerate the site reports.
+      </p>
+    </div>
+  ) : (
+    <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{model.aggregate.totalComponents}</div>
+          <div class="card-label">Components</div>
+        </div>
+        <div class="card card-critical">
+          <div class="card-value">{model.aggregate.overloadedComponents}</div>
+          <div class="card-label">Overloaded</div>
+        </div>
+        <div class="card card-warning">
+          <div class="card-value">{model.aggregate.knowledgeExposedComponents}</div>
+          <div class="card-label">Knowledge Exposed</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{model.aggregate.averageRisk.toFixed(1)}</div>
+          <div class="card-label">Average Risk</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{selectedTemporal?.periodLabel ?? "No temporal window"}</div>
+          <div class="card-label">Temporal Window</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h3>Big Ball of Mud</h3>
+        <BigBallOfMudChart client:load model={model} helpText={chartHelp.coupling.mudChart} />
+      </section>
+
+      <div class="two-up">
+        {dimensionMixData.length > 0 && (
+          <section class="section">
+            <h3>Average Coupling Mix</h3>
+            <DonutChart client:visible data={dimensionMixData} valueLabel="avg score" helpText={chartHelp.coupling.dimensionMix} />
+          </section>
+        )}
+
+        {dominantBreakdownData.length > 0 && (
+          <section class="section">
+            <h3>Dominant Dimension by Component</h3>
+            <DistributionChart client:visible data={dominantBreakdownData} helpText={chartHelp.coupling.dominantBreakdown} />
+          </section>
+        )}
+      </div>
+
+      <section class="section">
+        <h3>Top Risk Components</h3>
+        <HorizontalBarChart client:visible data={topRiskData} valueLabel="risk" helpText={chartHelp.coupling.topComponents} />
+      </section>
+
+      {riskTierData.length > 1 && (
+        <section class="section">
+          <h3>Risk Tier Mix</h3>
+          <DonutChart
+            client:visible
+            data={riskTierData}
+            valueLabel="components"
+            helpText={chartHelp.coupling.riskTierMix}
+          />
+        </section>
+      )}
+
+      <ReportDataGrid
+        client:visible
+        title="Coupling Inventory"
+        description="Search by component, risk type, or explainability reason while keeping the mud view above."
+        searchPlaceholder="Search component, reason, or coupling dimension"
+        searchHint={`Decomposition: ${decompositionKey}${selectedTemporal ? ` • Temporal input: ${selectedTemporal.periodLabel}` : ""}`}
+        rows={couplingRows}
+        columns={[
+          { field: "component", headerName: "Component", minWidth: 220, flex: 1.2 },
+          { field: "riskTier", headerName: "Tier", minWidth: 110 },
+          { field: "systemicRisk", headerName: "Risk", type: "number", minWidth: 90, sort: "desc" },
+          { field: "overallLoad", headerName: "Load", type: "number", minWidth: 90 },
+          { field: "balanceScore", headerName: "Balance", type: "number", minWidth: 100 },
+          { field: "dominantDimension", headerName: "Primary Dimension", minWidth: 170 },
+          { field: "files", headerName: "Files", type: "number", minWidth: 90 },
+          { field: "loc", headerName: "LOC", type: "number", minWidth: 100 },
+          { field: "contributors", headerName: "Contributors", type: "number", minWidth: 120 },
+          { field: "incomingDependencies", headerName: "Incoming", type: "number", minWidth: 110 },
+          { field: "outgoingDependencies", headerName: "Outgoing", type: "number", minWidth: 110 },
+          { field: "temporalPartners", headerName: "Temporal Partners", type: "number", minWidth: 150 },
+          { field: "contributorOverlap", headerName: "Contributor Overlap", type: "number", minWidth: 160 },
+          { field: "staticCoupling", headerName: "Static", type: "number", minWidth: 100 },
+          { field: "temporalCoupling", headerName: "Temporal", type: "number", minWidth: 110 },
+          { field: "coordinationCoupling", headerName: "Coordination", type: "number", minWidth: 130 },
+          { field: "knowledgeRisk", headerName: "Knowledge", type: "number", minWidth: 110 },
+          { field: "explainability", headerName: "Why It Matters", type: "multiline", minWidth: 340, flex: 1.8 },
+        ]}
+      />
+    </>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    max-width: 72ch;
+  }
+
+  .empty {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .empty p {
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .hint {
+    font-size: 0.85rem;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    line-height: 1.1;
+  }
+
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.35rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .card-critical .card-value {
+    color: #dc2626;
+  }
+
+  .card-warning .card-value {
+    color: #d97706;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .two-up {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  @media (max-width: 900px) {
+    .two-up {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

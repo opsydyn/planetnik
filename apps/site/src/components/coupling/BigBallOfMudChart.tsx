@@ -117,7 +117,7 @@ function BigBallOfMudInner({
   const orbitRadius = Math.min(maxRadius - 18, ringOuterRadius + 34)
   const alertRingRadius = Math.min(maxRadius, mudRadius + model.aggregate.maxRisk * 3)
   const alertStrokeColor = alertTest ? chartTheme.colors.red : selected ? RISK_COLORS[selected.riskTier] : chartTheme.colors.accent
-  const mudFill = simulatedAlertMode ? "#fee2e2" : `url(#${gradientId}-mud)`
+  const mudFill = simulatedAlertMode ? "var(--color-danger-soft)" : `url(#${gradientId}-mud)`
   const mudStroke = simulatedAlertMode ? chartTheme.colors.red : chartTheme.colors.border
   const mudStrokeWidth = simulatedAlertMode ? 2.6 : 2
 
@@ -129,10 +129,10 @@ function BigBallOfMudInner({
             <stop
               offset="0%"
               stopColor={selected ? RISK_COLORS[selected.riskTier] : chartTheme.colors.accent}
-              stopOpacity="0.92"
+              stopOpacity="0.35"
             />
-            <stop offset="72%" stopColor="#eef2ff" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#f8fbff" stopOpacity="0.12" />
+            <stop offset="60%" stopColor={chartTheme.colors.bg} stopOpacity="0.15" />
+            <stop offset="100%" stopColor={chartTheme.colors.bg} stopOpacity="0.05" />
           </radialGradient>
         </defs>
 
@@ -141,8 +141,8 @@ function BigBallOfMudInner({
             cx={0}
             cy={0}
             r={ringOuterRadius + 10}
-            fill="#ffffff"
-            opacity={0.56}
+            fill={chartTheme.colors.card}
+            opacity={0.75}
           />
 
           <Pie
@@ -291,7 +291,7 @@ function BigBallOfMudInner({
                   r={nodeRadius}
                   fill={RISK_COLORS[snapshot.riskTier]}
                   fillOpacity={0.88}
-                  stroke="#ffffff"
+                  stroke={chartTheme.colors.bg}
                   strokeWidth={1.5}
                   style={{ cursor: "pointer" }}
                   onMouseMove={(event) =>

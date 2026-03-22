@@ -9,6 +9,8 @@ import {
   getLandscapeRepositoryCommitsHref,
   getLandscapeRepositoryComponentsHref,
   getLandscapeRepositoryControlsHref,
+  getLandscapeRepositoryCouplingHref,
+  getLandscapeRepositoryDependenciesHref,
   getLandscapeRepositoryDuplicationHref,
   getLandscapeRepositoryFilePageHref,
   getLandscapeRepositoryHotspotsHref,
@@ -150,6 +152,8 @@ function getLandscapeRepoNavSections(repoKey: string, repoName: string) {
       iconName: "stack",
       items: [
         { href: getLandscapeRepositoryComponentsHref(repoKey), label: "Components" },
+        { href: getLandscapeRepositoryCouplingHref(repoKey), label: "Balanced Coupling" },
+        { href: getLandscapeRepositoryDependenciesHref(repoKey), label: "Dependencies" },
         { href: getLandscapeRepositoryDuplicationHref(repoKey), label: "Duplication" },
       ],
     },
