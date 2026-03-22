@@ -132,7 +132,7 @@ const duplicationPercentage = repoSummary?.duplication?.percentage ?? null
   projectName={projectName}
   repoScope={{ repoKey, repoName: repository.data.name }}
 >
-  <a class="back-link" href="/landscape/repositories">&larr; Back to repositories</a>
+  <a class="back-link" href={route("/landscape/repositories")}>&larr; Back to repositories</a>
 
   <header class="page-header">
     <div>
