@@ -52,3 +52,6 @@ jobs:
         if: always()
         with:
           report_paths: test-results.xml
+          check_name: Tests
+          detailed_summary: true
+          include_passed: true
