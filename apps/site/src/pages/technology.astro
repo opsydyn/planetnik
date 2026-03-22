@@ -27,9 +27,9 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     </p>
 
     <p>
-      The majority of the codebase was written by AI coding agents — primarily
+      The majority of the codebase was written by AI coding agents, primarily
       <a href="https://claude.com/claude-code" target="_blank" rel="noopener noreferrer">Claude Code</a> and
-      <a href="https://openai.com/index/introducing-codex/" target="_blank" rel="noopener noreferrer">Codex</a> — working under human
+      <a href="https://openai.com/index/introducing-codex/" target="_blank" rel="noopener noreferrer">Codex</a>, working under human
       architectural direction. The human role was not to write most of the code, but to set constraints,
       review output, and steer decisions. The agents did the implementation.
     </p>
@@ -42,9 +42,9 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <dl>
       <dt>Architecture Decision Records (ADRs)</dt>
       <dd>
-        Every significant technical choice — the Effect stack, the concurrency model, the content collection
-        architecture, the landscape analysis pipeline — is captured in a written ADR before implementation begins.
-        Agents receive ADRs as context and are expected to follow them — and, critically, they are observed
+        Every significant technical choice (the Effect stack, the concurrency model, the content collection
+        architecture, the landscape analysis pipeline) is captured in a written ADR before implementation begins.
+        Agents receive ADRs as context and are expected to follow them, and critically, they are observed
         to push back when implementation conflicts with a recorded decision. This prevents architectural drift
         across sessions and agents, gives the human a durable record of <em>why</em> decisions were made, and
         turns the ADR corpus into a living constraint system rather than passive documentation.
@@ -52,7 +52,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
       <dt>Domain-Driven Design (DDD)</dt>
       <dd>
-        The domain model — repositories, components, contributors, coupling, hotspots, impact — is explicit and
+        The domain model (repositories, components, contributors, coupling, hotspots, impact) is explicit and
         shared across the codebase. Agents work within named domain boundaries rather than inventing ad-hoc
         abstractions. This keeps the code navigable and the vocabulary consistent, even when different agents
         contribute to different parts of the system.
@@ -68,7 +68,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <p>
       The result is a codebase that was largely agent-written but remains structurally coherent, well-tested,
-      and architecturally intentional. The practices that make this work are not specific to AI — they are the
+      and architecturally intentional. The practices that make this work are not specific to AI. They are the
       same practices that keep large human teams aligned. The difference is that with agents, the cost of
       skipping them is faster and more visible.
     </p>
@@ -76,7 +76,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <p>
       Płanetnik treats this as a practical question, not a philosophical one: can you modernise a mature Java
       tool into a TypeScript stack at speed, using AI agents as the primary implementers, without losing
-      architectural control? The answer so far is yes — if the engineering discipline is already in place.
+      architectural control? The answer so far is yes, if the engineering discipline is already in place.
     </p>
 
     <div class="section-banner">
@@ -102,7 +102,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <h3>Płanetnik's Approach</h3>
     <p>
       Płanetnik replaces the Java runtime with a single <strong>Bun</strong> binary and a TypeScript codebase.
-      The entire tool — CLI, analysis engine, and report site — runs from source with no compile step, no JVM, no
+      The entire tool (CLI, analysis engine, and report site) runs from source with no compile step, no JVM, no
       Graphviz, and no Docker requirement.
     </p>
 
@@ -140,14 +140,14 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     </div>
 
     <p>
-      The result is that a full analysis — clone, scan, build reports, deploy — can run in a single GitHub Actions
+      The result is that a full analysis (clone, scan, build reports, deploy) can run in a single GitHub Actions
       job with no container, no pre-built image, and no native dependency management.
     </p>
 
     <div class="benchmark">
       <div class="benchmark-value">53 seconds</div>
       <div class="benchmark-label">
-        Landscape analysis of the <a href="https://github.com/effect-TS" target="_blank" rel="noopener noreferrer">Effect-TS</a> organisation — 17 repositories
+        Landscape analysis of the <a href="https://github.com/effect-TS" target="_blank" rel="noopener noreferrer">Effect-TS</a> organisation: 17 repositories
         cloned, scanned, and aggregated with concurrency 4 on a standard GitHub Actions runner.
       </div>
     </div>
@@ -182,19 +182,13 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       <dt>Hotspot Prioritisation</dt>
       <dd>
         A multi-dimensional scoring model that ranks files, units, and components by structural risk, change
-        pressure, coordination cost, and knowledge risk — producing a prioritised queue of what to fix next
+        pressure, coordination cost, and knowledge risk, producing a prioritised queue of what to fix next
         rather than a flat list of metrics.
-      </dd>
-
-      <dt>Landscape Mode</dt>
-      <dd>
-        Multi-repository analysis across entire GitHub organisations, with cross-repo contributor tracking,
-        team topology, tag-based grouping, and per-repository drill-down — all from a single build.
       </dd>
 
       <dt>Interactive Reports</dt>
       <dd>
-        Every chart is a browser-rendered React component — zoomable, filterable, and theme-aware.
+        Every chart is a browser-rendered React component: zoomable, filterable, and theme-aware.
         No static PNGs, no Graphviz dependency, no server-side rendering.
       </dd>
 
@@ -202,11 +196,11 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       <dd>
         The report interface is designed around
         <a href="https://www.nngroup.com/articles/ten-usability-heuristics/" target="_blank" rel="noopener noreferrer">Nielsen's ten usability heuristics</a>,
-        not just technical capability. System status is always visible — loading states, empty states, and data
+        not just technical capability. System status is always visible: loading states, empty states, and data
         freshness are explicit rather than ambiguous. Navigation follows real-world conventions with consistent
         terminology across pages. Users can search globally with instant fuzzy matching, recover from wrong turns
         via persistent breadcrumbs, and switch between light and dark themes without losing context. Layouts are
-        fully responsive — the same report reads well on a widescreen monitor during a review and on a phone
+        fully responsive, so the same report reads well on a widescreen monitor during a review and on a phone
         during an incident. Error states are descriptive, not cryptic. Where Sokrates generates functional but
         utilitarian HTML, Płanetnik treats the report surface as a product: consistent visual hierarchy,
         keyboard-accessible controls, and interface patterns that reduce cognitive load rather than add to it.
@@ -221,14 +215,14 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <p>
       <a href="https://bun.sh" target="_blank" rel="noopener noreferrer">Bun</a> is the runtime, package manager, test runner, and bundler.
       It replaces Node.js, npm, Jest, and esbuild with a single binary. Płanetnik runs directly from
-      <code>.ts</code> source files — no transpilation step, no <code>dist/</code> folder in development.
+      <code>.ts</code> source files with no transpilation step and no <code>dist/</code> folder in development.
       In CI, <code>bun run apps/cli/src/index.ts</code> executes the CLI directly from source.
     </p>
 
     <h4>TypeScript</h4>
     <p>
-      Strict mode with <code>exactOptionalPropertyTypes</code>. The entire codebase — analysis engine, CLI,
-      report site — is TypeScript. Type safety is enforced at every boundary: configuration schemas, content
+      Strict mode with <code>exactOptionalPropertyTypes</code>. The entire codebase (analysis engine, CLI,
+      report site) is TypeScript. Type safety is enforced at every boundary: configuration schemas, content
       collections, component props, and CLI arguments.
     </p>
 
@@ -239,11 +233,11 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
       use <code>@effect/schema</code> instead of manual JSON validation. File I/O uses <code>@effect/platform</code>.
     </p>
     <p>
-      For landscape analysis — where dozens of repositories are cloned, scanned, and aggregated in parallel — Effect's
+      For landscape analysis, where dozens of repositories are cloned, scanned, and aggregated in parallel, Effect's
       <strong>structured concurrency</strong> is essential. Each repository analysis runs as a scoped effect with
       deterministic resource cleanup: temporary clone directories are acquired within Effect scope and released by
       finalizers, not by fragile <code>try/finally</code> blocks. Bounded concurrency is expressed declaratively rather
-      than through manual array batching, and interruption propagates cleanly — a cancelled run does not leave orphaned
+      than through manual array batching, and interruption propagates cleanly so a cancelled run does not leave orphaned
       temp directories or dangling network connections. Retry policies for flaky operations like git clones and GitHub
       API calls are explicit and bounded rather than implicit or absent.
     </p>
@@ -257,7 +251,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <p>
       <a href="https://astro.build" target="_blank" rel="noopener noreferrer">Astro</a> generates the report site as a fully static build. Pages are
       server-rendered at build time from content collections populated by the analysis output. The result is a
-      zero-JavaScript-by-default site that loads fast and can be deployed anywhere static files are served —
+      zero-JavaScript-by-default site that loads fast and can be deployed anywhere static files are served:
       GitHub Pages, S3, Netlify, or a local file server.
     </p>
 
@@ -267,7 +261,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     </p>
     <dl>
       <dt><a href="https://airbnb.io/visx/" target="_blank" rel="noopener noreferrer">visx</a></dt>
-      <dd>Low-level composable primitives for bar charts, heatmaps, treemaps, axes, and scales — built on D3 without the D3 abstraction tax</dd>
+      <dd>Low-level composable primitives for bar charts, heatmaps, treemaps, axes, and scales, built on D3 without the D3 abstraction tax</dd>
       <dt><a href="https://www.sigmajs.org/" target="_blank" rel="noopener noreferrer">Sigma.js</a> + <a href="https://graphology.github.io/" target="_blank" rel="noopener noreferrer">Graphology</a></dt>
       <dd>WebGL graph rendering for dependency networks, team topology, and coupling visualisations</dd>
       <dt><a href="https://reactflow.dev/" target="_blank" rel="noopener noreferrer">React Flow</a></dt>
@@ -277,7 +271,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     </dl>
 
     <p>
-      All charts render in the browser — no server-side image generation, no Graphviz, no SVG export pipeline.
+      All charts render in the browser. No server-side image generation, no Graphviz, no SVG export pipeline.
       This means diagrams are interactive, zoomable, and theme-aware by default.
     </p>
 
@@ -289,15 +283,15 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
 
     <dl>
       <dt><code>packages/analyzer</code></dt>
-      <dd>Core analysis engine — file scanning, git history, duplication detection, complexity, coupling, hotspots, and impact scoring</dd>
+      <dd>Core analysis engine: file scanning, git history, duplication detection, complexity, coupling, hotspots, and impact scoring</dd>
       <dt><code>packages/common</code></dt>
       <dd>Shared types, JSON I/O, rendering utilities, and colour palettes</dd>
       <dt><code>packages/reports</code></dt>
       <dd>HTML report generation, chart utilities, and data exporters</dd>
       <dt><code>apps/cli</code></dt>
-      <dd>Effect CLI application — <code>analyzeLocal</code>, <code>analyzeRemote</code>, <code>analyzeLandscape</code>, and supporting commands</dd>
+      <dd>Effect CLI application: <code>analyzeLocal</code>, <code>analyzeRemote</code>, <code>analyzeLandscape</code>, and supporting commands</dd>
       <dt><code>apps/site</code></dt>
-      <dd>Astro report site — reads analysis output as content collections and renders the full interactive dashboard</dd>
+      <dd>Astro report site: reads analysis output as content collections and renders the full interactive dashboard</dd>
     </dl>
 
     <hr />
@@ -343,7 +337,7 @@ const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? 
     <dl>
       <dt>Port first, refine second</dt>
       <dd>
-        The initial migration ported Java classes and business logic 1:1 into TypeScript classes — not idiomatic
+        The initial migration ported Java classes and business logic 1:1 into TypeScript classes, not idiomatic
         TypeScript, but <em>simple</em>. Matching the original structure let the LLM agents focus on tests and
         straightforward porting rather than simultaneous redesign. Once the test suite was green and behaviour
         was verified, a second pass reshaped the code toward idiomatic Effect, functional patterns, and cleaner
