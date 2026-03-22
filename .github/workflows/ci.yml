@@ -48,9 +48,7 @@ jobs:
         run: bun test --reporter=junit --reporter-outfile=test-results.xml
 
       - name: Test report
-        uses: dorny/test-reporter@v2
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
-          name: Test Results
-          path: test-results.xml
-          reporter: java-junit
+          report_paths: test-results.xml
