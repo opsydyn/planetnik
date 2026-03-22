@@ -13,6 +13,7 @@ import {
 } from "../../../../../lib/landscapeRepoContext"
 import { getMetric, parseMetricsText } from "../../../../../lib/metrics"
 import Dashboard from "../../../../../layouts/Dashboard.astro"
+import { route } from "../../../../../lib/route"
 
 interface RepoFileRecord {
   relativePath: string
@@ -78,7 +79,7 @@ if (!viewMeta) {
 const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect("/")
+  return Astro.redirect(route("/"))
 }
 
 const filesMain = readLandscapeRepoJson<RepoFilesExport>(props.repoKey, "files_main.json")?.files ?? []

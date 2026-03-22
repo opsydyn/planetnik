@@ -12,6 +12,7 @@ import {
 } from "../../../../lib/landscapeRepoContext"
 import { getMetric, parseMetricsText } from "../../../../lib/metrics"
 import Dashboard from "../../../../layouts/Dashboard.astro"
+import { route } from "../../../../lib/route"
 
 interface RepoContributor {
   email: string
@@ -53,7 +54,7 @@ const props = Astro.props as LandscapeRepoPageProps
 const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect("/")
+  return Astro.redirect(route("/"))
 }
 
 const contributors = readLandscapeRepoJson<RepoContributorsExport>(props.repoKey, "contributors.json")?.contributors ?? []
