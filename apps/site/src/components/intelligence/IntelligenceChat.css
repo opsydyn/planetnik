@@ -1,0 +1,105 @@
+.planetnik-chat {
+  --copilot-kit-primary-color: var(--color-accent);
+  --copilot-kit-contrast-color: #ffffff;
+  --copilot-kit-background-color: var(--color-card);
+  --copilot-kit-input-background-color: var(--color-bg);
+  --copilot-kit-secondary-color: var(--color-surface-subtle);
+  --copilot-kit-secondary-contrast-color: var(--color-text);
+  --copilot-kit-separator-color: var(--color-border);
+  --copilot-kit-muted-color: var(--color-text-muted);
+
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.intelligence-unconfigured {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.copilot-chart {
+  margin: 0.75rem 0;
+  min-height: 120px;
+}
+
+.copilot-chart-status {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.copilot-chart-streaming {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  padding: 0.25rem 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.copilot-nav-action {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  margin: 0.5rem 0;
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.copilot-nav-action--done {
+  opacity: 0.7;
+}
+
+.copilot-nav-icon {
+  color: var(--color-accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.copilot-nav-link {
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.copilot-nav-link:hover {
+  text-decoration: underline;
+}
+
+.copilot-nav-reason {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.copilot-nav-reason::before {
+  content: "— ";
+}
+
+.intelligence-unconfigured code {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.85em;
+  background: var(--color-surface-muted, #f1f5f9);
+  color: var(--color-text);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}

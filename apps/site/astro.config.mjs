@@ -19,6 +19,12 @@ export default defineConfig({
         access: "secret",
         optional: true,
       }),
+      PUBLIC_COPILOT_RUNTIME_URL: envField.string({
+        context: "client",
+        access: "public",
+        optional: true,
+        default: "http://localhost:4111/api/copilotkit",
+      }),
     },
   },
   fonts: [
@@ -56,6 +62,8 @@ export default defineConfig({
         "@visx/shape",
         "@visx/text",
         "@visx/tooltip",
+        "@copilotkit/react-core",
+        "@copilotkit/react-ui",
       ],
     },
     resolve: {
