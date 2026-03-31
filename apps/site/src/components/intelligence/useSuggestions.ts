@@ -7,6 +7,7 @@ export function useSuggestions({
   impactData,
   contributorsData,
   controlsData,
+  securityData,
 }: AnalysisContextProps) {
   const hasHotspots = hotspotsData && hotspotsData.length > 0
   const hasImpact = impactData && impactData.opportunities.length > 0
@@ -41,6 +42,12 @@ export function useSuggestions({
     parts.push(`${active30d} contributor(s) were active in the last 30 days.`)
   }
 
+  if (securityData) {
+    parts.push(
+      `There are ${securityData.totalOpenAlerts} open vulnerability alerts (${securityData.severityCounts.critical} critical, ${securityData.severityCounts.high} high) across ${securityData.reposWithAlerts}/${securityData.totalRepos} repos. Supply chain exposure: ${Math.round(securityData.supplyChainExposureScore * 100)}%.`,
+    )
+  }
+
   const instructions = [
     "Suggest 2-3 follow-up questions the user might ask about their codebase analysis.",
     "Questions should be specific to the data available, not generic.",
@@ -57,6 +64,6 @@ export function useSuggestions({
       maxSuggestions: 3,
       available: "always",
     },
-    [analysisData, hotspotsData, impactData, contributorsData, controlsData],
+    [analysisData, hotspotsData, impactData, contributorsData, controlsData, securityData],
   )
 }

@@ -56,6 +56,65 @@ type ForceGraphTheme = {
   accentStrong: string
 }
 
+function drawNodeHoverDarkAware(
+  context: CanvasRenderingContext2D,
+  data: { x: number; y: number; size: number; label: string | null; color: string },
+  settings: { labelSize: number; labelFont: string; labelWeight: string },
+) {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark"
+  const bgColor = isDark ? "#1e293b" : "#ffffff"
+  const textColor = isDark ? "#e2e8f0" : "#1e293b"
+  const shadowColor = isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.2)"
+
+  const { labelSize: size, labelFont: font, labelWeight: weight } = settings
+  context.font = `${weight} ${size}px ${font}`
+
+  context.fillStyle = bgColor
+  context.shadowOffsetX = 0
+  context.shadowOffsetY = 2
+  context.shadowBlur = 8
+  context.shadowColor = shadowColor
+
+  const PADDING = 3
+  if (typeof data.label === "string") {
+    const textWidth = context.measureText(data.label).width
+    const boxWidth = Math.round(textWidth + 8)
+    const boxHeight = Math.round(size + 2 * PADDING)
+    const radius = Math.max(data.size, size / 2) + PADDING
+    const angleRadian = Math.asin(boxHeight / 2 / radius)
+    const xDeltaCoord = Math.sqrt(Math.abs(radius ** 2 - (boxHeight / 2) ** 2))
+
+    context.beginPath()
+    context.moveTo(data.x + xDeltaCoord, data.y + boxHeight / 2)
+    context.lineTo(data.x + radius + boxWidth, data.y + boxHeight / 2)
+    context.lineTo(data.x + radius + boxWidth, data.y - boxHeight / 2)
+    context.lineTo(data.x + xDeltaCoord, data.y - boxHeight / 2)
+    context.arc(data.x, data.y, radius, angleRadian, -angleRadian)
+    context.closePath()
+    context.fill()
+
+    context.shadowBlur = 0
+    context.fillStyle = textColor
+    context.fillText(data.label, data.x + radius + 3, data.y + size / 3)
+  } else {
+    context.beginPath()
+    context.arc(data.x, data.y, data.size + PADDING, 0, Math.PI * 2)
+    context.closePath()
+    context.fill()
+  }
+
+  // Node circle on top
+  context.shadowBlur = 0
+  context.beginPath()
+  context.arc(data.x, data.y, data.size, 0, Math.PI * 2)
+  context.closePath()
+  context.fillStyle = data.color
+  context.fill()
+  context.strokeStyle = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.2)"
+  context.lineWidth = 1.5
+  context.stroke()
+}
+
 function getCssVar(name: string, fallback: string) {
   if (typeof window === "undefined") return fallback
   const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -412,6 +471,7 @@ export default function ForceGraphClient({
             labelColor: { color: theme.text },
             defaultEdgeColor: theme.theme === "dark" ? "rgba(167, 139, 250, 0.44)" : "rgba(67, 56, 202, 0.38)",
             defaultNodeColor: "#6366f1",
+            defaultDrawNodeHover: drawNodeHoverDarkAware as never,
           }}
         >
           <ForceGraphScene graph={graph} onNodeClick={onNodeClick} onHoverChange={setHovered} />

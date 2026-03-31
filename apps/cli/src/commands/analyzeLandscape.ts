@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { Command, Options } from "@effect/cli"
+import { Schema } from "@effect/schema"
 import { LandscapeAnalysisInitiator, LandscapeAnalyzer, ScopeCreator } from "@planetnik/analyzer"
 import {
   LandscapeDataExport,
@@ -12,8 +13,9 @@ import {
   ReportRenderer,
   RichTextReport,
 } from "@planetnik/reports"
-import { Effect } from "effect"
+import { Effect, Redacted } from "effect"
 import simpleGit from "simple-git"
+import { CliConfig } from "../config.js"
 import {
   CloneError,
   ConfigNotFoundError,
@@ -26,8 +28,11 @@ import {
   UnknownWorkerError,
 } from "../domain/landscape.js"
 import { extractGitHistory } from "../git/GitHistoryExtractor.js"
+import { buildLandscapeHealth } from "../github/DependabotAnalyzer.js"
+import { type DependabotAlert, fetchDependabotAlerts } from "../github/DependabotClient.js"
 import { discoverRepos, type GitHubRepo, type LandscapeConfig } from "../github/GitHubRepoFinder.js"
 import { withPhase } from "../logger.js"
+import { LandscapeConfigSchema } from "../schemas/LandscapeConfigSchema.js"
 import { runAnalysis } from "./generateReports.js"
 import { hydrateLandscapeConfiguration, saveLandscapeConfiguration } from "./landscapeConfigHydrator.js"
 import { resolveLandscapeDataDir, resolveLandscapeReportsDir } from "./landscapePaths.js"
@@ -158,8 +163,14 @@ export const analyzeLandscapeCommand = Command.make(
         return
       }
 
-      const rawConfig = JSON.parse(readFileSync(configPath, "utf-8"))
-      const config: LandscapeConfig = rawConfig
+      const rawJson = JSON.parse(readFileSync(configPath, "utf-8"))
+      const decoded = Schema.decodeUnknownSync(LandscapeConfigSchema)(rawJson)
+      const cliConfig = yield* CliConfig
+      const rawConfig = { ...rawJson, ...decoded }
+      const config: LandscapeConfig = {
+        ...decoded,
+        githubToken: decoded.githubToken || (cliConfig.githubToken ? Redacted.value(cliConfig.githubToken) : undefined),
+      }
       const outDir = resolve(args.outputFolder)
       mkdirSync(outDir, { recursive: true })
 
@@ -267,6 +278,53 @@ export const analyzeLandscapeCommand = Command.make(
         writeFileSync(join(outDir, "_failures.json"), JSON.stringify(failureReport, null, 2), "utf-8")
       }
 
+      // 2.5. Fetch Dependabot alerts (security phase)
+      const alertsByRepo = new Map<string, DependabotAlert[]>()
+      const securityConfig = decoded.security
+      if (securityConfig.enabled && securityConfig.fetchAlerts && config.githubToken) {
+        yield* Effect.logInfo("Fetching Dependabot alerts...").pipe(withPhase("security"))
+
+        for (const [org, repos] of orgRepos) {
+          // Process in batches of 5 to respect rate limits
+          for (let i = 0; i < repos.length; i += 5) {
+            const batch = repos.slice(i, i + 5)
+            const batchEffects = batch.map((repo) =>
+              Effect.tryPromise({
+                try: () => fetchDependabotAlerts(org, repo.name, config.githubToken, config.githubApiUrl),
+                catch: (error) => error,
+              }).pipe(
+                Effect.map((alerts) => ({ repo: repo.name, alerts })),
+                Effect.catchAll((error) =>
+                  Effect.gen(function* () {
+                    yield* Effect.logWarning(`Dependabot fetch failed for ${org}/${repo.name}: ${error}`).pipe(
+                      withPhase("security"),
+                    )
+                    return { repo: repo.name, alerts: [] as DependabotAlert[] }
+                  }),
+                ),
+              ),
+            )
+
+            const results = yield* Effect.all(batchEffects, { concurrency: "unbounded" })
+            for (const { repo: repoName, alerts } of results) {
+              alertsByRepo.set(repoName, alerts)
+            }
+          }
+        }
+
+        const totalAlertCount = Array.from(alertsByRepo.values()).reduce((sum, alerts) => sum + alerts.length, 0)
+        const reposWithAlerts = Array.from(alertsByRepo.values()).filter((alerts) => alerts.length > 0).length
+        yield* Effect.logInfo(
+          `Security: ${totalAlertCount} alerts across ${reposWithAlerts}/${alertsByRepo.size} repos`,
+        ).pipe(withPhase("security"))
+      } else if (!config.githubToken) {
+        yield* Effect.logDebug("Skipping Dependabot alerts: no GitHub token available").pipe(withPhase("security"))
+      } else {
+        yield* Effect.logDebug("Skipping Dependabot alerts: security.enabled=false or fetchAlerts=false").pipe(
+          withPhase("security"),
+        )
+      }
+
       // 3. Generate landscape report
       yield* Effect.logInfo("Generating landscape report...").pipe(withPhase("reporting"))
 
@@ -313,6 +371,23 @@ export const analyzeLandscapeCommand = Command.make(
       const tagMap = buildLandscapeTagMap(landscapeConfig, landscapeResults.repositoryAnalysisResults, outDir)
       landscapeDataExport.exportRepositories(tagMap)
       landscapeDataExport.exportTagContracts(tagMap, landscapeConfig.tagGroups)
+
+      // Export security data if alerts were fetched
+      if (alertsByRepo.size > 0) {
+        const landscapeHealth = buildLandscapeHealth(alertsByRepo)
+        const alertsExport = Object.fromEntries(
+          Array.from(alertsByRepo.entries()).map(([repo, alerts]) => [repo, alerts]),
+        )
+        writeFileSync(join(dataDir, "landscape_dependency_alerts.json"), JSON.stringify(alertsExport, null, 2), "utf-8")
+        writeFileSync(
+          join(dataDir, "landscape_dependency_health.json"),
+          JSON.stringify(landscapeHealth, null, 2),
+          "utf-8",
+        )
+        yield* Effect.logInfo(`Security data exported: ${dataDir}/landscape_dependency_health.json`).pipe(
+          withPhase("reporting"),
+        )
+      }
 
       yield* Effect.logInfo(`Landscape report: ${reportsDir}/index.html`).pipe(withPhase("reporting"))
       yield* Effect.logInfo(

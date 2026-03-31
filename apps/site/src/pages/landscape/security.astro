@@ -1,0 +1,286 @@
+---
+import { getCollection, getEntry } from "astro:content"
+import DonutChart from "../../components/charts/DonutChart"
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
+import SecurityBallChart from "../../components/security/SecurityBallChart"
+import SharedPackagesGraph from "../../components/security/SharedPackagesGraph"
+import ReportDataGrid from "../../components/tables/ReportDataGrid"
+import Dashboard from "../../layouts/Dashboard.astro"
+import { getLandscapeRepositoryHref } from "../../lib/landscapeRoutes"
+import { route } from "../../lib/route"
+
+const reportContext = await getEntry("reportContext", "context")
+if (reportContext?.data.reportMode !== "landscape") {
+  return Astro.redirect(route("/"))
+}
+
+const health = await getEntry("landscapeDependencyHealth", "health")
+const projectName = reportContext.data.title
+
+const landscapeRepos = await getCollection("landscapeRepositories")
+const repoHrefMap: Record<string, string> = {}
+for (const entry of landscapeRepos) {
+  repoHrefMap[entry.data.name] = getLandscapeRepositoryHref(entry.data.repoKey)
+}
+
+const repoHealth = health?.data.repoHealth ?? []
+const severityCounts = health?.data.severityCounts ?? { critical: 0, high: 0, medium: 0, low: 0 }
+const sharedPackages = health?.data.sharedVulnerablePackages ?? []
+
+const severityItems = [
+  { label: "Critical", value: severityCounts.critical, color: "#ef4444" },
+  { label: "High", value: severityCounts.high, color: "#f59e0b" },
+  { label: "Medium", value: severityCounts.medium, color: "#eab308" },
+  { label: "Low", value: severityCounts.low, color: "#22c55e" },
+].filter((b) => b.value > 0)
+const severityDonutColors = severityItems.map((s) => s.color)
+
+const repoAlertBars = repoHealth
+  .filter((r) => r.totalAlerts > 0)
+  .sort((a, b) => b.openAlerts - a.openAlerts)
+  .slice(0, 15)
+  .map((r) => ({ label: r.repo, value: r.openAlerts, href: repoHrefMap[r.repo] }))
+
+const repoRows = repoHealth.map((r) => ({
+  id: r.repo,
+  repo: r.repo,
+  repoHref: repoHrefMap[r.repo] ?? "",
+  totalAlerts: r.totalAlerts,
+  openAlerts: r.openAlerts,
+  fixedAlerts: r.fixedAlerts,
+  critical: r.severityCounts.critical,
+  high: r.severityCounts.high,
+  medium: r.severityCounts.medium,
+  low: r.severityCounts.low,
+  mttr: r.meanTimeToResolveDays ?? "—",
+  oldestDays: r.oldestOpenAlertDays ?? "—",
+}))
+
+const sharedRows = sharedPackages.map((p, i) => ({
+  id: `shared-${i}`,
+  package: p.name,
+  ecosystem: p.ecosystem,
+  severity: p.severity,
+  affectedRepos: p.affectedRepos.join(" , "),
+  repoCount: p.affectedRepos.length,
+}))
+
+const exposureScore = health?.data.supplyChainExposureScore ?? 0
+const exposurePercent = Math.round(exposureScore * 100)
+const hasData = health !== undefined
+
+const securityBallRepos = repoHealth.map((r) => ({
+  repo: r.repo,
+  href: repoHrefMap[r.repo],
+  totalAlerts: r.totalAlerts,
+  openAlerts: r.openAlerts,
+  critical: r.severityCounts.critical,
+  high: r.severityCounts.high,
+  medium: r.severityCounts.medium,
+  low: r.severityCounts.low,
+  mttrDays: r.meanTimeToResolveDays ?? null,
+  oldestOpenDays: r.oldestOpenAlertDays ?? null,
+}))
+---
+
+<Dashboard title="Dependency Security" projectName={projectName}>
+  <h2>Dependency Security</h2>
+  <p class="subtitle">
+    Dependabot vulnerability alerts across the landscape — severity breakdown, patch status, and supply chain exposure.
+  </p>
+
+  {!hasData ? (
+    <div class="empty-state">
+      <p>No security data available. Run the landscape analysis with a GitHub token that has <code>security_events</code> scope and <code>security.enabled: true</code> in landscape config.</p>
+    </div>
+  ) : (
+    <>
+      <div class="cards">
+        <div class="card">
+          <div class="card-value">{health.data.totalAlerts.toLocaleString()}</div>
+          <div class="card-label">Total Alerts</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{health.data.totalOpenAlerts.toLocaleString()}</div>
+          <div class="card-label">Open Alerts</div>
+        </div>
+        <div class="card card--critical">
+          <div class="card-value">{severityCounts.critical.toLocaleString()}</div>
+          <div class="card-label">Critical</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{health.data.reposWithAlerts}/{health.data.totalRepos}</div>
+          <div class="card-label">Repos with Alerts</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{health.data.meanTimeToResolveDays !== null ? `${health.data.meanTimeToResolveDays}d` : "—"}</div>
+          <div class="card-label">Mean Time to Resolve</div>
+        </div>
+        <div class="card">
+          <div class="card-value">{exposurePercent}%</div>
+          <div class="card-label">Supply Chain Exposure</div>
+        </div>
+      </div>
+
+      {securityBallRepos.length > 0 && (
+        <h3 class="section-heading">Vulnerability Landscape</h3>
+        <SecurityBallChart
+          client:load
+          repos={securityBallRepos}
+          totalOpen={health.data.totalOpenAlerts}
+          severityCounts={severityCounts}
+          exposureScore={exposureScore}
+          helpText="Vulnerability landscape — repos orbit the central vulnerability mass, sized by open alerts, colored by highest severity. Pulsing rings indicate critical vulnerabilities."
+        />
+      )}
+
+      <h3 class="section-heading">Alert Distribution</h3>
+
+      <div class="chart-row">
+        {severityItems.length > 0 && (
+          <div class="chart-col">
+            <DonutChart
+              client:load
+              data={severityItems}
+              valueLabel="Alerts"
+              colors={severityDonutColors}
+              helpText="Distribution of vulnerability alerts by severity level across all repositories."
+            />
+          </div>
+        )}
+        {repoAlertBars.length > 0 && (
+          <div class="chart-col">
+            <HorizontalBarChart
+              client:load
+              data={repoAlertBars}
+              valueLabel="Open Alerts"
+              barColor="var(--color-warning, #f59e0b)"
+              helpText="Repositories with the most open vulnerability alerts."
+            />
+          </div>
+        )}
+      </div>
+
+      {sharedPackages.length > 0 && (
+        <div class="section-block">
+          <h3 class="section-heading">Supply Chain Risk</h3>
+          <SharedPackagesGraph
+            client:load
+            packages={sharedPackages}
+            repoHrefMap={repoHrefMap}
+            helpText="Supply chain risk — package nodes (colored by severity) connect to repos that depend on them. Larger nodes affect more repos."
+          />
+        </div>
+      )}
+
+      <h3 class="section-heading">Repository Details</h3>
+
+      <div class="section-block">
+        <ReportDataGrid
+          client:load
+          title="Repository Security Health"
+          description="Per-repository vulnerability alert breakdown with severity counts and resolution metrics."
+          searchPlaceholder="Search repositories"
+          rows={repoRows}
+          columns={[
+            { field: "repo", headerName: "Repository", type: "link", hrefField: "repoHref", flex: 2, sort: "asc" },
+            { field: "totalAlerts", headerName: "Total", type: "number", flex: 1 },
+            { field: "openAlerts", headerName: "Open", type: "number", flex: 1, sort: "desc" },
+            { field: "fixedAlerts", headerName: "Fixed", type: "number", flex: 1 },
+            { field: "critical", headerName: "Critical", type: "number", flex: 1 },
+            { field: "high", headerName: "High", type: "number", flex: 1 },
+            { field: "medium", headerName: "Medium", type: "number", flex: 1 },
+            { field: "low", headerName: "Low", type: "number", flex: 1 },
+            { field: "mttr", headerName: "MTTR (days)", type: "text", flex: 1 },
+            { field: "oldestDays", headerName: "Oldest Open (days)", type: "text", flex: 1 },
+          ]}
+        />
+      </div>
+
+      {sharedRows.length > 0 && (
+        <div class="section-block">
+          <ReportDataGrid
+            client:load
+            title="Shared Vulnerable Packages"
+            description="Packages with known vulnerabilities appearing in multiple repositories — highest supply chain risk."
+            searchPlaceholder="Search packages"
+            rows={sharedRows}
+            columns={[
+              { field: "package", headerName: "Package", type: "text", flex: 2, sort: "asc" },
+              { field: "ecosystem", headerName: "Ecosystem", type: "text", flex: 1 },
+              { field: "severity", headerName: "Severity", type: "text", flex: 1 },
+              { field: "repoCount", headerName: "Repos Affected", type: "number", flex: 1, sort: "desc" },
+              { field: "affectedRepos", headerName: "Repositories", type: "text", flex: 3 },
+            ]}
+          />
+        </div>
+      )}
+    </>
+  )}
+</Dashboard>
+
+<style>
+  .subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .card {
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+  .card--critical {
+    border: 1px solid var(--color-danger, #ef4444);
+  }
+  .card-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .card--critical .card-value {
+    color: var(--color-danger, #ef4444);
+  }
+  .card-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+  }
+  .section-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0.5rem 0 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-primary, rgba(255, 255, 255, 0.08));
+  }
+  .chart-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .chart-col {
+    min-width: 0;
+  }
+  .section-block {
+    margin-bottom: 2rem;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+  }
+  .empty-state code {
+    background: var(--surface-secondary);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+</style>

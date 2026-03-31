@@ -15,6 +15,58 @@ Prioritize features that answer:
 
 More charts only matter when they support that loop.
 
+## Platform Track: Static Reports and Hosted Intelligence
+
+Alongside feature work, Planetnik now has a clear platform split to deliver:
+
+- keep `apps/site` as the easy, no-auth, static report product
+- add a separate authenticated hosted product for intelligence and secret-dependent features
+
+This is an enabling track, not a replacement for the product roadmap above.
+
+### Why this matters now
+
+- intelligence and Dependabot require request-time secrets
+- the static report product should stay simple to host and share
+- auth, user state, and runtime integrations should not leak into the static deployment model
+
+### Planned shape
+
+- `apps/site`
+  - static Astro
+  - GitHub Pages / static hosting
+  - report browsing and public analytics
+- `apps/app`
+  - hosted Astro SSR
+  - authenticated shell
+  - intelligence and user-aware features
+- `apps/runtime`
+  - Bun/Effect API
+  - Better Auth
+  - Dependabot and AI integrations
+  - Neon Postgres-backed state
+
+### Delivery order
+
+1. runtime backbone with Better Auth and Neon
+2. hosted Astro shell on Azure Container Apps
+3. migrate intelligence out of the static app
+4. add Dependabot as a hosted feature
+5. only then extract shared packages where duplication is proven
+
+### Architectural rule
+
+Do not turn the static report product into a half-server app.
+
+If a capability needs:
+
+- auth
+- request-time secrets
+- persistent user state
+- provider credentials
+
+it belongs in the hosted product.
+
 ## Current Strengths
 
 Planetnik already has strong coverage for:

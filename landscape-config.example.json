@@ -1,7 +1,7 @@
 {
   "githubCloneUrl": "https://github.com",
   "githubApiUrl": "https://api.github.com",
-  "githubToken": "<YOUR_GITHUB_TOKEN>",
+  "githubToken": "<YOUR_GITHUB_TOKEN or omit and set GITHUB_TOKEN env var>",
   "reposUpdatedAfter": "2023-01-01",
   "metadata": {
     "name": "<YOUR_ORG> OSS Landscape",

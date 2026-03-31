@@ -33,6 +33,6 @@
     }
   },
   "files": {
-    "includes": ["packages/**/*.ts", "apps/**/*.ts"]
+    "includes": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "apps/**/*.astro"]
   }
 }

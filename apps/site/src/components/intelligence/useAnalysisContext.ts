@@ -48,12 +48,35 @@ export interface ControlItem {
   status: string
 }
 
+export interface SecuritySummary {
+  totalAlerts: number
+  totalOpenAlerts: number
+  reposWithAlerts: number
+  totalRepos: number
+  severityCounts: { critical: number; high: number; medium: number; low: number }
+  meanTimeToResolveDays: number | null
+  supplyChainExposureScore: number
+  sharedVulnerablePackages: Array<{
+    name: string
+    ecosystem: string
+    severity: string
+    affectedRepos: string[]
+  }>
+  repoHealth: Array<{
+    repo: string
+    openAlerts: number
+    critical: number
+    high: number
+  }>
+}
+
 export interface AnalysisContextProps {
   analysisData: AnalysisSummary | null
   hotspotsData: HotspotItem[] | null
   impactData: ImpactSummary | null
   contributorsData: ContributorItem[] | null
   controlsData: ControlItem[] | null
+  securityData: SecuritySummary | null
 }
 
 export function useAnalysisContext({
@@ -62,6 +85,7 @@ export function useAnalysisContext({
   impactData,
   contributorsData,
   controlsData,
+  securityData,
 }: AnalysisContextProps) {
   useCopilotReadable({
     description:
@@ -91,5 +115,11 @@ export function useAnalysisContext({
     description:
       "Quality goals and controls with metric values, desired ranges, and pass/fail status. Use this to assess whether the project is meeting its quality targets.",
     value: controlsData,
+  })
+
+  useCopilotReadable({
+    description:
+      "Dependency security summary from Dependabot: total and open vulnerability alerts, severity breakdown (critical/high/medium/low), repos with alerts, mean time to resolve, supply chain exposure score (0-1), shared vulnerable packages across repos, and per-repo alert counts. Use this to answer questions about dependency vulnerabilities, security posture, and supply chain risk.",
+    value: securityData,
   })
 }

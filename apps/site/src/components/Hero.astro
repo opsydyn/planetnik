@@ -1,4 +1,5 @@
 ---
+import { Image } from "astro:assets"
 import { route } from "../lib/route"
 
 interface Props {
@@ -9,7 +10,7 @@ const { tagline } = Astro.props
 ---
 
 <div class="hero">
-  <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="hero-logo" />
+  <Image src={route("/planetnik-logo-2.webp")} alt="Planetnik" width={320} height={320} class="hero-logo" />
   <p class="hero-tagline">{tagline}</p>
 </div>
 

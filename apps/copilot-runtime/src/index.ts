@@ -1,11 +1,14 @@
 import { CopilotRuntime, copilotRuntimeNodeHttpEndpoint, OpenAIAdapter } from "@copilotkit/runtime"
+import { createAnalysisActions } from "./actions"
 
 const PORT = Number(process.env.COPILOT_PORT ?? 4111)
 const CORS_ORIGIN = process.env.COPILOT_CORS_ORIGIN ?? "http://localhost:4321"
 const MODEL = process.env.COPILOT_MODEL ?? "gpt-4o"
+const DATA_DIR = process.env.PLANETNIK_DATA_DIR ?? ""
 
 const serviceAdapter = new OpenAIAdapter({ model: MODEL })
-const runtime = new CopilotRuntime()
+const actions = DATA_DIR ? createAnalysisActions() : []
+const runtime = new CopilotRuntime({ actions })
 
 const handler = copilotRuntimeNodeHttpEndpoint({
   runtime,
@@ -44,7 +47,7 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/health") {
-      return new Response(JSON.stringify({ status: "ok", model: MODEL }), {
+      return new Response(JSON.stringify({ status: "ok", model: MODEL, dataDir: DATA_DIR || null, actions: actions.length }), {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       })
     }
@@ -56,3 +59,5 @@ const server = Bun.serve({
 console.log(`Copilot Runtime listening on http://localhost:${server.port}`)
 console.log(`Model: ${MODEL}`)
 console.log(`CORS origin: ${CORS_ORIGIN}`)
+console.log(`Data dir: ${DATA_DIR || "(not set — server-side tools disabled)"}`)
+console.log(`Server-side actions: ${actions.length}`)

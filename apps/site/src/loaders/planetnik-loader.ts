@@ -206,7 +206,8 @@ function readJsonFilesInDirectory(directoryName: string): Array<{ id: string; da
     .map((fileName) => {
       const path = join(directoryPath, fileName)
       const data = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>
-      const id = typeof data.email === "string" && data.email ? data.email : decodeURIComponent(fileName.replace(/\.json$/, ""))
+      const id =
+        typeof data.email === "string" && data.email ? data.email : decodeURIComponent(fileName.replace(/\.json$/, ""))
       return { id, data }
     })
 }
@@ -362,11 +363,7 @@ export function hotspotsLoader(): Loader {
       } | null
       if (!raw) return
 
-      const groups = [
-        ...(raw.fileHotspots ?? []),
-        ...(raw.unitHotspots ?? []),
-        ...(raw.componentHotspots ?? []),
-      ]
+      const groups = [...(raw.fileHotspots ?? []), ...(raw.unitHotspots ?? []), ...(raw.componentHotspots ?? [])]
 
       for (const entry of groups) {
         const id =
@@ -403,10 +400,7 @@ export function findingsLoader(): Loader {
 
       for (let i = 0; i < raw.items.length; i++) {
         const entry = raw.items[i] ?? {}
-        const id =
-          typeof entry.id === "string" && entry.id.trim().length > 0
-            ? entry.id
-            : `finding-${i + 1}`
+        const id = typeof entry.id === "string" && entry.id.trim().length > 0 ? entry.id : `finding-${i + 1}`
         const data = await parseData({ id, data: entry })
         store.set({ id, data })
       }
@@ -544,6 +538,37 @@ export function contributorImpactLoader(): Loader {
         const data = await parseData({ id: email, data: contributor })
         store.set({ id: email, data })
       }
+    },
+  }
+}
+
+export function landscapeDependencyAlertsLoader(): Loader {
+  return {
+    name: "planetnik-landscape-dependency-alerts",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("landscape_dependency_alerts.json") as Record<string, unknown[]> | null
+      if (!raw) return
+
+      for (const [repo, alerts] of Object.entries(raw)) {
+        if (!Array.isArray(alerts)) continue
+        const data = await parseData({
+          id: repo,
+          data: { repo, alertCount: alerts.length, alerts },
+        })
+        store.set({ id: repo, data })
+      }
+    },
+  }
+}
+
+export function landscapeDependencyHealthLoader(): Loader {
+  return {
+    name: "planetnik-landscape-dependency-health",
+    async load({ store, parseData }) {
+      const raw = readJsonFile("landscape_dependency_health.json") as Record<string, unknown> | null
+      if (!raw) return
+      const data = await parseData({ id: "health", data: raw })
+      store.set({ id: "health", data })
     },
   }
 }

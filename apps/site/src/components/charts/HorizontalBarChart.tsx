@@ -1,14 +1,15 @@
 import { Group } from "@visx/group"
 import { scaleLinear } from "@visx/scale"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
+import type { TechnologyIconData } from "../../lib/iconography"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
-import type { TechnologyIconData } from "../../lib/iconography"
 
 interface BarItem {
   label: string
   value: number
   icon?: TechnologyIconData | null
+  href?: string
 }
 
 interface HorizontalBarChartProps {
@@ -125,17 +126,34 @@ function HorizontalBarInner({
               )}
 
               {/* Truncated label */}
-              <text
-                x={textX}
-                y={ROW_HEIGHT / 2}
-                textAnchor="start"
-                dominantBaseline="central"
-                fontSize={chartTheme.font.labelSize}
-                fontFamily={chartTheme.font.family}
-                fill={chartTheme.colors.text}
-              >
-                {displayLabel}
-              </text>
+              {d.href ? (
+                <a href={d.href} style={{ textDecoration: "none" }}>
+                  <text
+                    x={textX}
+                    y={ROW_HEIGHT / 2}
+                    textAnchor="start"
+                    dominantBaseline="central"
+                    fontSize={chartTheme.font.labelSize}
+                    fontFamily={chartTheme.font.family}
+                    fill={chartTheme.colors.text}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {displayLabel}
+                  </text>
+                </a>
+              ) : (
+                <text
+                  x={textX}
+                  y={ROW_HEIGHT / 2}
+                  textAnchor="start"
+                  dominantBaseline="central"
+                  fontSize={chartTheme.font.labelSize}
+                  fontFamily={chartTheme.font.family}
+                  fill={chartTheme.colors.text}
+                >
+                  {displayLabel}
+                </text>
+              )}
 
               {/* Bar background track */}
               <rect

@@ -1,4 +1,5 @@
 ---
+import { Image } from "astro:assets"
 import { getEntry } from "astro:content"
 import { ClientRouter } from "astro:transitions"
 import Breadcrumb from "../components/Breadcrumb.astro"
@@ -129,6 +130,7 @@ const landscapeNavSections = [
       { href: route("/landscape/teams"), label: "Teams" },
       { href: route("/landscape/topology"), label: "Team Topology" },
       { href: route("/landscape/tags"), label: "Tags" },
+      { href: route("/landscape/security"), label: "Security" },
     ],
   },
   ...(import.meta.env.DEV
@@ -725,7 +727,7 @@ function isActiveLink(href: string): boolean {
   <body>
     <!-- Mobile top bar -->
     <header class="topbar">
-      <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="topbar-logo" />
+      <Image src={route("/planetnik-logo-2.webp")} alt="Planetnik" width={160} height={160} class="topbar-logo" />
       <span class="topbar-project">Report for <strong>{projectName}</strong></span>
       <button class="menu-toggle" id="menu-open" aria-label="Open navigation">
         <SystemIcon name="list" size={22} />
@@ -740,7 +742,7 @@ function isActiveLink(href: string): boolean {
       <div class="nav-header">
         <div class="nav-header-content">
           <a href={rootHref} class="nav-logo-link">
-            <img src={route("/planetnik-logo-2.webp")} alt="Planetnik" class="nav-logo" />
+            <Image src={route("/planetnik-logo-2.webp")} alt="Planetnik" width={320} height={320} class="nav-logo" />
           </a>
           <div class="project-name">
             {reportMode === "landscape" ? "Landscape for " : "Report for "}

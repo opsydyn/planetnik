@@ -13,6 +13,7 @@ interface DonutChartProps {
   data: DonutItem[]
   valueLabel?: string
   helpText?: string
+  colors?: string[]
 }
 
 const PALETTE = chartTheme.colors.palette
@@ -21,12 +22,12 @@ const LEGEND_WIDTH = 160
 const CHART_GAP = 16
 const CHART_PADDING = 16
 
-export default function DonutChart({ data, valueLabel, helpText }: DonutChartProps) {
+export default function DonutChart({ data, valueLabel, helpText, colors }: DonutChartProps) {
   if (data.length === 0) return null
 
   return (
     <ChartCard height={300} helpText={helpText}>
-      {(width) => <DonutInner data={data} valueLabel={valueLabel} width={width} height={300} />}
+      {(width) => <DonutInner data={data} valueLabel={valueLabel} colors={colors} width={width} height={300} />}
     </ChartCard>
   )
 }
@@ -34,6 +35,7 @@ export default function DonutChart({ data, valueLabel, helpText }: DonutChartPro
 function DonutInner({
   data,
   valueLabel,
+  colors,
   width,
   height,
 }: DonutChartProps & { width: number; height: number }) {
@@ -41,6 +43,7 @@ function DonutInner({
     useTooltip<DonutItem & { percentage: number }>()
   const { containerRef, TooltipInPortal } = useTooltipInPortal({ detectBounds: true, scroll: true })
 
+  const colorScale = colors ?? PALETTE
   const total = data.reduce((s, d) => s + d.value, 0)
   const availableChartWidth = Math.max(width - LEGEND_WIDTH - CHART_GAP, 0)
   const chartSize = Math.max(Math.min(availableChartWidth, height) - CHART_PADDING * 2, 120)
@@ -65,7 +68,7 @@ function DonutInner({
             {(pie) =>
               pie.arcs.map((arc, i) => {
                 const path = pie.path(arc) ?? ""
-                const color = PALETTE[i % PALETTE.length]
+                const color = colorScale[i % colorScale.length]
                 return (
                   <path
                     key={arc.data.label}
@@ -133,7 +136,7 @@ function DonutInner({
                   width: 10,
                   height: 10,
                   borderRadius: 2,
-                  background: PALETTE[i % PALETTE.length],
+                  background: colorScale[i % colorScale.length],
                   flexShrink: 0,
                 }}
               />

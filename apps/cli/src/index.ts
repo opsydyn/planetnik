@@ -15,6 +15,7 @@ import { initCommand } from "./commands/init.js"
 import { initConventionsCommand } from "./commands/initConventions.js"
 import { updateConfigCommand } from "./commands/updateConfig.js"
 import { updateLandscapeCommand } from "./commands/updateLandscape.js"
+import { CliConfig } from "./config.js"
 import { PlanetnikLoggerLayer } from "./logger.js"
 
 const command = Command.make("planetnik", {}, () =>
@@ -40,6 +41,6 @@ const cli = Command.run(command, {
   version: "0.1.0",
 })
 
-const AppLayer = Layer.mergeAll(NodeContext.layer, PlanetnikLoggerLayer)
+const AppLayer = Layer.mergeAll(NodeContext.layer, PlanetnikLoggerLayer, CliConfig.layer)
 
 cli(process.argv).pipe(Effect.provide(AppLayer), NodeRuntime.runMain)

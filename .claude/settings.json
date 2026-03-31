@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find node_modules/.bun -path *copilotkit*shared* -name *.d.mts)"
+    ]
+  }
+}

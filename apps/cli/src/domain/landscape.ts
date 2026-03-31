@@ -56,6 +56,14 @@ export class UnknownWorkerError extends Data.TaggedError("UnknownWorkerError")<{
   readonly repoKey: string
 }> {}
 
+/** Dependabot alert fetch failed for an org/repo. */
+export class DependabotFetchError extends Data.TaggedError("DependabotFetchError")<{
+  readonly type: "landscape/dependabot-fetch"
+  readonly title: "Dependabot alert fetch failed"
+  readonly detail: string
+  readonly repoKey: string
+}> {}
+
 /** Union of all landscape domain errors. */
 export type LandscapeError =
   | CloneError
@@ -63,6 +71,7 @@ export type LandscapeError =
   | ConfigNotFoundError
   | GitHubDiscoveryError
   | UnknownWorkerError
+  | DependabotFetchError
 
 // ---------------------------------------------------------------------------
 // Result types — tagged outcome union for repo analysis workers

@@ -15,10 +15,10 @@ export interface GitHubRepo {
 export interface LandscapeConfig {
   githubApiUrl: string
   githubCloneUrl: string
-  githubToken: string
-  githubOrgs: string[]
+  githubToken?: string | undefined
+  githubOrgs: readonly string[]
   reposUpdatedAfter: string
-  ignore: { org: string; repo: string }[]
+  ignore: readonly { readonly org: string; readonly repo: string }[]
 }
 
 export async function discoverRepos(config: LandscapeConfig): Promise<Map<string, GitHubRepo[]>> {
@@ -42,12 +42,28 @@ async function fetchOrgRepos(org: string, config: LandscapeConfig): Promise<GitH
   const all: GitHubRepo[] = []
   let page = 1
 
+  // Try /orgs/ first; if 404, fall back to /users/ (personal accounts like alanpcurrie)
+  let prefix = `${config.githubApiUrl}/orgs/${org}`
+  const probeUrl = `${prefix}/repos?per_page=1`
+  const probe = await fetch(probeUrl, {
+    headers: {
+      "User-Agent": "planetnik",
+      ...(config.githubToken ? { Authorization: `token ${config.githubToken}` } : {}),
+    },
+  })
+
+  if (probe.status === 404) {
+    prefix = `${config.githubApiUrl}/users/${org}`
+  } else if (!probe.ok) {
+    throw new Error(`GitHub API error: ${probe.status} ${probe.statusText} for ${probeUrl}`)
+  }
+
   while (true) {
-    const url = `${config.githubApiUrl}/orgs/${org}/repos?per_page=100&page=${page}`
+    const url = `${prefix}/repos?per_page=100&page=${page}`
     const response = await fetch(url, {
       headers: {
         "User-Agent": "planetnik",
-        Authorization: `token ${config.githubToken}`,
+        ...(config.githubToken ? { Authorization: `token ${config.githubToken}` } : {}),
       },
     })
 
@@ -65,7 +81,7 @@ async function fetchOrgRepos(org: string, config: LandscapeConfig): Promise<GitH
   return all
 }
 
-function shouldIgnore(org: string, repoName: string, rules: { org: string; repo: string }[]): boolean {
+function shouldIgnore(org: string, repoName: string, rules: readonly { readonly org: string; readonly repo: string }[]): boolean {
   for (const rule of rules) {
     const orgMatch = rule.org === "" || new RegExp(rule.org, "gi").test(org)
     const repoMatch = rule.repo === "" || new RegExp(rule.repo, "gi").test(repoName)
