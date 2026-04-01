@@ -7,6 +7,7 @@ import StaticReportTable from "../components/tables/StaticReportTable.astro";
 import Dashboard from "../layouts/Dashboard.astro";
 import { chartHelp } from "../lib/chartHelp";
 import { getTechnologyIconData } from "../lib/iconography";
+import { route } from "../lib/route";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {

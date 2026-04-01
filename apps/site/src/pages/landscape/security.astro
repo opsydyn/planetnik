@@ -7,6 +7,7 @@ import SharedPackagesGraph from "../../components/security/SharedPackagesGraph";
 import ReportDataGrid from "../../components/tables/ReportDataGrid";
 import Dashboard from "../../layouts/Dashboard.astro";
 import { getLandscapeRepositoryHref } from "../../lib/landscapeRoutes";
+import { route } from "../../lib/route";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {

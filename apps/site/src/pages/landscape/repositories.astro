@@ -5,6 +5,7 @@ import ReportDataGrid from "../../components/tables/ReportDataGrid";
 import Dashboard from "../../layouts/Dashboard.astro";
 import { chartHelp } from "../../lib/chartHelp";
 import { getLandscapeRepositoryHref } from "../../lib/landscape";
+import { route } from "../../lib/route";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {

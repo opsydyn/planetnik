@@ -2,6 +2,7 @@
 import { getCollection, getEntry } from "astro:content";
 import ReportDataGrid from "../../components/tables/ReportDataGrid";
 import Dashboard from "../../layouts/Dashboard.astro";
+import { route } from "../../lib/route";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
