@@ -204,6 +204,50 @@ Płanetnik is useful when you want to:
 
 ---
 
+## common commands
+
+### analyze a single remote repository
+
+```bash
+bun run apps/cli/src/index.ts analyzeRemote --repo owner/repo --outputFolder ./datasets/repo-name
+```
+
+### analyze a local repository
+
+```bash
+bun run apps/cli/src/index.ts init --srcRoot .
+bun run apps/cli/src/index.ts extractGitHistory --srcRoot .
+bun run apps/cli/src/index.ts generateReports --confFile ./_planetnik/config.json --outputFolder ./_planetnik/reports
+```
+
+### analyze a GitHub org in landscape mode
+
+```bash
+bun run apps/cli/src/index.ts analyzeLandscape --config ./landscape-config.json --outputFolder ./datasets/effect-ts
+```
+
+### analyze a GitHub org in landscape mode with dependency security
+
+```bash
+cp apps/cli/.env.example apps/cli/.env
+# then set GITHUB_TOKEN in apps/cli/.env
+bun run --cwd apps/cli dev analyzeLandscape --config ../../landscape-config.json --outputFolder ../../datasets/effect-ts
+```
+
+Dependency security is fetched during `analyzeLandscape`. It is not a second command. `updateLandscape` rebuilds landscape contracts from existing analysis output, but it does not backfill Dependabot data. If the GitHub token is invalid or cannot read Dependabot alerts, the CLI logs an explicit warning.
+
+### run the Astro site against a named dataset
+
+```bash
+export PLANETNIK_DATASETS_ROOT=/Users/alan/Projects/planetnik/datasets
+export PLANETNIK_DATASET=effect-ts
+bun run dev:site
+```
+
+For more detail, see [docs/cli.md](/Users/alan/Projects/planetnik/docs/cli.md).
+
+---
+
 ## who it is for
 
 Płanetnik is built for:

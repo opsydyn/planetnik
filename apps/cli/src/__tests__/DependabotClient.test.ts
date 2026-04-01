@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-import { fetchDependabotAlerts } from "../github/DependabotClient.js"
+import {
+  DependabotAuthError,
+  DependabotScopeError,
+  fetchDependabotAlerts,
+} from "../github/DependabotClient.js"
 
 const ALERT_FIXTURE = {
   number: 1,
@@ -40,7 +44,7 @@ describe("fetchDependabotAlerts", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       })),
-    ) as typeof fetch
+    ) as unknown as typeof fetch
 
     const alerts = await fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")
 
@@ -69,7 +73,7 @@ describe("fetchDependabotAlerts", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }))
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     const alerts = await fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")
 
@@ -79,28 +83,39 @@ describe("fetchDependabotAlerts", () => {
     expect(callCount).toBe(2)
   })
 
-  test("returns empty array on 403 (no security_events scope)", async () => {
+  test("throws a scope error on 403", async () => {
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response(JSON.stringify({ message: "Forbidden" }), { status: 403 })),
-    ) as typeof fetch
+    ) as unknown as typeof fetch
 
-    const alerts = await fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")
-    expect(alerts).toEqual([])
+    await expect(fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")).rejects.toBeInstanceOf(
+      DependabotScopeError,
+    )
   })
 
   test("returns empty array on 404 (Dependabot not enabled)", async () => {
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response(JSON.stringify({ message: "Not Found" }), { status: 404 })),
-    ) as typeof fetch
+    ) as unknown as typeof fetch
 
     const alerts = await fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")
     expect(alerts).toEqual([])
   })
 
+  test("throws an auth error on 401", async () => {
+    globalThis.fetch = mock(() =>
+      Promise.resolve(new Response(JSON.stringify({ message: "Bad credentials" }), { status: 401 })),
+    ) as unknown as typeof fetch
+
+    await expect(fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")).rejects.toBeInstanceOf(
+      DependabotAuthError,
+    )
+  })
+
   test("throws on unexpected error status", async () => {
     globalThis.fetch = mock(() =>
       Promise.resolve(new Response("Internal Server Error", { status: 500 })),
-    ) as typeof fetch
+    ) as unknown as typeof fetch
 
     expect(fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")).rejects.toThrow()
   })
@@ -113,7 +128,7 @@ describe("fetchDependabotAlerts", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }))
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     await fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")
 
@@ -129,7 +144,7 @@ describe("fetchDependabotAlerts", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }))
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     await fetchDependabotAlerts("alanpcurrie", "my-repo", undefined, "https://api.github.com")
 
@@ -144,7 +159,7 @@ describe("fetchDependabotAlerts", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }))
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     await fetchDependabotAlerts("alanpcurrie", "my-repo", "ghp_token", "https://api.github.com")
 

@@ -1,5 +1,19 @@
 import { parseLinkHeader } from "./parseLinkHeader.js"
 
+export class DependabotAuthError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "DependabotAuthError"
+  }
+}
+
+export class DependabotScopeError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "DependabotScopeError"
+  }
+}
+
 export interface DependabotAlert {
   number: number
   state: string
@@ -29,8 +43,8 @@ export interface DependabotAlert {
 /**
  * Fetch Dependabot alerts for a repository using cursor-based pagination.
  *
- * Gracefully returns an empty array on 403 (missing `security_events` scope)
- * or 404 (Dependabot not enabled for the repo).
+ * Returns an empty array on 404 (Dependabot not enabled for the repo).
+ * Throws a clear error on 401 (invalid token) or 403 (missing scope / access).
  */
 export async function fetchDependabotAlerts(
   owner: string,
@@ -49,8 +63,20 @@ export async function fetchDependabotAlerts(
   while (url) {
     const response = await fetch(url, { headers })
 
-    if (response.status === 403 || response.status === 404) {
+    if (response.status === 404) {
       return all
+    }
+
+    if (response.status === 401) {
+      throw new DependabotAuthError(
+        `GitHub token is invalid for Dependabot alerts on ${owner}/${repo}. Check GITHUB_TOKEN.`,
+      )
+    }
+
+    if (response.status === 403) {
+      throw new DependabotScopeError(
+        `GitHub token cannot read Dependabot alerts for ${owner}/${repo}. Check security_events scope, SSO authorization, and repo access.`,
+      )
     }
 
     if (!response.ok) {

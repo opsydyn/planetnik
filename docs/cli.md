@@ -56,6 +56,14 @@ The command outputs a `data/` subdirectory in the output folder, which can be co
 
 This replaces the Java-era `sokrates-oss-landscape-analysis` pipeline (which required JVM + Node.js + bash scripts) with a single command.
 
+Dependency security is collected here too. It is not a second command. If you want the `landscape/security` page to be populated, run `analyzeLandscape` with:
+
+- a GitHub token available as `GITHUB_TOKEN` or `githubToken`
+- `security.enabled: true`
+- `security.fetchAlerts: true`
+
+`updateLandscape` regenerates landscape contracts from existing repo analyses, but it does not fetch Dependabot alerts.
+
 ```bash
 # Analyze all active repos in a GitHub org
 planetnik analyzeLandscape --config ./landscape-config.json
@@ -69,6 +77,29 @@ planetnik analyzeLandscape \
 
 # Re-run — only analyzes new/changed repos
 planetnik analyzeLandscape --config ./landscape-config.json --skipExisting
+
+# With dependency security enabled from env
+export GITHUB_TOKEN=YOUR_TOKEN_WITH_SECURITY_EVENTS_SCOPE
+planetnik analyzeLandscape \
+  --config ./landscape-config.json \
+  --outputFolder ./datasets/alanpcurrie \
+  --name "alanpcurrie Landscape"
+```
+
+For local development, prefer an env file over exporting each time:
+
+```bash
+cp apps/cli/.env.example apps/cli/.env
+```
+
+```env
+GITHUB_TOKEN=YOUR_TOKEN_WITH_SECURITY_EVENTS_SCOPE
+```
+
+Then run the CLI through the app cwd so that env file is picked up:
+
+```bash
+bun run --cwd apps/cli dev analyzeLandscape --config ../../landscape-config.json --outputFolder ../../datasets/alanpcurrie --name "alanpcurrie Landscape"
 ```
 
 | Option | Default | Description |
@@ -85,14 +116,21 @@ planetnik analyzeLandscape --config ./landscape-config.json --skipExisting
 {
   "githubCloneUrl": "https://github.com",
   "githubApiUrl": "https://api.github.com",
-  "githubToken": "<YOUR_TOKEN>",
+  "githubToken": "<YOUR_TOKEN or omit and set GITHUB_TOKEN env var>",
   "reposUpdatedAfter": "2023-01-01",
+  "security": {
+    "enabled": true,
+    "fetchAlerts": true,
+    "fetchSBOM": false
+  },
   "githubOrgs": ["my-org"],
   "ignore": [
     { "org": "", "repo": ".*[-]builds" }
   ]
 }
 ```
+
+For GitHub security data, the token must be able to read Dependabot alerts. The site message refers to `security_events` scope because that is the key permission required by the Dependabot alerts API. If no token is available, the CLI skips the security phase and no `landscape_dependency_*.json` files are written. If the token is invalid or cannot read Dependabot alerts, the CLI now logs an explicit warning instead of silently producing an empty security view.
 
 **Output structure:**
 
@@ -113,6 +151,8 @@ landscape-report/
       index.html                 # Landscape overview report
       data/
         landscapeAnalysisResults.json
+        landscape_dependency_alerts.json   # present only when security alerts were fetched
+        landscape_dependency_health.json   # present only when security alerts were fetched
   _failures.json                 # Failed repos (if any)
 ```
 
@@ -257,6 +297,8 @@ planetnik updateLandscape --analysisRoot . --name "Platform Landscape"
 | `--confFile` | *(auto)* | Landscape configuration file |
 | `--name` | *(auto)* | Landscape name |
 | `--description` | *(empty)* | Landscape description |
+
+`updateLandscape` rebuilds landscape-level HTML and JSON from an existing analysis root. It does not perform GitHub discovery, clone repositories, or fetch Dependabot alerts.
 
 ---
 

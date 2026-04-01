@@ -63,7 +63,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.10
+          bun-version: 1.3.11
 
       - name: Cache Bun download cache
         uses: actions/cache@v5
@@ -150,6 +150,24 @@ jobs:
           --outputFolder _landscape
           --concurrency ${{ inputs.concurrency || '4' }}
           ${{ inputs.name && format('--name "{0}"', inputs.name) || '' }}
+
+      - name: Verify landscape security exports
+        if: steps.mode.outputs.mode == 'landscape'
+        run: |
+          DATA_DIR="${{ github.workspace }}/_landscape/_planetnik_landscape/reports/data"
+          test -f "$DATA_DIR/landscape_dependency_health.json" || {
+            echo "Missing $DATA_DIR/landscape_dependency_health.json"
+            echo "Landscape security data was not exported. Check LANDSCAPE_GITHUB_TOKEN permissions and landscape security config."
+            exit 1
+          }
+          test -f "$DATA_DIR/landscape_dependency_alerts.json" || {
+            echo "Missing $DATA_DIR/landscape_dependency_alerts.json"
+            echo "Landscape dependency alerts were not exported. Check LANDSCAPE_GITHUB_TOKEN permissions and landscape security config."
+            exit 1
+          }
+          echo "### Landscape security exports verified" >> "$GITHUB_STEP_SUMMARY"
+          echo "- landscape_dependency_health.json" >> "$GITHUB_STEP_SUMMARY"
+          echo "- landscape_dependency_alerts.json" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Build and upload ──
 

@@ -33,6 +33,11 @@
   "mergeExtensions": [
     { "primary": "ts", "secondary": "tsx" }
   ],
+  "security": {
+    "enabled": true,
+    "fetchAlerts": true,
+    "fetchSBOM": false
+  },
   "githubOrgs": [
     "<YOUR_ORG>"
   ],

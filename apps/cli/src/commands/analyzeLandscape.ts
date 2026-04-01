@@ -29,7 +29,12 @@ import {
 } from "../domain/landscape.js"
 import { extractGitHistory } from "../git/GitHistoryExtractor.js"
 import { buildLandscapeHealth } from "../github/DependabotAnalyzer.js"
-import { type DependabotAlert, fetchDependabotAlerts } from "../github/DependabotClient.js"
+import {
+  DependabotAuthError,
+  type DependabotAlert,
+  fetchDependabotAlerts,
+  DependabotScopeError,
+} from "../github/DependabotClient.js"
 import { discoverRepos, type GitHubRepo, type LandscapeConfig } from "../github/GitHubRepoFinder.js"
 import { withPhase } from "../logger.js"
 import { LandscapeConfigSchema } from "../schemas/LandscapeConfigSchema.js"
@@ -284,11 +289,49 @@ export const analyzeLandscapeCommand = Command.make(
       if (securityConfig.enabled && securityConfig.fetchAlerts && config.githubToken) {
         yield* Effect.logInfo("Fetching Dependabot alerts...").pipe(withPhase("security"))
 
-        for (const [org, repos] of orgRepos) {
+        const repoTargets = Array.from(orgRepos.entries()).flatMap(([org, repos]) =>
+          repos.map((repo) => ({ org, repo })),
+        )
+
+        let securityBlocked = false
+        let startIndex = 0
+
+        if (repoTargets.length > 0) {
+          const firstTarget = repoTargets[0]!
+          const preflight = yield* Effect.tryPromise({
+            try: () =>
+              fetchDependabotAlerts(firstTarget.org, firstTarget.repo.name, config.githubToken, config.githubApiUrl),
+            catch: (error) => error,
+          }).pipe(Effect.either)
+
+          if (preflight._tag === "Left") {
+            const error = preflight.left
+            if (error instanceof DependabotAuthError) {
+              securityBlocked = true
+              yield* Effect.logWarning(
+                "Skipping Dependabot alerts: GITHUB_TOKEN is invalid for the Dependabot alerts API.",
+              ).pipe(withPhase("security"))
+            } else if (error instanceof DependabotScopeError) {
+              securityBlocked = true
+              yield* Effect.logWarning(
+                "Skipping Dependabot alerts: GITHUB_TOKEN cannot read Dependabot alerts. Check security_events scope, SSO authorization, and repository access.",
+              ).pipe(withPhase("security"))
+            } else {
+              yield* Effect.logWarning(
+                `Dependabot preflight failed for ${firstTarget.org}/${firstTarget.repo.name}: ${String(error)}`,
+              ).pipe(withPhase("security"))
+            }
+          } else {
+            alertsByRepo.set(firstTarget.repo.name, preflight.right)
+            startIndex = 1
+          }
+        }
+
+        if (!securityBlocked) {
           // Process in batches of 5 to respect rate limits
-          for (let i = 0; i < repos.length; i += 5) {
-            const batch = repos.slice(i, i + 5)
-            const batchEffects = batch.map((repo) =>
+          for (let i = startIndex; i < repoTargets.length; i += 5) {
+            const batch = repoTargets.slice(i, i + 5)
+            const batchEffects = batch.map(({ org, repo }) =>
               Effect.tryPromise({
                 try: () => fetchDependabotAlerts(org, repo.name, config.githubToken, config.githubApiUrl),
                 catch: (error) => error,
@@ -296,7 +339,7 @@ export const analyzeLandscapeCommand = Command.make(
                 Effect.map((alerts) => ({ repo: repo.name, alerts })),
                 Effect.catchAll((error) =>
                   Effect.gen(function* () {
-                    yield* Effect.logWarning(`Dependabot fetch failed for ${org}/${repo.name}: ${error}`).pipe(
+                    yield* Effect.logWarning(`Dependabot fetch failed for ${org}/${repo.name}: ${String(error)}`).pipe(
                       withPhase("security"),
                     )
                     return { repo: repo.name, alerts: [] as DependabotAlert[] }
@@ -314,9 +357,11 @@ export const analyzeLandscapeCommand = Command.make(
 
         const totalAlertCount = Array.from(alertsByRepo.values()).reduce((sum, alerts) => sum + alerts.length, 0)
         const reposWithAlerts = Array.from(alertsByRepo.values()).filter((alerts) => alerts.length > 0).length
-        yield* Effect.logInfo(
-          `Security: ${totalAlertCount} alerts across ${reposWithAlerts}/${alertsByRepo.size} repos`,
-        ).pipe(withPhase("security"))
+        if (!securityBlocked) {
+          yield* Effect.logInfo(
+            `Security: ${totalAlertCount} alerts across ${reposWithAlerts}/${alertsByRepo.size} repos`,
+          ).pipe(withPhase("security"))
+        }
       } else if (!config.githubToken) {
         yield* Effect.logDebug("Skipping Dependabot alerts: no GitHub token available").pipe(withPhase("security"))
       } else {

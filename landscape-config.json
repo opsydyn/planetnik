@@ -3,14 +3,19 @@
   "githubApiUrl": "https://api.github.com",
   "reposUpdatedAfter": "2024-01-01",
   "metadata": {
-    "name": "Effect Ecosystem",
-    "description": "Multi-repository landscape analysis of the Effect-TS organisation"
+    "name": "Alan Currie - personal repo",
+    "description": "Multi-repository landscape analysis of Alan Currie's repositories"
   },
   "mergeExtensions": [
     { "primary": "ts", "secondary": "tsx" }
   ],
+  "security": {
+    "enabled": true,
+    "fetchAlerts": true,
+    "fetchSBOM": false
+  },
   "githubOrgs": [
-    "effect-TS"
+    "alanpcurrie"
   ],
   "ignore": [
     { "org": "", "repo": "\\.github" },
