@@ -10,6 +10,7 @@ import {
 	getContributorDisplayName,
 	getContributorHref,
 } from "../lib/contributors";
+import { route } from "../lib/route";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {
