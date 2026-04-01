@@ -359,11 +359,11 @@ export const analyzeLandscapeCommand = Command.make(
 			// 2.5. Fetch Dependabot alerts (security phase)
 			const alertsByRepo = new Map<string, DependabotAlert[]>();
 			const securityConfig = decoded.security;
-			if (
+			const securityFetchConfigured =
 				securityConfig.enabled &&
 				securityConfig.fetchAlerts &&
-				config.githubToken
-			) {
+				!!config.githubToken;
+			if (securityFetchConfigured) {
 				yield* Effect.logInfo("Fetching Dependabot alerts...").pipe(
 					withPhase("security"),
 				);
@@ -536,8 +536,8 @@ export const analyzeLandscapeCommand = Command.make(
 			landscapeDataExport.exportRepositories(tagMap);
 			landscapeDataExport.exportTagContracts(tagMap, landscapeConfig.tagGroups);
 
-			// Export security data if alerts were fetched
-			if (alertsByRepo.size > 0) {
+			// Export security data if security fetching was attempted (even if no alerts found)
+			if (securityFetchConfigured) {
 				const landscapeHealth = buildLandscapeHealth(alertsByRepo);
 				const alertsExport = Object.fromEntries(
 					Array.from(alertsByRepo.entries()).map(([repo, alerts]) => [
