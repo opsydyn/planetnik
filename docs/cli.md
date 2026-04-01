@@ -32,7 +32,7 @@ planetnik analyzeRemote --repo facebook/react
 planetnik analyzeRemote --repo https://github.com/facebook/react.git
 
 # With options
-planetnik analyzeRemote --repo facebook/react --ref main --name "React" --outputFolder ./react-report
+planetnik analyzeRemote --repo facebook/react --ref main --name "React" --outputFolder ./datasets/react
 
 # Keep the cloned repo for inspection
 planetnik analyzeRemote --repo facebook/react --keep
@@ -63,7 +63,7 @@ planetnik analyzeLandscape --config ./landscape-config.json
 # With options
 planetnik analyzeLandscape \
   --config ./landscape-config.json \
-  --outputFolder ./my-landscape \
+  --outputFolder ./datasets/my-landscape \
   --name "Platform Landscape" \
   --concurrency 8
 
@@ -289,7 +289,7 @@ No options. Writes to the current directory.
 ### Analyze a remote repository (simplest)
 
 ```bash
-planetnik analyzeRemote --repo owner/repo --outputFolder ./report
+planetnik analyzeRemote --repo owner/repo --outputFolder ./datasets/report
 ```
 
 ### Analyze a local repository
@@ -305,19 +305,21 @@ planetnik generateReports
 
 ```bash
 # After generating reports (either method)
-PLANETNIK_DATA_DIR=./report/data bun run --cwd apps/site build
+PLANETNIK_DATA_DIR=./datasets/report/data bun run --cwd apps/site build
 
 # Or for dev mode
-PLANETNIK_DATA_DIR=./report/data bun run --cwd apps/site dev
+PLANETNIK_DATA_DIR=./datasets/report/data bun run --cwd apps/site dev
 ```
 
 For local developer-specific defaults, prefer `apps/site/.env.local`:
 
 ```env
-# Prefer an absolute path to avoid cwd ambiguity
-PLANETNIK_DATA_DIR=/absolute/path/to/report/data
+# Recommended local workflow: select a named dataset under the repo-root datasets/ folder.
+PLANETNIK_DATASETS_ROOT=/Users/alan/Projects/planetnik/datasets
+PLANETNIK_DATASET=effect-ts
 
-# Or use the landscape-specific variable for multi-repo landscape datasets
+# Raw overrides still work when needed.
+PLANETNIK_DATA_DIR=/absolute/path/to/report/data
 PLANETNIK_LANDSCAPE_DATA_DIR=/absolute/path/to/_planetnik_landscape/reports/data
 ```
 
@@ -327,8 +329,10 @@ If you want to inspect the real remote landscape dataset validated during develo
 
 ```bash
 cd /Users/alan/Projects/planetnik/apps/site
-PLANETNIK_DATA_DIR=/tmp/planetnik-effect-landscape-v2/_planetnik_landscape/reports/data bun run dev
+PLANETNIK_LANDSCAPE_DATA_DIR=/Users/alan/Projects/planetnik/datasets/effect-ts/_planetnik_landscape/reports/data bun run dev
 ```
+
+That assumes you generated the landscape into `./datasets/effect-ts`.
 
 Then open:
 
@@ -343,8 +347,8 @@ Useful validation commands against the same dataset:
 
 ```bash
 cd /Users/alan/Projects/planetnik/apps/site
-PLANETNIK_DATA_DIR=/tmp/planetnik-effect-landscape-v2/_planetnik_landscape/reports/data bun run typecheck
-PLANETNIK_DATA_DIR=/tmp/planetnik-effect-landscape-v2/_planetnik_landscape/reports/data bun run build
+PLANETNIK_LANDSCAPE_DATA_DIR=/Users/alan/Projects/planetnik/datasets/effect-ts/_planetnik_landscape/reports/data bun run typecheck
+PLANETNIK_LANDSCAPE_DATA_DIR=/Users/alan/Projects/planetnik/datasets/effect-ts/_planetnik_landscape/reports/data bun run build
 ```
 
 Notes:
@@ -355,7 +359,7 @@ Notes:
 
 ### Deploy to GitHub Pages
 
-The included GitHub Actions workflow (`.github/workflows/analyze-and-deploy.yml`) automates the full pipeline:
+The included GitHub Actions workflow ([deploy.yml](/Users/alan/Projects/planetnik/.github/workflows/deploy.yml)) automates the full pipeline:
 
 1. Trigger manually via `workflow_dispatch` with a `repo` input
 2. Or push to `main` to analyze the repository itself
@@ -374,6 +378,8 @@ name: React
 
 | Variable | Description |
 |----------|-------------|
+| `PLANETNIK_DATASETS_ROOT` | Optional root directory for named local datasets. Defaults to `<repo>/datasets` when `PLANETNIK_DATASET` is used. |
+| `PLANETNIK_DATASET` | Optional named local dataset selector. The site looks for a matching dataset under `PLANETNIK_DATASETS_ROOT` before falling back to the default single-repo path. |
 | `PLANETNIK_DATA_DIR` | Path to the `data/` directory from a report run. Used by the Astro site and content loaders to find analysis results. |
 | `PLANETNIK_LANDSCAPE_DATA_DIR` | Optional landscape-specific data directory. Used when `PLANETNIK_DATA_DIR` is not set. Useful for keeping a single-repo default and a separate multi-repo landscape dataset side by side. |
 

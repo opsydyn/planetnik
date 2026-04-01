@@ -19,6 +19,16 @@ export default defineConfig({
         access: "secret",
         optional: true,
       }),
+      PLANETNIK_DATASETS_ROOT: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      PLANETNIK_DATASET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
       PUBLIC_COPILOT_RUNTIME_URL: envField.string({
         context: "client",
         access: "public",

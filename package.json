@@ -1,6 +1,7 @@
 {
   "name": "planetnik",
   "private": true,
+  "packageManager": "bun@1.3.11",
   "workspaces": {
     "packages": [
       "packages/*",
@@ -19,6 +20,8 @@
     }
   },
   "scripts": {
+    "dev:site": "bun run --cwd apps/site dev",
+    "dev:cli": "bun run --cwd apps/cli dev",
     "build": "bun run --filter '*' build",
     "test": "bun run --filter '*' test",
     "typecheck": "bun run --filter '*' typecheck",
@@ -42,11 +45,11 @@
     "effect": "^3.21.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.8",
-    "@effect/language-service": "^0.81.0",
+    "@biomejs/biome": "^2.4.10",
+    "@effect/language-service": "^0.84.2",
     "@types/bun": "^1.3.11",
     "@types/node": "^25.5.0",
-    "knip": "^5.88.1",
-    "typescript": "^5.9.3"
+    "knip": "^6.1.1",
+    "typescript": "^6.0.2"
   }
 }

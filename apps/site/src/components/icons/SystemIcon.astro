@@ -1,8 +1,8 @@
 ---
-import "@phosphor-icons/web/regular"
+import { SystemIcon as ReactSystemIcon, type SystemIconName } from "./SystemIcon"
 
 interface Props {
-  name: string
+  name: SystemIconName
   size?: number | string
   title?: string
   class?: string
@@ -18,11 +18,12 @@ const {
 } = Astro.props
 ---
 
-<i
-  class:list={["ph", `ph-${name}`, "system-icon", className]}
-  style={`font-size: ${typeof size === "number" ? `${size}px` : size};`}
+<ReactSystemIcon
+  name={name}
+  size={size}
   title={title}
-  aria-hidden={decorative ? "true" : undefined}
+  className={className}
+  aria-hidden={decorative ? true : undefined}
   aria-label={decorative ? undefined : title}
   role={decorative ? undefined : "img"}
 />

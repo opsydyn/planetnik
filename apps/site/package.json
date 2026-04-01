@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "engines": {
-    "node": ">=24.0.0"
+    "bun": ">=1.3.11"
   },
   "scripts": {
     "dev": "astro dev",
@@ -14,13 +14,13 @@
     "optimize-images": "sharp -i public/*.png -o public/ -f webp -- resize 1024"
   },
   "dependencies": {
-    "@astrojs/react": "^5.0.0",
+    "@astrojs/react": "^5.0.2",
     "@base-ui/react": "^1.3.0",
-    "@copilotkit/react-core": "^1.8.0",
-    "@copilotkit/react-ui": "^1.8.0",
+    "@copilotkit/react-core": "^1.54.1",
+    "@copilotkit/react-ui": "^1.54.1",
     "@dagrejs/dagre": "^2.0.4",
     "@effect-atom/atom-react": "^0.5.0",
-    "@iconify-json/devicon": "^1.2.61",
+    "@iconify-json/devicon": "^1.2.62",
     "@phosphor-icons/react": "^2.1.10",
     "@phosphor-icons/web": "^2.1.2",
     "@react-sigma/core": "^5.0.6",
@@ -36,12 +36,12 @@
     "@visx/shape": "^3.12.0",
     "@visx/text": "^3.12.0",
     "@visx/tooltip": "^3.12.0",
-    "@xyflow/react": "^12.10.1",
-    "astro": "^6.0.4",
+    "@xyflow/react": "^12.10.2",
+    "astro": "^6.1.2",
     "astro-icon": "^1.1.5",
     "astro-tunnel": "^0.1.9",
     "d3-hierarchy": "^3.1.2",
-    "effect": "catalog:",
+    "effect": "^3.21.0",
     "fuse.js": "^7.1.0",
     "graphology": "^0.26.0",
     "graphology-layout": "^0.6.1",
@@ -53,7 +53,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.8",
-    "@astrojs/compiler-rs": "^0.1.5",
+    "@astrojs/compiler-rs": "^0.1.6",
     "@types/d3-hierarchy": "^3.1.7",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

@@ -2,10 +2,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Loader } from "astro/loaders"
+import { getDatasetCandidateDirs, resolveNamedDatasetDataDir } from "../lib/dataDirectories"
 
 const siteRoot = join(dirname(fileURLToPath(import.meta.url)), "../..")
 const workspaceRoot = join(siteRoot, "../..")
 const defaultDataDir = join(workspaceRoot, "_planetnik", "reports", "data")
+const defaultDatasetsRoot = join(workspaceRoot, "datasets")
 
 let loadedEnv: Record<string, string> | undefined
 
@@ -29,16 +31,29 @@ function getLoadedEnv(): Record<string, string> {
 
 export function resolveDataDir(): string {
   const env = getLoadedEnv()
+  const explicitDataDir = process.env.PLANETNIK_DATA_DIR ?? env.PLANETNIK_DATA_DIR
+  const explicitLandscapeDataDir = process.env.PLANETNIK_LANDSCAPE_DATA_DIR ?? env.PLANETNIK_LANDSCAPE_DATA_DIR
+  const datasetName = process.env.PLANETNIK_DATASET ?? env.PLANETNIK_DATASET
+  const datasetsRoot = process.env.PLANETNIK_DATASETS_ROOT ?? env.PLANETNIK_DATASETS_ROOT ?? defaultDatasetsRoot
+  const namedDatasetDir = resolveNamedDatasetDataDir(datasetName, datasetsRoot)
+
   const dir =
-    process.env.PLANETNIK_DATA_DIR ??
-    env.PLANETNIK_DATA_DIR ??
-    process.env.PLANETNIK_LANDSCAPE_DATA_DIR ??
-    env.PLANETNIK_LANDSCAPE_DATA_DIR ??
+    explicitDataDir ??
+    explicitLandscapeDataDir ??
+    namedDatasetDir ??
     defaultDataDir
+
+  if (!explicitDataDir && !explicitLandscapeDataDir && datasetName && !namedDatasetDir) {
+    console.warn(`[planetnik-loader] Dataset '${datasetName}' was not found under ${datasetsRoot}`)
+    console.warn(
+      `[planetnik-loader] Checked: ${getDatasetCandidateDirs(datasetsRoot, datasetName).join(", ")}`,
+    )
+  }
+
   if (!existsSync(dir)) {
     console.warn(`[planetnik-loader] Data directory not found: ${dir}`)
     console.warn(
-      `[planetnik-loader] Set PLANETNIK_DATA_DIR or PLANETNIK_LANDSCAPE_DATA_DIR env var, or create apps/site/.env.local`,
+      `[planetnik-loader] Set PLANETNIK_DATA_DIR, PLANETNIK_LANDSCAPE_DATA_DIR, or PLANETNIK_DATASET env vars, or create apps/site/.env.local`,
     )
   }
   return dir

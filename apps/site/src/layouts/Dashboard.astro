@@ -5,6 +5,7 @@ import { ClientRouter } from "astro:transitions"
 import Breadcrumb from "../components/Breadcrumb.astro"
 import GlobalSearch from "../components/search/GlobalSearch"
 import SystemIcon from "../components/icons/SystemIcon.astro"
+import type { SystemIconName } from "../components/icons/SystemIcon"
 import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro"
 import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro"
 import {
@@ -33,11 +34,28 @@ interface Props {
   }
 }
 
+interface NavItem {
+  href: string
+  label: string
+}
+
+interface NavSection {
+  label: string
+  iconName: SystemIconName
+  items: NavItem[]
+}
+
+const intelligenceNavSection: NavSection = {
+  label: "Intelligence",
+  iconName: "chat-circle",
+  items: [{ href: route("/intelligence"), label: "Ask Płanetnik" }],
+}
+
 const reportContext = await getEntry("reportContext", "context")
 const reportMode = reportContext?.data.reportMode ?? "single_repository"
 const { title, projectName = reportContext?.data.title ?? "Planetnik", repoScope } = Astro.props
 
-const singleRepoNavSections = [
+const singleRepoNavSections: NavSection[] = [
   {
     label: "Overview",
     iconName: "house",
@@ -99,18 +117,10 @@ const singleRepoNavSections = [
       { href: route("/trends"), label: "Trend" },
     ],
   },
-  ...(import.meta.env.DEV
-    ? [
-        {
-          label: "Intelligence",
-          iconName: "chat-circle",
-          items: [{ href: route("/intelligence"), label: "Ask Płanetnik" }],
-        },
-      ]
-    : []),
+  ...(import.meta.env.DEV ? [intelligenceNavSection] : []),
 ]
 
-const landscapeNavSections = [
+const landscapeNavSections: NavSection[] = [
   {
     label: "Overview",
     iconName: "house",
@@ -133,18 +143,10 @@ const landscapeNavSections = [
       { href: route("/landscape/security"), label: "Security" },
     ],
   },
-  ...(import.meta.env.DEV
-    ? [
-        {
-          label: "Intelligence",
-          iconName: "chat-circle",
-          items: [{ href: route("/intelligence"), label: "Ask Płanetnik" }],
-        },
-      ]
-    : []),
+  ...(import.meta.env.DEV ? [intelligenceNavSection] : []),
 ]
 
-function getLandscapeRepoNavSections(repoKey: string, repoName: string) {
+function getLandscapeRepoNavSections(repoKey: string, repoName: string): NavSection[] {
   const repoHref = getLandscapeRepositoryHref(repoKey)
 
   return [

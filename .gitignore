@@ -8,3 +8,5 @@ coverage/
 .env.local
 _planetnik/
 _sokrates/
+datasets/
+_planetnik_landscape/

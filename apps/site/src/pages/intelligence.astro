@@ -9,6 +9,7 @@ import type {
   ControlItem,
   HotspotItem,
   ImpactSummary,
+  SecuritySummary,
 } from "../components/intelligence/useAnalysisContext"
 
 const reportContext = await getEntry("reportContext", "context")
@@ -21,6 +22,7 @@ let hotspotsData: HotspotItem[] | null = null
 let impactData: ImpactSummary | null = null
 let contributorsData: ContributorItem[] | null = null
 let controlsData: ControlItem[] | null = null
+let securityData: SecuritySummary | null = null
 let projectName = "Unknown"
 
 if (isLandscape) {
@@ -149,6 +151,7 @@ const dataProps: AnalysisContextProps = {
   impactData,
   contributorsData,
   controlsData,
+  securityData,
 }
 ---
 
