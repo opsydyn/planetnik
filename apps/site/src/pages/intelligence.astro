@@ -1,158 +1,168 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import IntelligenceChat from "../components/intelligence/IntelligenceChat"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import IntelligenceChat from "../components/intelligence/IntelligenceChat";
 import type {
-  AnalysisContextProps,
-  AnalysisSummary,
-  ContributorItem,
-  ControlItem,
-  HotspotItem,
-  ImpactSummary,
-  SecuritySummary,
-} from "../components/intelligence/useAnalysisContext"
+	AnalysisContextProps,
+	AnalysisSummary,
+	ContributorItem,
+	ControlItem,
+	HotspotItem,
+	ImpactSummary,
+	SecuritySummary,
+} from "../components/intelligence/useAnalysisContext";
+import Dashboard from "../layouts/Dashboard.astro";
 
-const reportContext = await getEntry("reportContext", "context")
-const isLandscape = reportContext?.data.reportMode === "landscape"
+const reportContext = await getEntry("reportContext", "context");
+const isLandscape = reportContext?.data.reportMode === "landscape";
 
-const runtimeUrl = import.meta.env.PUBLIC_COPILOT_RUNTIME_URL ?? ""
+const runtimeUrl = import.meta.env.PUBLIC_COPILOT_RUNTIME_URL ?? "";
 
-let analysisData: AnalysisSummary | null = null
-let hotspotsData: HotspotItem[] | null = null
-let impactData: ImpactSummary | null = null
-let contributorsData: ContributorItem[] | null = null
-let controlsData: ControlItem[] | null = null
-let securityData: SecuritySummary | null = null
-let projectName = "Unknown"
+let analysisData: AnalysisSummary | null = null;
+let hotspotsData: HotspotItem[] | null = null;
+let impactData: ImpactSummary | null = null;
+let contributorsData: ContributorItem[] | null = null;
+let controlsData: ControlItem[] | null = null;
+let securityData: SecuritySummary | null = null;
+let projectName = "Unknown";
 
 if (isLandscape) {
-  const overview = await getEntry("landscapeOverview", "overview")
-  const repos = await getCollection("landscapeRepositories")
-  const landscapeContributors = await getCollection("landscapeContributors")
+	const overview = await getEntry("landscapeOverview", "overview");
+	const repos = await getCollection("landscapeRepositories");
+	const landscapeContributors = await getCollection("landscapeContributors");
 
-  projectName = overview?.data.landscapeName ?? reportContext?.data.title ?? "Landscape"
+	projectName =
+		overview?.data.landscapeName ?? reportContext?.data.title ?? "Landscape";
 
-  if (overview) {
-    analysisData = {
-      name: overview.data.landscapeName,
-      description: `Landscape with ${overview.data.repositoryCount} repositories`,
-      filesCount: overview.data.totals.mainFilesCount,
-      linesOfCode: overview.data.totals.totalLinesOfCode,
-    }
-  }
+	if (overview) {
+		analysisData = {
+			name: overview.data.landscapeName,
+			description: `Landscape with ${overview.data.repositoryCount} repositories`,
+			filesCount: overview.data.totals.mainFilesCount,
+			linesOfCode: overview.data.totals.totalLinesOfCode,
+		};
+	}
 
-  if (repos.length > 0) {
-    hotspotsData = [...repos]
-      .sort((a, b) => b.data.mainLinesOfCode - a.data.mainLinesOfCode)
-      .slice(0, 10)
-      .map((r) => ({
-        name: r.data.name,
-        kind: "repository",
-        score: r.data.mainLinesOfCode,
-        severity: r.data.mainLinesOfCode > 50000 ? "High" : r.data.mainLinesOfCode > 10000 ? "Medium" : "Low",
-        dominantDimension: "structuralRisk",
-        reasons: [
-          `${r.data.mainLinesOfCode} lines of code`,
-          `${r.data.contributorsCount} contributors`,
-          `${r.data.commitsCount} commits`,
-        ],
-      }))
-  }
+	if (repos.length > 0) {
+		hotspotsData = [...repos]
+			.sort((a, b) => b.data.mainLinesOfCode - a.data.mainLinesOfCode)
+			.slice(0, 10)
+			.map((r) => ({
+				name: r.data.name,
+				kind: "repository",
+				score: r.data.mainLinesOfCode,
+				severity:
+					r.data.mainLinesOfCode > 50000
+						? "High"
+						: r.data.mainLinesOfCode > 10000
+							? "Medium"
+							: "Low",
+				dominantDimension: "structuralRisk",
+				reasons: [
+					`${r.data.mainLinesOfCode} lines of code`,
+					`${r.data.contributorsCount} contributors`,
+					`${r.data.commitsCount} commits`,
+				],
+			}));
+	}
 
-  if (landscapeContributors.length > 0) {
-    contributorsData = [...landscapeContributors]
-      .slice(0, 15)
-      .map((c) => ({
-        email: c.data.email,
-        commitsAllTime: c.data.commitsCount ?? 0,
-        commits30Days: c.data.commitsCount30Days ?? 0,
-        commits90Days: c.data.commitsCount90Days ?? 0,
-      }))
-  }
+	if (landscapeContributors.length > 0) {
+		contributorsData = [...landscapeContributors].slice(0, 15).map((c) => ({
+			email: c.data.email,
+			commitsAllTime: c.data.commitsCount ?? 0,
+			commits30Days: c.data.commitsCount30Days ?? 0,
+			commits90Days: c.data.commitsCount90Days ?? 0,
+		}));
+	}
 } else {
-  const summary = await getEntry("analysis", "summary")
-  const hotspots = await getCollection("hotspots")
-  const impact = await getEntry("impact", "impact")
-  const contributors = await getCollection("contributors")
-  const controls = await getCollection("controls")
+	const summary = await getEntry("analysis", "summary");
+	const hotspots = await getCollection("hotspots");
+	const impact = await getEntry("impact", "impact");
+	const contributors = await getCollection("contributors");
+	const controls = await getCollection("controls");
 
-  projectName = summary?.data.metadata.name ?? "Unknown"
+	projectName = summary?.data.metadata.name ?? "Unknown";
 
-  analysisData = summary
-    ? {
-        name: summary.data.metadata.name,
-        description: summary.data.metadata.description || undefined,
-        filesCount: summary.data.filesCount,
-        linesOfCode: summary.data.linesOfCode,
-        duplication: {
-          percentage: summary.data.duplication.percentage,
-          cleanedLinesOfCode: summary.data.duplication.cleanedLines,
-          duplicatedLinesOfCode: summary.data.duplication.duplicatedLines,
-        },
-      }
-    : null
+	analysisData = summary
+		? {
+				name: summary.data.metadata.name,
+				description: summary.data.metadata.description || undefined,
+				filesCount: summary.data.filesCount,
+				linesOfCode: summary.data.linesOfCode,
+				duplication: {
+					percentage: summary.data.duplication.percentage,
+					cleanedLinesOfCode: summary.data.duplication.cleanedLines,
+					duplicatedLinesOfCode: summary.data.duplication.duplicatedLines,
+				},
+			}
+		: null;
 
-  hotspotsData = hotspots.length > 0
-    ? [...hotspots]
-        .sort((a, b) => b.data.score - a.data.score)
-        .slice(0, 10)
-        .map((h) => ({
-          name: h.data.name,
-          kind: h.data.kind,
-          score: h.data.score,
-          severity: h.data.severity,
-          dominantDimension: h.data.dominantDimension,
-          suggestedAction: h.data.suggestedAction,
-          reasons: h.data.reasons.slice(0, 3),
-        }))
-    : null
+	hotspotsData =
+		hotspots.length > 0
+			? [...hotspots]
+					.sort((a, b) => b.data.score - a.data.score)
+					.slice(0, 10)
+					.map((h) => ({
+						name: h.data.name,
+						kind: h.data.kind,
+						score: h.data.score,
+						severity: h.data.severity,
+						dominantDimension: h.data.dominantDimension,
+						suggestedAction: h.data.suggestedAction,
+						reasons: h.data.reasons.slice(0, 3),
+					}))
+			: null;
 
-  impactData = impact
-    ? {
-        overall_score: impact.data.structural_impact.summary.overall_score,
-        dominant_dimension: impact.data.structural_impact.summary.dominant_dimension,
-        dimensions: impact.data.structural_impact.dimensions,
-        opportunities: impact.data.impact_opportunities.slice(0, 10).map((o) => ({
-          name: o.name,
-          kind: o.kind,
-          impact_score: o.impact_score,
-          dominant_dimension: o.dominant_dimension,
-          suggested_action: o.suggested_action,
-        })),
-      }
-    : null
+	impactData = impact
+		? {
+				overall_score: impact.data.structural_impact.summary.overall_score,
+				dominant_dimension:
+					impact.data.structural_impact.summary.dominant_dimension,
+				dimensions: impact.data.structural_impact.dimensions,
+				opportunities: impact.data.impact_opportunities
+					.slice(0, 10)
+					.map((o) => ({
+						name: o.name,
+						kind: o.kind,
+						impact_score: o.impact_score,
+						dominant_dimension: o.dominant_dimension,
+						suggested_action: o.suggested_action,
+					})),
+			}
+		: null;
 
-  contributorsData = contributors.length > 0
-    ? [...contributors]
-        .sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
-        .slice(0, 15)
-        .map((c) => ({
-          email: c.data.email,
-          commitsAllTime: c.data.commitsAllTime,
-          commits30Days: c.data.commits30Days,
-          commits90Days: c.data.commits90Days,
-        }))
-    : null
+	contributorsData =
+		contributors.length > 0
+			? [...contributors]
+					.sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
+					.slice(0, 15)
+					.map((c) => ({
+						email: c.data.email,
+						commitsAllTime: c.data.commitsAllTime,
+						commits30Days: c.data.commits30Days,
+						commits90Days: c.data.commits90Days,
+					}))
+			: null;
 
-  controlsData = controls.length > 0
-    ? controls.map((c) => ({
-        goal: c.data.goal,
-        metricId: c.data.metricId,
-        metricValue: c.data.metricValue ?? 0,
-        desiredRange: c.data.desiredRangeText,
-        status: c.data.status,
-      }))
-    : null
+	controlsData =
+		controls.length > 0
+			? controls.map((c) => ({
+					goal: c.data.goal,
+					metricId: c.data.metricId,
+					metricValue: c.data.metricValue ?? 0,
+					desiredRange: c.data.desiredRangeText,
+					status: c.data.status,
+				}))
+			: null;
 }
 
 const dataProps: AnalysisContextProps = {
-  analysisData,
-  hotspotsData,
-  impactData,
-  contributorsData,
-  controlsData,
-  securityData,
-}
+	analysisData,
+	hotspotsData,
+	impactData,
+	contributorsData,
+	controlsData,
+	securityData,
+};
 ---
 
 <Dashboard title="Intelligence" projectName={projectName}>

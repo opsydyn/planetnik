@@ -1,1 +1,1 @@
-export { Alignment, SimpleOneBarChart } from "./SimpleOneBarChart.js"
+export { Alignment, SimpleOneBarChart } from "./SimpleOneBarChart.js";

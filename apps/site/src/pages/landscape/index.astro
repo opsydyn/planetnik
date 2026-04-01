@@ -1,39 +1,38 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DonutChart from "../../components/charts/DonutChart"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import StaticReportTable from "../../components/tables/StaticReportTable.astro"
-import TechnologyIcon from "../../components/icons/TechnologyIcon.astro"
-import { chartHelp } from "../../lib/chartHelp"
-import { getTechnologyIconData } from "../../lib/iconography"
-import Dashboard from "../../layouts/Dashboard.astro"
-import { route } from "../../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import DonutChart from "../../components/charts/DonutChart";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import TechnologyIcon from "../../components/icons/TechnologyIcon.astro";
+import StaticReportTable from "../../components/tables/StaticReportTable.astro";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
+import { getTechnologyIconData } from "../../lib/iconography";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const overview = await getEntry("landscapeOverview", "overview")
-const teams = await getCollection("landscapeTeams")
-const tags = await getEntry("landscapeTags", "tags")
+const overview = await getEntry("landscapeOverview", "overview");
+const teams = await getCollection("landscapeTeams");
+const tags = await getEntry("landscapeTags", "tags");
 
-const projectName = reportContext.data.title
-const data = overview?.data
+const projectName = reportContext.data.title;
+const data = overview?.data;
 
 const languageBars =
-  data?.languages.map((item) => ({
-    label: `.${item.extension}`,
-    value: item.linesOfCode,
-    icon: getTechnologyIconData(item.extension),
-  })) ?? []
+	data?.languages.map((item) => ({
+		label: `.${item.extension}`,
+		value: item.linesOfCode,
+		icon: getTechnologyIconData(item.extension),
+	})) ?? [];
 
 const topRepositories = (data?.topRepositories ?? []).map((repository) => ({
-  repository: repository.name,
-  mainLinesOfCode: repository.mainLinesOfCode,
-  contributors: repository.contributors,
-  latestCommitDate: repository.latestCommitDate,
-}))
+	repository: repository.name,
+	mainLinesOfCode: repository.mainLinesOfCode,
+	contributors: repository.contributors,
+	latestCommitDate: repository.latestCommitDate,
+}));
 ---
 
 <Dashboard title="Landscape Dashboard" projectName={projectName}>

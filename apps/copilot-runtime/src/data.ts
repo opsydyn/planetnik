@@ -14,7 +14,9 @@ function readTsv(filename: string): string[][] {
   if (!DATA_DIR) return []
   const path = join(DATA_DIR, filename)
   if (!existsSync(path)) return []
-  const lines = readFileSync(path, "utf-8").split("\n").filter((l) => l.trim())
+  const lines = readFileSync(path, "utf-8")
+    .split("\n")
+    .filter((l) => l.trim())
   return lines.map((line) => line.split("\t"))
 }
 

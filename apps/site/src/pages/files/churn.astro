@@ -1,55 +1,57 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import ScatterPlot from "../../components/charts/ScatterPlot"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../lib/chartHelp"
-import Dashboard from "../../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import ScatterPlot from "../../components/charts/ScatterPlot";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const metrics = await getCollection("metrics")
-const filesMain = await getCollection("filesMain")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const metrics = await getCollection("metrics");
+const filesMain = await getCollection("filesMain");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 function getMetric(id: string): number | null {
-  const m = metrics.find((m) => m.data.id === id)
-  return m?.data.value ?? null
+	const m = metrics.find((m) => m.data.id === id);
+	return m?.data.value ?? null;
 }
 
-const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
-const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS")
-const estimatedWorkingDays = getMetric("FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS")
+const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS");
+const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS");
+const estimatedWorkingDays = getMetric(
+	"FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS",
+);
 
 // Files with history data, sorted by commits
 const filesWithHistory = filesMain
-  .filter((f) => f.data.commitsCount && f.data.commitsCount > 0)
-  .sort((a, b) => (b.data.commitsCount ?? 0) - (a.data.commitsCount ?? 0))
+	.filter((f) => f.data.commitsCount && f.data.commitsCount > 0)
+	.sort((a, b) => (b.data.commitsCount ?? 0) - (a.data.commitsCount ?? 0));
 
 const scatterData = filesWithHistory.slice(0, 200).map((f) => ({
-  x: f.data.commitsCount ?? 0,
-  y: f.data.contributorsCount ?? 0,
-  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
-}))
+	x: f.data.commitsCount ?? 0,
+	y: f.data.contributorsCount ?? 0,
+	label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+}));
 
 const mostChangedBarData = filesWithHistory.slice(0, 15).map((f) => ({
-  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
-  value: f.data.commitsCount ?? 0,
-}))
+	label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+	value: f.data.commitsCount ?? 0,
+}));
 
 const volatilityData = filesWithHistory.slice(0, 200).map((f) => ({
-  x: f.data.linesOfCode,
-  y: f.data.commitsCount ?? 0,
-  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
-}))
+	x: f.data.linesOfCode,
+	y: f.data.commitsCount ?? 0,
+	label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+}));
 
 const churnRows = filesWithHistory.map((f) => ({
-  id: f.data.relativePath,
-  file: f.data.relativePath,
-  commits: f.data.commitsCount ?? 0,
-  contributors: f.data.contributorsCount ?? 0,
-  firstChange: f.data.firstDate ?? "—",
-  lastChange: f.data.latestDate ?? "—",
-}))
+	id: f.data.relativePath,
+	file: f.data.relativePath,
+	commits: f.data.commitsCount ?? 0,
+	contributors: f.data.contributorsCount ?? 0,
+	firstChange: f.data.firstDate ?? "—",
+	lastChange: f.data.latestDate ?? "—",
+}));
 ---
 
 <Dashboard title="File Churn" projectName={projectName}>

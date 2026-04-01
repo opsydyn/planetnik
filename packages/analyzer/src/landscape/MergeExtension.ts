@@ -1,4 +1,4 @@
 export class MergeExtension {
-  primary: string = ""
-  secondary: string = ""
+	primary: string = "";
+	secondary: string = "";
 }

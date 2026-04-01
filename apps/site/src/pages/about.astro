@@ -1,13 +1,14 @@
 ---
-import Dashboard from "../layouts/Dashboard.astro"
-import Hero from "../components/Hero.astro"
-import { Image } from "astro:assets"
-import { getEntry } from "astro:content"
-import { route } from "../lib/route"
+import { Image } from "astro:assets";
+import { getEntry } from "astro:content";
+import Hero from "../components/Hero.astro";
+import Dashboard from "../layouts/Dashboard.astro";
+import { route } from "../lib/route";
 
-const summary = await getEntry("analysis", "summary")
-const reportContext = await getEntry("reportContext", "context")
-const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
+const summary = await getEntry("analysis", "summary");
+const reportContext = await getEntry("reportContext", "context");
+const projectName =
+	reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik";
 ---
 
 <Dashboard title="About" projectName={projectName}>

@@ -215,8 +215,7 @@ export function createAnalysisActions() {
         {
           name: "sortBy",
           type: "string" as const,
-          description:
-            "Sort field: 'commitsAllTime', 'commits30Days', 'commits90Days'. Defaults to 'commitsAllTime'.",
+          description: "Sort field: 'commitsAllTime', 'commits30Days', 'commits90Days'. Defaults to 'commitsAllTime'.",
           required: false,
         },
         {
@@ -226,12 +225,7 @@ export function createAnalysisActions() {
           required: false,
         },
       ],
-      handler: async (args: {
-        namePattern?: string
-        activeOnly?: boolean
-        sortBy?: string
-        limit?: number
-      }) => {
+      handler: async (args: { namePattern?: string; activeOnly?: boolean; sortBy?: string; limit?: number }) => {
         let contributors = getContributors()
         const limit = args.limit ?? 30
 
@@ -324,14 +318,12 @@ export function createAnalysisActions() {
           required: false,
         },
       ],
-      handler: async (args: {
-        severity?: string
-        repoPattern?: string
-        sharedOnly?: boolean
-        limit?: number
-      }) => {
+      handler: async (args: { severity?: string; repoPattern?: string; sharedOnly?: boolean; limit?: number }) => {
         const data = getSecurityData()
-        if (!data) return JSON.stringify({ error: "No security data found. Ensure landscape analysis was run with security enabled." })
+        if (!data)
+          return JSON.stringify({
+            error: "No security data found. Ensure landscape analysis was run with security enabled.",
+          })
 
         const limit = args.limit ?? 20
 
@@ -359,7 +351,11 @@ export function createAnalysisActions() {
           repos = repos.filter((r) => {
             if (minPriority >= 4 && r.severityCounts.critical > 0) return true
             if (minPriority >= 3 && (r.severityCounts.critical > 0 || r.severityCounts.high > 0)) return true
-            if (minPriority >= 2 && (r.severityCounts.critical > 0 || r.severityCounts.high > 0 || r.severityCounts.medium > 0)) return true
+            if (
+              minPriority >= 2 &&
+              (r.severityCounts.critical > 0 || r.severityCounts.high > 0 || r.severityCounts.medium > 0)
+            )
+              return true
             return r.openAlerts > 0
           })
         }

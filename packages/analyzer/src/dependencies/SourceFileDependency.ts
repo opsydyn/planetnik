@@ -1,12 +1,12 @@
-import type { SourceFile } from "../aspects/SourceFile.js"
+import type { SourceFile } from "../aspects/SourceFile.js";
 
 export class SourceFileDependency {
-  sourceFile!: SourceFile
-  codeFragment: string = ""
+	sourceFile!: SourceFile;
+	codeFragment: string = "";
 
-  constructor(sourceFile?: SourceFile) {
-    if (sourceFile) {
-      this.sourceFile = sourceFile
-    }
-  }
+	constructor(sourceFile?: SourceFile) {
+		if (sourceFile) {
+			this.sourceFile = sourceFile;
+		}
+	}
 }

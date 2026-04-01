@@ -1,41 +1,46 @@
 ---
-import { route } from "../lib/route"
+import { route } from "../lib/route";
 
 interface Crumb {
-  label: string
-  href?: string
+	label: string;
+	href?: string;
 }
 
 interface Props {
-  title: string
-  reportMode: string
-  repoScope?: {
-    repoKey: string
-    repoName: string
-  }
+	title: string;
+	reportMode: string;
+	repoScope?: {
+		repoKey: string;
+		repoName: string;
+	};
 }
 
-const { title, reportMode, repoScope } = Astro.props
-const isLandscape = reportMode === "landscape"
+const { title, reportMode, repoScope } = Astro.props;
+const isLandscape = reportMode === "landscape";
 
-const crumbs: Crumb[] = []
+const crumbs: Crumb[] = [];
 
 if (isLandscape) {
-  crumbs.push({ label: "Landscape", href: route("/landscape") })
+	crumbs.push({ label: "Landscape", href: route("/landscape") });
 
-  if (repoScope) {
-    crumbs.push({ label: "Repositories", href: route("/landscape/repositories") })
-    crumbs.push({
-      label: repoScope.repoName,
-      href: route(`/landscape/repositories/${encodeURIComponent(repoScope.repoKey)}`),
-    })
-  }
+	if (repoScope) {
+		crumbs.push({
+			label: "Repositories",
+			href: route("/landscape/repositories"),
+		});
+		crumbs.push({
+			label: repoScope.repoName,
+			href: route(
+				`/landscape/repositories/${encodeURIComponent(repoScope.repoKey)}`,
+			),
+		});
+	}
 } else {
-  crumbs.push({ label: "Dashboard", href: route("/") })
+	crumbs.push({ label: "Dashboard", href: route("/") });
 }
 
 // Current page (no link)
-crumbs.push({ label: title })
+crumbs.push({ label: title });
 ---
 
 {crumbs.length > 1 && (

@@ -1,36 +1,38 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import TemporalDependenciesExplorer from "../../components/TemporalDependenciesExplorer"
-import Dashboard from "../../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import TemporalDependenciesExplorer from "../../components/TemporalDependenciesExplorer";
+import Dashboard from "../../layouts/Dashboard.astro";
 
-const summary = await getEntry("analysis", "summary")
-const temporalDeps = await getCollection("temporalDeps")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const temporalDeps = await getCollection("temporalDeps");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
-const groupedTemporalDeps = new Map<string, typeof temporalDeps>()
+const groupedTemporalDeps = new Map<string, typeof temporalDeps>();
 for (const dependency of temporalDeps) {
-  const group = groupedTemporalDeps.get(dependency.data.periodKey) ?? []
-  group.push(dependency)
-  groupedTemporalDeps.set(dependency.data.periodKey, group)
+	const group = groupedTemporalDeps.get(dependency.data.periodKey) ?? [];
+	group.push(dependency);
+	groupedTemporalDeps.set(dependency.data.periodKey, group);
 }
 
 const temporalSections = [...groupedTemporalDeps.entries()]
-  .map(([periodKey, group]) => {
-    const first = group[0]
-    if (!first) {
-      return null
-    }
+	.map(([periodKey, group]) => {
+		const first = group[0];
+		if (!first) {
+			return null;
+		}
 
-    const sorted = [...group].sort((left, right) => right.data.sameCommits - left.data.sameCommits)
-    return {
-      periodKey,
-      periodLabel: first.data.periodLabel,
-      periodDays: first.data.periodDays,
-      dependencies: sorted,
-    }
-  })
-  .filter((section): section is NonNullable<typeof section> => section !== null)
-  .sort((left, right) => left.periodDays - right.periodDays)
+		const sorted = [...group].sort(
+			(left, right) => right.data.sameCommits - left.data.sameCommits,
+		);
+		return {
+			periodKey,
+			periodLabel: first.data.periodLabel,
+			periodDays: first.data.periodDays,
+			dependencies: sorted,
+		};
+	})
+	.filter((section): section is NonNullable<typeof section> => section !== null)
+	.sort((left, right) => left.periodDays - right.periodDays);
 ---
 
 <Dashboard title="Temporal Dependencies" projectName={projectName}>

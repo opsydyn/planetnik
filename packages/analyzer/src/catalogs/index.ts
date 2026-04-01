@@ -1,1 +1,1 @@
-export { StandardSecurityAspects } from "./StandardSecurityAspects.js"
+export { StandardSecurityAspects } from "./StandardSecurityAspects.js";

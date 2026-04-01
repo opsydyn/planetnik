@@ -1,57 +1,59 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DistributionChart from "../../components/charts/DistributionChart"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../lib/chartHelp"
-import Dashboard from "../../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../../components/charts/DistributionChart";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const filesMain = await getCollection("filesMain")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const filesMain = await getCollection("filesMain");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 // Sort by LOC descending
-const sorted = [...filesMain].sort((a, b) => b.data.linesOfCode - a.data.linesOfCode)
-const totalLoc = sorted.reduce((sum, f) => sum + f.data.linesOfCode, 0)
+const sorted = [...filesMain].sort(
+	(a, b) => b.data.linesOfCode - a.data.linesOfCode,
+);
+const totalLoc = sorted.reduce((sum, f) => sum + f.data.linesOfCode, 0);
 
 // Size distribution buckets
 const buckets = [
-  { label: "1-50", min: 1, max: 50, count: 0, loc: 0 },
-  { label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
-  { label: "101-200", min: 101, max: 200, count: 0, loc: 0 },
-  { label: "201-500", min: 201, max: 500, count: 0, loc: 0 },
-  { label: "501-1000", min: 501, max: 1000, count: 0, loc: 0 },
-  { label: "1001+", min: 1001, max: Infinity, count: 0, loc: 0 },
-]
+	{ label: "1-50", min: 1, max: 50, count: 0, loc: 0 },
+	{ label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
+	{ label: "101-200", min: 101, max: 200, count: 0, loc: 0 },
+	{ label: "201-500", min: 201, max: 500, count: 0, loc: 0 },
+	{ label: "501-1000", min: 501, max: 1000, count: 0, loc: 0 },
+	{ label: "1001+", min: 1001, max: Infinity, count: 0, loc: 0 },
+];
 
 for (const f of sorted) {
-  for (const b of buckets) {
-    if (f.data.linesOfCode >= b.min && f.data.linesOfCode <= b.max) {
-      b.count++
-      b.loc += f.data.linesOfCode
-      break
-    }
-  }
+	for (const b of buckets) {
+		if (f.data.linesOfCode >= b.min && f.data.linesOfCode <= b.max) {
+			b.count++;
+			b.loc += f.data.linesOfCode;
+			break;
+		}
+	}
 }
 
 const distData = buckets.map((b) => ({
-  label: b.label + " LOC",
-  value: b.loc,
-  detail: b.count + " files",
-  detailSecondary: b.loc.toLocaleString() + " LOC",
-}))
+	label: b.label + " LOC",
+	value: b.loc,
+	detail: b.count + " files",
+	detailSecondary: b.loc.toLocaleString() + " LOC",
+}));
 
 const largestBarData = sorted.slice(0, 15).map((f) => ({
-  label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
-  value: f.data.linesOfCode,
-}))
+	label: f.data.relativePath.split("/").pop() ?? f.data.relativePath,
+	value: f.data.linesOfCode,
+}));
 
 const fileSizeRows = sorted.map((f) => ({
-  id: f.data.relativePath,
-  file: f.data.relativePath,
-  extension: `.${f.data.extension}`,
-  linesOfCode: f.data.linesOfCode,
-}))
+	id: f.data.relativePath,
+	file: f.data.relativePath,
+	extension: `.${f.data.extension}`,
+	linesOfCode: f.data.linesOfCode,
+}));
 ---
 
 <Dashboard title="File Size" projectName={projectName}>

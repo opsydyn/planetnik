@@ -1,104 +1,104 @@
 .report-static-table__surface {
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  background: var(--color-card);
-  overflow: hidden;
+	border: 1px solid var(--color-border);
+	border-radius: 18px;
+	background: var(--color-card);
+	overflow: hidden;
 }
 
 .report-static-table__wrap {
-  overflow-x: auto;
+	overflow-x: auto;
 }
 
 .report-static-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: auto;
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: auto;
 }
 
 .report-static-table thead th {
-  padding: 0;
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface-subtle);
-  vertical-align: top;
+	padding: 0;
+	text-align: left;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-surface-subtle);
+	vertical-align: top;
 }
 
 .report-static-table thead th > span {
-  display: block;
-  padding: 0.9rem 1rem;
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1.15;
-  color: var(--color-text-muted);
+	display: block;
+	padding: 0.9rem 1rem;
+	font-size: 0.72rem;
+	font-weight: 750;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	line-height: 1.15;
+	color: var(--color-text-muted);
 }
 
 .report-static-table tbody td {
-  padding: 0.95rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: top;
-  color: var(--color-text);
-  word-break: break-word;
+	padding: 0.95rem 1rem;
+	text-align: left;
+	border-bottom: 1px solid var(--color-border);
+	vertical-align: top;
+	color: var(--color-text);
+	word-break: break-word;
 }
 
 .report-static-table tbody tr:last-child td {
-  border-bottom: 0;
+	border-bottom: 0;
 }
 
 .report-static-table__num {
-  text-align: right;
-  font-family: "SF Mono", "Fira Code", monospace;
+	text-align: right;
+	font-family: "SF Mono", "Fira Code", monospace;
 }
 
 .report-static-table__date {
-  font-family: "SF Mono", "Fira Code", monospace;
-  color: var(--color-text-muted);
-  font-size: 0.82rem;
+	font-family: "SF Mono", "Fira Code", monospace;
+	color: var(--color-text-muted);
+	font-size: 0.82rem;
 }
 
 .report-static-table__code {
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 0.85em;
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  padding: 0.15em 0.4em;
-  border-radius: 999px;
+	font-family: "SF Mono", "Fira Code", monospace;
+	font-size: 0.85em;
+	background: var(--color-surface-muted);
+	color: var(--color-text);
+	padding: 0.15em 0.4em;
+	border-radius: 999px;
 }
 
 .report-static-table__path {
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  word-break: break-all;
-  color: var(--color-text-muted);
+	font-family: "SF Mono", "Fira Code", monospace;
+	font-size: 0.78rem;
+	line-height: 1.45;
+	word-break: break-all;
+	color: var(--color-text-muted);
 }
 
 .report-static-table__muted {
-  color: var(--color-text-muted);
+	color: var(--color-text-muted);
 }
 
 html[data-theme="dark"] .report-static-table__surface {
-  background: #0f172a;
+	background: #0f172a;
 }
 
 html[data-theme="dark"] .report-static-table thead th {
-  background: #111c2f;
+	background: #111c2f;
 }
 
 html[data-theme="dark"] .report-static-table thead th > span {
-  color: #94a3b8;
+	color: #94a3b8;
 }
 
 html[data-theme="dark"] .report-static-table__code {
-  background: #182334;
-  color: #e2e8f0;
+	background: #182334;
+	color: #e2e8f0;
 }
 
 @media (max-width: 900px) {
-  .report-static-table thead th > span,
-  .report-static-table tbody td {
-    padding-inline: 0.85rem;
-  }
+	.report-static-table thead th > span,
+	.report-static-table tbody td {
+		padding-inline: 0.85rem;
+	}
 }

@@ -1,213 +1,246 @@
 ---
-import DistributionChart from "../../../../../components/charts/DistributionChart"
-import DonutChart from "../../../../../components/charts/DonutChart"
-import HorizontalBarChart from "../../../../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../../../../components/tables/ReportDataGrid"
-import ScatterPlot from "../../../../../components/charts/ScatterPlot"
-import TemporalDependenciesExplorer from "../../../../../components/TemporalDependenciesExplorer"
-import { chartHelp } from "../../../../../lib/chartHelp"
-import { readLandscapeRepoJson, readLandscapeRepoText } from "../../../../../lib/landscape"
+import DistributionChart from "../../../../../components/charts/DistributionChart";
+import DonutChart from "../../../../../components/charts/DonutChart";
+import HorizontalBarChart from "../../../../../components/charts/HorizontalBarChart";
+import ScatterPlot from "../../../../../components/charts/ScatterPlot";
+import TemporalDependenciesExplorer from "../../../../../components/TemporalDependenciesExplorer";
+import ReportDataGrid from "../../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../../lib/chartHelp";
 import {
-  getLandscapeRepositoryPageContext,
-  type LandscapeRepoPageProps,
-} from "../../../../../lib/landscapeRepoContext"
-import { getMetric, parseMetricsText } from "../../../../../lib/metrics"
-import Dashboard from "../../../../../layouts/Dashboard.astro"
-import { route } from "../../../../../lib/route"
+	readLandscapeRepoJson,
+	readLandscapeRepoText,
+} from "../../../../../lib/landscape";
+import {
+	getLandscapeRepositoryPageContext,
+	type LandscapeRepoPageProps,
+} from "../../../../../lib/landscapeRepoContext";
+import { getMetric, parseMetricsText } from "../../../../../lib/metrics";
 
 interface RepoFileRecord {
-  relativePath: string
-  extension: string
-  linesOfCode: number
-  commitsCount?: number
-  contributorsCount?: number
-  firstDate?: string
-  latestDate?: string
+	relativePath: string;
+	extension: string;
+	linesOfCode: number;
+	commitsCount?: number;
+	contributorsCount?: number;
+	firstDate?: string;
+	latestDate?: string;
 }
 
 interface RepoFilesExport {
-  files?: RepoFileRecord[]
+	files?: RepoFileRecord[];
 }
 
 interface RepoTemporalDependency {
-  periodKey: string
-  periodLabel: string
-  periodDays: number
-  file1: string
-  file2: string
-  sameCommits: number
-  commitsFile1: number
-  commitsFile2: number
-  latestCommit: string
+	periodKey: string;
+	periodLabel: string;
+	periodDays: number;
+	file1: string;
+	file2: string;
+	sameCommits: number;
+	commitsFile1: number;
+	commitsFile2: number;
+	latestCommit: string;
 }
 
 const viewLabels = {
-  size: { pageTitle: "File Size", heading: "File Size" },
-  age: { pageTitle: "File Age", heading: "File Age & Freshness" },
-  churn: { pageTitle: "File Churn", heading: "File Change Frequency" },
-  temporal: { pageTitle: "Temporal Dependencies", heading: "Temporal Dependencies" },
-} as const
+	size: { pageTitle: "File Size", heading: "File Size" },
+	age: { pageTitle: "File Age", heading: "File Age & Freshness" },
+	churn: { pageTitle: "File Churn", heading: "File Change Frequency" },
+	temporal: {
+		pageTitle: "Temporal Dependencies",
+		heading: "Temporal Dependencies",
+	},
+} as const;
 
 export async function getStaticPaths() {
-  const { getCollection } = await import("astro:content")
-  const { getLandscapeRepoRouteParam } = await import("../../../../../lib/landscape")
-  const repositories = await getCollection("landscapeRepositories")
-  const views = ["size", "age", "churn", "temporal"] as const
+	const { getCollection } = await import("astro:content");
+	const { getLandscapeRepoRouteParam } = await import(
+		"../../../../../lib/landscape"
+	);
+	const repositories = await getCollection("landscapeRepositories");
+	const views = ["size", "age", "churn", "temporal"] as const;
 
-  return repositories.flatMap((repository) =>
-    views.map((view) => ({
-      params: {
-        repo: getLandscapeRepoRouteParam(repository.data.repoKey),
-        view,
-      },
-      props: {
-        repositoryId: repository.id,
-        repoKey: repository.data.repoKey,
-        view,
-      },
-    })),
-  )
+	return repositories.flatMap((repository) =>
+		views.map((view) => ({
+			params: {
+				repo: getLandscapeRepoRouteParam(repository.data.repoKey),
+				view,
+			},
+			props: {
+				repositoryId: repository.id,
+				repoKey: repository.data.repoKey,
+				view,
+			},
+		})),
+	);
 }
 
-const props = Astro.props as LandscapeRepoPageProps & { view: keyof typeof viewLabels }
-const viewMeta = viewLabels[props.view]
+const props = Astro.props as LandscapeRepoPageProps & {
+	view: keyof typeof viewLabels;
+};
+const viewMeta = viewLabels[props.view];
 
 if (!viewMeta) {
-  throw new Error(`Unsupported repository file view: ${props.view}`)
+	throw new Error(`Unsupported repository file view: ${props.view}`);
 }
 
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const filesMain = readLandscapeRepoJson<RepoFilesExport>(props.repoKey, "files_main.json")?.files ?? []
-const metrics = parseMetricsText(readLandscapeRepoText(props.repoKey, "metrics.txt"))
-const temporalDeps = readLandscapeRepoJson<{ dependencies?: RepoTemporalDependency[] }>(props.repoKey, "temporal_dependencies.json")?.dependencies ?? []
+const filesMain =
+	readLandscapeRepoJson<RepoFilesExport>(props.repoKey, "files_main.json")
+		?.files ?? [];
+const metrics = parseMetricsText(
+	readLandscapeRepoText(props.repoKey, "metrics.txt"),
+);
+const temporalDeps =
+	readLandscapeRepoJson<{ dependencies?: RepoTemporalDependency[] }>(
+		props.repoKey,
+		"temporal_dependencies.json",
+	)?.dependencies ?? [];
 
-const sortedFilesBySize = [...filesMain].sort((a, b) => b.linesOfCode - a.linesOfCode)
-const totalFileLoc = sortedFilesBySize.reduce((sum, file) => sum + file.linesOfCode, 0)
+const sortedFilesBySize = [...filesMain].sort(
+	(a, b) => b.linesOfCode - a.linesOfCode,
+);
+const totalFileLoc = sortedFilesBySize.reduce(
+	(sum, file) => sum + file.linesOfCode,
+	0,
+);
 const sizeBuckets = [
-  { label: "1-50", min: 1, max: 50, count: 0, loc: 0 },
-  { label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
-  { label: "101-200", min: 101, max: 200, count: 0, loc: 0 },
-  { label: "201-500", min: 201, max: 500, count: 0, loc: 0 },
-  { label: "501-1000", min: 501, max: 1000, count: 0, loc: 0 },
-  { label: "1001+", min: 1001, max: Infinity, count: 0, loc: 0 },
-]
+	{ label: "1-50", min: 1, max: 50, count: 0, loc: 0 },
+	{ label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
+	{ label: "101-200", min: 101, max: 200, count: 0, loc: 0 },
+	{ label: "201-500", min: 201, max: 500, count: 0, loc: 0 },
+	{ label: "501-1000", min: 501, max: 1000, count: 0, loc: 0 },
+	{ label: "1001+", min: 1001, max: Infinity, count: 0, loc: 0 },
+];
 
 for (const file of sortedFilesBySize) {
-  for (const bucket of sizeBuckets) {
-    if (file.linesOfCode >= bucket.min && file.linesOfCode <= bucket.max) {
-      bucket.count++
-      bucket.loc += file.linesOfCode
-      break
-    }
-  }
+	for (const bucket of sizeBuckets) {
+		if (file.linesOfCode >= bucket.min && file.linesOfCode <= bucket.max) {
+			bucket.count++;
+			bucket.loc += file.linesOfCode;
+			break;
+		}
+	}
 }
 
 const fileSizeDistribution = sizeBuckets.map((bucket) => ({
-  label: `${bucket.label} LOC`,
-  value: bucket.loc,
-  detail: `${bucket.count} files`,
-  detailSecondary: `${bucket.loc.toLocaleString()} LOC`,
-}))
+	label: `${bucket.label} LOC`,
+	value: bucket.loc,
+	detail: `${bucket.count} files`,
+	detailSecondary: `${bucket.loc.toLocaleString()} LOC`,
+}));
 
 const largestFilesBarData = sortedFilesBySize.slice(0, 15).map((file) => ({
-  label: file.relativePath.split("/").pop() ?? file.relativePath,
-  value: file.linesOfCode,
-}))
+	label: file.relativePath.split("/").pop() ?? file.relativePath,
+	value: file.linesOfCode,
+}));
 
 const fileSizeRows = sortedFilesBySize.map((file) => ({
-  id: file.relativePath,
-  file: file.relativePath,
-  extension: `.${file.extension}`,
-  linesOfCode: file.linesOfCode,
-}))
+	id: file.relativePath,
+	file: file.relativePath,
+	extension: `.${file.extension}`,
+	linesOfCode: file.linesOfCode,
+}));
 
-const ageInDays = getMetric(metrics, "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
-const activeDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ACTIVE_DAYS")
-const weeks = getMetric(metrics, "FILE_CHANGE_HISTORY_WEEKS")
-const estimatedWorkingDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS")
+const ageInDays = getMetric(metrics, "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS");
+const activeDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ACTIVE_DAYS");
+const weeks = getMetric(metrics, "FILE_CHANGE_HISTORY_WEEKS");
+const estimatedWorkingDays = getMetric(
+	metrics,
+	"FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS",
+);
 const ageCategories = [
-  { label: "Negligible Risk", metric: "FILE_AGE_NEGLIGIBLE_RISK_COUNT" },
-  { label: "Low Risk", metric: "FILE_AGE_LOW_RISK_COUNT" },
-  { label: "Medium Risk", metric: "FILE_AGE_MEDIUM_RISK_COUNT" },
-  { label: "High Risk", metric: "FILE_AGE_HIGH_RISK_COUNT" },
-  { label: "Very High Risk", metric: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
-]
-const ageRiskColors = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"]
+	{ label: "Negligible Risk", metric: "FILE_AGE_NEGLIGIBLE_RISK_COUNT" },
+	{ label: "Low Risk", metric: "FILE_AGE_LOW_RISK_COUNT" },
+	{ label: "Medium Risk", metric: "FILE_AGE_MEDIUM_RISK_COUNT" },
+	{ label: "High Risk", metric: "FILE_AGE_HIGH_RISK_COUNT" },
+	{ label: "Very High Risk", metric: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
+];
+const ageRiskColors = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"];
 const ageDistribution = ageCategories
-  .map((category, index) => {
-    const value = getMetric(metrics, category.metric)
-    return {
-      label: category.label,
-      value: value ?? 0,
-      detail: `${(value ?? 0).toLocaleString()} files`,
-      color: ageRiskColors[index],
-    }
-  })
-  .filter((item) => item.value > 0)
+	.map((category, index) => {
+		const value = getMetric(metrics, category.metric);
+		return {
+			label: category.label,
+			value: value ?? 0,
+			detail: `${(value ?? 0).toLocaleString()} files`,
+			color: ageRiskColors[index],
+		};
+	})
+	.filter((item) => item.value > 0);
 
 const ageDetailRows = ageCategories
-  .map((category) => {
-    const value = getMetric(metrics, category.metric)
-    return value === null ? null : { id: category.metric, category: category.label, files: value }
-  })
-  .filter((row): row is { id: string; category: string; files: number } => row !== null)
+	.map((category) => {
+		const value = getMetric(metrics, category.metric);
+		return value === null
+			? null
+			: { id: category.metric, category: category.label, files: value };
+	})
+	.filter(
+		(row): row is { id: string; category: string; files: number } =>
+			row !== null,
+	);
 
 const filesWithHistory = filesMain
-  .filter((file) => file.commitsCount && file.commitsCount > 0)
-  .sort((a, b) => (b.commitsCount ?? 0) - (a.commitsCount ?? 0))
+	.filter((file) => file.commitsCount && file.commitsCount > 0)
+	.sort((a, b) => (b.commitsCount ?? 0) - (a.commitsCount ?? 0));
 
 const churnScatterData = filesWithHistory.slice(0, 200).map((file) => ({
-  x: file.commitsCount ?? 0,
-  y: file.contributorsCount ?? 0,
-  label: file.relativePath.split("/").pop() ?? file.relativePath,
-}))
+	x: file.commitsCount ?? 0,
+	y: file.contributorsCount ?? 0,
+	label: file.relativePath.split("/").pop() ?? file.relativePath,
+}));
 
 const mostChangedFilesBarData = filesWithHistory.slice(0, 15).map((file) => ({
-  label: file.relativePath.split("/").pop() ?? file.relativePath,
-  value: file.commitsCount ?? 0,
-}))
+	label: file.relativePath.split("/").pop() ?? file.relativePath,
+	value: file.commitsCount ?? 0,
+}));
 
 const volatilityData = filesWithHistory.slice(0, 200).map((file) => ({
-  x: file.linesOfCode,
-  y: file.commitsCount ?? 0,
-  label: file.relativePath.split("/").pop() ?? file.relativePath,
-}))
+	x: file.linesOfCode,
+	y: file.commitsCount ?? 0,
+	label: file.relativePath.split("/").pop() ?? file.relativePath,
+}));
 
 const churnRows = filesWithHistory.map((file) => ({
-  id: file.relativePath,
-  file: file.relativePath,
-  commits: file.commitsCount ?? 0,
-  contributors: file.contributorsCount ?? 0,
-  firstChange: file.firstDate ?? "—",
-  lastChange: file.latestDate ?? "—",
-}))
+	id: file.relativePath,
+	file: file.relativePath,
+	commits: file.commitsCount ?? 0,
+	contributors: file.contributorsCount ?? 0,
+	firstChange: file.firstDate ?? "—",
+	lastChange: file.latestDate ?? "—",
+}));
 
-const groupedTemporalDeps = new Map<string, RepoTemporalDependency[]>()
+const groupedTemporalDeps = new Map<string, RepoTemporalDependency[]>();
 for (const dependency of temporalDeps) {
-  const group = groupedTemporalDeps.get(dependency.periodKey) ?? []
-  group.push(dependency)
-  groupedTemporalDeps.set(dependency.periodKey, group)
+	const group = groupedTemporalDeps.get(dependency.periodKey) ?? [];
+	group.push(dependency);
+	groupedTemporalDeps.set(dependency.periodKey, group);
 }
 
 const temporalSections = [...groupedTemporalDeps.entries()]
-  .map(([periodKey, group]) => {
-    const first = group[0]
-    if (!first) return null
-    const sorted = [...group].sort((left, right) => right.sameCommits - left.sameCommits)
-    return {
-      periodKey,
-      periodLabel: first.periodLabel,
-      periodDays: first.periodDays,
-      dependencies: sorted,
-    }
-  })
-  .filter((section): section is NonNullable<typeof section> => section !== null)
-  .sort((left, right) => left.periodDays - right.periodDays)
+	.map(([periodKey, group]) => {
+		const first = group[0];
+		if (!first) return null;
+		const sorted = [...group].sort(
+			(left, right) => right.sameCommits - left.sameCommits,
+		);
+		return {
+			periodKey,
+			periodLabel: first.periodLabel,
+			periodDays: first.periodDays,
+			dependencies: sorted,
+		};
+	})
+	.filter((section): section is NonNullable<typeof section> => section !== null)
+	.sort((left, right) => left.periodDays - right.periodDays);
 ---
 
 <Dashboard title={`${repoName} ${viewMeta.pageTitle}`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

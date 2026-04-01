@@ -1,9 +1,9 @@
 ---
-import { getEntry } from "astro:content"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getEntry } from "astro:content";
+import Dashboard from "../layouts/Dashboard.astro";
 
-const summary = await getEntry("analysis", "summary")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 ---
 
 <Dashboard title="Trend" projectName={projectName}>

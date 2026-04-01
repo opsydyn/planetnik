@@ -1,151 +1,178 @@
 ---
-import DistributionChart from "../../../../../components/charts/DistributionChart"
-import DonutChart from "../../../../../components/charts/DonutChart"
-import ReportDataGrid from "../../../../../components/tables/ReportDataGrid"
-import ScatterPlot from "../../../../../components/charts/ScatterPlot"
-import { chartHelp } from "../../../../../lib/chartHelp"
-import { readLandscapeRepoJson } from "../../../../../lib/landscape"
+import DistributionChart from "../../../../../components/charts/DistributionChart";
+import DonutChart from "../../../../../components/charts/DonutChart";
+import ScatterPlot from "../../../../../components/charts/ScatterPlot";
+import ReportDataGrid from "../../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../../lib/chartHelp";
+import { readLandscapeRepoJson } from "../../../../../lib/landscape";
 import {
-  getLandscapeRepositoryPageContext,
-  type LandscapeRepoPageProps,
-} from "../../../../../lib/landscapeRepoContext"
-import Dashboard from "../../../../../layouts/Dashboard.astro"
-import { route } from "../../../../../lib/route"
+	getLandscapeRepositoryPageContext,
+	type LandscapeRepoPageProps,
+} from "../../../../../lib/landscapeRepoContext";
 
 interface RepoUnitRecord {
-  shortName: string
-  relativeFileName: string
-  linesOfCode: number
-  mcCabeIndex: number
-  numberOfParameters: number
-  startLine: number
+	shortName: string;
+	relativeFileName: string;
+	linesOfCode: number;
+	mcCabeIndex: number;
+	numberOfParameters: number;
+	startLine: number;
 }
 
 interface RepoUnitsExport {
-  units?: RepoUnitRecord[]
+	units?: RepoUnitRecord[];
 }
 
 const viewLabels = {
-  size: { pageTitle: "Unit Size", heading: "Unit Size" },
-  complexity: { pageTitle: "Conditional Complexity", heading: "Conditional Complexity" },
-} as const
+	size: { pageTitle: "Unit Size", heading: "Unit Size" },
+	complexity: {
+		pageTitle: "Conditional Complexity",
+		heading: "Conditional Complexity",
+	},
+} as const;
 
 export async function getStaticPaths() {
-  const { getCollection } = await import("astro:content")
-  const { getLandscapeRepoRouteParam } = await import("../../../../../lib/landscape")
-  const repositories = await getCollection("landscapeRepositories")
-  const views = ["size", "complexity"] as const
+	const { getCollection } = await import("astro:content");
+	const { getLandscapeRepoRouteParam } = await import(
+		"../../../../../lib/landscape"
+	);
+	const repositories = await getCollection("landscapeRepositories");
+	const views = ["size", "complexity"] as const;
 
-  return repositories.flatMap((repository) =>
-    views.map((view) => ({
-      params: {
-        repo: getLandscapeRepoRouteParam(repository.data.repoKey),
-        view,
-      },
-      props: {
-        repositoryId: repository.id,
-        repoKey: repository.data.repoKey,
-        view,
-      },
-    })),
-  )
+	return repositories.flatMap((repository) =>
+		views.map((view) => ({
+			params: {
+				repo: getLandscapeRepoRouteParam(repository.data.repoKey),
+				view,
+			},
+			props: {
+				repositoryId: repository.id,
+				repoKey: repository.data.repoKey,
+				view,
+			},
+		})),
+	);
 }
 
-const props = Astro.props as LandscapeRepoPageProps & { view: keyof typeof viewLabels }
-const viewMeta = viewLabels[props.view]
+const props = Astro.props as LandscapeRepoPageProps & {
+	view: keyof typeof viewLabels;
+};
+const viewMeta = viewLabels[props.view];
 
 if (!viewMeta) {
-  throw new Error(`Unsupported repository unit view: ${props.view}`)
+	throw new Error(`Unsupported repository unit view: ${props.view}`);
 }
 
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const units = readLandscapeRepoJson<RepoUnitsExport>(props.repoKey, "units.json")?.units ?? []
+const units =
+	readLandscapeRepoJson<RepoUnitsExport>(props.repoKey, "units.json")?.units ??
+	[];
 
-const sortedUnitsBySize = [...units].sort((a, b) => b.linesOfCode - a.linesOfCode)
-const totalUnitLoc = sortedUnitsBySize.reduce((sum, unit) => sum + unit.linesOfCode, 0)
+const sortedUnitsBySize = [...units].sort(
+	(a, b) => b.linesOfCode - a.linesOfCode,
+);
+const totalUnitLoc = sortedUnitsBySize.reduce(
+	(sum, unit) => sum + unit.linesOfCode,
+	0,
+);
 const unitSizeBuckets = [
-  { label: "1-10", min: 1, max: 10, count: 0, loc: 0 },
-  { label: "11-20", min: 11, max: 20, count: 0, loc: 0 },
-  { label: "21-50", min: 21, max: 50, count: 0, loc: 0 },
-  { label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
-  { label: "101+", min: 101, max: Infinity, count: 0, loc: 0 },
-]
+	{ label: "1-10", min: 1, max: 10, count: 0, loc: 0 },
+	{ label: "11-20", min: 11, max: 20, count: 0, loc: 0 },
+	{ label: "21-50", min: 21, max: 50, count: 0, loc: 0 },
+	{ label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
+	{ label: "101+", min: 101, max: Infinity, count: 0, loc: 0 },
+];
 
 for (const unit of sortedUnitsBySize) {
-  for (const bucket of unitSizeBuckets) {
-    if (unit.linesOfCode >= bucket.min && unit.linesOfCode <= bucket.max) {
-      bucket.count++
-      bucket.loc += unit.linesOfCode
-      break
-    }
-  }
+	for (const bucket of unitSizeBuckets) {
+		if (unit.linesOfCode >= bucket.min && unit.linesOfCode <= bucket.max) {
+			bucket.count++;
+			bucket.loc += unit.linesOfCode;
+			break;
+		}
+	}
 }
 
 const unitSizeDistribution = unitSizeBuckets.map((bucket) => ({
-  label: `${bucket.label} LOC`,
-  value: bucket.loc,
-  detail: `${bucket.count} units`,
-  detailSecondary: `${bucket.loc.toLocaleString()} LOC`,
-}))
+	label: `${bucket.label} LOC`,
+	value: bucket.loc,
+	detail: `${bucket.count} units`,
+	detailSecondary: `${bucket.loc.toLocaleString()} LOC`,
+}));
 
 const unitSizeRiskData = [
-  { label: "Low (1-20 LOC)", value: unitSizeBuckets[0].count + unitSizeBuckets[1].count },
-  { label: "Medium (21-50 LOC)", value: unitSizeBuckets[2].count },
-  { label: "High (51-100 LOC)", value: unitSizeBuckets[3].count },
-  { label: "Very High (101+ LOC)", value: unitSizeBuckets[4].count },
-].filter((item) => item.value > 0)
+	{
+		label: "Low (1-20 LOC)",
+		value: unitSizeBuckets[0].count + unitSizeBuckets[1].count,
+	},
+	{ label: "Medium (21-50 LOC)", value: unitSizeBuckets[2].count },
+	{ label: "High (51-100 LOC)", value: unitSizeBuckets[3].count },
+	{ label: "Very High (101+ LOC)", value: unitSizeBuckets[4].count },
+].filter((item) => item.value > 0);
 
 const unitSizeRows = sortedUnitsBySize.map((unit) => ({
-  id: `${unit.relativeFileName}:${unit.startLine}`,
-  unit: unit.shortName,
-  file: unit.relativeFileName,
-  linesOfCode: unit.linesOfCode,
-  mcCabeIndex: unit.mcCabeIndex,
-  numberOfParameters: unit.numberOfParameters,
-}))
+	id: `${unit.relativeFileName}:${unit.startLine}`,
+	unit: unit.shortName,
+	file: unit.relativeFileName,
+	linesOfCode: unit.linesOfCode,
+	mcCabeIndex: unit.mcCabeIndex,
+	numberOfParameters: unit.numberOfParameters,
+}));
 
-const sortedUnitsByComplexity = [...units].sort((a, b) => b.mcCabeIndex - a.mcCabeIndex)
+const sortedUnitsByComplexity = [...units].sort(
+	(a, b) => b.mcCabeIndex - a.mcCabeIndex,
+);
 const complexityBuckets = [
-  { label: "1-5 (simple)", min: 1, max: 5, count: 0, color: "#22c55e" },
-  { label: "6-10 (moderate)", min: 6, max: 10, count: 0, color: "#eab308" },
-  { label: "11-25 (complex)", min: 11, max: 25, count: 0, color: "#f97316" },
-  { label: "26+ (very complex)", min: 26, max: Infinity, count: 0, color: "#ef4444" },
-]
+	{ label: "1-5 (simple)", min: 1, max: 5, count: 0, color: "#22c55e" },
+	{ label: "6-10 (moderate)", min: 6, max: 10, count: 0, color: "#eab308" },
+	{ label: "11-25 (complex)", min: 11, max: 25, count: 0, color: "#f97316" },
+	{
+		label: "26+ (very complex)",
+		min: 26,
+		max: Infinity,
+		count: 0,
+		color: "#ef4444",
+	},
+];
 
 for (const unit of sortedUnitsByComplexity) {
-  for (const bucket of complexityBuckets) {
-    if (unit.mcCabeIndex >= bucket.min && unit.mcCabeIndex <= bucket.max) {
-      bucket.count++
-      break
-    }
-  }
+	for (const bucket of complexityBuckets) {
+		if (unit.mcCabeIndex >= bucket.min && unit.mcCabeIndex <= bucket.max) {
+			bucket.count++;
+			break;
+		}
+	}
 }
 
 const complexityDistribution = complexityBuckets.map((bucket) => ({
-  label: bucket.label,
-  value: bucket.count,
-  detail: bucket.count.toString(),
-  color: bucket.color,
-}))
+	label: bucket.label,
+	value: bucket.count,
+	detail: bucket.count.toString(),
+	color: bucket.color,
+}));
 
-const complexityScatterData = sortedUnitsByComplexity.slice(0, 200).map((unit) => ({
-  x: unit.linesOfCode,
-  y: unit.mcCabeIndex,
-  label: unit.shortName,
-}))
+const complexityScatterData = sortedUnitsByComplexity
+	.slice(0, 200)
+	.map((unit) => ({
+		x: unit.linesOfCode,
+		y: unit.mcCabeIndex,
+		label: unit.shortName,
+	}));
 
 const complexityRows = sortedUnitsByComplexity.map((unit) => ({
-  id: `${unit.relativeFileName}:${unit.startLine}`,
-  unit: unit.shortName,
-  file: unit.relativeFileName,
-  mcCabeIndex: unit.mcCabeIndex,
-  linesOfCode: unit.linesOfCode,
-}))
+	id: `${unit.relativeFileName}:${unit.startLine}`,
+	unit: unit.shortName,
+	file: unit.relativeFileName,
+	mcCabeIndex: unit.mcCabeIndex,
+	linesOfCode: unit.linesOfCode,
+}));
 ---
 
 <Dashboard title={`${repoName} ${viewMeta.pageTitle}`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

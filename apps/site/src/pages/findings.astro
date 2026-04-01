@@ -1,20 +1,23 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
 
-const summary = await getEntry("analysis", "summary")
-const findings = await getCollection("findings")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const findings = await getCollection("findings");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 const findingRows = findings.map((finding, index) => ({
-  id: finding.id,
-  href: `#${finding.id}`,
-  sequence: index + 1,
-  summary: finding.data.summary,
-  preview: finding.data.bodyText.length > 180 ? `${finding.data.bodyText.slice(0, 177)}...` : finding.data.bodyText,
-  words: finding.data.bodyText.split(/\s+/).filter(Boolean).length,
-}))
+	id: finding.id,
+	href: `#${finding.id}`,
+	sequence: index + 1,
+	summary: finding.data.summary,
+	preview:
+		finding.data.bodyText.length > 180
+			? `${finding.data.bodyText.slice(0, 177)}...`
+			: finding.data.bodyText,
+	words: finding.data.bodyText.split(/\s+/).filter(Boolean).length,
+}));
 ---
 
 <Dashboard title="Findings" projectName={projectName}>

@@ -1,59 +1,87 @@
 ---
 const quadrants = [
-  {
-    id: "strategic",
-    title: "Strategic work",
-    subtitleLines: ["High effort", "High impact"],
-    x: 694,
-    y: 242,
-    subtitleStartY: 280,
-    align: "middle",
-  },
-  {
-    id: "leverage",
-    title: "Leverage edits",
-    subtitleLines: ["Low effort", "High impact"],
-    x: 266,
-    y: 182,
-    subtitleStartY: 220,
-    align: "middle",
-  },
-  {
-    id: "ghosts",
-    title: "Ghost work",
-    subtitleLines: ["High effort", "Low impact"],
-    x: 694,
-    y: 486,
-    subtitleStartY: 524,
-    align: "middle",
-  },
-  {
-    id: "snacks",
-    title: "Snacks",
-    subtitleLines: ["Low effort", "Low impact"],
-    x: 266,
-    y: 516,
-    subtitleStartY: 554,
-    align: "middle",
-  },
-] as const
+	{
+		id: "strategic",
+		title: "Strategic work",
+		subtitleLines: ["High effort", "High impact"],
+		x: 694,
+		y: 242,
+		subtitleStartY: 280,
+		align: "middle",
+	},
+	{
+		id: "leverage",
+		title: "Leverage edits",
+		subtitleLines: ["Low effort", "High impact"],
+		x: 266,
+		y: 182,
+		subtitleStartY: 220,
+		align: "middle",
+	},
+	{
+		id: "ghosts",
+		title: "Ghost work",
+		subtitleLines: ["High effort", "Low impact"],
+		x: 694,
+		y: 486,
+		subtitleStartY: 524,
+		align: "middle",
+	},
+	{
+		id: "snacks",
+		title: "Snacks",
+		subtitleLines: ["Low effort", "Low impact"],
+		x: 266,
+		y: 516,
+		subtitleStartY: 554,
+		align: "middle",
+	},
+] as const;
 
 const detailStacks = [
-  {
-    tone: "warning",
-    items: [
-      { x: 82, y: 364, width: 312, height: 54, color: "var(--impact-danger)", lines: ["Visible activity", "without structural leverage"] },
-      { x: 82, y: 428, width: 312, height: 54, color: "var(--impact-warning)", lines: ["Feels productive, but rarely", "changes the system's future"] },
-    ],
-  },
-  {
-    tone: "accent",
-    items: [
-      { x: 564, y: 90, width: 282, height: 54, color: "var(--impact-success)", lines: ["Harder work with", "durable system payoff"] },
-      { x: 564, y: 154, width: 282, height: 54, color: "var(--impact-accent)", lines: ["The kind of change", "Planetnik is designed to surface"] },
-    ],
-  },
-] as const
+	{
+		tone: "warning",
+		items: [
+			{
+				x: 82,
+				y: 364,
+				width: 312,
+				height: 54,
+				color: "var(--impact-danger)",
+				lines: ["Visible activity", "without structural leverage"],
+			},
+			{
+				x: 82,
+				y: 428,
+				width: 312,
+				height: 54,
+				color: "var(--impact-warning)",
+				lines: ["Feels productive, but rarely", "changes the system's future"],
+			},
+		],
+	},
+	{
+		tone: "accent",
+		items: [
+			{
+				x: 564,
+				y: 90,
+				width: 282,
+				height: 54,
+				color: "var(--impact-success)",
+				lines: ["Harder work with", "durable system payoff"],
+			},
+			{
+				x: 564,
+				y: 154,
+				width: 282,
+				height: 54,
+				color: "var(--impact-accent)",
+				lines: ["The kind of change", "Planetnik is designed to surface"],
+			},
+		],
+	},
+] as const;
 ---
 
 <figure class="impact-matrix">

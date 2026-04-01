@@ -21,9 +21,9 @@ pre.graphviz { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-
 </head>
 <body>
 <div class="container-fluid">
-`
+`;
 
 export const REPORTS_HTML_FOOTER = `
 </div>
 </body>
-</html>`
+</html>`;

@@ -1,17 +1,17 @@
-import type { DuplicationInstance } from "../duplication/DuplicationInstance.js"
-import { DuplicationMetric } from "../metrics/DuplicationMetric.js"
+import type { DuplicationInstance } from "../duplication/DuplicationInstance.js";
+import { DuplicationMetric } from "../metrics/DuplicationMetric.js";
 
 export class DuplicationAnalysisResults {
-  overallDuplication: DuplicationMetric = new DuplicationMetric("system")
+	overallDuplication: DuplicationMetric = new DuplicationMetric("system");
 
-  duplicationPerComponent: DuplicationMetric[][] = []
-  duplicationPerConcern: DuplicationMetric[] = []
-  duplicationPerExtension: DuplicationMetric[] = []
+	duplicationPerComponent: DuplicationMetric[][] = [];
+	duplicationPerConcern: DuplicationMetric[] = [];
+	duplicationPerExtension: DuplicationMetric[] = [];
 
-  // Not serialized
-  allDuplicates: DuplicationInstance[] = []
-  unitDuplicates: DuplicationInstance[] = []
+	// Not serialized
+	allDuplicates: DuplicationInstance[] = [];
+	unitDuplicates: DuplicationInstance[] = [];
 
-  longestDuplicates: DuplicationInstance[] = []
-  mostFrequentDuplicates: DuplicationInstance[] = []
+	longestDuplicates: DuplicationInstance[] = [];
+	mostFrequentDuplicates: DuplicationInstance[] = [];
 }

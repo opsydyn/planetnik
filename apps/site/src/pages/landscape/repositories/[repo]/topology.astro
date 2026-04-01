@@ -1,127 +1,149 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import TopologyGraph from "../../../../components/TopologyGraph"
-import { getLandscapeRepoRouteParam, getLandscapeRepositoryHref, readLandscapeRepoJson } from "../../../../lib/landscape"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import TopologyGraph from "../../../../components/TopologyGraph";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import {
+	getLandscapeRepoRouteParam,
+	getLandscapeRepositoryHref,
+	readLandscapeRepoJson,
+} from "../../../../lib/landscape";
 
-type PeopleDep = { from: string; to: string; count: number; files: string[] }
+type PeopleDep = { from: string; to: string; count: number; files: string[] };
 type ContributorImpactDimensionKey =
-  | "complexity_reduction"
-  | "boundary_shaping"
-  | "knowledge_spread"
-  | "coordination_relief"
-  | "change_enablement"
+	| "complexity_reduction"
+	| "boundary_shaping"
+	| "knowledge_spread"
+	| "coordination_relief"
+	| "change_enablement";
 
 type ContributorImpactContributor = {
-  email: string
-  display_name: string
-  glue_score: number
-  snacking_score: number
-  structural_impact_score: number
-  visible_activity_score: number
-  collaborator_count: number
-  shared_files_count: number
-  commits_count: number
-  files_touched: number
-  components_touched: number
-  dominant_dimension: ContributorImpactDimensionKey
-  dimensions: Record<ContributorImpactDimensionKey, number>
-  top_components: Array<{ name: string; files: number; commits: number }>
-  top_routes: string[]
-  reasons: string[]
-  is_glue: boolean
-  is_snacking: boolean
-}
+	email: string;
+	display_name: string;
+	glue_score: number;
+	snacking_score: number;
+	structural_impact_score: number;
+	visible_activity_score: number;
+	collaborator_count: number;
+	shared_files_count: number;
+	commits_count: number;
+	files_touched: number;
+	components_touched: number;
+	dominant_dimension: ContributorImpactDimensionKey;
+	dimensions: Record<ContributorImpactDimensionKey, number>;
+	top_components: Array<{ name: string; files: number; commits: number }>;
+	top_routes: string[];
+	reasons: string[];
+	is_glue: boolean;
+	is_snacking: boolean;
+};
 
 type ContributorImpactPeriod = {
-  period_key: "all_time" | "30d" | "90d" | "180d" | "365d"
-  period_label: string
-  contributors: ContributorImpactContributor[]
-}
+	period_key: "all_time" | "30d" | "90d" | "180d" | "365d";
+	period_label: string;
+	contributors: ContributorImpactContributor[];
+};
 
 type ContributorImpactExport = {
-  periods?: ContributorImpactPeriod[]
-}
+	periods?: ContributorImpactPeriod[];
+};
 
 interface RepoAnalysisSummary {
-  metadata?: {
-    name?: string
-  }
+	metadata?: {
+		name?: string;
+	};
 }
 
 const periodFiles = {
-  "All Time": "people_dependencies.json",
-  "1 Year": "people_dependencies_365d.json",
-  "6 Months": "people_dependencies_180d.json",
-  Quarter: "people_dependencies_90d.json",
-  Month: "people_dependencies_30d.json",
-} as const
+	"All Time": "people_dependencies.json",
+	"1 Year": "people_dependencies_365d.json",
+	"6 Months": "people_dependencies_180d.json",
+	Quarter: "people_dependencies_90d.json",
+	Month: "people_dependencies_30d.json",
+} as const;
 
 export async function getStaticPaths() {
-  const repositories = await getCollection("landscapeRepositories")
+	const repositories = await getCollection("landscapeRepositories");
 
-  return repositories.map((repository) => ({
-    params: { repo: getLandscapeRepoRouteParam(repository.data.repoKey) },
-    props: {
-      repositoryId: repository.id,
-      repoKey: repository.data.repoKey,
-    },
-  }))
+	return repositories.map((repository) => ({
+		params: { repo: getLandscapeRepoRouteParam(repository.data.repoKey) },
+		props: {
+			repositoryId: repository.id,
+			repoKey: repository.data.repoKey,
+		},
+	}));
 }
 
 const { repositoryId, repoKey } = Astro.props as {
-  repositoryId: string
-  repoKey: string
-}
+	repositoryId: string;
+	repoKey: string;
+};
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const repository = await getEntry("landscapeRepositories", repositoryId)
+const repository = await getEntry("landscapeRepositories", repositoryId);
 if (!repository) {
-  throw new Error(`Landscape repository entry not found for ${repositoryId}`)
+	throw new Error(`Landscape repository entry not found for ${repositoryId}`);
 }
 
-const repoSummary = readLandscapeRepoJson<RepoAnalysisSummary>(repoKey, "analysisResults.json")
+const repoSummary = readLandscapeRepoJson<RepoAnalysisSummary>(
+	repoKey,
+	"analysisResults.json",
+);
 
 function loadPeriod(filename: string): PeopleDep[] {
-  return readLandscapeRepoJson<PeopleDep[]>(repoKey, filename) ?? []
+	return readLandscapeRepoJson<PeopleDep[]>(repoKey, filename) ?? [];
 }
 
-function loadContributorImpact(): Record<string, ContributorImpactContributor[]> {
-  const raw = readLandscapeRepoJson<ContributorImpactExport>(repoKey, "contributor_impact.json")
-  if (!raw) return {}
+function loadContributorImpact(): Record<
+	string,
+	ContributorImpactContributor[]
+> {
+	const raw = readLandscapeRepoJson<ContributorImpactExport>(
+		repoKey,
+		"contributor_impact.json",
+	);
+	if (!raw) return {};
 
-  const labelByPeriodKey: Record<ContributorImpactPeriod["period_key"], string> = {
-    all_time: "All Time",
-    "365d": "1 Year",
-    "180d": "6 Months",
-    "90d": "Quarter",
-    "30d": "Month",
-  }
+	const labelByPeriodKey: Record<
+		ContributorImpactPeriod["period_key"],
+		string
+	> = {
+		all_time: "All Time",
+		"365d": "1 Year",
+		"180d": "6 Months",
+		"90d": "Quarter",
+		"30d": "Month",
+	};
 
-  return Object.fromEntries(
-    (raw.periods ?? []).map((period) => [labelByPeriodKey[period.period_key], period.contributors ?? []]),
-  )
+	return Object.fromEntries(
+		(raw.periods ?? []).map((period) => [
+			labelByPeriodKey[period.period_key],
+			period.contributors ?? [],
+		]),
+	);
 }
 
 const periods = Object.fromEntries(
-  Object.entries(periodFiles)
-    .map(([label, fileName]) => [label, loadPeriod(fileName)])
-    .filter(([, edges]) => edges.length > 0),
-) as Record<string, PeopleDep[]>
+	Object.entries(periodFiles)
+		.map(([label, fileName]) => [label, loadPeriod(fileName)])
+		.filter(([, edges]) => edges.length > 0),
+) as Record<string, PeopleDep[]>;
 
-const contributorImpactPeriods = loadContributorImpact()
+const contributorImpactPeriods = loadContributorImpact();
 const availableImpactPeriods = Object.fromEntries(
-  Object.keys(periods).map((key) => [key, contributorImpactPeriods[key] ?? []]),
-) as Record<string, ContributorImpactContributor[]>
+	Object.keys(periods).map((key) => [key, contributorImpactPeriods[key] ?? []]),
+) as Record<string, ContributorImpactContributor[]>;
 
-const hasData = Object.keys(periods).length > 0
-const projectName = reportContext.data.title
-const repoName = repository.data.name || repoSummary?.metadata?.name || repoKey.split("/").at(-1) || repoKey
+const hasData = Object.keys(periods).length > 0;
+const projectName = reportContext.data.title;
+const repoName =
+	repository.data.name ||
+	repoSummary?.metadata?.name ||
+	repoKey.split("/").at(-1) ||
+	repoKey;
 ---
 
 <Dashboard

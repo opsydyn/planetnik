@@ -1,16 +1,16 @@
-import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js"
-import { CStyleAnalyzer } from "./CStyleAnalyzer.js"
+import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js";
+import { CStyleAnalyzer } from "./CStyleAnalyzer.js";
 
 export class GoLangAnalyzer extends CStyleAnalyzer {
-  protected override duplicationPatterns = ["import .*", "package.*", "{", "}"]
+	protected override duplicationPatterns = ["import .*", "package.*", "{", "}"];
 
-  protected override createCleaner(): CommentsAndEmptyLinesCleaner {
-    return new CommentsAndEmptyLinesCleaner()
-      .addCommentBlockHelper("/*", "*/")
-      .addCommentBlockHelper("//", "\n")
-      .addStringBlockHelper('"', '"', "\\")
-      .addStringBlockHelper("'", "'", "\\")
-      .addStringBlockHelper("`", "`")
-      .addCommentBlockHelper("import (", ")")
-  }
+	protected override createCleaner(): CommentsAndEmptyLinesCleaner {
+		return new CommentsAndEmptyLinesCleaner()
+			.addCommentBlockHelper("/*", "*/")
+			.addCommentBlockHelper("//", "\n")
+			.addStringBlockHelper('"', '"', "\\")
+			.addStringBlockHelper("'", "'", "\\")
+			.addStringBlockHelper("`", "`")
+			.addCommentBlockHelper("import (", ")");
+	}
 }

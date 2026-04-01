@@ -47,9 +47,12 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/health") {
-      return new Response(JSON.stringify({ status: "ok", model: MODEL, dataDir: DATA_DIR || null, actions: actions.length }), {
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      })
+      return new Response(
+        JSON.stringify({ status: "ok", model: MODEL, dataDir: DATA_DIR || null, actions: actions.length }),
+        {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      )
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders })

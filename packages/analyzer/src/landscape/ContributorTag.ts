@@ -1,4 +1,4 @@
 export class ContributorTag {
-  name: string = ""
-  emailPatterns: string[] = []
+	name: string = "";
+	emailPatterns: string[] = [];
 }

@@ -1,61 +1,69 @@
-import type { SourceFile } from "../aspects/SourceFile.js"
-import type { CleanedContent } from "../cleaners/CleanedContent.js"
-import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js"
-import { SourceCodeCleanerUtils } from "../cleaners/SourceCodeCleanerUtils.js"
-import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js"
-import type { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js"
-import type { UnitInfo } from "../units/UnitInfo.js"
+import type { SourceFile } from "../aspects/SourceFile.js";
+import type { CleanedContent } from "../cleaners/CleanedContent.js";
+import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js";
+import { SourceCodeCleanerUtils } from "../cleaners/SourceCodeCleanerUtils.js";
+import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js";
+import type { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js";
+import type { UnitInfo } from "../units/UnitInfo.js";
 import {
-  FEATURE_ADVANCED_CODE_CLEANING,
-  FEATURE_ALL_STANDARD_ANALYSES,
-  FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS,
-  FEATURE_UNIT_SIZE_ANALYSIS,
-  type LanguageAnalyzer,
-} from "./LanguageAnalyzer.js"
+	FEATURE_ADVANCED_CODE_CLEANING,
+	FEATURE_ALL_STANDARD_ANALYSES,
+	FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS,
+	FEATURE_UNIT_SIZE_ANALYSIS,
+	type LanguageAnalyzer,
+} from "./LanguageAnalyzer.js";
 
 export class PythonAnalyzer implements LanguageAnalyzer {
-  private createCleaner(): CommentsAndEmptyLinesCleaner {
-    return new CommentsAndEmptyLinesCleaner()
-      .addCommentBlockHelper('"""', '"""')
-      .addCommentBlockHelper("#", "\n")
-      .addStringBlockHelper('"', '"', "\\")
-      .addStringBlockHelper("'", "'", "\\")
-      .addStringBlockHelper("'''", "'''")
-  }
+	private createCleaner(): CommentsAndEmptyLinesCleaner {
+		return new CommentsAndEmptyLinesCleaner()
+			.addCommentBlockHelper('"""', '"""')
+			.addCommentBlockHelper("#", "\n")
+			.addStringBlockHelper('"', '"', "\\")
+			.addStringBlockHelper("'", "'", "\\")
+			.addStringBlockHelper("'''", "'''");
+	}
 
-  cleanForLinesOfCodeCalculations(sourceFile: SourceFile): CleanedContent {
-    return this.createCleaner().clean(sourceFile.content)
-  }
+	cleanForLinesOfCodeCalculations(sourceFile: SourceFile): CleanedContent {
+		return this.createCleaner().clean(sourceFile.content);
+	}
 
-  cleanForDuplicationCalculations(sourceFile: SourceFile): CleanedContent {
-    const cleaned = this.createCleaner().clean(sourceFile.content)
-    let content = cleaned.cleanedContent
-    content = SourceCodeCleanerUtils.emptyLinesMatchingPattern("^\\s*from .*import.*$", content)
-    content = SourceCodeCleanerUtils.emptyLinesMatchingPattern("^\\s*import .*$", content)
-    content = SourceCodeCleanerUtils.trimLines(content)
-    return SourceCodeCleanerUtils.cleanEmptyLinesWithLineIndexes(content)
-  }
+	cleanForDuplicationCalculations(sourceFile: SourceFile): CleanedContent {
+		const cleaned = this.createCleaner().clean(sourceFile.content);
+		let content = cleaned.cleanedContent;
+		content = SourceCodeCleanerUtils.emptyLinesMatchingPattern(
+			"^\\s*from .*import.*$",
+			content,
+		);
+		content = SourceCodeCleanerUtils.emptyLinesMatchingPattern(
+			"^\\s*import .*$",
+			content,
+		);
+		content = SourceCodeCleanerUtils.trimLines(content);
+		return SourceCodeCleanerUtils.cleanEmptyLinesWithLineIndexes(content);
+	}
 
-  extractUnits(_sourceFile: SourceFile): UnitInfo[] {
-    // Python unit extraction would use indentation-based heuristics
-    // Placeholder for now — will port PythonHeuristicUnitsExtractor
-    return []
-  }
+	extractUnits(_sourceFile: SourceFile): UnitInfo[] {
+		// Python unit extraction would use indentation-based heuristics
+		// Placeholder for now — will port PythonHeuristicUnitsExtractor
+		return [];
+	}
 
-  extractDependencies(_sourceFiles: readonly SourceFile[]): DependenciesAnalysis {
-    return new DependenciesAnalysis()
-  }
+	extractDependencies(
+		_sourceFiles: readonly SourceFile[],
+	): DependenciesAnalysis {
+		return new DependenciesAnalysis();
+	}
 
-  getMetaDependencyRules(): MetaDependencyRule[] {
-    return []
-  }
+	getMetaDependencyRules(): MetaDependencyRule[] {
+		return [];
+	}
 
-  getFeaturesDescription(): string[] {
-    return [
-      FEATURE_ALL_STANDARD_ANALYSES,
-      FEATURE_ADVANCED_CODE_CLEANING,
-      FEATURE_UNIT_SIZE_ANALYSIS,
-      FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS,
-    ]
-  }
+	getFeaturesDescription(): string[] {
+		return [
+			FEATURE_ALL_STANDARD_ANALYSES,
+			FEATURE_ADVANCED_CODE_CLEANING,
+			FEATURE_UNIT_SIZE_ANALYSIS,
+			FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS,
+		];
+	}
 }

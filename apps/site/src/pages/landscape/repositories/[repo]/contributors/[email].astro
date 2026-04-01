@@ -1,167 +1,192 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import CommitHeatmap from "../../../../../components/charts/CommitHeatmap"
-import DonutChart from "../../../../../components/charts/DonutChart"
-import HorizontalBarChart from "../../../../../components/charts/HorizontalBarChart"
-import LineChart from "../../../../../components/charts/LineChart"
-import StaticReportTable from "../../../../../components/tables/StaticReportTable.astro"
-import { chartHelp } from "../../../../../lib/chartHelp"
+import { getCollection, getEntry } from "astro:content";
+import CommitHeatmap from "../../../../../components/charts/CommitHeatmap";
+import DonutChart from "../../../../../components/charts/DonutChart";
+import HorizontalBarChart from "../../../../../components/charts/HorizontalBarChart";
+import LineChart from "../../../../../components/charts/LineChart";
+import StaticReportTable from "../../../../../components/tables/StaticReportTable.astro";
+import Dashboard from "../../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../../lib/chartHelp";
 import {
-  getContributorDisplayName,
-  getContributorMonthlyActivity,
-  getContributorRouteParam,
-} from "../../../../../lib/contributors"
+	getContributorDisplayName,
+	getContributorMonthlyActivity,
+	getContributorRouteParam,
+} from "../../../../../lib/contributors";
 import {
-  getLandscapeRepoRouteParam,
-  getLandscapeRepositoryContributorHref,
-  getLandscapeRepositoryHref,
-  readLandscapeRepoContributorDetailJson,
-  readLandscapeRepoJson,
-} from "../../../../../lib/landscape"
-import Dashboard from "../../../../../layouts/Dashboard.astro"
-import { route } from "../../../../../lib/route"
+	getLandscapeRepoRouteParam,
+	getLandscapeRepositoryContributorHref,
+	getLandscapeRepositoryHref,
+	readLandscapeRepoContributorDetailJson,
+	readLandscapeRepoJson,
+} from "../../../../../lib/landscape";
 
 interface RepoContributorDetail {
-  email: string
-  userName?: string
-  commitsCount: number
-  commitsCount30Days: number
-  commitsCount90Days: number
-  commitsCount180Days: number
-  commitsCount365Days: number
-  firstCommitDate: string
-  latestCommitDate: string
-  isActive: boolean
-  isRookie: boolean
-  dailyActivity: Array<{ date: string; commits: number }>
-  files: Array<{
-    relativePath: string
-    extension: string
-    commits: number
-    logicalComponents: string[]
-    concerns: string[]
-  }>
-  extensions: Array<{
-    extension: string
-    commits: number
-    files: number
-  }>
-  logicalComponents: Array<{
-    name: string
-    files: number
-    linesOfCode: number
-  }>
-  collaborators: Array<{
-    email: string
-    sharedFiles: number
-  }>
+	email: string;
+	userName?: string;
+	commitsCount: number;
+	commitsCount30Days: number;
+	commitsCount90Days: number;
+	commitsCount180Days: number;
+	commitsCount365Days: number;
+	firstCommitDate: string;
+	latestCommitDate: string;
+	isActive: boolean;
+	isRookie: boolean;
+	dailyActivity: Array<{ date: string; commits: number }>;
+	files: Array<{
+		relativePath: string;
+		extension: string;
+		commits: number;
+		logicalComponents: string[];
+		concerns: string[];
+	}>;
+	extensions: Array<{
+		extension: string;
+		commits: number;
+		files: number;
+	}>;
+	logicalComponents: Array<{
+		name: string;
+		files: number;
+		linesOfCode: number;
+	}>;
+	collaborators: Array<{
+		email: string;
+		sharedFiles: number;
+	}>;
 }
 
 interface RepoContributorImpactEntry {
-  email: string
-  display_name: string
-  glue_score: number
-  snacking_score: number
-  structural_impact_score: number
-  visible_activity_score: number
-  collaborator_count: number
-  shared_files_count: number
-  commits_count: number
-  files_touched: number
-  components_touched: number
-  dominant_dimension: string
-  reasons: string[]
-  is_glue: boolean
-  is_snacking: boolean
+	email: string;
+	display_name: string;
+	glue_score: number;
+	snacking_score: number;
+	structural_impact_score: number;
+	visible_activity_score: number;
+	collaborator_count: number;
+	shared_files_count: number;
+	commits_count: number;
+	files_touched: number;
+	components_touched: number;
+	dominant_dimension: string;
+	reasons: string[];
+	is_glue: boolean;
+	is_snacking: boolean;
 }
 
 interface RepoContributorImpactExport {
-  periods?: Array<{
-    period_key?: string
-    contributors?: RepoContributorImpactEntry[]
-  }>
+	periods?: Array<{
+		period_key?: string;
+		contributors?: RepoContributorImpactEntry[];
+	}>;
 }
 
 interface RepoAnalysisSummary {
-  metadata?: {
-    name?: string
-    description?: string
-  }
+	metadata?: {
+		name?: string;
+		description?: string;
+	};
 }
 
 export async function getStaticPaths() {
-  const contributors = await getCollection("landscapeContributors")
+	const contributors = await getCollection("landscapeContributors");
 
-  return contributors.flatMap((contributor) =>
-    contributor.data.repositories
-      .filter((repository) => repository.repoKey && repository.analysisResultsPath)
-      .map((repository) => ({
-        params: {
-          repo: getLandscapeRepoRouteParam(repository.repoKey),
-          email: getContributorRouteParam(contributor.data.email),
-        },
-        props: {
-          repoKey: repository.repoKey,
-          contributorEmail: contributor.data.email,
-        },
-      })),
-  )
+	return contributors.flatMap((contributor) =>
+		contributor.data.repositories
+			.filter(
+				(repository) => repository.repoKey && repository.analysisResultsPath,
+			)
+			.map((repository) => ({
+				params: {
+					repo: getLandscapeRepoRouteParam(repository.repoKey),
+					email: getContributorRouteParam(contributor.data.email),
+				},
+				props: {
+					repoKey: repository.repoKey,
+					contributorEmail: contributor.data.email,
+				},
+			})),
+	);
 }
 
 const { repoKey, contributorEmail } = Astro.props as {
-  repoKey: string
-  contributorEmail: string
-}
+	repoKey: string;
+	contributorEmail: string;
+};
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const repositorySummary = readLandscapeRepoJson<RepoAnalysisSummary>(repoKey, "analysisResults.json")
-const contributor = readLandscapeRepoContributorDetailJson<RepoContributorDetail>(repoKey, contributorEmail)
-const contributorImpactExport = readLandscapeRepoJson<RepoContributorImpactExport>(repoKey, "contributor_impact.json")
+const repositorySummary = readLandscapeRepoJson<RepoAnalysisSummary>(
+	repoKey,
+	"analysisResults.json",
+);
+const contributor =
+	readLandscapeRepoContributorDetailJson<RepoContributorDetail>(
+		repoKey,
+		contributorEmail,
+	);
+const contributorImpactExport =
+	readLandscapeRepoJson<RepoContributorImpactExport>(
+		repoKey,
+		"contributor_impact.json",
+	);
 const contributorImpact =
-  contributorImpactExport?.periods
-    ?.find((period) => period.period_key === "all_time")
-    ?.contributors?.find((entry) => entry.email === contributorEmail) ?? null
+	contributorImpactExport?.periods
+		?.find((period) => period.period_key === "all_time")
+		?.contributors?.find((entry) => entry.email === contributorEmail) ?? null;
 
 if (!contributor) {
-  throw new Error(`Repo contributor detail not found for ${contributorEmail} in ${repoKey}`)
+	throw new Error(
+		`Repo contributor detail not found for ${contributorEmail} in ${repoKey}`,
+	);
 }
 
-const projectName = reportContext.data.title
-const repoName = repositorySummary?.metadata?.name || repoKey.split("/").at(-1) || repoKey
+const projectName = reportContext.data.title;
+const repoName =
+	repositorySummary?.metadata?.name || repoKey.split("/").at(-1) || repoKey;
 const contributorName = getContributorDisplayName({
-  email: contributor.email,
-  userName: contributor.userName,
-})
+	email: contributor.email,
+	userName: contributor.userName,
+});
 
-const monthlyActivity = getContributorMonthlyActivity(contributor.dailyActivity)
+const monthlyActivity = getContributorMonthlyActivity(
+	contributor.dailyActivity,
+);
 const extensionChartData = [...contributor.extensions]
-  .sort((a, b) => b.commits - a.commits || a.extension.localeCompare(b.extension))
-  .map((entry) => ({
-    label: entry.extension ? `.${entry.extension}` : "No Extension",
-    value: entry.commits,
-  }))
+	.sort(
+		(a, b) => b.commits - a.commits || a.extension.localeCompare(b.extension),
+	)
+	.map((entry) => ({
+		label: entry.extension ? `.${entry.extension}` : "No Extension",
+		value: entry.commits,
+	}));
 
 const componentBarData = [...contributor.logicalComponents]
-  .sort((a, b) => b.linesOfCode - a.linesOfCode || a.name.localeCompare(b.name))
-  .slice(0, 10)
-  .map((entry) => ({
-    label: entry.name,
-    value: entry.linesOfCode,
-  }))
+	.sort((a, b) => b.linesOfCode - a.linesOfCode || a.name.localeCompare(b.name))
+	.slice(0, 10)
+	.map((entry) => ({
+		label: entry.name,
+		value: entry.linesOfCode,
+	}));
 
-const collaboratorBarData = contributor.collaborators.slice(0, 10).map((entry) => ({
-  label: getContributorDisplayName({ email: entry.email }),
-  value: entry.sharedFiles,
-}))
+const collaboratorBarData = contributor.collaborators
+	.slice(0, 10)
+	.map((entry) => ({
+		label: getContributorDisplayName({ email: entry.email }),
+		value: entry.sharedFiles,
+	}));
 
-const touchedFiles = [...contributor.files].sort((a, b) => b.commits - a.commits || a.relativePath.localeCompare(b.relativePath))
-const activeDays = contributor.dailyActivity.length
-const topCollaborator = contributor.collaborators[0]
-const dominantImpactLabel = contributorImpact?.dominant_dimension.replace(/_/g, " ") ?? null
+const touchedFiles = [...contributor.files].sort(
+	(a, b) =>
+		b.commits - a.commits || a.relativePath.localeCompare(b.relativePath),
+);
+const activeDays = contributor.dailyActivity.length;
+const topCollaborator = contributor.collaborators[0];
+const dominantImpactLabel =
+	contributorImpact?.dominant_dimension.replace(/_/g, " ") ?? null;
 ---
 
 <Dashboard

@@ -1,22 +1,22 @@
-let idCounter = 0
+let idCounter = 0;
 
 export class LineInfo {
-  readonly id: number
-  private _count: number = 1
+	readonly id: number;
+	private _count: number = 1;
 
-  constructor() {
-    this.id = idCounter++
-  }
+	constructor() {
+		this.id = idCounter++;
+	}
 
-  static resetCounter(): void {
-    idCounter = 0
-  }
+	static resetCounter(): void {
+		idCounter = 0;
+	}
 
-  get count(): number {
-    return this._count
-  }
+	get count(): number {
+		return this._count;
+	}
 
-  incrementCount(): void {
-    this._count++
-  }
+	incrementCount(): void {
+		this._count++;
+	}
 }

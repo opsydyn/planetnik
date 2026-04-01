@@ -1,61 +1,96 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DistributionChart from "../components/charts/DistributionChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import LineChart from "../components/charts/LineChart"
-import StaticReportTable from "../components/tables/StaticReportTable.astro"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../components/charts/DistributionChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import LineChart from "../components/charts/LineChart";
+import StaticReportTable from "../components/tables/StaticReportTable.astro";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const contributors = await getCollection("contributors")
-const metrics = await getCollection("metrics")
-const commitsPerExtension = await getCollection("commitsPerExtension")
-const timeline = await getCollection("contributorTimeline")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const contributors = await getCollection("contributors");
+const metrics = await getCollection("metrics");
+const commitsPerExtension = await getCollection("commitsPerExtension");
+const timeline = await getCollection("contributorTimeline");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 function getMetric(id: string): number | null {
-  const m = metrics.find((m) => m.data.id === id)
-  return m?.data.value ?? null
+	const m = metrics.find((m) => m.data.id === id);
+	return m?.data.value ?? null;
 }
 
-const totalContributors = contributors.length
-const totalCommits = contributors.reduce((s, c) => s + c.data.commitsAllTime, 0)
-const activeContributors30 = contributors.filter((c) => c.data.commits30Days > 0).length
-const activeContributors90 = contributors.filter((c) => c.data.commits90Days > 0).length
-const activeContributors365 = contributors.filter((c) => c.data.commits365Days > 0).length
+const totalContributors = contributors.length;
+const totalCommits = contributors.reduce(
+	(s, c) => s + c.data.commitsAllTime,
+	0,
+);
+const activeContributors30 = contributors.filter(
+	(c) => c.data.commits30Days > 0,
+).length;
+const activeContributors90 = contributors.filter(
+	(c) => c.data.commits90Days > 0,
+).length;
+const activeContributors365 = contributors.filter(
+	(c) => c.data.commits365Days > 0,
+).length;
 
-const ageDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
-const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
+const ageDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS");
+const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS");
 
-const rookieCount = contributors.filter((c) => c.data.isRookie).length
+const rookieCount = contributors.filter((c) => c.data.isRookie).length;
 
 const activityData = [
-  { label: "Past 30 days", value: activeContributors30, detail: `${activeContributors30} contributors` },
-  { label: "Past 90 days", value: activeContributors90, detail: `${activeContributors90} contributors` },
-  { label: "Past year", value: activeContributors365, detail: `${activeContributors365} contributors` },
-  { label: "All time", value: totalContributors, detail: `${totalContributors} contributors` },
-]
+	{
+		label: "Past 30 days",
+		value: activeContributors30,
+		detail: `${activeContributors30} contributors`,
+	},
+	{
+		label: "Past 90 days",
+		value: activeContributors90,
+		detail: `${activeContributors90} contributors`,
+	},
+	{
+		label: "Past year",
+		value: activeContributors365,
+		detail: `${activeContributors365} contributors`,
+	},
+	{
+		label: "All time",
+		value: totalContributors,
+		detail: `${totalContributors} contributors`,
+	},
+];
 
 const yearlyData = timeline
-  .filter((t) => t.data.granularity === "year")
-  .sort((a, b) => a.data.timeSlot.localeCompare(b.data.timeSlot))
+	.filter((t) => t.data.granularity === "year")
+	.sort((a, b) => a.data.timeSlot.localeCompare(b.data.timeSlot));
 
-const commitsByYear = yearlyData.map((t) => ({ label: t.data.timeSlot, value: t.data.commits }))
-const contributorsByYear = yearlyData.map((t) => ({ label: t.data.timeSlot, value: t.data.contributors }))
+const commitsByYear = yearlyData.map((t) => ({
+	label: t.data.timeSlot,
+	value: t.data.commits,
+}));
+const contributorsByYear = yearlyData.map((t) => ({
+	label: t.data.timeSlot,
+	value: t.data.contributors,
+}));
 
 const timelineSeries = [
-  ...(commitsByYear.length > 0 ? [{ name: "Commits", data: commitsByYear, color: "#3b82f6" }] : []),
-  ...(contributorsByYear.length > 0 ? [{ name: "Contributors", data: contributorsByYear, color: "#22c55e" }] : []),
-]
+	...(commitsByYear.length > 0
+		? [{ name: "Commits", data: commitsByYear, color: "#3b82f6" }]
+		: []),
+	...(contributorsByYear.length > 0
+		? [{ name: "Contributors", data: contributorsByYear, color: "#22c55e" }]
+		: []),
+];
 
 const extensionBarData = [...commitsPerExtension]
-  .sort((a, b) => b.data.commitsCount - a.data.commitsCount)
-  .slice(0, 15)
-  .map((e) => ({
-    label: `.${e.data.extension}`,
-    value: e.data.commitsCount,
-  }))
+	.sort((a, b) => b.data.commitsCount - a.data.commitsCount)
+	.slice(0, 15)
+	.map((e) => ({
+		label: `.${e.data.extension}`,
+		value: e.data.commitsCount,
+	}));
 ---
 
 <Dashboard title="Commits" projectName={projectName}>

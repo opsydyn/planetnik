@@ -1,5 +1,5 @@
-import type { GoalsAnalysisResults } from "./GoalsAnalysisResults.js"
+import type { GoalsAnalysisResults } from "./GoalsAnalysisResults.js";
 
 export class ControlsAnalysisResults {
-  goalsAnalysisResults: GoalsAnalysisResults[] = []
+	goalsAnalysisResults: GoalsAnalysisResults[] = [];
 }

@@ -1,7 +1,13 @@
-export { DuplicationMetric } from "./DuplicationMetric.js"
-export { Metric } from "./Metric.js"
-export { MetricRangeControl, type MetricRangeControlType } from "./MetricRangeControl.js"
-export { MetricsList } from "./MetricsList.js"
-export { MetricsWithGoal, type MetricsWithGoalType } from "./MetricsWithGoal.js"
-export { NumericMetric } from "./NumericMetric.js"
-export { RiskDistributionStats } from "./RiskDistributionStats.js"
+export { DuplicationMetric } from "./DuplicationMetric.js";
+export { Metric } from "./Metric.js";
+export {
+	MetricRangeControl,
+	type MetricRangeControlType,
+} from "./MetricRangeControl.js";
+export { MetricsList } from "./MetricsList.js";
+export {
+	MetricsWithGoal,
+	type MetricsWithGoalType,
+} from "./MetricsWithGoal.js";
+export { NumericMetric } from "./NumericMetric.js";
+export { RiskDistributionStats } from "./RiskDistributionStats.js";

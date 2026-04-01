@@ -1,75 +1,89 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import CommitHeatmap from "../../components/charts/CommitHeatmap"
-import DonutChart from "../../components/charts/DonutChart"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import LineChart from "../../components/charts/LineChart"
-import StaticReportTable from "../../components/tables/StaticReportTable.astro"
-import Dashboard from "../../layouts/Dashboard.astro"
-import { chartHelp } from "../../lib/chartHelp"
-import { getContributorDisplayName, getContributorHref, getContributorMonthlyActivity, getContributorRouteParam } from "../../lib/contributors"
-import { route } from "../../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import CommitHeatmap from "../../components/charts/CommitHeatmap";
+import DonutChart from "../../components/charts/DonutChart";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import LineChart from "../../components/charts/LineChart";
+import StaticReportTable from "../../components/tables/StaticReportTable.astro";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
+import {
+	getContributorDisplayName,
+	getContributorHref,
+	getContributorMonthlyActivity,
+	getContributorRouteParam,
+} from "../../lib/contributors";
+import { route } from "../../lib/route";
 
 export async function getStaticPaths() {
-  const contributorDetails = await getCollection("contributorDetails")
+	const contributorDetails = await getCollection("contributorDetails");
 
-  return contributorDetails.map((entry) => ({
-    params: { email: getContributorRouteParam(entry.id) },
-    props: { contributorId: entry.id },
-  }))
+	return contributorDetails.map((entry) => ({
+		params: { email: getContributorRouteParam(entry.id) },
+		props: { contributorId: entry.id },
+	}));
 }
 
-const { contributorId } = Astro.props as { contributorId: string }
+const { contributorId } = Astro.props as { contributorId: string };
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {
-  return Astro.redirect(route("/landscape/contributors"))
+	return Astro.redirect(route("/landscape/contributors"));
 }
 
-const summary = await getEntry("analysis", "summary")
-const contributor = await getEntry("contributorDetails", contributorId)
-const contributorSummary = await getEntry("contributors", contributorId)
-const contributorImpact = await getEntry("contributorImpact", contributorId)
+const summary = await getEntry("analysis", "summary");
+const contributor = await getEntry("contributorDetails", contributorId);
+const contributorSummary = await getEntry("contributors", contributorId);
+const contributorImpact = await getEntry("contributorImpact", contributorId);
 
 if (!contributor) {
-  throw new Error(`Contributor detail entry not found for ${contributorId}`)
+	throw new Error(`Contributor detail entry not found for ${contributorId}`);
 }
 
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const projectName = summary?.data.metadata.name ?? "Unknown";
 const contributorName = getContributorDisplayName({
-  email: contributor.data.email,
-  userName: contributor.data.userName,
-})
+	email: contributor.data.email,
+	userName: contributor.data.userName,
+});
 
-const monthlyActivity = getContributorMonthlyActivity(contributor.data.dailyActivity)
+const monthlyActivity = getContributorMonthlyActivity(
+	contributor.data.dailyActivity,
+);
 const extensionChartData = [...contributor.data.extensions]
-  .sort((a, b) => b.commits - a.commits || a.extension.localeCompare(b.extension))
-  .map((entry) => ({
-    label: entry.extension ? `.${entry.extension}` : "No Extension",
-    value: entry.commits,
-  }))
+	.sort(
+		(a, b) => b.commits - a.commits || a.extension.localeCompare(b.extension),
+	)
+	.map((entry) => ({
+		label: entry.extension ? `.${entry.extension}` : "No Extension",
+		value: entry.commits,
+	}));
 
 const componentBarData = [...contributor.data.logicalComponents]
-  .sort((a, b) => b.linesOfCode - a.linesOfCode || a.name.localeCompare(b.name))
-  .slice(0, 10)
-  .map((entry) => ({
-    label: entry.name,
-    value: entry.linesOfCode,
-  }))
+	.sort((a, b) => b.linesOfCode - a.linesOfCode || a.name.localeCompare(b.name))
+	.slice(0, 10)
+	.map((entry) => ({
+		label: entry.name,
+		value: entry.linesOfCode,
+	}));
 
-const collaboratorBarData = contributor.data.collaborators.slice(0, 10).map((entry) => ({
-  label: getContributorDisplayName({ email: entry.email }),
-  value: entry.sharedFiles,
-}))
+const collaboratorBarData = contributor.data.collaborators
+	.slice(0, 10)
+	.map((entry) => ({
+		label: getContributorDisplayName({ email: entry.email }),
+		value: entry.sharedFiles,
+	}));
 
-const touchedFiles = [...contributor.data.files].sort((a, b) => b.commits - a.commits || a.relativePath.localeCompare(b.relativePath))
-const activeDays = contributor.data.dailyActivity.length
-const topCollaborator = contributor.data.collaborators[0]
-const hasSourceFileDetail = contributor.data.files.length > 0
-const commitShare = contributorSummary?.data.percentage ?? null
+const touchedFiles = [...contributor.data.files].sort(
+	(a, b) =>
+		b.commits - a.commits || a.relativePath.localeCompare(b.relativePath),
+);
+const activeDays = contributor.data.dailyActivity.length;
+const topCollaborator = contributor.data.collaborators[0];
+const hasSourceFileDetail = contributor.data.files.length > 0;
+const commitShare = contributorSummary?.data.percentage ?? null;
 const dominantImpactLabel = contributorImpact
-  ? contributorImpact.data.dominant_dimension.replace(/_/g, " ")
-  : null
+	? contributorImpact.data.dominant_dimension.replace(/_/g, " ")
+	: null;
 ---
 
 <Dashboard title={contributorName} projectName={projectName}>

@@ -1,44 +1,44 @@
 ---
-import { getEntry } from "astro:content"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../lib/chartHelp"
-import Dashboard from "../../layouts/Dashboard.astro"
-import { route } from "../../lib/route"
+import { getEntry } from "astro:content";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const tags = await getEntry("landscapeTags", "tags")
-const tagMatrix = await getEntry("landscapeTagMatrix", "tag-matrix")
-const projectName = reportContext.data.title
+const tags = await getEntry("landscapeTags", "tags");
+const tagMatrix = await getEntry("landscapeTagMatrix", "tag-matrix");
+const projectName = reportContext.data.title;
 
-const groups = tags?.data.groups ?? []
+const groups = tags?.data.groups ?? [];
 const flatTags = groups.flatMap((group) =>
-  group.tags.map((tag) => ({
-    id: `${group.name}:${tag.key}`,
-    group: group.name,
-    tag: tag.name,
-    repositoryCount: tag.repositoryCount,
-    totalMainLinesOfCode: tag.totalMainLinesOfCode,
-    repositories: tag.repositories.map((repository) => repository.name).join(" • ") || "—",
-  })),
-)
+	group.tags.map((tag) => ({
+		id: `${group.name}:${tag.key}`,
+		group: group.name,
+		tag: tag.name,
+		repositoryCount: tag.repositoryCount,
+		totalMainLinesOfCode: tag.totalMainLinesOfCode,
+		repositories:
+			tag.repositories.map((repository) => repository.name).join(" • ") || "—",
+	})),
+);
 const topTagBars = flatTags
-  .slice()
-  .sort((left, right) => right.repositoryCount - left.repositoryCount)
-  .slice(0, 12)
-  .map((tag) => ({
-    label: tag.tag,
-    value: tag.repositoryCount,
-  }))
+	.slice()
+	.sort((left, right) => right.repositoryCount - left.repositoryCount)
+	.slice(0, 12)
+	.map((tag) => ({
+		label: tag.tag,
+		value: tag.repositoryCount,
+	}));
 const untaggedRows =
-  tagMatrix?.data.repositories
-    .filter((repository) => repository.isUntagged)
-    .map((repository) => repository.name)
-    .join(" • ") ?? "—"
+	tagMatrix?.data.repositories
+		.filter((repository) => repository.isUntagged)
+		.map((repository) => repository.name)
+		.join(" • ") ?? "—";
 ---
 
 <Dashboard title="Landscape Tags" projectName={projectName}>

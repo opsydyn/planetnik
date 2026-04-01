@@ -1,50 +1,57 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DistributionChart from "../../components/charts/DistributionChart"
-import DonutChart from "../../components/charts/DonutChart"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../lib/chartHelp"
-import Dashboard from "../../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../../components/charts/DistributionChart";
+import DonutChart from "../../components/charts/DonutChart";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const metrics = await getCollection("metrics")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const metrics = await getCollection("metrics");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 function getMetric(id: string): number | null {
-  const m = metrics.find((m) => m.data.id === id)
-  return m?.data.value ?? null
+	const m = metrics.find((m) => m.data.id === id);
+	return m?.data.value ?? null;
 }
 
-const ageInDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
-const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS")
-const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS")
+const ageInDays = getMetric("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS");
+const activeDays = getMetric("FILE_CHANGE_HISTORY_ACTIVE_DAYS");
+const weeks = getMetric("FILE_CHANGE_HISTORY_WEEKS");
 
 const ageCategories = [
-  { label: "Negligible Risk", metric: "FILE_AGE_NEGLIGIBLE_RISK_COUNT" },
-  { label: "Low Risk", metric: "FILE_AGE_LOW_RISK_COUNT" },
-  { label: "Medium Risk", metric: "FILE_AGE_MEDIUM_RISK_COUNT" },
-  { label: "High Risk", metric: "FILE_AGE_HIGH_RISK_COUNT" },
-  { label: "Very High Risk", metric: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
-]
+	{ label: "Negligible Risk", metric: "FILE_AGE_NEGLIGIBLE_RISK_COUNT" },
+	{ label: "Low Risk", metric: "FILE_AGE_LOW_RISK_COUNT" },
+	{ label: "Medium Risk", metric: "FILE_AGE_MEDIUM_RISK_COUNT" },
+	{ label: "High Risk", metric: "FILE_AGE_HIGH_RISK_COUNT" },
+	{ label: "Very High Risk", metric: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
+];
 
-const riskColors = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"]
-const distData = ageCategories.map((cat, i) => {
-  const val = getMetric(cat.metric)
-  return { label: cat.label, value: val ?? 0, detail: (val ?? 0).toLocaleString() + " files", color: riskColors[i] }
-}).filter((d) => d.value > 0)
+const riskColors = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"];
+const distData = ageCategories
+	.map((cat, i) => {
+		const val = getMetric(cat.metric);
+		return {
+			label: cat.label,
+			value: val ?? 0,
+			detail: (val ?? 0).toLocaleString() + " files",
+			color: riskColors[i],
+		};
+	})
+	.filter((d) => d.value > 0);
 
 const ageDetailRows = ageCategories
-  .map((cat) => {
-    const val = getMetric(cat.metric)
-    return val === null
-      ? null
-      : {
-          id: cat.metric,
-          category: cat.label,
-          files: val,
-        }
-  })
-  .filter((row): row is NonNullable<typeof row> => row !== null)
+	.map((cat) => {
+		const val = getMetric(cat.metric);
+		return val === null
+			? null
+			: {
+					id: cat.metric,
+					category: cat.label,
+					files: val,
+				};
+	})
+	.filter((row): row is NonNullable<typeof row> => row !== null);
 ---
 
 <Dashboard title="File Age" projectName={projectName}>

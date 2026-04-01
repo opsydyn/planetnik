@@ -1,80 +1,89 @@
 ---
-import DependencyMatrix from "../../../../components/charts/DependencyMatrix"
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../../../lib/chartHelp"
-import { readLandscapeRepoJson } from "../../../../lib/landscape"
+import DependencyMatrix from "../../../../components/charts/DependencyMatrix";
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../lib/chartHelp";
+import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
-  getLandscapeRepositoryPageContext,
-  getLandscapeRepositoryStaticPaths,
-  type LandscapeRepoPageProps,
-} from "../../../../lib/landscapeRepoContext"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
 
 interface ComponentDependencyRecord {
-  decompositionKey: string
-  fromComponent: string
-  toComponent: string
-  count: number
-  locFrom: number
-  evidenceCount: number
-  color: string
+	decompositionKey: string;
+	fromComponent: string;
+	toComponent: string;
+	count: number;
+	locFrom: number;
+	evidenceCount: number;
+	color: string;
 }
 
 interface ComponentDependenciesExport {
-  dependencies?: ComponentDependencyRecord[]
+	dependencies?: ComponentDependencyRecord[];
 }
 
 export async function getStaticPaths() {
-  return getLandscapeRepositoryStaticPaths()
+	return getLandscapeRepositoryStaticPaths();
 }
 
-const props = Astro.props as LandscapeRepoPageProps
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const props = Astro.props as LandscapeRepoPageProps;
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const raw = readLandscapeRepoJson<ComponentDependenciesExport>(props.repoKey, "component_dependencies.json")
-const allDeps = raw?.dependencies ?? []
+const raw = readLandscapeRepoJson<ComponentDependenciesExport>(
+	props.repoKey,
+	"component_dependencies.json",
+);
+const allDeps = raw?.dependencies ?? [];
 
-const groupedDependencies = new Map<string, ComponentDependencyRecord[]>()
+const groupedDependencies = new Map<string, ComponentDependencyRecord[]>();
 for (const dep of allDeps) {
-  const group = groupedDependencies.get(dep.decompositionKey) ?? []
-  group.push(dep)
-  groupedDependencies.set(dep.decompositionKey, group)
+	const group = groupedDependencies.get(dep.decompositionKey) ?? [];
+	group.push(dep);
+	groupedDependencies.set(dep.decompositionKey, group);
 }
 
 const dependencySections = [...groupedDependencies.entries()]
-  .sort(([left], [right]) => left.localeCompare(right))
-  .map(([decompositionKey, group]) => {
-    const matrixData = group.map((dep) => ({
-      from: dep.fromComponent,
-      to: dep.toComponent,
-      count: dep.count,
-    }))
+	.sort(([left], [right]) => left.localeCompare(right))
+	.map(([decompositionKey, group]) => {
+		const matrixData = group.map((dep) => ({
+			from: dep.fromComponent,
+			to: dep.toComponent,
+			count: dep.count,
+		}));
 
-    const inDegree = new Map<string, number>()
-    const outDegree = new Map<string, number>()
-    for (const dep of group) {
-      inDegree.set(dep.toComponent, (inDegree.get(dep.toComponent) ?? 0) + dep.count)
-      outDegree.set(dep.fromComponent, (outDegree.get(dep.fromComponent) ?? 0) + dep.count)
-    }
+		const inDegree = new Map<string, number>();
+		const outDegree = new Map<string, number>();
+		for (const dep of group) {
+			inDegree.set(
+				dep.toComponent,
+				(inDegree.get(dep.toComponent) ?? 0) + dep.count,
+			);
+			outDegree.set(
+				dep.fromComponent,
+				(outDegree.get(dep.fromComponent) ?? 0) + dep.count,
+			);
+		}
 
-    return {
-      decompositionKey,
-      dependencies: group,
-      matrixData,
-      inDegreeData: [...inDegree.entries()]
-        .sort((left, right) => right[1] - left[1])
-        .map(([label, value]) => ({ label, value })),
-      outDegreeData: [...outDegree.entries()]
-        .sort((left, right) => right[1] - left[1])
-        .map(([label, value]) => ({ label, value })),
-    }
-  })
+		return {
+			decompositionKey,
+			dependencies: group,
+			matrixData,
+			inDegreeData: [...inDegree.entries()]
+				.sort((left, right) => right[1] - left[1])
+				.map(([label, value]) => ({ label, value })),
+			outDegreeData: [...outDegree.entries()]
+				.sort((left, right) => right[1] - left[1])
+				.map(([label, value]) => ({ label, value })),
+		};
+	});
 ---
 
 <Dashboard title={`${repoName} Dependencies`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

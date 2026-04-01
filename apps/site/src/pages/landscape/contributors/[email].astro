@@ -1,65 +1,78 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import HorizontalBarChart from "../../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../../components/tables/ReportDataGrid"
-import { getContributorDisplayName, getContributorRouteParam } from "../../../lib/contributors"
+import { getCollection, getEntry } from "astro:content";
+import HorizontalBarChart from "../../../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../layouts/Dashboard.astro";
 import {
-  getLandscapeRepositoryContributorHref,
-  getLandscapeRepositoryHref,
-} from "../../../lib/landscape"
-import Dashboard from "../../../layouts/Dashboard.astro"
-import { route } from "../../../lib/route"
+	getContributorDisplayName,
+	getContributorRouteParam,
+} from "../../../lib/contributors";
+import {
+	getLandscapeRepositoryContributorHref,
+	getLandscapeRepositoryHref,
+} from "../../../lib/landscape";
+import { route } from "../../../lib/route";
 
 export async function getStaticPaths() {
-  const contributors = await getCollection("landscapeContributors")
+	const contributors = await getCollection("landscapeContributors");
 
-  return contributors.map((contributor) => ({
-    params: { email: getContributorRouteParam(contributor.data.email) },
-    props: { contributorId: contributor.id },
-  }))
+	return contributors.map((contributor) => ({
+		params: { email: getContributorRouteParam(contributor.data.email) },
+		props: { contributorId: contributor.id },
+	}));
 }
 
 const { contributorId } = Astro.props as {
-  contributorId: string
-}
+	contributorId: string;
+};
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const contributor = await getEntry("landscapeContributors", contributorId)
+const contributor = await getEntry("landscapeContributors", contributorId);
 if (!contributor) {
-  throw new Error(`Landscape contributor entry not found for ${contributorId}`)
+	throw new Error(`Landscape contributor entry not found for ${contributorId}`);
 }
 
-const projectName = reportContext.data.title
+const projectName = reportContext.data.title;
 const contributorName = getContributorDisplayName({
-  email: contributor.data.email,
-  userName: contributor.data.displayName !== contributor.data.email ? contributor.data.displayName : undefined,
-})
+	email: contributor.data.email,
+	userName:
+		contributor.data.displayName !== contributor.data.email
+			? contributor.data.displayName
+			: undefined,
+});
 
 const sortedRepositories = contributor.data.repositories
-  .slice()
-  .sort((left, right) => right.commitsCount - left.commitsCount || left.name.localeCompare(right.name))
+	.slice()
+	.sort(
+		(left, right) =>
+			right.commitsCount - left.commitsCount ||
+			left.name.localeCompare(right.name),
+	);
 
 const repositoryBarData = sortedRepositories.slice(0, 10).map((repository) => ({
-  label: repository.name,
-  value: repository.commitsCount,
-}))
+	label: repository.name,
+	value: repository.commitsCount,
+}));
 
 const repositoryRows = sortedRepositories.map((repository) => ({
-  id: repository.repoKey,
-  repository: repository.name,
-  repositoryHref: getLandscapeRepositoryHref(repository.repoKey),
-  repoView: "Open repo contributor view",
-  repoViewHref: getLandscapeRepositoryContributorHref(repository.repoKey, contributor.data.email),
-  description: repository.description || "—",
-  commitsCount: repository.commitsCount,
-  commits30d: repository.commits30Days,
-  commits90d: repository.commits90Days,
-  latestCommitDate: repository.latestCommitDate,
-}))
+	id: repository.repoKey,
+	repository: repository.name,
+	repositoryHref: getLandscapeRepositoryHref(repository.repoKey),
+	repoView: "Open repo contributor view",
+	repoViewHref: getLandscapeRepositoryContributorHref(
+		repository.repoKey,
+		contributor.data.email,
+	),
+	description: repository.description || "—",
+	commitsCount: repository.commitsCount,
+	commits30d: repository.commits30Days,
+	commits90d: repository.commits90Days,
+	latestCommitDate: repository.latestCommitDate,
+}));
 ---
 
 <Dashboard title={contributorName} projectName={projectName}>

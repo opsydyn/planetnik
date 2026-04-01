@@ -1,234 +1,277 @@
 ---
-import { Image } from "astro:assets"
-import { getEntry } from "astro:content"
-import { ClientRouter } from "astro:transitions"
-import Breadcrumb from "../components/Breadcrumb.astro"
-import GlobalSearch from "../components/search/GlobalSearch"
-import SystemIcon from "../components/icons/SystemIcon.astro"
-import type { SystemIconName } from "../components/icons/SystemIcon"
-import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro"
-import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro"
+import { Image } from "astro:assets";
+import { getEntry } from "astro:content";
+import { ClientRouter } from "astro:transitions";
+import Breadcrumb from "../components/Breadcrumb.astro";
+import type { SystemIconName } from "../components/icons/SystemIcon";
+import SystemIcon from "../components/icons/SystemIcon.astro";
+import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
+import GlobalSearch from "../components/search/GlobalSearch";
+import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro";
 import {
-  getLandscapeRepositoryCommitsHref,
-  getLandscapeRepositoryComponentsHref,
-  getLandscapeRepositoryControlsHref,
-  getLandscapeRepositoryCouplingHref,
-  getLandscapeRepositoryDependenciesHref,
-  getLandscapeRepositoryDuplicationHref,
-  getLandscapeRepositoryFilePageHref,
-  getLandscapeRepositoryHotspotsHref,
-  getLandscapeRepositoryHref,
-  getLandscapeRepositoryImpactHref,
-  getLandscapeRepositoryMetricsHref,
-  getLandscapeRepositoryUnitPageHref,
-} from "../lib/landscape"
-import { shouldBypassClientRouter } from "../lib/reloadRoutes"
-import { route } from "../lib/route"
+	getLandscapeRepositoryCommitsHref,
+	getLandscapeRepositoryComponentsHref,
+	getLandscapeRepositoryControlsHref,
+	getLandscapeRepositoryCouplingHref,
+	getLandscapeRepositoryDependenciesHref,
+	getLandscapeRepositoryDuplicationHref,
+	getLandscapeRepositoryFilePageHref,
+	getLandscapeRepositoryHotspotsHref,
+	getLandscapeRepositoryHref,
+	getLandscapeRepositoryImpactHref,
+	getLandscapeRepositoryMetricsHref,
+	getLandscapeRepositoryUnitPageHref,
+} from "../lib/landscape";
+import { shouldBypassClientRouter } from "../lib/reloadRoutes";
+import { route } from "../lib/route";
 
 interface Props {
-  title: string
-  projectName?: string
-  repoScope?: {
-    repoKey: string
-    repoName: string
-  }
+	title: string;
+	projectName?: string;
+	repoScope?: {
+		repoKey: string;
+		repoName: string;
+	};
 }
 
 interface NavItem {
-  href: string
-  label: string
+	href: string;
+	label: string;
 }
 
 interface NavSection {
-  label: string
-  iconName: SystemIconName
-  items: NavItem[]
+	label: string;
+	iconName: SystemIconName;
+	items: NavItem[];
 }
 
 const intelligenceNavSection: NavSection = {
-  label: "Intelligence",
-  iconName: "chat-circle",
-  items: [{ href: route("/intelligence"), label: "Ask Płanetnik" }],
-}
+	label: "Intelligence",
+	iconName: "chat-circle",
+	items: [{ href: route("/intelligence"), label: "Ask Płanetnik" }],
+};
 
-const reportContext = await getEntry("reportContext", "context")
-const reportMode = reportContext?.data.reportMode ?? "single_repository"
-const { title, projectName = reportContext?.data.title ?? "Planetnik", repoScope } = Astro.props
+const reportContext = await getEntry("reportContext", "context");
+const reportMode = reportContext?.data.reportMode ?? "single_repository";
+const {
+	title,
+	projectName = reportContext?.data.title ?? "Planetnik",
+	repoScope,
+} = Astro.props;
 
 const singleRepoNavSections: NavSection[] = [
-  {
-    label: "Overview",
-    iconName: "house",
-    items: [
-      { href: route("/about"), label: "About" },
-      { href: route("/guide"), label: "Guide" },
-      { href: route("/technology"), label: "Technology" },
-      { href: route("/"), label: "Dashboard" },
-      { href: route("/overview"), label: "Source Code Overview" },
-      { href: route("/metrics"), label: "Metrics" },
-    ],
-  },
-  {
-    label: "Structure",
-    iconName: "stack",
-    items: [
-      { href: route("/components"), label: "Components" },
-      { href: route("/coupling"), label: "Balanced Coupling" },
-      { href: route("/dependencies"), label: "Dependencies" },
-      { href: route("/duplication"), label: "Duplication" },
-    ],
-  },
-  {
-    label: "Files",
-    iconName: "files",
-    items: [
-      { href: route("/files/size"), label: "File Size" },
-      { href: route("/files/age"), label: "File Age" },
-      { href: route("/files/churn"), label: "File Churn" },
-      { href: route("/files/temporal"), label: "Temporal Dependencies" },
-    ],
-  },
-  {
-    label: "Units",
-    iconName: "brackets-curly",
-    items: [
-      { href: route("/units/size"), label: "Unit Size" },
-      { href: route("/units/complexity"), label: "Conditional Complexity" },
-    ],
-  },
-  {
-    label: "Team",
-    iconName: "users-three",
-    items: [
-      { href: route("/contributors"), label: "Contributors" },
-      { href: route("/commits"), label: "Commits" },
-      { href: route("/topology"), label: "Team Topology" },
-    ],
-  },
-  {
-    label: "Quality",
-    iconName: "chart-line-up",
-    items: [
-      { href: route("/hotspots"), label: "Hotspots" },
-      { href: route("/impact"), label: "Impact" },
-      { href: route("/concerns"), label: "Features of Interest" },
-      { href: route("/findings"), label: "Findings" },
-      { href: route("/controls"), label: "Goals & Controls" },
-      { href: route("/trends"), label: "Trend" },
-    ],
-  },
-  ...(import.meta.env.DEV ? [intelligenceNavSection] : []),
-]
+	{
+		label: "Overview",
+		iconName: "house",
+		items: [
+			{ href: route("/about"), label: "About" },
+			{ href: route("/guide"), label: "Guide" },
+			{ href: route("/technology"), label: "Technology" },
+			{ href: route("/"), label: "Dashboard" },
+			{ href: route("/overview"), label: "Source Code Overview" },
+			{ href: route("/metrics"), label: "Metrics" },
+		],
+	},
+	{
+		label: "Structure",
+		iconName: "stack",
+		items: [
+			{ href: route("/components"), label: "Components" },
+			{ href: route("/coupling"), label: "Balanced Coupling" },
+			{ href: route("/dependencies"), label: "Dependencies" },
+			{ href: route("/duplication"), label: "Duplication" },
+		],
+	},
+	{
+		label: "Files",
+		iconName: "files",
+		items: [
+			{ href: route("/files/size"), label: "File Size" },
+			{ href: route("/files/age"), label: "File Age" },
+			{ href: route("/files/churn"), label: "File Churn" },
+			{ href: route("/files/temporal"), label: "Temporal Dependencies" },
+		],
+	},
+	{
+		label: "Units",
+		iconName: "brackets-curly",
+		items: [
+			{ href: route("/units/size"), label: "Unit Size" },
+			{ href: route("/units/complexity"), label: "Conditional Complexity" },
+		],
+	},
+	{
+		label: "Team",
+		iconName: "users-three",
+		items: [
+			{ href: route("/contributors"), label: "Contributors" },
+			{ href: route("/commits"), label: "Commits" },
+			{ href: route("/topology"), label: "Team Topology" },
+		],
+	},
+	{
+		label: "Quality",
+		iconName: "chart-line-up",
+		items: [
+			{ href: route("/hotspots"), label: "Hotspots" },
+			{ href: route("/impact"), label: "Impact" },
+			{ href: route("/concerns"), label: "Features of Interest" },
+			{ href: route("/findings"), label: "Findings" },
+			{ href: route("/controls"), label: "Goals & Controls" },
+			{ href: route("/trends"), label: "Trend" },
+		],
+	},
+	...(import.meta.env.DEV ? [intelligenceNavSection] : []),
+];
 
 const landscapeNavSections: NavSection[] = [
-  {
-    label: "Overview",
-    iconName: "house",
-    items: [
-      { href: route("/landscape"), label: "Landscape Dashboard" },
-      { href: route("/about"), label: "About" },
-      { href: route("/guide"), label: "Guide" },
-      { href: route("/technology"), label: "Technology" },
-    ],
-  },
-  {
-    label: "Landscape",
-    iconName: "stack",
-    items: [
-      { href: route("/landscape/repositories"), label: "Repositories" },
-      { href: route("/landscape/contributors"), label: "Contributors" },
-      { href: route("/landscape/teams"), label: "Teams" },
-      { href: route("/landscape/topology"), label: "Team Topology" },
-      { href: route("/landscape/tags"), label: "Tags" },
-      { href: route("/landscape/security"), label: "Security" },
-    ],
-  },
-  ...(import.meta.env.DEV ? [intelligenceNavSection] : []),
-]
+	{
+		label: "Overview",
+		iconName: "house",
+		items: [
+			{ href: route("/landscape"), label: "Landscape Dashboard" },
+			{ href: route("/about"), label: "About" },
+			{ href: route("/guide"), label: "Guide" },
+			{ href: route("/technology"), label: "Technology" },
+		],
+	},
+	{
+		label: "Landscape",
+		iconName: "stack",
+		items: [
+			{ href: route("/landscape/repositories"), label: "Repositories" },
+			{ href: route("/landscape/contributors"), label: "Contributors" },
+			{ href: route("/landscape/teams"), label: "Teams" },
+			{ href: route("/landscape/topology"), label: "Team Topology" },
+			{ href: route("/landscape/tags"), label: "Tags" },
+			{ href: route("/landscape/security"), label: "Security" },
+		],
+	},
+	...(import.meta.env.DEV ? [intelligenceNavSection] : []),
+];
 
-function getLandscapeRepoNavSections(repoKey: string, repoName: string): NavSection[] {
-  const repoHref = getLandscapeRepositoryHref(repoKey)
+function getLandscapeRepoNavSections(
+	repoKey: string,
+	repoName: string,
+): NavSection[] {
+	const repoHref = getLandscapeRepositoryHref(repoKey);
 
-  return [
-    {
-      label: "Landscape",
-      iconName: "house",
-      items: [
-        { href: route("/landscape"), label: "Landscape Dashboard" },
-        { href: route("/about"), label: "About" },
-        { href: route("/guide"), label: "Guide" },
-        { href: route("/technology"), label: "Technology" },
-        { href: route("/landscape/repositories"), label: "Repositories" },
-      ],
-    },
-    {
-      label: "Repository",
-      iconName: "house",
-      items: [
-        { href: repoHref, label: `${repoName} Dashboard` },
-        { href: getLandscapeRepositoryMetricsHref(repoKey), label: "Metrics" },
-        { href: getLandscapeRepositoryCommitsHref(repoKey), label: "Commits" },
-      ],
-    },
-    {
-      label: "Structure",
-      iconName: "stack",
-      items: [
-        { href: getLandscapeRepositoryComponentsHref(repoKey), label: "Components" },
-        { href: getLandscapeRepositoryCouplingHref(repoKey), label: "Balanced Coupling" },
-        { href: getLandscapeRepositoryDependenciesHref(repoKey), label: "Dependencies" },
-        { href: getLandscapeRepositoryDuplicationHref(repoKey), label: "Duplication" },
-      ],
-    },
-    {
-      label: "Files",
-      iconName: "files",
-      items: [
-        { href: getLandscapeRepositoryFilePageHref(repoKey, "size"), label: "File Size" },
-        { href: getLandscapeRepositoryFilePageHref(repoKey, "age"), label: "File Age" },
-        { href: getLandscapeRepositoryFilePageHref(repoKey, "churn"), label: "File Churn" },
-        { href: getLandscapeRepositoryFilePageHref(repoKey, "temporal"), label: "Temporal Dependencies" },
-      ],
-    },
-    {
-      label: "Units",
-      iconName: "brackets-curly",
-      items: [
-        { href: getLandscapeRepositoryUnitPageHref(repoKey, "size"), label: "Unit Size" },
-        { href: getLandscapeRepositoryUnitPageHref(repoKey, "complexity"), label: "Conditional Complexity" },
-      ],
-    },
-    {
-      label: "Team",
-      iconName: "users-three",
-      items: [
-        { href: `${repoHref}/contributors`, label: "Contributors" },
-        { href: `${repoHref}/topology`, label: "Team Topology" },
-      ],
-    },
-    {
-      label: "Quality",
-      iconName: "chart-line-up",
-      items: [
-        { href: getLandscapeRepositoryHotspotsHref(repoKey), label: "Hotspots" },
-        { href: getLandscapeRepositoryImpactHref(repoKey), label: "Impact" },
-        { href: getLandscapeRepositoryControlsHref(repoKey), label: "Goals & Controls" },
-      ],
-    },
-  ]
+	return [
+		{
+			label: "Landscape",
+			iconName: "house",
+			items: [
+				{ href: route("/landscape"), label: "Landscape Dashboard" },
+				{ href: route("/about"), label: "About" },
+				{ href: route("/guide"), label: "Guide" },
+				{ href: route("/technology"), label: "Technology" },
+				{ href: route("/landscape/repositories"), label: "Repositories" },
+			],
+		},
+		{
+			label: "Repository",
+			iconName: "house",
+			items: [
+				{ href: repoHref, label: `${repoName} Dashboard` },
+				{ href: getLandscapeRepositoryMetricsHref(repoKey), label: "Metrics" },
+				{ href: getLandscapeRepositoryCommitsHref(repoKey), label: "Commits" },
+			],
+		},
+		{
+			label: "Structure",
+			iconName: "stack",
+			items: [
+				{
+					href: getLandscapeRepositoryComponentsHref(repoKey),
+					label: "Components",
+				},
+				{
+					href: getLandscapeRepositoryCouplingHref(repoKey),
+					label: "Balanced Coupling",
+				},
+				{
+					href: getLandscapeRepositoryDependenciesHref(repoKey),
+					label: "Dependencies",
+				},
+				{
+					href: getLandscapeRepositoryDuplicationHref(repoKey),
+					label: "Duplication",
+				},
+			],
+		},
+		{
+			label: "Files",
+			iconName: "files",
+			items: [
+				{
+					href: getLandscapeRepositoryFilePageHref(repoKey, "size"),
+					label: "File Size",
+				},
+				{
+					href: getLandscapeRepositoryFilePageHref(repoKey, "age"),
+					label: "File Age",
+				},
+				{
+					href: getLandscapeRepositoryFilePageHref(repoKey, "churn"),
+					label: "File Churn",
+				},
+				{
+					href: getLandscapeRepositoryFilePageHref(repoKey, "temporal"),
+					label: "Temporal Dependencies",
+				},
+			],
+		},
+		{
+			label: "Units",
+			iconName: "brackets-curly",
+			items: [
+				{
+					href: getLandscapeRepositoryUnitPageHref(repoKey, "size"),
+					label: "Unit Size",
+				},
+				{
+					href: getLandscapeRepositoryUnitPageHref(repoKey, "complexity"),
+					label: "Conditional Complexity",
+				},
+			],
+		},
+		{
+			label: "Team",
+			iconName: "users-three",
+			items: [
+				{ href: `${repoHref}/contributors`, label: "Contributors" },
+				{ href: `${repoHref}/topology`, label: "Team Topology" },
+			],
+		},
+		{
+			label: "Quality",
+			iconName: "chart-line-up",
+			items: [
+				{
+					href: getLandscapeRepositoryHotspotsHref(repoKey),
+					label: "Hotspots",
+				},
+				{ href: getLandscapeRepositoryImpactHref(repoKey), label: "Impact" },
+				{
+					href: getLandscapeRepositoryControlsHref(repoKey),
+					label: "Goals & Controls",
+				},
+			],
+		},
+	];
 }
 
-const currentPath = Astro.url.pathname
-const isLandscapeRepoScope = reportMode === "landscape" && repoScope
+const currentPath = Astro.url.pathname;
+const isLandscapeRepoScope = reportMode === "landscape" && repoScope;
 const navSections = isLandscapeRepoScope
-  ? getLandscapeRepoNavSections(repoScope.repoKey, repoScope.repoName)
-  : reportMode === "landscape"
-    ? landscapeNavSections
-    : singleRepoNavSections
-const rootHref = reportMode === "landscape" ? route("/landscape") : route("/")
+	? getLandscapeRepoNavSections(repoScope.repoKey, repoScope.repoName)
+	: reportMode === "landscape"
+		? landscapeNavSections
+		: singleRepoNavSections;
+const rootHref = reportMode === "landscape" ? route("/landscape") : route("/");
 function isActiveLink(href: string): boolean {
-  if (href === route("/")) return currentPath === href
-  return currentPath === href || currentPath.startsWith(`${href}/`)
+	if (href === route("/")) return currentPath === href;
+	return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 ---
 

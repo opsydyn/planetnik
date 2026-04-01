@@ -1,60 +1,62 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DistributionChart from "../../components/charts/DistributionChart"
-import DonutChart from "../../components/charts/DonutChart"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../lib/chartHelp"
-import Dashboard from "../../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../../components/charts/DistributionChart";
+import DonutChart from "../../components/charts/DonutChart";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const units = await getCollection("units")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const units = await getCollection("units");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 // Sort by LOC descending
-const sorted = [...units].sort((a, b) => b.data.linesOfCode - a.data.linesOfCode)
-const totalLoc = sorted.reduce((sum, u) => sum + u.data.linesOfCode, 0)
+const sorted = [...units].sort(
+	(a, b) => b.data.linesOfCode - a.data.linesOfCode,
+);
+const totalLoc = sorted.reduce((sum, u) => sum + u.data.linesOfCode, 0);
 
 // Size distribution
 const buckets = [
-  { label: "1-10", min: 1, max: 10, count: 0, loc: 0 },
-  { label: "11-20", min: 11, max: 20, count: 0, loc: 0 },
-  { label: "21-50", min: 21, max: 50, count: 0, loc: 0 },
-  { label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
-  { label: "101+", min: 101, max: Infinity, count: 0, loc: 0 },
-]
+	{ label: "1-10", min: 1, max: 10, count: 0, loc: 0 },
+	{ label: "11-20", min: 11, max: 20, count: 0, loc: 0 },
+	{ label: "21-50", min: 21, max: 50, count: 0, loc: 0 },
+	{ label: "51-100", min: 51, max: 100, count: 0, loc: 0 },
+	{ label: "101+", min: 101, max: Infinity, count: 0, loc: 0 },
+];
 
 for (const u of sorted) {
-  for (const b of buckets) {
-    if (u.data.linesOfCode >= b.min && u.data.linesOfCode <= b.max) {
-      b.count++
-      b.loc += u.data.linesOfCode
-      break
-    }
-  }
+	for (const b of buckets) {
+		if (u.data.linesOfCode >= b.min && u.data.linesOfCode <= b.max) {
+			b.count++;
+			b.loc += u.data.linesOfCode;
+			break;
+		}
+	}
 }
 
 const distData = buckets.map((b) => ({
-  label: b.label + " LOC",
-  value: b.loc,
-  detail: b.count + " units",
-  detailSecondary: b.loc.toLocaleString() + " LOC",
-}))
+	label: b.label + " LOC",
+	value: b.loc,
+	detail: b.count + " units",
+	detailSecondary: b.loc.toLocaleString() + " LOC",
+}));
 
 const riskData = [
-  { label: "Low (1-20 LOC)", value: buckets[0].count + buckets[1].count },
-  { label: "Medium (21-50 LOC)", value: buckets[2].count },
-  { label: "High (51-100 LOC)", value: buckets[3].count },
-  { label: "Very High (101+ LOC)", value: buckets[4].count },
-].filter((d) => d.value > 0)
+	{ label: "Low (1-20 LOC)", value: buckets[0].count + buckets[1].count },
+	{ label: "Medium (21-50 LOC)", value: buckets[2].count },
+	{ label: "High (51-100 LOC)", value: buckets[3].count },
+	{ label: "Very High (101+ LOC)", value: buckets[4].count },
+].filter((d) => d.value > 0);
 
 const unitSizeRows = sorted.map((u) => ({
-  id: u.id,
-  unit: u.data.shortName,
-  file: u.data.relativeFileName,
-  linesOfCode: u.data.linesOfCode,
-  mcCabeIndex: u.data.mcCabeIndex,
-  numberOfParameters: u.data.numberOfParameters,
-}))
+	id: u.id,
+	unit: u.data.shortName,
+	file: u.data.relativeFileName,
+	linesOfCode: u.data.linesOfCode,
+	mcCabeIndex: u.data.mcCabeIndex,
+	numberOfParameters: u.data.numberOfParameters,
+}));
 ---
 
 <Dashboard title="Unit Size" projectName={projectName}>

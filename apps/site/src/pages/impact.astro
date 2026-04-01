@@ -1,139 +1,148 @@
 ---
-import { getEntry } from "astro:content"
-import { basename } from "node:path"
-import DistributionChart from "../components/charts/DistributionChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import ImpactMatrix from "../components/impact/ImpactMatrix.astro"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
-import { route } from "../lib/route"
+import { getEntry } from "astro:content";
+import { basename } from "node:path";
+import DistributionChart from "../components/charts/DistributionChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import ImpactMatrix from "../components/impact/ImpactMatrix.astro";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
+import { route } from "../lib/route";
 
-const summary = await getEntry("analysis", "summary")
-const impact = await getEntry("impact", "impact")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const impact = await getEntry("impact", "impact");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 const dimensionLabels = {
-  complexity_reduction: "Complexity reduction",
-  boundary_shaping: "Boundary shaping",
-  knowledge_spread: "Knowledge spread",
-  coordination_relief: "Coordination relief",
-  change_enablement: "Change enablement",
-} as const
+	complexity_reduction: "Complexity reduction",
+	boundary_shaping: "Boundary shaping",
+	knowledge_spread: "Knowledge spread",
+	coordination_relief: "Coordination relief",
+	change_enablement: "Change enablement",
+} as const;
 
 function truncateLabel(value: string, max = 34): string {
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+	return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 function formatEvidenceExample(id: string): string {
-  if (id.startsWith("component:")) {
-    const [, decompositionKey = "", componentName = ""] = id.split(":")
-    return `component · ${componentName || decompositionKey}`
-  }
+	if (id.startsWith("component:")) {
+		const [, decompositionKey = "", componentName = ""] = id.split(":");
+		return `component · ${componentName || decompositionKey}`;
+	}
 
-  if (id.startsWith("file:")) {
-    const relativePath = id.slice("file:".length)
-    return `file · ${basename(relativePath)}`
-  }
+	if (id.startsWith("file:")) {
+		const relativePath = id.slice("file:".length);
+		return `file · ${basename(relativePath)}`;
+	}
 
-  if (id.startsWith("unit:")) {
-    const unitPath = id.slice("unit:".length)
-    const lineSeparator = unitPath.lastIndexOf(":")
-    const relativePath = lineSeparator >= 0 ? unitPath.slice(0, lineSeparator) : unitPath
-    const line = lineSeparator >= 0 ? unitPath.slice(lineSeparator + 1) : ""
-    const fileName = basename(relativePath)
-    return line ? `unit · ${fileName}:${line}` : `unit · ${fileName}`
-  }
+	if (id.startsWith("unit:")) {
+		const unitPath = id.slice("unit:".length);
+		const lineSeparator = unitPath.lastIndexOf(":");
+		const relativePath =
+			lineSeparator >= 0 ? unitPath.slice(0, lineSeparator) : unitPath;
+		const line = lineSeparator >= 0 ? unitPath.slice(lineSeparator + 1) : "";
+		const fileName = basename(relativePath);
+		return line ? `unit · ${fileName}:${line}` : `unit · ${fileName}`;
+	}
 
-  return truncateLabel(id, 40)
+	return truncateLabel(id, 40);
 }
 
 const opportunityRows =
-  impact?.data.impact_opportunities.map((item) => ({
-    id: item.id,
-    name: item.name,
-    href: item.route,
-    kind: item.kind[0].toUpperCase() + item.kind.slice(1),
-    parent: item.parent || "System-wide",
-    impactScore: item.impact_score,
-    visibleActivity: item.visible_activity_score,
-    structuralImpact: item.structural_impact_score,
-    dominantDimension: dimensionLabels[item.dominant_dimension],
-    complexityReduction: item.dimensions.complexity_reduction,
-    boundaryShaping: item.dimensions.boundary_shaping,
-    knowledgeSpread: item.dimensions.knowledge_spread,
-    coordinationRelief: item.dimensions.coordination_relief,
-    changeEnablement: item.dimensions.change_enablement,
-    suggestedAction: item.suggested_action,
-    reasons: item.reasons.join(" • "),
-  })) ?? []
+	impact?.data.impact_opportunities.map((item) => ({
+		id: item.id,
+		name: item.name,
+		href: item.route,
+		kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+		parent: item.parent || "System-wide",
+		impactScore: item.impact_score,
+		visibleActivity: item.visible_activity_score,
+		structuralImpact: item.structural_impact_score,
+		dominantDimension: dimensionLabels[item.dominant_dimension],
+		complexityReduction: item.dimensions.complexity_reduction,
+		boundaryShaping: item.dimensions.boundary_shaping,
+		knowledgeSpread: item.dimensions.knowledge_spread,
+		coordinationRelief: item.dimensions.coordination_relief,
+		changeEnablement: item.dimensions.change_enablement,
+		suggestedAction: item.suggested_action,
+		reasons: item.reasons.join(" • "),
+	})) ?? [];
 
 const snackingRows =
-  impact?.data.snacking_candidates.map((item) => ({
-    id: item.id,
-    name: item.name,
-    href: item.route,
-    kind: item.kind[0].toUpperCase() + item.kind.slice(1),
-    visibleActivity: item.visible_activity_score,
-    structuralImpact: item.structural_impact_score,
-    delta: Math.max(item.visible_activity_score - item.structural_impact_score, 0),
-    reason: item.reason,
-  })) ?? []
+	impact?.data.snacking_candidates.map((item) => ({
+		id: item.id,
+		name: item.name,
+		href: item.route,
+		kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+		visibleActivity: item.visible_activity_score,
+		structuralImpact: item.structural_impact_score,
+		delta: Math.max(
+			item.visible_activity_score - item.structural_impact_score,
+			0,
+		),
+		reason: item.reason,
+	})) ?? [];
 
 const dimensionChartData =
-  impact?.data.impact_dimensions.map((dimension) => ({
-    label: dimension.label,
-    value: dimension.score,
-  })) ?? []
+	impact?.data.impact_dimensions.map((dimension) => ({
+		label: dimension.label,
+		value: dimension.score,
+	})) ?? [];
 
 const topOpportunityData =
-  impact?.data.impact_opportunities.slice(0, 12).map((item) => ({
-    label: truncateLabel(item.name),
-    value: item.impact_score,
-  })) ?? []
+	impact?.data.impact_opportunities.slice(0, 12).map((item) => ({
+		label: truncateLabel(item.name),
+		value: item.impact_score,
+	})) ?? [];
 
 const snackingChartData =
-  impact?.data.snacking_candidates.slice(0, 8).map((item) => ({
-    label: truncateLabel(item.name),
-    value: Math.max(item.visible_activity_score - item.structural_impact_score, 0),
-    detail: `activity ${item.visible_activity_score.toFixed(1)}`,
-    detailSecondary: `impact ${item.structural_impact_score.toFixed(1)}`,
-  })) ?? []
+	impact?.data.snacking_candidates.slice(0, 8).map((item) => ({
+		label: truncateLabel(item.name),
+		value: Math.max(
+			item.visible_activity_score - item.structural_impact_score,
+			0,
+		),
+		detail: `activity ${item.visible_activity_score.toFixed(1)}`,
+		detailSecondary: `impact ${item.structural_impact_score.toFixed(1)}`,
+	})) ?? [];
 
 const conceptCards =
-  impact?.data.concept_mappings.map((mapping) => ({
-    concept: mapping.concept,
-    dimension: dimensionLabels[mapping.dimension],
-    evidenceCount: mapping.evidence_count,
-    examples: mapping.example_ids.slice(0, 3).map((id) => formatEvidenceExample(id)),
-  })) ?? []
+	impact?.data.concept_mappings.map((mapping) => ({
+		concept: mapping.concept,
+		dimension: dimensionLabels[mapping.dimension],
+		evidenceCount: mapping.evidence_count,
+		examples: mapping.example_ids
+			.slice(0, 3)
+			.map((id) => formatEvidenceExample(id)),
+	})) ?? [];
 
 const playbookItems = [
-  {
-    title: "Reduce complexity in hotspot cores",
-    body: "Start where large units, duplication, and structural hotspot pressure overlap. Those are usually the fastest durable wins.",
-    href: route("/hotspots"),
-    label: "Open Hotspots",
-  },
-  {
-    title: "Stabilize overloaded boundaries",
-    body: "Use coupling and dependency evidence together to tighten components that pull too much coordination across the system.",
-    href: route("/coupling"),
-    label: "Open Balanced Coupling",
-  },
-  {
-    title: "Spread knowledge in fragile areas",
-    body: "Large components with thin backup coverage raise delivery and offboarding risk. Use people signals before the next major change lands there.",
-    href: route("/contributors"),
-    label: "Open Contributors",
-  },
-  {
-    title: "Hold the line after improvement",
-    body: "After a structural improvement, turn the insight into a control so the system does not slide back into the same failure mode.",
-    href: route("/controls"),
-    label: "Open Goals & Controls",
-  },
-] as const
+	{
+		title: "Reduce complexity in hotspot cores",
+		body: "Start where large units, duplication, and structural hotspot pressure overlap. Those are usually the fastest durable wins.",
+		href: route("/hotspots"),
+		label: "Open Hotspots",
+	},
+	{
+		title: "Stabilize overloaded boundaries",
+		body: "Use coupling and dependency evidence together to tighten components that pull too much coordination across the system.",
+		href: route("/coupling"),
+		label: "Open Balanced Coupling",
+	},
+	{
+		title: "Spread knowledge in fragile areas",
+		body: "Large components with thin backup coverage raise delivery and offboarding risk. Use people signals before the next major change lands there.",
+		href: route("/contributors"),
+		label: "Open Contributors",
+	},
+	{
+		title: "Hold the line after improvement",
+		body: "After a structural improvement, turn the insight into a control so the system does not slide back into the same failure mode.",
+		href: route("/controls"),
+		label: "Open Goals & Controls",
+	},
+] as const;
 ---
 
 <Dashboard title="Impact" projectName={projectName}>

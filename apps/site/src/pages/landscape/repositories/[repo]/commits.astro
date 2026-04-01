@@ -1,98 +1,153 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart"
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
-import LineChart from "../../../../components/charts/LineChart"
-import StaticReportTable from "../../../../components/tables/StaticReportTable.astro"
-import { chartHelp } from "../../../../lib/chartHelp"
-import { readLandscapeRepoJson, readLandscapeRepoText } from "../../../../lib/landscape"
+import DistributionChart from "../../../../components/charts/DistributionChart";
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
+import LineChart from "../../../../components/charts/LineChart";
+import StaticReportTable from "../../../../components/tables/StaticReportTable.astro";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../lib/chartHelp";
 import {
-  getLandscapeRepositoryPageContext,
-  getLandscapeRepositoryStaticPaths,
-  type LandscapeRepoPageProps,
-} from "../../../../lib/landscapeRepoContext"
-import { getMetric, parseMetricsText } from "../../../../lib/metrics"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+	readLandscapeRepoJson,
+	readLandscapeRepoText,
+} from "../../../../lib/landscape";
+import {
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
+import { getMetric, parseMetricsText } from "../../../../lib/metrics";
 
 interface RepoContributor {
-  email: string
-  commitsCount: number
-  commitsCount30Days: number
-  commitsCount90Days: number
-  commitsCount365Days: number
-  isRookie?: boolean
+	email: string;
+	commitsCount: number;
+	commitsCount30Days: number;
+	commitsCount90Days: number;
+	commitsCount365Days: number;
+	isRookie?: boolean;
 }
 
 interface RepoContributorsExport {
-  contributors?: RepoContributor[]
+	contributors?: RepoContributor[];
 }
 
 interface RepoTimelineEntry {
-  timeSlot: string
-  contributors: number
-  commits: number
+	timeSlot: string;
+	contributors: number;
+	commits: number;
 }
 
 interface RepoTimelineExport {
-  perYear?: RepoTimelineEntry[]
+	perYear?: RepoTimelineEntry[];
 }
 
 interface CommitsPerExtensionEntry {
-  extension: string
-  commitsCount: number
-  committersCount: number
-  filesCount: number
-  commitsCount30Days?: number
-  commitsCount90Days?: number
+	extension: string;
+	commitsCount: number;
+	committersCount: number;
+	filesCount: number;
+	commitsCount30Days?: number;
+	commitsCount90Days?: number;
 }
 
 export async function getStaticPaths() {
-  return getLandscapeRepositoryStaticPaths()
+	return getLandscapeRepositoryStaticPaths();
 }
 
-const props = Astro.props as LandscapeRepoPageProps
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const props = Astro.props as LandscapeRepoPageProps;
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const contributors = readLandscapeRepoJson<RepoContributorsExport>(props.repoKey, "contributors.json")?.contributors ?? []
-const metrics = parseMetricsText(readLandscapeRepoText(props.repoKey, "metrics.txt"))
-const commitsPerExtension = readLandscapeRepoJson<CommitsPerExtensionEntry[]>(props.repoKey, "commits_per_extension.json") ?? []
-const timeline = readLandscapeRepoJson<RepoTimelineExport>(props.repoKey, "contributor_timeline.json")
+const contributors =
+	readLandscapeRepoJson<RepoContributorsExport>(
+		props.repoKey,
+		"contributors.json",
+	)?.contributors ?? [];
+const metrics = parseMetricsText(
+	readLandscapeRepoText(props.repoKey, "metrics.txt"),
+);
+const commitsPerExtension =
+	readLandscapeRepoJson<CommitsPerExtensionEntry[]>(
+		props.repoKey,
+		"commits_per_extension.json",
+	) ?? [];
+const timeline = readLandscapeRepoJson<RepoTimelineExport>(
+	props.repoKey,
+	"contributor_timeline.json",
+);
 
-const totalContributors = contributors.length
-const totalCommits = contributors.reduce((sum, contributor) => sum + contributor.commitsCount, 0)
-const activeContributors30 = contributors.filter((contributor) => contributor.commitsCount30Days > 0).length
-const activeContributors90 = contributors.filter((contributor) => contributor.commitsCount90Days > 0).length
-const activeContributors365 = contributors.filter((contributor) => contributor.commitsCount365Days > 0).length
-const ageDays = getMetric(metrics, "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS")
-const activeDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ACTIVE_DAYS")
-const rookieCount = contributors.filter((contributor) => contributor.isRookie).length
+const totalContributors = contributors.length;
+const totalCommits = contributors.reduce(
+	(sum, contributor) => sum + contributor.commitsCount,
+	0,
+);
+const activeContributors30 = contributors.filter(
+	(contributor) => contributor.commitsCount30Days > 0,
+).length;
+const activeContributors90 = contributors.filter(
+	(contributor) => contributor.commitsCount90Days > 0,
+).length;
+const activeContributors365 = contributors.filter(
+	(contributor) => contributor.commitsCount365Days > 0,
+).length;
+const ageDays = getMetric(metrics, "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS");
+const activeDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ACTIVE_DAYS");
+const rookieCount = contributors.filter(
+	(contributor) => contributor.isRookie,
+).length;
 
 const activityData = [
-  { label: "Past 30 days", value: activeContributors30, detail: `${activeContributors30} contributors` },
-  { label: "Past 90 days", value: activeContributors90, detail: `${activeContributors90} contributors` },
-  { label: "Past year", value: activeContributors365, detail: `${activeContributors365} contributors` },
-  { label: "All time", value: totalContributors, detail: `${totalContributors} contributors` },
-]
+	{
+		label: "Past 30 days",
+		value: activeContributors30,
+		detail: `${activeContributors30} contributors`,
+	},
+	{
+		label: "Past 90 days",
+		value: activeContributors90,
+		detail: `${activeContributors90} contributors`,
+	},
+	{
+		label: "Past year",
+		value: activeContributors365,
+		detail: `${activeContributors365} contributors`,
+	},
+	{
+		label: "All time",
+		value: totalContributors,
+		detail: `${totalContributors} contributors`,
+	},
+];
 
-const yearlyData = [...(timeline?.perYear ?? [])].sort((left, right) => left.timeSlot.localeCompare(right.timeSlot))
-const commitsByYear = yearlyData.map((entry) => ({ label: entry.timeSlot, value: entry.commits }))
-const contributorsByYear = yearlyData.map((entry) => ({ label: entry.timeSlot, value: entry.contributors }))
+const yearlyData = [...(timeline?.perYear ?? [])].sort((left, right) =>
+	left.timeSlot.localeCompare(right.timeSlot),
+);
+const commitsByYear = yearlyData.map((entry) => ({
+	label: entry.timeSlot,
+	value: entry.commits,
+}));
+const contributorsByYear = yearlyData.map((entry) => ({
+	label: entry.timeSlot,
+	value: entry.contributors,
+}));
 const timelineSeries = [
-  ...(commitsByYear.length > 0 ? [{ name: "Commits", data: commitsByYear, color: "#3b82f6" }] : []),
-  ...(contributorsByYear.length > 0 ? [{ name: "Contributors", data: contributorsByYear, color: "#22c55e" }] : []),
-]
+	...(commitsByYear.length > 0
+		? [{ name: "Commits", data: commitsByYear, color: "#3b82f6" }]
+		: []),
+	...(contributorsByYear.length > 0
+		? [{ name: "Contributors", data: contributorsByYear, color: "#22c55e" }]
+		: []),
+];
 
 const extensionBarData = [...commitsPerExtension]
-  .sort((left, right) => right.commitsCount - left.commitsCount)
-  .slice(0, 15)
-  .map((entry) => ({
-    label: `.${entry.extension}`,
-    value: entry.commitsCount,
-  }))
+	.sort((left, right) => right.commitsCount - left.commitsCount)
+	.slice(0, 15)
+	.map((entry) => ({
+		label: `.${entry.extension}`,
+		value: entry.commitsCount,
+	}));
 ---
 
 <Dashboard title={`${repoName} Commits`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

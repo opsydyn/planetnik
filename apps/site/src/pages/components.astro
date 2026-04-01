@@ -1,80 +1,128 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DonutChart from "../components/charts/DonutChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import ScatterPlot from "../components/charts/ScatterPlot"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import TreemapChart from "../components/charts/Treemap"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import ScatterPlot from "../components/charts/ScatterPlot";
+import TreemapChart from "../components/charts/Treemap";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const filesMain = await getCollection("filesMain")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const filesMain = await getCollection("filesMain");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 // Aggregate components from files
-const componentMap = new Map<string, { files: number; loc: number; contributors: Set<string> }>()
+const componentMap = new Map<
+	string,
+	{ files: number; loc: number; contributors: Set<string> }
+>();
 for (const f of filesMain) {
-  for (const comp of f.data.components) {
-    const entry = componentMap.get(comp) ?? { files: 0, loc: 0, contributors: new Set<string>() }
-    entry.files++
-    entry.loc += f.data.linesOfCode
-    if (f.data.contributors) {
-      for (const c of f.data.contributors) entry.contributors.add(c)
-    }
-    componentMap.set(comp, entry)
-  }
+	for (const comp of f.data.components) {
+		const entry = componentMap.get(comp) ?? {
+			files: 0,
+			loc: 0,
+			contributors: new Set<string>(),
+		};
+		entry.files++;
+		entry.loc += f.data.linesOfCode;
+		if (f.data.contributors) {
+			for (const c of f.data.contributors) entry.contributors.add(c);
+		}
+		componentMap.set(comp, entry);
+	}
 }
-const components = [...componentMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
-const unassigned = filesMain.filter((f) => f.data.components.length === 0)
-const singleOwnerComponents = components.filter(([, s]) => s.contributors.size === 1).length
-const lowBackupComponents = components.filter(([, s]) => s.contributors.size > 0 && s.contributors.size <= 2).length
-const distributedComponents = components.filter(([, s]) => s.contributors.size >= 3).length
+const components = [...componentMap.entries()].sort(
+	(a, b) => b[1].loc - a[1].loc,
+);
+const unassigned = filesMain.filter((f) => f.data.components.length === 0);
+const singleOwnerComponents = components.filter(
+	([, s]) => s.contributors.size === 1,
+).length;
+const lowBackupComponents = components.filter(
+	([, s]) => s.contributors.size > 0 && s.contributors.size <= 2,
+).length;
+const distributedComponents = components.filter(
+	([, s]) => s.contributors.size >= 3,
+).length;
 const componentCoverageData = [
-  ...(singleOwnerComponents > 0 ? [{ label: "Single owner", value: singleOwnerComponents, color: "#ef4444" }] : []),
-  ...(lowBackupComponents - singleOwnerComponents > 0
-    ? [{ label: "Two contributors", value: lowBackupComponents - singleOwnerComponents, color: "#f59e0b" }]
-    : []),
-  ...(distributedComponents > 0 ? [{ label: "3+ contributors", value: distributedComponents, color: "#22c55e" }] : []),
-  ...(unassigned.length > 0 ? [{ label: "Unassigned files", value: unassigned.length, color: "#94a3b8" }] : []),
-]
+	...(singleOwnerComponents > 0
+		? [
+				{
+					label: "Single owner",
+					value: singleOwnerComponents,
+					color: "#ef4444",
+				},
+			]
+		: []),
+	...(lowBackupComponents - singleOwnerComponents > 0
+		? [
+				{
+					label: "Two contributors",
+					value: lowBackupComponents - singleOwnerComponents,
+					color: "#f59e0b",
+				},
+			]
+		: []),
+	...(distributedComponents > 0
+		? [
+				{
+					label: "3+ contributors",
+					value: distributedComponents,
+					color: "#22c55e",
+				},
+			]
+		: []),
+	...(unassigned.length > 0
+		? [
+				{
+					label: "Unassigned files",
+					value: unassigned.length,
+					color: "#94a3b8",
+				},
+			]
+		: []),
+];
 
 const compBarData = components.slice(0, 15).map(([name, s]) => ({
-  label: name,
-  value: s.loc,
-}))
+	label: name,
+	value: s.loc,
+}));
 
 const treemapData = components.map(([name, s]) => ({
-  label: name,
-  value: s.loc,
-}))
+	label: name,
+	value: s.loc,
+}));
 
 const busFactorData = components
-  .filter(([, s]) => s.contributors.size > 0)
-  .map(([name, s]) => ({
-    x: s.loc,
-    y: s.contributors.size,
-    label: name,
-  }))
+	.filter(([, s]) => s.contributors.size > 0)
+	.map(([name, s]) => ({
+		x: s.loc,
+		y: s.contributors.size,
+		label: name,
+	}));
 
 const componentRows = components.map(([name, s]) => ({
-  id: name,
-  component: name,
-  files: s.files,
-  loc: s.loc,
-  contributors: s.contributors.size > 0 ? s.contributors.size : null,
-  risk: s.contributors.size > 0 && s.contributors.size <= 2 ? "Bus factor risk" : "",
-}))
+	id: name,
+	component: name,
+	files: s.files,
+	loc: s.loc,
+	contributors: s.contributors.size > 0 ? s.contributors.size : null,
+	risk:
+		s.contributors.size > 0 && s.contributors.size <= 2
+			? "Bus factor risk"
+			: "",
+}));
 
 if (unassigned.length > 0) {
-  componentRows.push({
-    id: "__unassigned__",
-    component: "(unassigned)",
-    files: unassigned.length,
-    loc: unassigned.reduce((sum, file) => sum + file.data.linesOfCode, 0),
-    contributors: null,
-    risk: "",
-  })
+	componentRows.push({
+		id: "__unassigned__",
+		component: "(unassigned)",
+		files: unassigned.length,
+		loc: unassigned.reduce((sum, file) => sum + file.data.linesOfCode, 0),
+		contributors: null,
+		risk: "",
+	});
 }
 ---
 

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.7/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
   "assist": {
     "actions": {
       "source": {
@@ -33,6 +33,49 @@
     }
   },
   "files": {
-    "includes": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "apps/**/*.astro"]
+    "includes": [
+      "biome.json",
+      "package.json",
+      "tsconfig.base.json",
+      "packages/**/*.json",
+      "packages/**/*.ts",
+      "apps/**/*.json",
+      "apps/**/*.ts",
+      "apps/**/*.tsx",
+      "!apps/**/.astro",
+      "!apps/**/dist"
+    ]
+  },
+  "overrides": [
+    {
+      "includes": ["apps/site/src/components/charts/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noStaticElementInteractions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/site/src/components/coupling/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/site/src/components/charts/HorizontalBarChart.tsx"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          }
+        }
+      }
+    }
   }
 }

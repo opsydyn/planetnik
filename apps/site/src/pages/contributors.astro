@@ -1,113 +1,141 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DonutChart from "../components/charts/DonutChart"
-import DistributionChart from "../components/charts/DistributionChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
-import { getContributorDisplayName, getContributorHref } from "../lib/contributors"
-import { route } from "../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../components/charts/DistributionChart";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
+import {
+	getContributorDisplayName,
+	getContributorHref,
+} from "../lib/contributors";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {
-  return Astro.redirect(route("/landscape/contributors"))
+	return Astro.redirect(route("/landscape/contributors"));
 }
 
-const summary = await getEntry("analysis", "summary")
-const contributors = await getCollection("contributors")
-const contributorDetails = await getCollection("contributorDetails")
-const projectName = summary?.data.metadata.name ?? "Unknown"
-const contributorDetailsByEmail = new Map(contributorDetails.map((entry) => [entry.id, entry.data]))
+const summary = await getEntry("analysis", "summary");
+const contributors = await getCollection("contributors");
+const contributorDetails = await getCollection("contributorDetails");
+const projectName = summary?.data.metadata.name ?? "Unknown";
+const contributorDetailsByEmail = new Map(
+	contributorDetails.map((entry) => [entry.id, entry.data]),
+);
 
 // Sort by commits descending
-const sorted = [...contributors].sort((a, b) => b.data.commitsAllTime - a.data.commitsAllTime)
-const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0)
+const sorted = [...contributors].sort(
+	(a, b) => b.data.commitsAllTime - a.data.commitsAllTime,
+);
+const totalCommits = sorted.reduce((sum, c) => sum + c.data.commitsAllTime, 0);
 
 const contribBarData = sorted.slice(0, 15).map((c) => ({
-  label: getContributorDisplayName(c.data),
-  value: c.data.commitsAllTime,
-}))
+	label: getContributorDisplayName(c.data),
+	value: c.data.commitsAllTime,
+}));
 
-const rookieCount = sorted.filter((c) => c.data.isRookie).length
-const activeCount = sorted.filter((c) => c.data.isActive).length
-const inactiveCount = sorted.length - activeCount
-const topContributorShare = totalCommits > 0 && sorted[0] ? (sorted[0].data.commitsAllTime / totalCommits) * 100 : 0
-const topThreeCommits = sorted.slice(0, 3).reduce((sum, contributor) => sum + contributor.data.commitsAllTime, 0)
-const topThreeShare = totalCommits > 0 ? (topThreeCommits / totalCommits) * 100 : 0
-const singleComponentSpecialists = contributorDetails.filter((entry) => entry.data.logicalComponents.length === 1).length
-const crossComponentContributors = contributorDetails.filter((entry) => entry.data.logicalComponents.length >= 3).length
+const rookieCount = sorted.filter((c) => c.data.isRookie).length;
+const activeCount = sorted.filter((c) => c.data.isActive).length;
+const inactiveCount = sorted.length - activeCount;
+const topContributorShare =
+	totalCommits > 0 && sorted[0]
+		? (sorted[0].data.commitsAllTime / totalCommits) * 100
+		: 0;
+const topThreeCommits = sorted
+	.slice(0, 3)
+	.reduce((sum, contributor) => sum + contributor.data.commitsAllTime, 0);
+const topThreeShare =
+	totalCommits > 0 ? (topThreeCommits / totalCommits) * 100 : 0;
+const singleComponentSpecialists = contributorDetails.filter(
+	(entry) => entry.data.logicalComponents.length === 1,
+).length;
+const crossComponentContributors = contributorDetails.filter(
+	(entry) => entry.data.logicalComponents.length >= 3,
+).length;
 
 const knowledgeDistribution = [
-  {
-    label: "1 component",
-    value: contributorDetails.filter((entry) => entry.data.logicalComponents.length === 1).length,
-    detail: "deep specialists",
-  },
-  {
-    label: "2-3 components",
-    value: contributorDetails.filter((entry) => {
-      const count = entry.data.logicalComponents.length
-      return count >= 2 && count <= 3
-    }).length,
-    detail: "balanced contributors",
-  },
-  {
-    label: "4-7 components",
-    value: contributorDetails.filter((entry) => {
-      const count = entry.data.logicalComponents.length
-      return count >= 4 && count <= 7
-    }).length,
-    detail: "broad contributors",
-  },
-  {
-    label: "8+ components",
-    value: contributorDetails.filter((entry) => entry.data.logicalComponents.length >= 8).length,
-    detail: "system-wide reach",
-  },
-].filter((entry) => entry.value > 0)
+	{
+		label: "1 component",
+		value: contributorDetails.filter(
+			(entry) => entry.data.logicalComponents.length === 1,
+		).length,
+		detail: "deep specialists",
+	},
+	{
+		label: "2-3 components",
+		value: contributorDetails.filter((entry) => {
+			const count = entry.data.logicalComponents.length;
+			return count >= 2 && count <= 3;
+		}).length,
+		detail: "balanced contributors",
+	},
+	{
+		label: "4-7 components",
+		value: contributorDetails.filter((entry) => {
+			const count = entry.data.logicalComponents.length;
+			return count >= 4 && count <= 7;
+		}).length,
+		detail: "broad contributors",
+	},
+	{
+		label: "8+ components",
+		value: contributorDetails.filter(
+			(entry) => entry.data.logicalComponents.length >= 8,
+		).length,
+		detail: "system-wide reach",
+	},
+].filter((entry) => entry.value > 0);
 
 const segmentData = [
-  ...(rookieCount > 0 ? [{ label: "Rookies (active, < 1yr)", value: rookieCount }] : []),
-  ...(activeCount - rookieCount > 0 ? [{ label: "Active (> 1yr)", value: activeCount - rookieCount }] : []),
-  ...(inactiveCount > 0 ? [{ label: "Inactive", value: inactiveCount }] : []),
-]
+	...(rookieCount > 0
+		? [{ label: "Rookies (active, < 1yr)", value: rookieCount }]
+		: []),
+	...(activeCount - rookieCount > 0
+		? [{ label: "Active (> 1yr)", value: activeCount - rookieCount }]
+		: []),
+	...(inactiveCount > 0 ? [{ label: "Inactive", value: inactiveCount }] : []),
+];
 
 const contributorRows = sorted.map((c) => {
-  const detail = contributorDetailsByEmail.get(c.id)
-  const componentsTouched = detail?.logicalComponents.length ?? null
-  const filesTouched = detail?.files.length ?? null
-  const primaryComponent =
-    detail?.logicalComponents
-      .slice()
-      .sort((a, b) => b.linesOfCode - a.linesOfCode)[0]?.name ?? ""
-  const knowledgeRisk =
-    componentsTouched === 1
-      ? "Single-component specialist"
-      : componentsTouched !== null && componentsTouched >= 5
-        ? "Cross-context knowledge"
-        : ""
+	const detail = contributorDetailsByEmail.get(c.id);
+	const componentsTouched = detail?.logicalComponents.length ?? null;
+	const filesTouched = detail?.files.length ?? null;
+	const primaryComponent =
+		detail?.logicalComponents
+			.slice()
+			.sort((a, b) => b.linesOfCode - a.linesOfCode)[0]?.name ?? "";
+	const knowledgeRisk =
+		componentsTouched === 1
+			? "Single-component specialist"
+			: componentsTouched !== null && componentsTouched >= 5
+				? "Cross-context knowledge"
+				: "";
 
-  return {
-    id: c.data.email,
-    contributor: getContributorDisplayName(c.data),
-    href: getContributorHref(c.data.email),
-    email: c.data.userName ? c.data.email : "",
-    status: c.data.isRookie ? "Rookie" : c.data.isActive ? "Active" : "Inactive",
-    allTime: c.data.commitsAllTime,
-    commits30Days: c.data.commits30Days ?? null,
-    commits90Days: c.data.commits90Days ?? null,
-    commits180Days: c.data.commits180Days ?? null,
-    commits365Days: c.data.commits365Days ?? null,
-    filesTouched,
-    componentsTouched,
-    primaryComponent,
-    knowledgeRisk,
-    firstCommit: c.data.firstCommit,
-    lastCommit: c.data.lastCommit,
-    percentage: c.data.percentage,
-  }
-})
+	return {
+		id: c.data.email,
+		contributor: getContributorDisplayName(c.data),
+		href: getContributorHref(c.data.email),
+		email: c.data.userName ? c.data.email : "",
+		status: c.data.isRookie
+			? "Rookie"
+			: c.data.isActive
+				? "Active"
+				: "Inactive",
+		allTime: c.data.commitsAllTime,
+		commits30Days: c.data.commits30Days ?? null,
+		commits90Days: c.data.commits90Days ?? null,
+		commits180Days: c.data.commits180Days ?? null,
+		commits365Days: c.data.commits365Days ?? null,
+		filesTouched,
+		componentsTouched,
+		primaryComponent,
+		knowledgeRisk,
+		firstCommit: c.data.firstCommit,
+		lastCommit: c.data.lastCommit,
+		percentage: c.data.percentage,
+	};
+});
 ---
 
 <Dashboard title="Contributors" projectName={projectName}>

@@ -1,206 +1,226 @@
 ---
-import { basename } from "node:path"
-import DistributionChart from "../../../../components/charts/DistributionChart"
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
-import ImpactMatrix from "../../../../components/impact/ImpactMatrix.astro"
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../../../lib/chartHelp"
+import { basename } from "node:path";
+import DistributionChart from "../../../../components/charts/DistributionChart";
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
+import ImpactMatrix from "../../../../components/impact/ImpactMatrix.astro";
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../lib/chartHelp";
 import {
-  getLandscapeRepositoryComponentsHref,
-  getLandscapeRepositoryControlsHref,
-  getLandscapeRepositoryContributorsHref,
-  getLandscapeRepositoryHotspotsHref,
-  mapLandscapeRepositoryRoute,
-  readLandscapeRepoJson,
-} from "../../../../lib/landscape"
+	getLandscapeRepositoryComponentsHref,
+	getLandscapeRepositoryContributorsHref,
+	getLandscapeRepositoryControlsHref,
+	getLandscapeRepositoryHotspotsHref,
+	mapLandscapeRepositoryRoute,
+	readLandscapeRepoJson,
+} from "../../../../lib/landscape";
 import {
-  getLandscapeRepositoryPageContext,
-  getLandscapeRepositoryStaticPaths,
-  type LandscapeRepoPageProps,
-} from "../../../../lib/landscapeRepoContext"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
 
 type ImpactDimensionKey =
-  | "complexity_reduction"
-  | "boundary_shaping"
-  | "knowledge_spread"
-  | "coordination_relief"
-  | "change_enablement"
+	| "complexity_reduction"
+	| "boundary_shaping"
+	| "knowledge_spread"
+	| "coordination_relief"
+	| "change_enablement";
 
 interface RepoImpactItem {
-  id: string
-  name: string
-  route: string
-  kind: "file" | "unit" | "component"
-  parent?: string
-  impact_score: number
-  visible_activity_score: number
-  structural_impact_score: number
-  dominant_dimension: ImpactDimensionKey
-  dimensions: Record<ImpactDimensionKey, number>
-  suggested_action: string
-  reasons: string[]
+	id: string;
+	name: string;
+	route: string;
+	kind: "file" | "unit" | "component";
+	parent?: string;
+	impact_score: number;
+	visible_activity_score: number;
+	structural_impact_score: number;
+	dominant_dimension: ImpactDimensionKey;
+	dimensions: Record<ImpactDimensionKey, number>;
+	suggested_action: string;
+	reasons: string[];
 }
 
 interface RepoImpactExport {
-  title: string
-  visible_activity: {
-    commits: number
-    contributors: number
-    changed_files: number
-    changed_units: number
-  }
-  structural_impact: {
-    summary: {
-      overall_score: number
-      dominant_dimension: ImpactDimensionKey
-    }
-  }
-  impact_dimensions: Array<{
-    id: ImpactDimensionKey
-    label: string
-    score: number
-    reasons: string[]
-  }>
-  concept_mappings: Array<{
-    concept: string
-    dimension: ImpactDimensionKey
-    evidence_count: number
-    example_ids: string[]
-  }>
-  impact_opportunities: RepoImpactItem[]
-  snacking_candidates: Array<{
-    id: string
-    name: string
-    route: string
-    kind: "file" | "unit" | "component"
-    visible_activity_score: number
-    structural_impact_score: number
-    reason: string
-  }>
+	title: string;
+	visible_activity: {
+		commits: number;
+		contributors: number;
+		changed_files: number;
+		changed_units: number;
+	};
+	structural_impact: {
+		summary: {
+			overall_score: number;
+			dominant_dimension: ImpactDimensionKey;
+		};
+	};
+	impact_dimensions: Array<{
+		id: ImpactDimensionKey;
+		label: string;
+		score: number;
+		reasons: string[];
+	}>;
+	concept_mappings: Array<{
+		concept: string;
+		dimension: ImpactDimensionKey;
+		evidence_count: number;
+		example_ids: string[];
+	}>;
+	impact_opportunities: RepoImpactItem[];
+	snacking_candidates: Array<{
+		id: string;
+		name: string;
+		route: string;
+		kind: "file" | "unit" | "component";
+		visible_activity_score: number;
+		structural_impact_score: number;
+		reason: string;
+	}>;
 }
 
 export async function getStaticPaths() {
-  return getLandscapeRepositoryStaticPaths()
+	return getLandscapeRepositoryStaticPaths();
 }
 
-const props = Astro.props as LandscapeRepoPageProps
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const props = Astro.props as LandscapeRepoPageProps;
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const impact = readLandscapeRepoJson<RepoImpactExport>(props.repoKey, "impact.json")
+const impact = readLandscapeRepoJson<RepoImpactExport>(
+	props.repoKey,
+	"impact.json",
+);
 
 const dimensionLabels = {
-  complexity_reduction: "Complexity reduction",
-  boundary_shaping: "Boundary shaping",
-  knowledge_spread: "Knowledge spread",
-  coordination_relief: "Coordination relief",
-  change_enablement: "Change enablement",
-} as const
+	complexity_reduction: "Complexity reduction",
+	boundary_shaping: "Boundary shaping",
+	knowledge_spread: "Knowledge spread",
+	coordination_relief: "Coordination relief",
+	change_enablement: "Change enablement",
+} as const;
 
 function truncateLabel(value: string, max = 34): string {
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+	return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 function formatEvidenceExample(id: string): string {
-  if (id.startsWith("component:")) {
-    const [, decompositionKey = "", componentName = ""] = id.split(":")
-    return `component · ${componentName || decompositionKey}`
-  }
-  if (id.startsWith("file:")) {
-    return `file · ${basename(id.slice("file:".length))}`
-  }
-  if (id.startsWith("unit:")) {
-    const unitPath = id.slice("unit:".length)
-    const lineSeparator = unitPath.lastIndexOf(":")
-    const relativePath = lineSeparator >= 0 ? unitPath.slice(0, lineSeparator) : unitPath
-    const line = lineSeparator >= 0 ? unitPath.slice(lineSeparator + 1) : ""
-    const fileName = basename(relativePath)
-    return line ? `unit · ${fileName}:${line}` : `unit · ${fileName}`
-  }
-  return truncateLabel(id, 40)
+	if (id.startsWith("component:")) {
+		const [, decompositionKey = "", componentName = ""] = id.split(":");
+		return `component · ${componentName || decompositionKey}`;
+	}
+	if (id.startsWith("file:")) {
+		return `file · ${basename(id.slice("file:".length))}`;
+	}
+	if (id.startsWith("unit:")) {
+		const unitPath = id.slice("unit:".length);
+		const lineSeparator = unitPath.lastIndexOf(":");
+		const relativePath =
+			lineSeparator >= 0 ? unitPath.slice(0, lineSeparator) : unitPath;
+		const line = lineSeparator >= 0 ? unitPath.slice(lineSeparator + 1) : "";
+		const fileName = basename(relativePath);
+		return line ? `unit · ${fileName}:${line}` : `unit · ${fileName}`;
+	}
+	return truncateLabel(id, 40);
 }
 
 const opportunityRows =
-  impact?.impact_opportunities.map((item) => ({
-    id: item.id,
-    name: item.name,
-    href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
-    kind: item.kind[0].toUpperCase() + item.kind.slice(1),
-    parent: item.parent || "System-wide",
-    impactScore: item.impact_score,
-    visibleActivity: item.visible_activity_score,
-    structuralImpact: item.structural_impact_score,
-    dominantDimension: dimensionLabels[item.dominant_dimension],
-    complexityReduction: item.dimensions.complexity_reduction,
-    boundaryShaping: item.dimensions.boundary_shaping,
-    knowledgeSpread: item.dimensions.knowledge_spread,
-    coordinationRelief: item.dimensions.coordination_relief,
-    changeEnablement: item.dimensions.change_enablement,
-    suggestedAction: item.suggested_action,
-    reasons: item.reasons.join(" • "),
-  })) ?? []
+	impact?.impact_opportunities.map((item) => ({
+		id: item.id,
+		name: item.name,
+		href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
+		kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+		parent: item.parent || "System-wide",
+		impactScore: item.impact_score,
+		visibleActivity: item.visible_activity_score,
+		structuralImpact: item.structural_impact_score,
+		dominantDimension: dimensionLabels[item.dominant_dimension],
+		complexityReduction: item.dimensions.complexity_reduction,
+		boundaryShaping: item.dimensions.boundary_shaping,
+		knowledgeSpread: item.dimensions.knowledge_spread,
+		coordinationRelief: item.dimensions.coordination_relief,
+		changeEnablement: item.dimensions.change_enablement,
+		suggestedAction: item.suggested_action,
+		reasons: item.reasons.join(" • "),
+	})) ?? [];
 
 const snackingRows =
-  impact?.snacking_candidates.map((item) => ({
-    id: item.id,
-    name: item.name,
-    href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
-    kind: item.kind[0].toUpperCase() + item.kind.slice(1),
-    visibleActivity: item.visible_activity_score,
-    structuralImpact: item.structural_impact_score,
-    delta: Math.max(item.visible_activity_score - item.structural_impact_score, 0),
-    reason: item.reason,
-  })) ?? []
+	impact?.snacking_candidates.map((item) => ({
+		id: item.id,
+		name: item.name,
+		href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
+		kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+		visibleActivity: item.visible_activity_score,
+		structuralImpact: item.structural_impact_score,
+		delta: Math.max(
+			item.visible_activity_score - item.structural_impact_score,
+			0,
+		),
+		reason: item.reason,
+	})) ?? [];
 
-const dimensionChartData = impact?.impact_dimensions.map((dimension) => ({ label: dimension.label, value: dimension.score })) ?? []
-const topOpportunityData = impact?.impact_opportunities.slice(0, 12).map((item) => ({ label: truncateLabel(item.name), value: item.impact_score })) ?? []
+const dimensionChartData =
+	impact?.impact_dimensions.map((dimension) => ({
+		label: dimension.label,
+		value: dimension.score,
+	})) ?? [];
+const topOpportunityData =
+	impact?.impact_opportunities.slice(0, 12).map((item) => ({
+		label: truncateLabel(item.name),
+		value: item.impact_score,
+	})) ?? [];
 const snackingChartData =
-  impact?.snacking_candidates.slice(0, 8).map((item) => ({
-    label: truncateLabel(item.name),
-    value: Math.max(item.visible_activity_score - item.structural_impact_score, 0),
-    detail: `activity ${item.visible_activity_score.toFixed(1)}`,
-    detailSecondary: `impact ${item.structural_impact_score.toFixed(1)}`,
-  })) ?? []
+	impact?.snacking_candidates.slice(0, 8).map((item) => ({
+		label: truncateLabel(item.name),
+		value: Math.max(
+			item.visible_activity_score - item.structural_impact_score,
+			0,
+		),
+		detail: `activity ${item.visible_activity_score.toFixed(1)}`,
+		detailSecondary: `impact ${item.structural_impact_score.toFixed(1)}`,
+	})) ?? [];
 
 const conceptCards =
-  impact?.concept_mappings.map((mapping) => ({
-    concept: mapping.concept,
-    dimension: dimensionLabels[mapping.dimension],
-    evidenceCount: mapping.evidence_count,
-    examples: mapping.example_ids.slice(0, 3).map((id) => formatEvidenceExample(id)),
-  })) ?? []
+	impact?.concept_mappings.map((mapping) => ({
+		concept: mapping.concept,
+		dimension: dimensionLabels[mapping.dimension],
+		evidenceCount: mapping.evidence_count,
+		examples: mapping.example_ids
+			.slice(0, 3)
+			.map((id) => formatEvidenceExample(id)),
+	})) ?? [];
 
 const playbookItems = [
-  {
-    title: "Reduce complexity in hotspot cores",
-    body: "Start where large units, duplication, and structural hotspot pressure overlap. Those are usually the fastest durable wins.",
-    href: getLandscapeRepositoryHotspotsHref(props.repoKey),
-    label: "Open Hotspots",
-  },
-  {
-    title: "Stabilize overloaded boundaries",
-    body: "Use component and topology evidence together to tighten areas that pull too much coordination inside the repository.",
-    href: getLandscapeRepositoryComponentsHref(props.repoKey),
-    label: "Open Components",
-  },
-  {
-    title: "Spread knowledge in fragile areas",
-    body: "Large components with thin backup coverage raise delivery and offboarding risk. Use people signals before the next major change lands there.",
-    href: getLandscapeRepositoryContributorsHref(props.repoKey),
-    label: "Open Contributors",
-  },
-  {
-    title: "Hold the line after improvement",
-    body: "After a structural improvement, turn the insight into a control so the repository does not slide back into the same failure mode.",
-    href: getLandscapeRepositoryControlsHref(props.repoKey),
-    label: "Open Goals & Controls",
-  },
-] as const
+	{
+		title: "Reduce complexity in hotspot cores",
+		body: "Start where large units, duplication, and structural hotspot pressure overlap. Those are usually the fastest durable wins.",
+		href: getLandscapeRepositoryHotspotsHref(props.repoKey),
+		label: "Open Hotspots",
+	},
+	{
+		title: "Stabilize overloaded boundaries",
+		body: "Use component and topology evidence together to tighten areas that pull too much coordination inside the repository.",
+		href: getLandscapeRepositoryComponentsHref(props.repoKey),
+		label: "Open Components",
+	},
+	{
+		title: "Spread knowledge in fragile areas",
+		body: "Large components with thin backup coverage raise delivery and offboarding risk. Use people signals before the next major change lands there.",
+		href: getLandscapeRepositoryContributorsHref(props.repoKey),
+		label: "Open Contributors",
+	},
+	{
+		title: "Hold the line after improvement",
+		body: "After a structural improvement, turn the insight into a control so the repository does not slide back into the same failure mode.",
+		href: getLandscapeRepositoryControlsHref(props.repoKey),
+		label: "Open Goals & Controls",
+	},
+] as const;
 ---
 
 <Dashboard title={`${repoName} Impact`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

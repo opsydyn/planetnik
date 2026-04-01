@@ -1,6 +1,6 @@
 export class ValidationMessage {
-  constructor(
-    readonly message: string = "",
-    readonly searchPhrase: string = "",
-  ) {}
+	constructor(
+		readonly message: string = "",
+		readonly searchPhrase: string = "",
+	) {}
 }

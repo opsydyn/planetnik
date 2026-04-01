@@ -1,8 +1,8 @@
 export class Findings {
-  summary: string = ""
-  content: string = ""
+	summary: string = "";
+	content: string = "";
 
-  isEmpty(): boolean {
-    return !this.content.trim()
-  }
+	isEmpty(): boolean {
+		return !this.content.trim();
+	}
 }

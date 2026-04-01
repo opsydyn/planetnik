@@ -1,65 +1,64 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DonutChart from "../components/charts/DonutChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
-import StaticReportTable from "../components/tables/StaticReportTable.astro"
-import { chartHelp } from "../lib/chartHelp"
-import { getTechnologyIconData } from "../lib/iconography"
-import Dashboard from "../layouts/Dashboard.astro"
-import { route } from "../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import TechnologyIcon from "../components/icons/TechnologyIcon.astro";
+import StaticReportTable from "../components/tables/StaticReportTable.astro";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
+import { getTechnologyIconData } from "../lib/iconography";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {
-  return Astro.redirect(route("/landscape"))
+	return Astro.redirect(route("/landscape"));
 }
 
-const summary = await getEntry("analysis", "summary")
-const filesMain = await getCollection("filesMain")
-const filesTest = await getCollection("filesTest")
-const units = await getCollection("units")
-const duplicates = await getCollection("duplicates")
-const contributors = await getCollection("contributors")
-const metrics = await getCollection("metrics")
+const summary = await getEntry("analysis", "summary");
+const filesMain = await getCollection("filesMain");
+const filesTest = await getCollection("filesTest");
+const units = await getCollection("units");
+const duplicates = await getCollection("duplicates");
+const contributors = await getCollection("contributors");
+const metrics = await getCollection("metrics");
 
-const projectName = summary?.data.metadata.name ?? "Unknown"
-const totalFiles = summary?.data.filesCount ?? 0
-const totalLoc = summary?.data.linesOfCode ?? 0
-const dupPercentage = summary?.data.duplication.percentage ?? 0
-const dupLines = summary?.data.duplication.duplicatedLines ?? 0
+const projectName = summary?.data.metadata.name ?? "Unknown";
+const totalFiles = summary?.data.filesCount ?? 0;
+const totalLoc = summary?.data.linesOfCode ?? 0;
+const dupPercentage = summary?.data.duplication.percentage ?? 0;
+const dupLines = summary?.data.duplication.duplicatedLines ?? 0;
 
-const mainFiles = filesMain.length
-const testFiles = filesTest.length
-const totalUnits = units.length
-const totalDuplicates = duplicates.length
-const totalContributors = contributors.length
+const mainFiles = filesMain.length;
+const testFiles = filesTest.length;
+const totalUnits = units.length;
+const totalDuplicates = duplicates.length;
+const totalContributors = contributors.length;
 
 // Extension breakdown from main files
-const extMap = new Map<string, { files: number; loc: number }>()
+const extMap = new Map<string, { files: number; loc: number }>();
 for (const f of filesMain) {
-  const ext = f.data.extension
-  const entry = extMap.get(ext) ?? { files: 0, loc: 0 }
-  entry.files++
-  entry.loc += f.data.linesOfCode
-  extMap.set(ext, entry)
+	const ext = f.data.extension;
+	const entry = extMap.get(ext) ?? { files: 0, loc: 0 };
+	entry.files++;
+	entry.loc += f.data.linesOfCode;
+	extMap.set(ext, entry);
 }
 const extensions = [...extMap.entries()]
-  .sort((a, b) => b[1].loc - a[1].loc)
-  .slice(0, 10)
+	.sort((a, b) => b[1].loc - a[1].loc)
+	.slice(0, 10);
 
 // Find specific metrics
 function getMetric(id: string): number | null {
-  const m = metrics.find((m) => m.data.id === id)
-  return m?.data.value ?? null
+	const m = metrics.find((m) => m.data.id === id);
+	return m?.data.value ?? null;
 }
 
-const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE")
+const testVsMainPct = getMetric("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE");
 
 const langBarData = extensions.map(([ext, stats]) => ({
-  label: `.${ext}`,
-  value: stats.loc,
-  icon: getTechnologyIconData(ext),
-}))
+	label: `.${ext}`,
+	value: stats.loc,
+	icon: getTechnologyIconData(ext),
+}));
 ---
 
 <Dashboard title="Dashboard" projectName={projectName}>

@@ -1,125 +1,155 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart"
-import DonutChart from "../../../../components/charts/DonutChart"
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../../../lib/chartHelp"
-import { readLandscapeRepoJson } from "../../../../lib/landscape"
+import DistributionChart from "../../../../components/charts/DistributionChart";
+import DonutChart from "../../../../components/charts/DonutChart";
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../lib/chartHelp";
+import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
-  getLandscapeRepositoryPageContext,
-  getLandscapeRepositoryStaticPaths,
-  type LandscapeRepoPageProps,
-} from "../../../../lib/landscapeRepoContext"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
 
 interface RepoControl {
-  metricId: string
-  metricValue: number | null
-  metricDescription?: string
-  desiredRangeText: string
-  status: string
-  controlDescription?: string
+	metricId: string;
+	metricValue: number | null;
+	metricDescription?: string;
+	desiredRangeText: string;
+	status: string;
+	controlDescription?: string;
 }
 
 interface RepoControlsExport {
-  goals?: Array<{
-    goal?: string
-    description?: string
-    controls?: RepoControl[]
-  }>
+	goals?: Array<{
+		goal?: string;
+		description?: string;
+		controls?: RepoControl[];
+	}>;
 }
 
 export async function getStaticPaths() {
-  return getLandscapeRepositoryStaticPaths()
+	return getLandscapeRepositoryStaticPaths();
 }
 
-const props = Astro.props as LandscapeRepoPageProps
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const props = Astro.props as LandscapeRepoPageProps;
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const controlsExport = readLandscapeRepoJson<RepoControlsExport>(props.repoKey, "controls.json")
+const controlsExport = readLandscapeRepoJson<RepoControlsExport>(
+	props.repoKey,
+	"controls.json",
+);
 const controls =
-  controlsExport?.goals?.flatMap((goal) =>
-    (goal.controls ?? []).map((control, index) => ({
-      id: `${goal.goal ?? "Controls"}::${control.metricId || `control-${index}`}`,
-      goal: goal.goal ?? "Controls",
-      goalDescription: goal.description ?? "",
-      metricId: control.metricId,
-      metricValue: control.metricValue,
-      metricDescription: control.metricDescription ?? "",
-      desiredRangeText: control.desiredRangeText,
-      status: control.status,
-      controlDescription: control.controlDescription ?? "",
-    })),
-  ) ?? []
+	controlsExport?.goals?.flatMap((goal) =>
+		(goal.controls ?? []).map((control, index) => ({
+			id: `${goal.goal ?? "Controls"}::${control.metricId || `control-${index}`}`,
+			goal: goal.goal ?? "Controls",
+			goalDescription: goal.description ?? "",
+			metricId: control.metricId,
+			metricValue: control.metricValue,
+			metricDescription: control.metricDescription ?? "",
+			desiredRangeText: control.desiredRangeText,
+			status: control.status,
+			controlDescription: control.controlDescription ?? "",
+		})),
+	) ?? [];
 
 const statusOrder = new Map([
-  ["FAILED", 0],
-  ["TOLERANT", 1],
-  ["OK", 2],
-  ["IGNORED: the metric not found", 3],
-])
+	["FAILED", 0],
+	["TOLERANT", 1],
+	["OK", 2],
+	["IGNORED: the metric not found", 3],
+]);
 
 const statusCounts = {
-  failed: controls.filter((control) => control.status === "FAILED").length,
-  tolerant: controls.filter((control) => control.status === "TOLERANT").length,
-  ok: controls.filter((control) => control.status === "OK").length,
-  ignored: controls.filter((control) => control.status.startsWith("IGNORED")).length,
-}
+	failed: controls.filter((control) => control.status === "FAILED").length,
+	tolerant: controls.filter((control) => control.status === "TOLERANT").length,
+	ok: controls.filter((control) => control.status === "OK").length,
+	ignored: controls.filter((control) => control.status.startsWith("IGNORED"))
+		.length,
+};
 
 const statusChartData = [
-  ...(statusCounts.failed > 0 ? [{ label: "Failed", value: statusCounts.failed, color: "#ef4444" }] : []),
-  ...(statusCounts.tolerant > 0 ? [{ label: "Tolerant", value: statusCounts.tolerant, color: "#f59e0b" }] : []),
-  ...(statusCounts.ok > 0 ? [{ label: "OK", value: statusCounts.ok, color: "#22c55e" }] : []),
-  ...(statusCounts.ignored > 0 ? [{ label: "Ignored", value: statusCounts.ignored, color: "#94a3b8" }] : []),
-]
+	...(statusCounts.failed > 0
+		? [{ label: "Failed", value: statusCounts.failed, color: "#ef4444" }]
+		: []),
+	...(statusCounts.tolerant > 0
+		? [{ label: "Tolerant", value: statusCounts.tolerant, color: "#f59e0b" }]
+		: []),
+	...(statusCounts.ok > 0
+		? [{ label: "OK", value: statusCounts.ok, color: "#22c55e" }]
+		: []),
+	...(statusCounts.ignored > 0
+		? [{ label: "Ignored", value: statusCounts.ignored, color: "#94a3b8" }]
+		: []),
+];
 
-const goalMap = new Map<string, { total: number; failed: number; tolerant: number; ok: number; ignored: number }>()
+const goalMap = new Map<
+	string,
+	{
+		total: number;
+		failed: number;
+		tolerant: number;
+		ok: number;
+		ignored: number;
+	}
+>();
 for (const control of controls) {
-  const entry = goalMap.get(control.goal) ?? { total: 0, failed: 0, tolerant: 0, ok: 0, ignored: 0 }
-  entry.total++
+	const entry = goalMap.get(control.goal) ?? {
+		total: 0,
+		failed: 0,
+		tolerant: 0,
+		ok: 0,
+		ignored: 0,
+	};
+	entry.total++;
 
-  if (control.status === "FAILED") entry.failed++
-  else if (control.status === "TOLERANT") entry.tolerant++
-  else if (control.status === "OK") entry.ok++
-  else if (control.status.startsWith("IGNORED")) entry.ignored++
+	if (control.status === "FAILED") entry.failed++;
+	else if (control.status === "TOLERANT") entry.tolerant++;
+	else if (control.status === "OK") entry.ok++;
+	else if (control.status.startsWith("IGNORED")) entry.ignored++;
 
-  goalMap.set(control.goal, entry)
+	goalMap.set(control.goal, entry);
 }
 
 const goalRows = [...goalMap.entries()]
-  .sort((left, right) => {
-    if (right[1].failed !== left[1].failed) return right[1].failed - left[1].failed
-    if (right[1].tolerant !== left[1].tolerant) return right[1].tolerant - left[1].tolerant
-    return right[1].total - left[1].total
-  })
-  .map(([goal, stats]) => ({
-    label: goal,
-    value: stats.total,
-    detail: `${stats.failed} failed`,
-    detailSecondary: `${stats.tolerant} tolerant`,
-    color: stats.failed > 0 ? "#ef4444" : stats.tolerant > 0 ? "#f59e0b" : "#22c55e",
-  }))
+	.sort((left, right) => {
+		if (right[1].failed !== left[1].failed)
+			return right[1].failed - left[1].failed;
+		if (right[1].tolerant !== left[1].tolerant)
+			return right[1].tolerant - left[1].tolerant;
+		return right[1].total - left[1].total;
+	})
+	.map(([goal, stats]) => ({
+		label: goal,
+		value: stats.total,
+		detail: `${stats.failed} failed`,
+		detailSecondary: `${stats.tolerant} tolerant`,
+		color:
+			stats.failed > 0 ? "#ef4444" : stats.tolerant > 0 ? "#f59e0b" : "#22c55e",
+	}));
 
 const controlRows = [...controls]
-  .sort((left, right) => {
-    const rankLeft = statusOrder.get(left.status) ?? 99
-    const rankRight = statusOrder.get(right.status) ?? 99
-    if (rankLeft !== rankRight) return rankLeft - rankRight
-    return left.metricId.localeCompare(right.metricId)
-  })
-  .map((control) => ({
-    id: control.id,
-    goal: control.goal,
-    metric: control.metricId,
-    value: control.metricValue,
-    desiredRange: control.desiredRangeText,
-    status: control.status,
-    description: control.controlDescription || control.metricDescription,
-  }))
+	.sort((left, right) => {
+		const rankLeft = statusOrder.get(left.status) ?? 99;
+		const rankRight = statusOrder.get(right.status) ?? 99;
+		if (rankLeft !== rankRight) return rankLeft - rankRight;
+		return left.metricId.localeCompare(right.metricId);
+	})
+	.map((control) => ({
+		id: control.id,
+		goal: control.goal,
+		metric: control.metricId,
+		value: control.metricValue,
+		desiredRange: control.desiredRangeText,
+		status: control.status,
+		description: control.controlDescription || control.metricDescription,
+	}));
 ---
 
 <Dashboard title={`${repoName} Goals & Controls`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

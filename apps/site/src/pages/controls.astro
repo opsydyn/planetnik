@@ -1,80 +1,108 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DistributionChart from "../components/charts/DistributionChart"
-import DonutChart from "../components/charts/DonutChart"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../components/charts/DistributionChart";
+import DonutChart from "../components/charts/DonutChart";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const controls = await getCollection("controls")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const controls = await getCollection("controls");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 const statusOrder = new Map([
-  ["FAILED", 0],
-  ["TOLERANT", 1],
-  ["OK", 2],
-  ["IGNORED: the metric not found", 3],
-])
+	["FAILED", 0],
+	["TOLERANT", 1],
+	["OK", 2],
+	["IGNORED: the metric not found", 3],
+]);
 
 const statusCounts = {
-  failed: controls.filter((control) => control.data.status === "FAILED").length,
-  tolerant: controls.filter((control) => control.data.status === "TOLERANT").length,
-  ok: controls.filter((control) => control.data.status === "OK").length,
-  ignored: controls.filter((control) => control.data.status.startsWith("IGNORED")).length,
-}
+	failed: controls.filter((control) => control.data.status === "FAILED").length,
+	tolerant: controls.filter((control) => control.data.status === "TOLERANT")
+		.length,
+	ok: controls.filter((control) => control.data.status === "OK").length,
+	ignored: controls.filter((control) =>
+		control.data.status.startsWith("IGNORED"),
+	).length,
+};
 
 const statusChartData = [
-  ...(statusCounts.failed > 0 ? [{ label: "Failed", value: statusCounts.failed, color: "#ef4444" }] : []),
-  ...(statusCounts.tolerant > 0 ? [{ label: "Tolerant", value: statusCounts.tolerant, color: "#f59e0b" }] : []),
-  ...(statusCounts.ok > 0 ? [{ label: "OK", value: statusCounts.ok, color: "#22c55e" }] : []),
-  ...(statusCounts.ignored > 0 ? [{ label: "Ignored", value: statusCounts.ignored, color: "#94a3b8" }] : []),
-]
+	...(statusCounts.failed > 0
+		? [{ label: "Failed", value: statusCounts.failed, color: "#ef4444" }]
+		: []),
+	...(statusCounts.tolerant > 0
+		? [{ label: "Tolerant", value: statusCounts.tolerant, color: "#f59e0b" }]
+		: []),
+	...(statusCounts.ok > 0
+		? [{ label: "OK", value: statusCounts.ok, color: "#22c55e" }]
+		: []),
+	...(statusCounts.ignored > 0
+		? [{ label: "Ignored", value: statusCounts.ignored, color: "#94a3b8" }]
+		: []),
+];
 
-const goalMap = new Map<string, { total: number; failed: number; tolerant: number; ok: number; ignored: number }>()
+const goalMap = new Map<
+	string,
+	{
+		total: number;
+		failed: number;
+		tolerant: number;
+		ok: number;
+		ignored: number;
+	}
+>();
 for (const control of controls) {
-  const goal = control.data.goal || "Controls"
-  const entry = goalMap.get(goal) ?? { total: 0, failed: 0, tolerant: 0, ok: 0, ignored: 0 }
-  entry.total++
+	const goal = control.data.goal || "Controls";
+	const entry = goalMap.get(goal) ?? {
+		total: 0,
+		failed: 0,
+		tolerant: 0,
+		ok: 0,
+		ignored: 0,
+	};
+	entry.total++;
 
-  if (control.data.status === "FAILED") entry.failed++
-  else if (control.data.status === "TOLERANT") entry.tolerant++
-  else if (control.data.status === "OK") entry.ok++
-  else if (control.data.status.startsWith("IGNORED")) entry.ignored++
+	if (control.data.status === "FAILED") entry.failed++;
+	else if (control.data.status === "TOLERANT") entry.tolerant++;
+	else if (control.data.status === "OK") entry.ok++;
+	else if (control.data.status.startsWith("IGNORED")) entry.ignored++;
 
-  goalMap.set(goal, entry)
+	goalMap.set(goal, entry);
 }
 
 const goalRows = [...goalMap.entries()]
-  .sort((a, b) => {
-    if (b[1].failed !== a[1].failed) return b[1].failed - a[1].failed
-    if (b[1].tolerant !== a[1].tolerant) return b[1].tolerant - a[1].tolerant
-    return b[1].total - a[1].total
-  })
-  .map(([goal, stats]) => ({
-    label: goal,
-    value: stats.total,
-    detail: `${stats.failed} failed`,
-    detailSecondary: `${stats.tolerant} tolerant`,
-    color: stats.failed > 0 ? "#ef4444" : stats.tolerant > 0 ? "#f59e0b" : "#22c55e",
-  }))
+	.sort((a, b) => {
+		if (b[1].failed !== a[1].failed) return b[1].failed - a[1].failed;
+		if (b[1].tolerant !== a[1].tolerant) return b[1].tolerant - a[1].tolerant;
+		return b[1].total - a[1].total;
+	})
+	.map(([goal, stats]) => ({
+		label: goal,
+		value: stats.total,
+		detail: `${stats.failed} failed`,
+		detailSecondary: `${stats.tolerant} tolerant`,
+		color:
+			stats.failed > 0 ? "#ef4444" : stats.tolerant > 0 ? "#f59e0b" : "#22c55e",
+	}));
 
 const controlRows = [...controls]
-  .sort((a, b) => {
-    const rankA = statusOrder.get(a.data.status) ?? 99
-    const rankB = statusOrder.get(b.data.status) ?? 99
-    if (rankA !== rankB) return rankA - rankB
-    return a.data.metricId.localeCompare(b.data.metricId)
-  })
-  .map((control) => ({
-    id: control.id,
-    goal: control.data.goal,
-    metric: control.data.metricId,
-    value: control.data.metricValue,
-    desiredRange: control.data.desiredRangeText,
-    status: control.data.status,
-    description: control.data.controlDescription || control.data.metricDescription,
-  }))
+	.sort((a, b) => {
+		const rankA = statusOrder.get(a.data.status) ?? 99;
+		const rankB = statusOrder.get(b.data.status) ?? 99;
+		if (rankA !== rankB) return rankA - rankB;
+		return a.data.metricId.localeCompare(b.data.metricId);
+	})
+	.map((control) => ({
+		id: control.id,
+		goal: control.data.goal,
+		metric: control.data.metricId,
+		value: control.data.metricValue,
+		desiredRange: control.data.desiredRangeText,
+		status: control.data.status,
+		description:
+			control.data.controlDescription || control.data.metricDescription,
+	}));
 ---
 
 <Dashboard title="Goals & Controls" projectName={projectName}>

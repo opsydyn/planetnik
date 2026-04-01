@@ -1,86 +1,94 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DonutChart from "../../components/charts/DonutChart"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import SecurityBallChart from "../../components/security/SecurityBallChart"
-import SharedPackagesGraph from "../../components/security/SharedPackagesGraph"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import Dashboard from "../../layouts/Dashboard.astro"
-import { getLandscapeRepositoryHref } from "../../lib/landscapeRoutes"
-import { route } from "../../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import DonutChart from "../../components/charts/DonutChart";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import SecurityBallChart from "../../components/security/SecurityBallChart";
+import SharedPackagesGraph from "../../components/security/SharedPackagesGraph";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { getLandscapeRepositoryHref } from "../../lib/landscapeRoutes";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const health = await getEntry("landscapeDependencyHealth", "health")
-const projectName = reportContext.data.title
+const health = await getEntry("landscapeDependencyHealth", "health");
+const projectName = reportContext.data.title;
 
-const landscapeRepos = await getCollection("landscapeRepositories")
-const repoHrefMap: Record<string, string> = {}
+const landscapeRepos = await getCollection("landscapeRepositories");
+const repoHrefMap: Record<string, string> = {};
 for (const entry of landscapeRepos) {
-  repoHrefMap[entry.data.name] = getLandscapeRepositoryHref(entry.data.repoKey)
+	repoHrefMap[entry.data.name] = getLandscapeRepositoryHref(entry.data.repoKey);
 }
 
-const repoHealth = health?.data.repoHealth ?? []
-const severityCounts = health?.data.severityCounts ?? { critical: 0, high: 0, medium: 0, low: 0 }
-const sharedPackages = health?.data.sharedVulnerablePackages ?? []
+const repoHealth = health?.data.repoHealth ?? [];
+const severityCounts = health?.data.severityCounts ?? {
+	critical: 0,
+	high: 0,
+	medium: 0,
+	low: 0,
+};
+const sharedPackages = health?.data.sharedVulnerablePackages ?? [];
 
 const severityItems = [
-  { label: "Critical", value: severityCounts.critical, color: "#ef4444" },
-  { label: "High", value: severityCounts.high, color: "#f59e0b" },
-  { label: "Medium", value: severityCounts.medium, color: "#eab308" },
-  { label: "Low", value: severityCounts.low, color: "#22c55e" },
-].filter((b) => b.value > 0)
-const severityDonutColors = severityItems.map((s) => s.color)
+	{ label: "Critical", value: severityCounts.critical, color: "#ef4444" },
+	{ label: "High", value: severityCounts.high, color: "#f59e0b" },
+	{ label: "Medium", value: severityCounts.medium, color: "#eab308" },
+	{ label: "Low", value: severityCounts.low, color: "#22c55e" },
+].filter((b) => b.value > 0);
+const severityDonutColors = severityItems.map((s) => s.color);
 
 const repoAlertBars = repoHealth
-  .filter((r) => r.totalAlerts > 0)
-  .sort((a, b) => b.openAlerts - a.openAlerts)
-  .slice(0, 15)
-  .map((r) => ({ label: r.repo, value: r.openAlerts, href: repoHrefMap[r.repo] }))
+	.filter((r) => r.totalAlerts > 0)
+	.sort((a, b) => b.openAlerts - a.openAlerts)
+	.slice(0, 15)
+	.map((r) => ({
+		label: r.repo,
+		value: r.openAlerts,
+		href: repoHrefMap[r.repo],
+	}));
 
 const repoRows = repoHealth.map((r) => ({
-  id: r.repo,
-  repo: r.repo,
-  repoHref: repoHrefMap[r.repo] ?? "",
-  totalAlerts: r.totalAlerts,
-  openAlerts: r.openAlerts,
-  fixedAlerts: r.fixedAlerts,
-  critical: r.severityCounts.critical,
-  high: r.severityCounts.high,
-  medium: r.severityCounts.medium,
-  low: r.severityCounts.low,
-  mttr: r.meanTimeToResolveDays ?? "—",
-  oldestDays: r.oldestOpenAlertDays ?? "—",
-}))
+	id: r.repo,
+	repo: r.repo,
+	repoHref: repoHrefMap[r.repo] ?? "",
+	totalAlerts: r.totalAlerts,
+	openAlerts: r.openAlerts,
+	fixedAlerts: r.fixedAlerts,
+	critical: r.severityCounts.critical,
+	high: r.severityCounts.high,
+	medium: r.severityCounts.medium,
+	low: r.severityCounts.low,
+	mttr: r.meanTimeToResolveDays ?? "—",
+	oldestDays: r.oldestOpenAlertDays ?? "—",
+}));
 
 const sharedRows = sharedPackages.map((p, i) => ({
-  id: `shared-${i}`,
-  package: p.name,
-  ecosystem: p.ecosystem,
-  severity: p.severity,
-  affectedRepos: p.affectedRepos.join(" , "),
-  repoCount: p.affectedRepos.length,
-}))
+	id: `shared-${i}`,
+	package: p.name,
+	ecosystem: p.ecosystem,
+	severity: p.severity,
+	affectedRepos: p.affectedRepos.join(" , "),
+	repoCount: p.affectedRepos.length,
+}));
 
-const exposureScore = health?.data.supplyChainExposureScore ?? 0
-const exposurePercent = Math.round(exposureScore * 100)
-const hasData = health !== undefined
+const exposureScore = health?.data.supplyChainExposureScore ?? 0;
+const exposurePercent = Math.round(exposureScore * 100);
+const hasData = health !== undefined;
 
 const securityBallRepos = repoHealth.map((r) => ({
-  repo: r.repo,
-  href: repoHrefMap[r.repo],
-  totalAlerts: r.totalAlerts,
-  openAlerts: r.openAlerts,
-  critical: r.severityCounts.critical,
-  high: r.severityCounts.high,
-  medium: r.severityCounts.medium,
-  low: r.severityCounts.low,
-  mttrDays: r.meanTimeToResolveDays ?? null,
-  oldestOpenDays: r.oldestOpenAlertDays ?? null,
-}))
+	repo: r.repo,
+	href: repoHrefMap[r.repo],
+	totalAlerts: r.totalAlerts,
+	openAlerts: r.openAlerts,
+	critical: r.severityCounts.critical,
+	high: r.severityCounts.high,
+	medium: r.severityCounts.medium,
+	low: r.severityCounts.low,
+	mttrDays: r.meanTimeToResolveDays ?? null,
+	oldestOpenDays: r.oldestOpenAlertDays ?? null,
+}));
 ---
 
 <Dashboard title="Dependency Security" projectName={projectName}>

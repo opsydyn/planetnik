@@ -1,52 +1,66 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import DonutChart from "../components/charts/DonutChart"
-import TreemapChart from "../components/charts/Treemap"
-import StaticReportTable from "../components/tables/StaticReportTable.astro"
-import TechnologyIcon from "../components/icons/TechnologyIcon.astro"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import TreemapChart from "../components/charts/Treemap";
+import TechnologyIcon from "../components/icons/TechnologyIcon.astro";
+import StaticReportTable from "../components/tables/StaticReportTable.astro";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const filesMain = await getCollection("filesMain")
-const filesTest = await getCollection("filesTest")
-const metrics = await getCollection("metrics")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const filesMain = await getCollection("filesMain");
+const filesTest = await getCollection("filesTest");
+const metrics = await getCollection("metrics");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
-const totalLoc = summary?.data.linesOfCode ?? 0
+const totalLoc = summary?.data.linesOfCode ?? 0;
 
 // Extension breakdown
-const extMap = new Map<string, { files: number; loc: number }>()
+const extMap = new Map<string, { files: number; loc: number }>();
 for (const f of filesMain) {
-  const ext = f.data.extension
-  const entry = extMap.get(ext) ?? { files: 0, loc: 0 }
-  entry.files++
-  entry.loc += f.data.linesOfCode
-  extMap.set(ext, entry)
+	const ext = f.data.extension;
+	const entry = extMap.get(ext) ?? { files: 0, loc: 0 };
+	entry.files++;
+	entry.loc += f.data.linesOfCode;
+	extMap.set(ext, entry);
 }
-const extensions = [...extMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
+const extensions = [...extMap.entries()].sort((a, b) => b[1].loc - a[1].loc);
 
 // Test extension breakdown
-const testExtMap = new Map<string, { files: number; loc: number }>()
+const testExtMap = new Map<string, { files: number; loc: number }>();
 for (const f of filesTest) {
-  const ext = f.data.extension
-  const entry = testExtMap.get(ext) ?? { files: 0, loc: 0 }
-  entry.files++
-  entry.loc += f.data.linesOfCode
-  testExtMap.set(ext, entry)
+	const ext = f.data.extension;
+	const entry = testExtMap.get(ext) ?? { files: 0, loc: 0 };
+	entry.files++;
+	entry.loc += f.data.linesOfCode;
+	testExtMap.set(ext, entry);
 }
-const testExtensions = [...testExtMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
+const testExtensions = [...testExtMap.entries()].sort(
+	(a, b) => b[1].loc - a[1].loc,
+);
 
 function getMetric(id: string): number | null {
-  const m = metrics.find((m) => m.data.id === id)
-  return m?.data.value ?? null
+	const m = metrics.find((m) => m.data.id === id);
+	return m?.data.value ?? null;
 }
 
-const mainBarData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
-const testBarData = testExtensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
-const treemapData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
-const donutData = extensions.map(([ext, s]) => ({ label: `.${ext}`, value: s.loc }))
+const mainBarData = extensions.map(([ext, s]) => ({
+	label: `.${ext}`,
+	value: s.loc,
+}));
+const testBarData = testExtensions.map(([ext, s]) => ({
+	label: `.${ext}`,
+	value: s.loc,
+}));
+const treemapData = extensions.map(([ext, s]) => ({
+	label: `.${ext}`,
+	value: s.loc,
+}));
+const donutData = extensions.map(([ext, s]) => ({
+	label: `.${ext}`,
+	value: s.loc,
+}));
 ---
 
 <Dashboard title="Source Code Overview" projectName={projectName}>

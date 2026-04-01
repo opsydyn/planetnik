@@ -1,14 +1,18 @@
-import type { SourceFileFilterType } from "../core/SourceFileFilter.js"
+import type { SourceFileFilterType } from "../core/SourceFileFilter.js";
 
 export interface Convention extends SourceFileFilterType {
-  note: string
+	note: string;
 }
 
-export function createConvention(pathPattern: string, contentPattern: string = "", note: string = ""): Convention {
-  return {
-    pathPattern,
-    contentPattern,
-    exception: false,
-    note,
-  }
+export function createConvention(
+	pathPattern: string,
+	contentPattern: string = "",
+	note: string = "",
+): Convention {
+	return {
+		pathPattern,
+		contentPattern,
+		exception: false,
+		note,
+	};
 }

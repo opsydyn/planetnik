@@ -1,42 +1,49 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../lib/chartHelp"
-import { getLandscapeContributorHref } from "../../lib/landscape"
-import Dashboard from "../../layouts/Dashboard.astro"
-import { route } from "../../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
+import { chartHelp } from "../../lib/chartHelp";
+import { getLandscapeContributorHref } from "../../lib/landscape";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const contributors = await getCollection("landscapeContributors")
-const projectName = reportContext.data.title
+const contributors = await getCollection("landscapeContributors");
+const projectName = reportContext.data.title;
 
-const people = [...contributors].sort((left, right) => right.data.commitsCount - left.data.commitsCount)
-const totalContributors = people.length
-const active30d = people.filter((contributor) => contributor.data.commits30d > 0).length
-const botCount = people.filter((contributor) => contributor.data.isBot).length
-const multiRepoCount = people.filter((contributor) => contributor.data.repositoryCount > 1).length
+const people = [...contributors].sort(
+	(left, right) => right.data.commitsCount - left.data.commitsCount,
+);
+const totalContributors = people.length;
+const active30d = people.filter(
+	(contributor) => contributor.data.commits30d > 0,
+).length;
+const botCount = people.filter((contributor) => contributor.data.isBot).length;
+const multiRepoCount = people.filter(
+	(contributor) => contributor.data.repositoryCount > 1,
+).length;
 const topBars = people.slice(0, 12).map((contributor) => ({
-  label: contributor.data.displayName,
-  value: contributor.data.repositoryCount,
-}))
+	label: contributor.data.displayName,
+	value: contributor.data.repositoryCount,
+}));
 const rows = people.map((contributor) => ({
-  id: contributor.id,
-  displayName: contributor.data.displayName,
-  href: getLandscapeContributorHref(contributor.data.email),
-  email: contributor.data.email,
-  commitsCount: contributor.data.commitsCount,
-  commits30d: contributor.data.commits30d,
-  commits90d: contributor.data.commits90d,
-  repositoryCount: contributor.data.repositoryCount,
-  latestCommitDate: contributor.data.latestCommitDate,
-  isBot: contributor.data.isBot ? "Bot" : "Human",
-  repositories: contributor.data.repositories.map((repository) => repository.name).join(" • "),
-}))
+	id: contributor.id,
+	displayName: contributor.data.displayName,
+	href: getLandscapeContributorHref(contributor.data.email),
+	email: contributor.data.email,
+	commitsCount: contributor.data.commitsCount,
+	commits30d: contributor.data.commits30d,
+	commits90d: contributor.data.commits90d,
+	repositoryCount: contributor.data.repositoryCount,
+	latestCommitDate: contributor.data.latestCommitDate,
+	isBot: contributor.data.isBot ? "Bot" : "Human",
+	repositories: contributor.data.repositories
+		.map((repository) => repository.name)
+		.join(" • "),
+}));
 ---
 
 <Dashboard title="Landscape Contributors" projectName={projectName}>

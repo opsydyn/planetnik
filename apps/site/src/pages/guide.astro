@@ -1,203 +1,251 @@
 ---
-import Dashboard from "../layouts/Dashboard.astro"
-import Hero from "../components/Hero.astro"
-import { Image } from "astro:assets"
-import { getEntry } from "astro:content"
-import { route } from "../lib/route"
+import { Image } from "astro:assets";
+import { getEntry } from "astro:content";
+import Hero from "../components/Hero.astro";
+import Dashboard from "../layouts/Dashboard.astro";
+import { route } from "../lib/route";
 
-const summary = await getEntry("analysis", "summary")
-const reportContext = await getEntry("reportContext", "context")
-const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik"
-const reportMode = reportContext?.data.reportMode ?? "single_repository"
-const isLandscape = reportMode === "landscape"
+const summary = await getEntry("analysis", "summary");
+const reportContext = await getEntry("reportContext", "context");
+const projectName =
+	reportContext?.data.title ?? summary?.data.metadata.name ?? "Planetnik";
+const reportMode = reportContext?.data.reportMode ?? "single_repository";
+const isLandscape = reportMode === "landscape";
 
 const tutorialSteps = isLandscape
-  ? [
-      {
-        title: "Read the landscape dashboard",
-        body: "Start on the landscape dashboard to see which repositories are in scope, their relative size, and contributor spread across the organisation.",
-        href: route("/landscape"),
-        label: "Open Landscape",
-      },
-      {
-        title: "Drill into a repository",
-        body: "Pick a repository from the list to explore its structure, hotspots, contributors, and quality controls at the individual project level.",
-        href: route("/landscape/repositories"),
-        label: "Open Repositories",
-      },
-      {
-        title: "Review cross-repo contributors",
-        body: "Use landscape contributors and team topology to understand knowledge spread, collaboration patterns, and ownership concentration across repositories.",
-        href: route("/landscape/contributors"),
-        label: "Open Contributors",
-      },
-    ]
-  : [
-      {
-        title: "Read the dashboard first",
-        body: "Start on the dashboard and overview pages to understand system scale, language mix, and obvious concentration points before diving into detail.",
-        href: route("/"),
-        label: "Open Dashboard",
-      },
-      {
-        title: "Find the next thing to fix",
-        body: "Use impact and hotspots to distinguish visible activity from structural leverage, then identify where risk, churn, ownership, and coupling are overlapping.",
-        href: route("/impact"),
-        label: "Open Impact",
-      },
-      {
-        title: "Validate with evidence",
-        body: "Cross-check hotspot candidates with dependencies, temporal coupling, contributors, and controls so you act on evidence instead of intuition.",
-        href: route("/dependencies"),
-        label: "Open Dependencies",
-      },
-    ]
+	? [
+			{
+				title: "Read the landscape dashboard",
+				body: "Start on the landscape dashboard to see which repositories are in scope, their relative size, and contributor spread across the organisation.",
+				href: route("/landscape"),
+				label: "Open Landscape",
+			},
+			{
+				title: "Drill into a repository",
+				body: "Pick a repository from the list to explore its structure, hotspots, contributors, and quality controls at the individual project level.",
+				href: route("/landscape/repositories"),
+				label: "Open Repositories",
+			},
+			{
+				title: "Review cross-repo contributors",
+				body: "Use landscape contributors and team topology to understand knowledge spread, collaboration patterns, and ownership concentration across repositories.",
+				href: route("/landscape/contributors"),
+				label: "Open Contributors",
+			},
+		]
+	: [
+			{
+				title: "Read the dashboard first",
+				body: "Start on the dashboard and overview pages to understand system scale, language mix, and obvious concentration points before diving into detail.",
+				href: route("/"),
+				label: "Open Dashboard",
+			},
+			{
+				title: "Find the next thing to fix",
+				body: "Use impact and hotspots to distinguish visible activity from structural leverage, then identify where risk, churn, ownership, and coupling are overlapping.",
+				href: route("/impact"),
+				label: "Open Impact",
+			},
+			{
+				title: "Validate with evidence",
+				body: "Cross-check hotspot candidates with dependencies, temporal coupling, contributors, and controls so you act on evidence instead of intuition.",
+				href: route("/dependencies"),
+				label: "Open Dependencies",
+			},
+		];
 
 const howToGuides = isLandscape
-  ? [
-      {
-        title: "Understand the landscape",
-        text: "Use the Landscape Dashboard and Repositories list to build an initial map of organisation-wide structure, size, and activity.",
-        links: [
-          { href: route("/landscape"), label: "Landscape Dashboard" },
-          { href: route("/landscape/repositories"), label: "Repositories" },
-        ],
-      },
-      {
-        title: "Assess team and knowledge risk",
-        text: "Use Contributors and Team Topology to evaluate ownership spread, collaboration patterns, and knowledge concentration across the organisation.",
-        links: [
-          { href: route("/landscape/contributors"), label: "Contributors" },
-          { href: route("/landscape/teams"), label: "Teams" },
-          { href: route("/landscape/topology"), label: "Team Topology" },
-        ],
-      },
-      {
-        title: "Explore repository tags",
-        text: "Use Tags to filter and group repositories by technology, domain, or any custom classification applied during analysis.",
-        links: [{ href: route("/landscape/tags"), label: "Tags" }],
-      },
-      {
-        title: "Deep-dive into a single repository",
-        text: "From the Repositories list, click into any repository to access its full analysis: components, hotspots, contributors, file metrics, and quality controls.",
-        links: [{ href: route("/landscape/repositories"), label: "Repositories" }],
-      },
-    ]
-  : [
-      {
-        title: "Understand a new codebase fast",
-        text: "Use Dashboard, Overview, Components, and Contributors to build an initial map of structure, size, and ownership.",
-        links: [
-          { href: route("/"), label: "Dashboard" },
-          { href: route("/overview"), label: "Overview" },
-          { href: route("/components"), label: "Components" },
-          { href: route("/contributors"), label: "Contributors" },
-        ],
-      },
-      {
-        title: "Investigate risky change areas",
-        text: "Start with Hotspots, then validate with File Churn, Temporal Dependencies, and Duplication before planning refactoring work.",
-        links: [
-          { href: route("/hotspots"), label: "Hotspots" },
-          { href: route("/files/churn"), label: "File Churn" },
-          { href: route("/files/temporal"), label: "Temporal Dependencies" },
-          { href: route("/duplication"), label: "Duplication" },
-        ],
-      },
-      {
-        title: "Review architectural boundaries",
-        text: "Use Components, Balanced Coupling, Dependencies, and Features of Interest together to see whether intended boundaries match real code structure and change pressure.",
-        links: [
-          { href: route("/components"), label: "Components" },
-          { href: route("/coupling"), label: "Balanced Coupling" },
-          { href: route("/dependencies"), label: "Dependencies" },
-          { href: route("/concerns"), label: "Features of Interest" },
-        ],
-      },
-      {
-        title: "Evaluate coupling overload",
-        text: "Start with Balanced Coupling to see which components are overloaded, then validate the story with static dependencies, temporal coupling, and hotspots.",
-        links: [
-          { href: route("/coupling"), label: "Balanced Coupling" },
-          { href: route("/dependencies"), label: "Dependencies" },
-          { href: route("/files/temporal"), label: "Temporal Dependencies" },
-          { href: route("/hotspots"), label: "Hotspots" },
-        ],
-      },
-      {
-        title: "Assess team and knowledge risk",
-        text: "Use Contributors, Team Topology, and contributor detail pages to evaluate ownership spread, collaboration patterns, and concentration risk.",
-        links: [
-          { href: route("/contributors"), label: "Contributors" },
-          { href: route("/topology"), label: "Team Topology" },
-        ],
-      },
-    ]
+	? [
+			{
+				title: "Understand the landscape",
+				text: "Use the Landscape Dashboard and Repositories list to build an initial map of organisation-wide structure, size, and activity.",
+				links: [
+					{ href: route("/landscape"), label: "Landscape Dashboard" },
+					{ href: route("/landscape/repositories"), label: "Repositories" },
+				],
+			},
+			{
+				title: "Assess team and knowledge risk",
+				text: "Use Contributors and Team Topology to evaluate ownership spread, collaboration patterns, and knowledge concentration across the organisation.",
+				links: [
+					{ href: route("/landscape/contributors"), label: "Contributors" },
+					{ href: route("/landscape/teams"), label: "Teams" },
+					{ href: route("/landscape/topology"), label: "Team Topology" },
+				],
+			},
+			{
+				title: "Explore repository tags",
+				text: "Use Tags to filter and group repositories by technology, domain, or any custom classification applied during analysis.",
+				links: [{ href: route("/landscape/tags"), label: "Tags" }],
+			},
+			{
+				title: "Deep-dive into a single repository",
+				text: "From the Repositories list, click into any repository to access its full analysis: components, hotspots, contributors, file metrics, and quality controls.",
+				links: [
+					{ href: route("/landscape/repositories"), label: "Repositories" },
+				],
+			},
+		]
+	: [
+			{
+				title: "Understand a new codebase fast",
+				text: "Use Dashboard, Overview, Components, and Contributors to build an initial map of structure, size, and ownership.",
+				links: [
+					{ href: route("/"), label: "Dashboard" },
+					{ href: route("/overview"), label: "Overview" },
+					{ href: route("/components"), label: "Components" },
+					{ href: route("/contributors"), label: "Contributors" },
+				],
+			},
+			{
+				title: "Investigate risky change areas",
+				text: "Start with Hotspots, then validate with File Churn, Temporal Dependencies, and Duplication before planning refactoring work.",
+				links: [
+					{ href: route("/hotspots"), label: "Hotspots" },
+					{ href: route("/files/churn"), label: "File Churn" },
+					{ href: route("/files/temporal"), label: "Temporal Dependencies" },
+					{ href: route("/duplication"), label: "Duplication" },
+				],
+			},
+			{
+				title: "Review architectural boundaries",
+				text: "Use Components, Balanced Coupling, Dependencies, and Features of Interest together to see whether intended boundaries match real code structure and change pressure.",
+				links: [
+					{ href: route("/components"), label: "Components" },
+					{ href: route("/coupling"), label: "Balanced Coupling" },
+					{ href: route("/dependencies"), label: "Dependencies" },
+					{ href: route("/concerns"), label: "Features of Interest" },
+				],
+			},
+			{
+				title: "Evaluate coupling overload",
+				text: "Start with Balanced Coupling to see which components are overloaded, then validate the story with static dependencies, temporal coupling, and hotspots.",
+				links: [
+					{ href: route("/coupling"), label: "Balanced Coupling" },
+					{ href: route("/dependencies"), label: "Dependencies" },
+					{ href: route("/files/temporal"), label: "Temporal Dependencies" },
+					{ href: route("/hotspots"), label: "Hotspots" },
+				],
+			},
+			{
+				title: "Assess team and knowledge risk",
+				text: "Use Contributors, Team Topology, and contributor detail pages to evaluate ownership spread, collaboration patterns, and concentration risk.",
+				links: [
+					{ href: route("/contributors"), label: "Contributors" },
+					{ href: route("/topology"), label: "Team Topology" },
+				],
+			},
+		];
 
 const referenceSections = isLandscape
-  ? [
-      {
-        label: "Overview",
-        items: [
-          [route("/landscape"), "Landscape dashboard with organisation-wide summary."],
-          [route("/about"), "Płanetnik philosophy and weather metaphor."],
-        ],
-      },
-      {
-        label: "Landscape",
-        items: [
-          [route("/landscape/repositories"), "All repositories in the landscape with size and activity."],
-          [route("/landscape/contributors"), "Contributor activity and ownership across repositories."],
-          [route("/landscape/teams"), "Team membership and repository coverage."],
-          [route("/landscape/topology"), "Contributor collaboration topology across the organisation."],
-          [route("/landscape/tags"), "Repository tags and classification."],
-        ],
-      },
-    ]
-  : [
-      {
-        label: "Overview",
-        items: [
-          [route("/"), "Project summary, language mix, and duplicate headline metrics."],
-          [route("/overview"), "Main vs test code shape and extension breakdown."],
-          [route("/metrics"), "Raw metric inventory and grouped numeric summaries."],
-          [route("/about"), "Płanetnik philosophy and weather metaphor."],
-        ],
-      },
-      {
-        label: "Structure",
-        items: [
-          [route("/components"), "Logical component size and knowledge coverage."],
-          [route("/coupling"), "Balanced coupling pressure and Big Ball of Mud view."],
-          [route("/dependencies"), "Static component dependency relationships."],
-          [route("/duplication"), "Duplicate blocks and repeated code signals."],
-        ],
-      },
-      {
-        label: "Files & Units",
-        items: [
-          [route("/files/size"), "Large files by lines of code."],
-          [route("/files/age"), "File age and legacy concentration."],
-          [route("/files/churn"), "Frequently changed files and volatility."],
-          [route("/files/temporal"), "Files that move together over time."],
-          [route("/units/size"), "Large functions and methods."],
-          [route("/units/complexity"), "High McCabe complexity units."],
-        ],
-      },
-      {
-        label: "People & Quality",
-        items: [
-          [route("/contributors"), "Contributor activity, ownership, and knowledge spread."],
-          [route("/commits"), "Commit trends and extension-level change."],
-          [route("/topology"), "Contributor collaboration topology."],
-          [route("/impact"), "Visible activity versus structural impact and snacking signals."],
-          [route("/hotspots"), "Ranked queue of risky files, units, and components."],
-          [route("/controls"), "Quality controls and goal coverage."],
-          [route("/findings"), "Configured findings, when exported."],
-          [route("/trends"), "Movement of structural signals over time."],
-        ],
-      },
-    ]
+	? [
+			{
+				label: "Overview",
+				items: [
+					[
+						route("/landscape"),
+						"Landscape dashboard with organisation-wide summary.",
+					],
+					[route("/about"), "Płanetnik philosophy and weather metaphor."],
+				],
+			},
+			{
+				label: "Landscape",
+				items: [
+					[
+						route("/landscape/repositories"),
+						"All repositories in the landscape with size and activity.",
+					],
+					[
+						route("/landscape/contributors"),
+						"Contributor activity and ownership across repositories.",
+					],
+					[
+						route("/landscape/teams"),
+						"Team membership and repository coverage.",
+					],
+					[
+						route("/landscape/topology"),
+						"Contributor collaboration topology across the organisation.",
+					],
+					[route("/landscape/tags"), "Repository tags and classification."],
+				],
+			},
+		]
+	: [
+			{
+				label: "Overview",
+				items: [
+					[
+						route("/"),
+						"Project summary, language mix, and duplicate headline metrics.",
+					],
+					[
+						route("/overview"),
+						"Main vs test code shape and extension breakdown.",
+					],
+					[
+						route("/metrics"),
+						"Raw metric inventory and grouped numeric summaries.",
+					],
+					[route("/about"), "Płanetnik philosophy and weather metaphor."],
+				],
+			},
+			{
+				label: "Structure",
+				items: [
+					[
+						route("/components"),
+						"Logical component size and knowledge coverage.",
+					],
+					[
+						route("/coupling"),
+						"Balanced coupling pressure and Big Ball of Mud view.",
+					],
+					[
+						route("/dependencies"),
+						"Static component dependency relationships.",
+					],
+					[
+						route("/duplication"),
+						"Duplicate blocks and repeated code signals.",
+					],
+				],
+			},
+			{
+				label: "Files & Units",
+				items: [
+					[route("/files/size"), "Large files by lines of code."],
+					[route("/files/age"), "File age and legacy concentration."],
+					[route("/files/churn"), "Frequently changed files and volatility."],
+					[route("/files/temporal"), "Files that move together over time."],
+					[route("/units/size"), "Large functions and methods."],
+					[route("/units/complexity"), "High McCabe complexity units."],
+				],
+			},
+			{
+				label: "People & Quality",
+				items: [
+					[
+						route("/contributors"),
+						"Contributor activity, ownership, and knowledge spread.",
+					],
+					[route("/commits"), "Commit trends and extension-level change."],
+					[route("/topology"), "Contributor collaboration topology."],
+					[
+						route("/impact"),
+						"Visible activity versus structural impact and snacking signals.",
+					],
+					[
+						route("/hotspots"),
+						"Ranked queue of risky files, units, and components.",
+					],
+					[route("/controls"), "Quality controls and goal coverage."],
+					[route("/findings"), "Configured findings, when exported."],
+					[route("/trends"), "Movement of structural signals over time."],
+				],
+			},
+		];
 ---
 
 <Dashboard title="Guide" projectName={projectName}>

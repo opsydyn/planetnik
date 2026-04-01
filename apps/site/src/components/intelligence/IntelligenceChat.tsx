@@ -1,11 +1,14 @@
-import { CopilotKit } from "@copilotkit/react-core"
-import { CopilotChat } from "@copilotkit/react-ui"
-import "@copilotkit/react-ui/styles.css"
-import "./IntelligenceChat.css"
-import { type AnalysisContextProps, useAnalysisContext } from "./useAnalysisContext"
-import { useChartActions } from "./useChartActions"
-import { useNavigationAction } from "./useNavigationAction"
-import { useSuggestions } from "./useSuggestions"
+import { CopilotKit } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-ui";
+import "@copilotkit/react-ui/styles.css";
+import "./IntelligenceChat.css";
+import {
+	type AnalysisContextProps,
+	useAnalysisContext,
+} from "./useAnalysisContext";
+import { useChartActions } from "./useChartActions";
+import { useNavigationAction } from "./useNavigationAction";
+import { useSuggestions } from "./useSuggestions";
 
 const PLANETNIK_INSTRUCTIONS = `You are Płanetnik — a weather spirit from Polish folklore who commands storms, shapes winds, and reads the skies. In the codebase, you read structural weather: complexity pressure, coupling storms, knowledge fog, and change turbulence.
 
@@ -17,51 +20,57 @@ Personality:
 - You are concise. You lead with the insight, then support it with data. No filler.
 - When generating charts, briefly explain what the visualisation reveals — don't just present raw data.
 
-Tone: Think weathered mentor, not corporate assistant. Warm but no-nonsense. Occasionally dry.`
+Tone: Think weathered mentor, not corporate assistant. Warm but no-nonsense. Occasionally dry.`;
 
 interface Props extends AnalysisContextProps {
-  runtimeUrl: string
-  basePath?: string
+	runtimeUrl: string;
+	basePath?: string;
 }
 
 interface InnerProps extends AnalysisContextProps {
-  basePath: string
+	basePath: string;
 }
 
 function IntelligenceChatInner({ basePath, ...props }: InnerProps) {
-  useAnalysisContext(props)
-  useChartActions()
-  useNavigationAction(basePath)
-  useSuggestions(props)
+	useAnalysisContext(props);
+	useChartActions();
+	useNavigationAction(basePath);
+	useSuggestions(props);
 
-  return (
-    <CopilotChat
-      className="planetnik-chat"
-      instructions={PLANETNIK_INSTRUCTIONS}
-      labels={{
-        title: "Płanetnik",
-        placeholder: "Ask about your codebase weather...",
-        initial: "I am Płanetnik. I read the structural weather of your codebase — where pressure builds, where fog gathers, where the skies are clear. Ask me anything about your analysis.",
-      }}
-    />
-  )
+	return (
+		<CopilotChat
+			className="planetnik-chat"
+			instructions={PLANETNIK_INSTRUCTIONS}
+			labels={{
+				title: "Płanetnik",
+				placeholder: "Ask about your codebase weather...",
+				initial:
+					"I am Płanetnik. I read the structural weather of your codebase — where pressure builds, where fog gathers, where the skies are clear. Ask me anything about your analysis.",
+			}}
+		/>
+	);
 }
 
-export default function IntelligenceChat({ runtimeUrl, basePath = "", ...dataProps }: Props) {
-  if (!runtimeUrl) {
-    return (
-      <div className="intelligence-unconfigured">
-        <p>Intelligence is not configured for this deployment.</p>
-        <p>
-          Set <code>PUBLIC_COPILOT_RUNTIME_URL</code> to enable AI-powered analysis.
-        </p>
-      </div>
-    )
-  }
+export default function IntelligenceChat({
+	runtimeUrl,
+	basePath = "",
+	...dataProps
+}: Props) {
+	if (!runtimeUrl) {
+		return (
+			<div className="intelligence-unconfigured">
+				<p>Intelligence is not configured for this deployment.</p>
+				<p>
+					Set <code>PUBLIC_COPILOT_RUNTIME_URL</code> to enable AI-powered
+					analysis.
+				</p>
+			</div>
+		);
+	}
 
-  return (
-    <CopilotKit runtimeUrl={runtimeUrl} showDevConsole={false}>
-      <IntelligenceChatInner basePath={basePath} {...dataProps} />
-    </CopilotKit>
-  )
+	return (
+		<CopilotKit runtimeUrl={runtimeUrl} showDevConsole={false}>
+			<IntelligenceChatInner basePath={basePath} {...dataProps} />
+		</CopilotKit>
+	);
 }

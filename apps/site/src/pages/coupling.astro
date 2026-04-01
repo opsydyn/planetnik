@@ -1,143 +1,166 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import BigBallOfMudChart from "../components/coupling/BigBallOfMudChart"
-import DistributionChart from "../components/charts/DistributionChart"
-import DonutChart from "../components/charts/DonutChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import { buildBalancedCouplingModel } from "../lib/coupling/balancedCouplingModel"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../components/charts/DistributionChart";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import BigBallOfMudChart from "../components/coupling/BigBallOfMudChart";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
+import { buildBalancedCouplingModel } from "../lib/coupling/balancedCouplingModel";
 
-const summary = await getEntry("analysis", "summary")
-const filesMain = await getCollection("filesMain")
-const dependencies = await getCollection("dependencies")
-const temporalDeps = await getCollection("temporalDeps")
-const hotspots = await getCollection("hotspots")
-const projectName = summary?.data.metadata.name ?? "Unknown"
-const alertTest = Astro.url.searchParams.has("alert-test") || Astro.url.searchParams.has("-alert-test")
+const summary = await getEntry("analysis", "summary");
+const filesMain = await getCollection("filesMain");
+const dependencies = await getCollection("dependencies");
+const temporalDeps = await getCollection("temporalDeps");
+const hotspots = await getCollection("hotspots");
+const projectName = summary?.data.metadata.name ?? "Unknown";
+const alertTest =
+	Astro.url.searchParams.has("alert-test") ||
+	Astro.url.searchParams.has("-alert-test");
 
-const dependencyKeys = [...new Set(dependencies.map((entry) => entry.data.decompositionKey).filter(Boolean))]
+const dependencyKeys = [
+	...new Set(
+		dependencies.map((entry) => entry.data.decompositionKey).filter(Boolean),
+	),
+];
 const hotspotKeys = [
-  ...new Set(
-    hotspots
-      .filter((entry) => entry.data.kind === "component" && entry.data.parent)
-      .map((entry) => entry.data.parent),
-  ),
+	...new Set(
+		hotspots
+			.filter((entry) => entry.data.kind === "component" && entry.data.parent)
+			.map((entry) => entry.data.parent),
+	),
+];
+const decompositionKey = dependencyKeys.includes("primary")
+	? "primary"
+	: hotspotKeys.includes("primary")
+		? "primary"
+		: (dependencyKeys[0] ?? hotspotKeys[0] ?? "primary");
+
+const temporalSections = [
+	...new Set(temporalDeps.map((entry) => entry.data.periodKey)),
 ]
-const decompositionKey =
-  dependencyKeys.includes("primary")
-    ? "primary"
-    : hotspotKeys.includes("primary")
-      ? "primary"
-      : dependencyKeys[0] ?? hotspotKeys[0] ?? "primary"
+	.map((periodKey) => {
+		const group = temporalDeps.filter(
+			(entry) => entry.data.periodKey === periodKey,
+		);
+		const first = group[0];
+		if (!first) return null;
 
-const temporalSections = [...new Set(temporalDeps.map((entry) => entry.data.periodKey))]
-  .map((periodKey) => {
-    const group = temporalDeps.filter((entry) => entry.data.periodKey === periodKey)
-    const first = group[0]
-    if (!first) return null
+		return {
+			periodKey,
+			periodLabel: first.data.periodLabel,
+			periodDays: first.data.periodDays,
+			items: group,
+		};
+	})
+	.filter((section): section is NonNullable<typeof section> => Boolean(section))
+	.sort((left, right) => right.periodDays - left.periodDays);
 
-    return {
-      periodKey,
-      periodLabel: first.data.periodLabel,
-      periodDays: first.data.periodDays,
-      items: group,
-    }
-  })
-  .filter((section): section is NonNullable<typeof section> => Boolean(section))
-  .sort((left, right) => right.periodDays - left.periodDays)
-
-const selectedTemporal = temporalSections[0]
+const selectedTemporal = temporalSections[0];
 
 const model = buildBalancedCouplingModel({
-  decompositionKey,
-  files: filesMain.map((file) => ({
-    relativePath: file.data.relativePath,
-    linesOfCode: file.data.linesOfCode,
-    components: file.data.components,
-    contributors: file.data.contributors,
-  })),
-  dependencies: dependencies.map((dependency) => ({
-    decompositionKey: dependency.data.decompositionKey,
-    fromComponent: dependency.data.fromComponent,
-    toComponent: dependency.data.toComponent,
-    count: dependency.data.count,
-  })),
-  temporalDependencies: (selectedTemporal?.items ?? []).map((dependency) => ({
-    file1: dependency.data.file1,
-    file2: dependency.data.file2,
-    sameCommits: dependency.data.sameCommits,
-  })),
-  hotspots: hotspots.map((entry) => ({
-    kind: entry.data.kind,
-    name: entry.data.name,
-    parent: entry.data.parent,
-    score: entry.data.score,
-    dimensions: entry.data.dimensions,
-    reasons: entry.data.reasons,
-  })),
-})
+	decompositionKey,
+	files: filesMain.map((file) => ({
+		relativePath: file.data.relativePath,
+		linesOfCode: file.data.linesOfCode,
+		components: file.data.components,
+		contributors: file.data.contributors,
+	})),
+	dependencies: dependencies.map((dependency) => ({
+		decompositionKey: dependency.data.decompositionKey,
+		fromComponent: dependency.data.fromComponent,
+		toComponent: dependency.data.toComponent,
+		count: dependency.data.count,
+	})),
+	temporalDependencies: (selectedTemporal?.items ?? []).map((dependency) => ({
+		file1: dependency.data.file1,
+		file2: dependency.data.file2,
+		sameCommits: dependency.data.sameCommits,
+	})),
+	hotspots: hotspots.map((entry) => ({
+		kind: entry.data.kind,
+		name: entry.data.name,
+		parent: entry.data.parent,
+		score: entry.data.score,
+		dimensions: entry.data.dimensions,
+		reasons: entry.data.reasons,
+	})),
+});
 
 const riskTierCounts = {
-  critical: model.snapshots.filter((snapshot) => snapshot.riskTier === "Critical").length,
-  high: model.snapshots.filter((snapshot) => snapshot.riskTier === "High").length,
-  medium: model.snapshots.filter((snapshot) => snapshot.riskTier === "Medium").length,
-  low: model.snapshots.filter((snapshot) => snapshot.riskTier === "Low").length,
-}
+	critical: model.snapshots.filter(
+		(snapshot) => snapshot.riskTier === "Critical",
+	).length,
+	high: model.snapshots.filter((snapshot) => snapshot.riskTier === "High")
+		.length,
+	medium: model.snapshots.filter((snapshot) => snapshot.riskTier === "Medium")
+		.length,
+	low: model.snapshots.filter((snapshot) => snapshot.riskTier === "Low").length,
+};
 
 const riskTierData = [
-  ...(riskTierCounts.critical > 0 ? [{ label: "Critical", value: riskTierCounts.critical }] : []),
-  ...(riskTierCounts.high > 0 ? [{ label: "High", value: riskTierCounts.high }] : []),
-  ...(riskTierCounts.medium > 0 ? [{ label: "Medium", value: riskTierCounts.medium }] : []),
-  ...(riskTierCounts.low > 0 ? [{ label: "Low", value: riskTierCounts.low }] : []),
-]
+	...(riskTierCounts.critical > 0
+		? [{ label: "Critical", value: riskTierCounts.critical }]
+		: []),
+	...(riskTierCounts.high > 0
+		? [{ label: "High", value: riskTierCounts.high }]
+		: []),
+	...(riskTierCounts.medium > 0
+		? [{ label: "Medium", value: riskTierCounts.medium }]
+		: []),
+	...(riskTierCounts.low > 0
+		? [{ label: "Low", value: riskTierCounts.low }]
+		: []),
+];
 
 const dimensionMixData = model.aggregate.dimensionMix.map((item) => ({
-  label: item.label,
-  value: item.value,
-}))
+	label: item.label,
+	value: item.value,
+}));
 
-const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map((item) => ({
-  label: item.label,
-  value: item.value,
-  detail: item.detail,
-  color: item.color,
-}))
+const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map(
+	(item) => ({
+		label: item.label,
+		value: item.value,
+		detail: item.detail,
+		color: item.color,
+	}),
+);
 
 const topRiskData = model.snapshots.slice(0, 12).map((snapshot) => ({
-  label: snapshot.component,
-  value: snapshot.systemicRisk,
-}))
+	label: snapshot.component,
+	value: snapshot.systemicRisk,
+}));
 
 const couplingRows = model.snapshots.map((snapshot) => ({
-  id: snapshot.id,
-  component: snapshot.component,
-  riskTier: snapshot.riskTier,
-  systemicRisk: snapshot.systemicRisk,
-  overallLoad: snapshot.overallLoad,
-  balanceScore: snapshot.balanceScore,
-  dominantDimension:
-    snapshot.dominantDimension === "staticCoupling"
-      ? "Static"
-      : snapshot.dominantDimension === "temporalCoupling"
-        ? "Temporal"
-        : snapshot.dominantDimension === "coordinationCoupling"
-          ? "Coordination"
-          : "Knowledge",
-  files: snapshot.files,
-  loc: snapshot.loc,
-  contributors: snapshot.contributors,
-  incomingDependencies: snapshot.incomingDependencies,
-  outgoingDependencies: snapshot.outgoingDependencies,
-  temporalPartners: snapshot.temporalPartners,
-  contributorOverlap: snapshot.contributorOverlap,
-  staticCoupling: snapshot.staticCoupling,
-  temporalCoupling: snapshot.temporalCoupling,
-  coordinationCoupling: snapshot.coordinationCoupling,
-  knowledgeRisk: snapshot.knowledgeRisk,
-  explainability: snapshot.explainability.join(" • "),
-}))
+	id: snapshot.id,
+	component: snapshot.component,
+	riskTier: snapshot.riskTier,
+	systemicRisk: snapshot.systemicRisk,
+	overallLoad: snapshot.overallLoad,
+	balanceScore: snapshot.balanceScore,
+	dominantDimension:
+		snapshot.dominantDimension === "staticCoupling"
+			? "Static"
+			: snapshot.dominantDimension === "temporalCoupling"
+				? "Temporal"
+				: snapshot.dominantDimension === "coordinationCoupling"
+					? "Coordination"
+					: "Knowledge",
+	files: snapshot.files,
+	loc: snapshot.loc,
+	contributors: snapshot.contributors,
+	incomingDependencies: snapshot.incomingDependencies,
+	outgoingDependencies: snapshot.outgoingDependencies,
+	temporalPartners: snapshot.temporalPartners,
+	contributorOverlap: snapshot.contributorOverlap,
+	staticCoupling: snapshot.staticCoupling,
+	temporalCoupling: snapshot.temporalCoupling,
+	coordinationCoupling: snapshot.coordinationCoupling,
+	knowledgeRisk: snapshot.knowledgeRisk,
+	explainability: snapshot.explainability.join(" • "),
+}));
 ---
 
 <Dashboard title="Balanced Coupling" projectName={projectName}>

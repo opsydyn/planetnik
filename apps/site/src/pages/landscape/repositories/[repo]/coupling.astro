@@ -1,212 +1,235 @@
 ---
-import BigBallOfMudChart from "../../../../components/coupling/BigBallOfMudChart"
-import DistributionChart from "../../../../components/charts/DistributionChart"
-import DonutChart from "../../../../components/charts/DonutChart"
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
-import { buildBalancedCouplingModel } from "../../../../lib/coupling/balancedCouplingModel"
-import { chartHelp } from "../../../../lib/chartHelp"
-import { readLandscapeRepoJson } from "../../../../lib/landscape"
+import DistributionChart from "../../../../components/charts/DistributionChart";
+import DonutChart from "../../../../components/charts/DonutChart";
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
+import BigBallOfMudChart from "../../../../components/coupling/BigBallOfMudChart";
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../lib/chartHelp";
+import { buildBalancedCouplingModel } from "../../../../lib/coupling/balancedCouplingModel";
+import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
-  getLandscapeRepositoryPageContext,
-  getLandscapeRepositoryStaticPaths,
-  type LandscapeRepoPageProps,
-} from "../../../../lib/landscapeRepoContext"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
 
 interface FileRecord {
-  relativePath: string
-  linesOfCode: number
-  components: string[]
-  contributors?: string[]
+	relativePath: string;
+	linesOfCode: number;
+	components: string[];
+	contributors?: string[];
 }
 
 interface FilesExport {
-  files?: FileRecord[]
+	files?: FileRecord[];
 }
 
 interface ComponentDependencyRecord {
-  decompositionKey: string
-  fromComponent: string
-  toComponent: string
-  count: number
-  locFrom: number
-  evidenceCount: number
-  color: string
+	decompositionKey: string;
+	fromComponent: string;
+	toComponent: string;
+	count: number;
+	locFrom: number;
+	evidenceCount: number;
+	color: string;
 }
 
 interface ComponentDependenciesExport {
-  dependencies?: ComponentDependencyRecord[]
+	dependencies?: ComponentDependencyRecord[];
 }
 
 interface TemporalDependencyRecord {
-  periodKey: string
-  periodLabel: string
-  periodDays: number
-  file1: string
-  file2: string
-  sameCommits: number
+	periodKey: string;
+	periodLabel: string;
+	periodDays: number;
+	file1: string;
+	file2: string;
+	sameCommits: number;
 }
 
 interface TemporalDependenciesExport {
-  dependencies?: TemporalDependencyRecord[]
+	dependencies?: TemporalDependencyRecord[];
 }
 
 interface HotspotRecord {
-  kind: "file" | "unit" | "component"
-  name: string
-  parent: string
-  score: number
-  dimensions: {
-    structuralRisk: number
-    changePressure: number
-    coordinationCost: number
-    knowledgeRisk: number
-  }
-  reasons: string[]
+	kind: "file" | "unit" | "component";
+	name: string;
+	parent: string;
+	score: number;
+	dimensions: {
+		structuralRisk: number;
+		changePressure: number;
+		coordinationCost: number;
+		knowledgeRisk: number;
+	};
+	reasons: string[];
 }
 
 interface HotspotsExport {
-  hotspots?: HotspotRecord[]
+	hotspots?: HotspotRecord[];
 }
 
 export async function getStaticPaths() {
-  return getLandscapeRepositoryStaticPaths()
+	return getLandscapeRepositoryStaticPaths();
 }
 
-const props = Astro.props as LandscapeRepoPageProps
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const props = Astro.props as LandscapeRepoPageProps;
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const filesMain = readLandscapeRepoJson<FilesExport>(props.repoKey, "files_main.json")?.files ?? []
-const componentDeps = readLandscapeRepoJson<ComponentDependenciesExport>(props.repoKey, "component_dependencies.json")?.dependencies ?? []
-const temporalDepsRaw = readLandscapeRepoJson<TemporalDependenciesExport>(props.repoKey, "temporal_dependencies.json")?.dependencies ?? []
-const hotspotsRaw = readLandscapeRepoJson<HotspotsExport>(props.repoKey, "hotspots.json")?.hotspots ?? []
+const filesMain =
+	readLandscapeRepoJson<FilesExport>(props.repoKey, "files_main.json")?.files ??
+	[];
+const componentDeps =
+	readLandscapeRepoJson<ComponentDependenciesExport>(
+		props.repoKey,
+		"component_dependencies.json",
+	)?.dependencies ?? [];
+const temporalDepsRaw =
+	readLandscapeRepoJson<TemporalDependenciesExport>(
+		props.repoKey,
+		"temporal_dependencies.json",
+	)?.dependencies ?? [];
+const hotspotsRaw =
+	readLandscapeRepoJson<HotspotsExport>(props.repoKey, "hotspots.json")
+		?.hotspots ?? [];
 
-const dependencyKeys = [...new Set(componentDeps.map((d) => d.decompositionKey).filter(Boolean))]
+const dependencyKeys = [
+	...new Set(componentDeps.map((d) => d.decompositionKey).filter(Boolean)),
+];
 const hotspotKeys = [
-  ...new Set(
-    hotspotsRaw
-      .filter((h) => h.kind === "component" && h.parent)
-      .map((h) => h.parent),
-  ),
-]
-const decompositionKey =
-  dependencyKeys.includes("primary")
-    ? "primary"
-    : hotspotKeys.includes("primary")
-      ? "primary"
-      : dependencyKeys[0] ?? hotspotKeys[0] ?? "primary"
+	...new Set(
+		hotspotsRaw
+			.filter((h) => h.kind === "component" && h.parent)
+			.map((h) => h.parent),
+	),
+];
+const decompositionKey = dependencyKeys.includes("primary")
+	? "primary"
+	: hotspotKeys.includes("primary")
+		? "primary"
+		: (dependencyKeys[0] ?? hotspotKeys[0] ?? "primary");
 
 const temporalSections = [...new Set(temporalDepsRaw.map((d) => d.periodKey))]
-  .map((periodKey) => {
-    const group = temporalDepsRaw.filter((d) => d.periodKey === periodKey)
-    const first = group[0]
-    if (!first) return null
-    return {
-      periodKey,
-      periodLabel: first.periodLabel,
-      periodDays: first.periodDays,
-      items: group,
-    }
-  })
-  .filter((section): section is NonNullable<typeof section> => Boolean(section))
-  .sort((left, right) => right.periodDays - left.periodDays)
+	.map((periodKey) => {
+		const group = temporalDepsRaw.filter((d) => d.periodKey === periodKey);
+		const first = group[0];
+		if (!first) return null;
+		return {
+			periodKey,
+			periodLabel: first.periodLabel,
+			periodDays: first.periodDays,
+			items: group,
+		};
+	})
+	.filter((section): section is NonNullable<typeof section> => Boolean(section))
+	.sort((left, right) => right.periodDays - left.periodDays);
 
-const selectedTemporal = temporalSections[0]
+const selectedTemporal = temporalSections[0];
 
 const model = buildBalancedCouplingModel({
-  decompositionKey,
-  files: filesMain.map((file) => ({
-    relativePath: file.relativePath,
-    linesOfCode: file.linesOfCode,
-    components: file.components,
-    contributors: file.contributors,
-  })),
-  dependencies: componentDeps.map((dep) => ({
-    decompositionKey: dep.decompositionKey,
-    fromComponent: dep.fromComponent,
-    toComponent: dep.toComponent,
-    count: dep.count,
-  })),
-  temporalDependencies: (selectedTemporal?.items ?? []).map((dep) => ({
-    file1: dep.file1,
-    file2: dep.file2,
-    sameCommits: dep.sameCommits,
-  })),
-  hotspots: hotspotsRaw.map((h) => ({
-    kind: h.kind,
-    name: h.name,
-    parent: h.parent,
-    score: h.score,
-    dimensions: h.dimensions,
-    reasons: h.reasons,
-  })),
-})
+	decompositionKey,
+	files: filesMain.map((file) => ({
+		relativePath: file.relativePath,
+		linesOfCode: file.linesOfCode,
+		components: file.components,
+		contributors: file.contributors,
+	})),
+	dependencies: componentDeps.map((dep) => ({
+		decompositionKey: dep.decompositionKey,
+		fromComponent: dep.fromComponent,
+		toComponent: dep.toComponent,
+		count: dep.count,
+	})),
+	temporalDependencies: (selectedTemporal?.items ?? []).map((dep) => ({
+		file1: dep.file1,
+		file2: dep.file2,
+		sameCommits: dep.sameCommits,
+	})),
+	hotspots: hotspotsRaw.map((h) => ({
+		kind: h.kind,
+		name: h.name,
+		parent: h.parent,
+		score: h.score,
+		dimensions: h.dimensions,
+		reasons: h.reasons,
+	})),
+});
 
 const riskTierCounts = {
-  critical: model.snapshots.filter((s) => s.riskTier === "Critical").length,
-  high: model.snapshots.filter((s) => s.riskTier === "High").length,
-  medium: model.snapshots.filter((s) => s.riskTier === "Medium").length,
-  low: model.snapshots.filter((s) => s.riskTier === "Low").length,
-}
+	critical: model.snapshots.filter((s) => s.riskTier === "Critical").length,
+	high: model.snapshots.filter((s) => s.riskTier === "High").length,
+	medium: model.snapshots.filter((s) => s.riskTier === "Medium").length,
+	low: model.snapshots.filter((s) => s.riskTier === "Low").length,
+};
 
 const riskTierData = [
-  ...(riskTierCounts.critical > 0 ? [{ label: "Critical", value: riskTierCounts.critical }] : []),
-  ...(riskTierCounts.high > 0 ? [{ label: "High", value: riskTierCounts.high }] : []),
-  ...(riskTierCounts.medium > 0 ? [{ label: "Medium", value: riskTierCounts.medium }] : []),
-  ...(riskTierCounts.low > 0 ? [{ label: "Low", value: riskTierCounts.low }] : []),
-]
+	...(riskTierCounts.critical > 0
+		? [{ label: "Critical", value: riskTierCounts.critical }]
+		: []),
+	...(riskTierCounts.high > 0
+		? [{ label: "High", value: riskTierCounts.high }]
+		: []),
+	...(riskTierCounts.medium > 0
+		? [{ label: "Medium", value: riskTierCounts.medium }]
+		: []),
+	...(riskTierCounts.low > 0
+		? [{ label: "Low", value: riskTierCounts.low }]
+		: []),
+];
 
 const dimensionMixData = model.aggregate.dimensionMix.map((item) => ({
-  label: item.label,
-  value: item.value,
-}))
+	label: item.label,
+	value: item.value,
+}));
 
-const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map((item) => ({
-  label: item.label,
-  value: item.value,
-  detail: item.detail,
-  color: item.color,
-}))
+const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map(
+	(item) => ({
+		label: item.label,
+		value: item.value,
+		detail: item.detail,
+		color: item.color,
+	}),
+);
 
 const topRiskData = model.snapshots.slice(0, 12).map((snapshot) => ({
-  label: snapshot.component,
-  value: snapshot.systemicRisk,
-}))
+	label: snapshot.component,
+	value: snapshot.systemicRisk,
+}));
 
 const couplingRows = model.snapshots.map((snapshot) => ({
-  id: snapshot.id,
-  component: snapshot.component,
-  riskTier: snapshot.riskTier,
-  systemicRisk: snapshot.systemicRisk,
-  overallLoad: snapshot.overallLoad,
-  balanceScore: snapshot.balanceScore,
-  dominantDimension:
-    snapshot.dominantDimension === "staticCoupling"
-      ? "Static"
-      : snapshot.dominantDimension === "temporalCoupling"
-        ? "Temporal"
-        : snapshot.dominantDimension === "coordinationCoupling"
-          ? "Coordination"
-          : "Knowledge",
-  files: snapshot.files,
-  loc: snapshot.loc,
-  contributors: snapshot.contributors,
-  incomingDependencies: snapshot.incomingDependencies,
-  outgoingDependencies: snapshot.outgoingDependencies,
-  temporalPartners: snapshot.temporalPartners,
-  contributorOverlap: snapshot.contributorOverlap,
-  staticCoupling: snapshot.staticCoupling,
-  temporalCoupling: snapshot.temporalCoupling,
-  coordinationCoupling: snapshot.coordinationCoupling,
-  knowledgeRisk: snapshot.knowledgeRisk,
-  explainability: snapshot.explainability.join(" • "),
-}))
+	id: snapshot.id,
+	component: snapshot.component,
+	riskTier: snapshot.riskTier,
+	systemicRisk: snapshot.systemicRisk,
+	overallLoad: snapshot.overallLoad,
+	balanceScore: snapshot.balanceScore,
+	dominantDimension:
+		snapshot.dominantDimension === "staticCoupling"
+			? "Static"
+			: snapshot.dominantDimension === "temporalCoupling"
+				? "Temporal"
+				: snapshot.dominantDimension === "coordinationCoupling"
+					? "Coordination"
+					: "Knowledge",
+	files: snapshot.files,
+	loc: snapshot.loc,
+	contributors: snapshot.contributors,
+	incomingDependencies: snapshot.incomingDependencies,
+	outgoingDependencies: snapshot.outgoingDependencies,
+	temporalPartners: snapshot.temporalPartners,
+	contributorOverlap: snapshot.contributorOverlap,
+	staticCoupling: snapshot.staticCoupling,
+	temporalCoupling: snapshot.temporalCoupling,
+	coordinationCoupling: snapshot.coordinationCoupling,
+	knowledgeRisk: snapshot.knowledgeRisk,
+	explainability: snapshot.explainability.join(" • "),
+}));
 ---
 
 <Dashboard title={`${repoName} Balanced Coupling`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>

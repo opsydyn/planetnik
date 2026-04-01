@@ -1,97 +1,162 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DistributionChart from "../components/charts/DistributionChart"
-import DonutChart from "../components/charts/DonutChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../components/tables/ReportDataGrid"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DistributionChart from "../components/charts/DistributionChart";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../components/tables/ReportDataGrid";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const hotspots = await getCollection("hotspots")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const hotspots = await getCollection("hotspots");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
-const sorted = [...hotspots].sort((a, b) => b.data.score - a.data.score)
+const sorted = [...hotspots].sort((a, b) => b.data.score - a.data.score);
 const dimensionLabels = {
-  structuralRisk: "Structural Risk",
-  changePressure: "Change Pressure",
-  coordinationCost: "Coordination Cost",
-  knowledgeRisk: "Knowledge Risk",
-} as const
+	structuralRisk: "Structural Risk",
+	changePressure: "Change Pressure",
+	coordinationCost: "Coordination Cost",
+	knowledgeRisk: "Knowledge Risk",
+} as const;
 const severityCounts = {
-  critical: sorted.filter((item) => item.data.severity === "Critical").length,
-  high: sorted.filter((item) => item.data.severity === "High").length,
-  medium: sorted.filter((item) => item.data.severity === "Medium").length,
-  low: sorted.filter((item) => item.data.severity === "Low").length,
-}
+	critical: sorted.filter((item) => item.data.severity === "Critical").length,
+	high: sorted.filter((item) => item.data.severity === "High").length,
+	medium: sorted.filter((item) => item.data.severity === "Medium").length,
+	low: sorted.filter((item) => item.data.severity === "Low").length,
+};
 
 const kindCounts = {
-  files: sorted.filter((item) => item.data.kind === "file").length,
-  units: sorted.filter((item) => item.data.kind === "unit").length,
-  components: sorted.filter((item) => item.data.kind === "component").length,
-}
+	files: sorted.filter((item) => item.data.kind === "file").length,
+	units: sorted.filter((item) => item.data.kind === "unit").length,
+	components: sorted.filter((item) => item.data.kind === "component").length,
+};
 const dominantCounts = {
-  structuralRisk: sorted.filter((item) => item.data.dominantDimension === "structuralRisk").length,
-  changePressure: sorted.filter((item) => item.data.dominantDimension === "changePressure").length,
-  coordinationCost: sorted.filter((item) => item.data.dominantDimension === "coordinationCost").length,
-  knowledgeRisk: sorted.filter((item) => item.data.dominantDimension === "knowledgeRisk").length,
-}
+	structuralRisk: sorted.filter(
+		(item) => item.data.dominantDimension === "structuralRisk",
+	).length,
+	changePressure: sorted.filter(
+		(item) => item.data.dominantDimension === "changePressure",
+	).length,
+	coordinationCost: sorted.filter(
+		(item) => item.data.dominantDimension === "coordinationCost",
+	).length,
+	knowledgeRisk: sorted.filter(
+		(item) => item.data.dominantDimension === "knowledgeRisk",
+	).length,
+};
 
 const severityData = [
-  ...(severityCounts.critical > 0 ? [{ label: "Critical", value: severityCounts.critical, color: "#dc2626" }] : []),
-  ...(severityCounts.high > 0 ? [{ label: "High", value: severityCounts.high, color: "#ea580c" }] : []),
-  ...(severityCounts.medium > 0 ? [{ label: "Medium", value: severityCounts.medium, color: "#d97706" }] : []),
-  ...(severityCounts.low > 0 ? [{ label: "Low", value: severityCounts.low, color: "#16a34a" }] : []),
-]
+	...(severityCounts.critical > 0
+		? [{ label: "Critical", value: severityCounts.critical, color: "#dc2626" }]
+		: []),
+	...(severityCounts.high > 0
+		? [{ label: "High", value: severityCounts.high, color: "#ea580c" }]
+		: []),
+	...(severityCounts.medium > 0
+		? [{ label: "Medium", value: severityCounts.medium, color: "#d97706" }]
+		: []),
+	...(severityCounts.low > 0
+		? [{ label: "Low", value: severityCounts.low, color: "#16a34a" }]
+		: []),
+];
 
 const kindData = [
-  ...(kindCounts.files > 0 ? [{ label: "Files", value: kindCounts.files, detail: `${kindCounts.files} hotspots` }] : []),
-  ...(kindCounts.units > 0 ? [{ label: "Units", value: kindCounts.units, detail: `${kindCounts.units} hotspots` }] : []),
-  ...(kindCounts.components > 0
-    ? [{ label: "Components", value: kindCounts.components, detail: `${kindCounts.components} hotspots` }]
-    : []),
-]
+	...(kindCounts.files > 0
+		? [
+				{
+					label: "Files",
+					value: kindCounts.files,
+					detail: `${kindCounts.files} hotspots`,
+				},
+			]
+		: []),
+	...(kindCounts.units > 0
+		? [
+				{
+					label: "Units",
+					value: kindCounts.units,
+					detail: `${kindCounts.units} hotspots`,
+				},
+			]
+		: []),
+	...(kindCounts.components > 0
+		? [
+				{
+					label: "Components",
+					value: kindCounts.components,
+					detail: `${kindCounts.components} hotspots`,
+				},
+			]
+		: []),
+];
 const dominantDimensionData = [
-  ...(dominantCounts.structuralRisk > 0
-    ? [{ label: "Structural Risk", value: dominantCounts.structuralRisk, detail: `${dominantCounts.structuralRisk} hotspots` }]
-    : []),
-  ...(dominantCounts.changePressure > 0
-    ? [{ label: "Change Pressure", value: dominantCounts.changePressure, detail: `${dominantCounts.changePressure} hotspots` }]
-    : []),
-  ...(dominantCounts.coordinationCost > 0
-    ? [{ label: "Coordination Cost", value: dominantCounts.coordinationCost, detail: `${dominantCounts.coordinationCost} hotspots` }]
-    : []),
-  ...(dominantCounts.knowledgeRisk > 0
-    ? [{ label: "Knowledge Risk", value: dominantCounts.knowledgeRisk, detail: `${dominantCounts.knowledgeRisk} hotspots` }]
-    : []),
-]
+	...(dominantCounts.structuralRisk > 0
+		? [
+				{
+					label: "Structural Risk",
+					value: dominantCounts.structuralRisk,
+					detail: `${dominantCounts.structuralRisk} hotspots`,
+				},
+			]
+		: []),
+	...(dominantCounts.changePressure > 0
+		? [
+				{
+					label: "Change Pressure",
+					value: dominantCounts.changePressure,
+					detail: `${dominantCounts.changePressure} hotspots`,
+				},
+			]
+		: []),
+	...(dominantCounts.coordinationCost > 0
+		? [
+				{
+					label: "Coordination Cost",
+					value: dominantCounts.coordinationCost,
+					detail: `${dominantCounts.coordinationCost} hotspots`,
+				},
+			]
+		: []),
+	...(dominantCounts.knowledgeRisk > 0
+		? [
+				{
+					label: "Knowledge Risk",
+					value: dominantCounts.knowledgeRisk,
+					detail: `${dominantCounts.knowledgeRisk} hotspots`,
+				},
+			]
+		: []),
+];
 
 const topHotspotData = sorted.slice(0, 15).map((item) => ({
-  label: item.data.name.length > 56 ? `...${item.data.name.slice(-53)}` : item.data.name,
-  value: item.data.score,
-}))
+	label:
+		item.data.name.length > 56
+			? `...${item.data.name.slice(-53)}`
+			: item.data.name,
+	value: item.data.score,
+}));
 
 const hotspotRows = sorted.map((item) => ({
-  id: item.id,
-  name: item.data.name,
-  href: item.data.route,
-  kind: item.data.kind[0].toUpperCase() + item.data.kind.slice(1),
-  parent: item.data.parent || "—",
-  score: item.data.score,
-  severity: item.data.severity,
-  dominantDimension: dimensionLabels[item.data.dominantDimension],
-  size: item.data.size,
-  commits: item.data.commitsCount,
-  contributors: item.data.contributorsCount,
-  temporalLinks: item.data.temporalLinks,
-  complexity: item.data.complexity,
-  structuralRisk: item.data.dimensions.structuralRisk,
-  changePressure: item.data.dimensions.changePressure,
-  coordinationCost: item.data.dimensions.coordinationCost,
-  knowledgeRisk: item.data.dimensions.knowledgeRisk,
-  suggestedAction: item.data.suggestedAction,
-  reasons: item.data.reasons.join(" • "),
-}))
+	id: item.id,
+	name: item.data.name,
+	href: item.data.route,
+	kind: item.data.kind[0].toUpperCase() + item.data.kind.slice(1),
+	parent: item.data.parent || "—",
+	score: item.data.score,
+	severity: item.data.severity,
+	dominantDimension: dimensionLabels[item.data.dominantDimension],
+	size: item.data.size,
+	commits: item.data.commitsCount,
+	contributors: item.data.contributorsCount,
+	temporalLinks: item.data.temporalLinks,
+	complexity: item.data.complexity,
+	structuralRisk: item.data.dimensions.structuralRisk,
+	changePressure: item.data.dimensions.changePressure,
+	coordinationCost: item.data.dimensions.coordinationCost,
+	knowledgeRisk: item.data.dimensions.knowledgeRisk,
+	suggestedAction: item.data.suggestedAction,
+	reasons: item.data.reasons.join(" • "),
+}));
 ---
 
 <Dashboard title="Hotspots" projectName={projectName}>

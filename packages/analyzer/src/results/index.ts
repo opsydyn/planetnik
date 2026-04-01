@@ -1,14 +1,17 @@
-export { AspectAnalysisResults } from "./AspectAnalysisResults.js"
-export { CodeAnalysisResults } from "./CodeAnalysisResults.js"
-export { ConcernsAnalysisResults } from "./ConcernsAnalysisResults.js"
-export { ContributorsAnalysisResults } from "./ContributorsAnalysisResults.js"
-export { ControlStatus } from "./ControlStatus.js"
-export { ControlsAnalysisResults } from "./ControlsAnalysisResults.js"
-export { DuplicationAnalysisResults } from "./DuplicationAnalysisResults.js"
-export { FileDistributionPerLogicalDecomposition } from "./FileDistributionPerLogicalDecomposition.js"
-export { FilesAnalysisResults } from "./FilesAnalysisResults.js"
-export { type FilePairChangedTogether, FilesHistoryAnalysisResults } from "./FilesHistoryAnalysisResults.js"
-export { GoalsAnalysisResults } from "./GoalsAnalysisResults.js"
-export { HistoryPerExtension } from "./HistoryPerExtension.js"
-export { LogicalDecompositionAnalysisResults } from "./LogicalDecompositionAnalysisResults.js"
-export { UnitsAnalysisResults } from "./UnitsAnalysisResults.js"
+export { AspectAnalysisResults } from "./AspectAnalysisResults.js";
+export { CodeAnalysisResults } from "./CodeAnalysisResults.js";
+export { ConcernsAnalysisResults } from "./ConcernsAnalysisResults.js";
+export { ContributorsAnalysisResults } from "./ContributorsAnalysisResults.js";
+export { ControlStatus } from "./ControlStatus.js";
+export { ControlsAnalysisResults } from "./ControlsAnalysisResults.js";
+export { DuplicationAnalysisResults } from "./DuplicationAnalysisResults.js";
+export { FileDistributionPerLogicalDecomposition } from "./FileDistributionPerLogicalDecomposition.js";
+export { FilesAnalysisResults } from "./FilesAnalysisResults.js";
+export {
+	type FilePairChangedTogether,
+	FilesHistoryAnalysisResults,
+} from "./FilesHistoryAnalysisResults.js";
+export { GoalsAnalysisResults } from "./GoalsAnalysisResults.js";
+export { HistoryPerExtension } from "./HistoryPerExtension.js";
+export { LogicalDecompositionAnalysisResults } from "./LogicalDecompositionAnalysisResults.js";
+export { UnitsAnalysisResults } from "./UnitsAnalysisResults.js";

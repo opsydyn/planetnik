@@ -1,116 +1,129 @@
 ---
-import { existsSync, readFileSync } from "node:fs"
-import { join } from "node:path"
-import { getEntry } from "astro:content"
-import TopologyGraph from "../components/TopologyGraph"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getEntry } from "astro:content";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import TopologyGraph from "../components/TopologyGraph";
+import Dashboard from "../layouts/Dashboard.astro";
 // Import triggers .env side-effect, ensuring PLANETNIK_DATA_DIR is set
-import { resolveDataDir } from "../loaders/planetnik-loader"
-import { route } from "../lib/route"
+import { resolveDataDir } from "../loaders/planetnik-loader";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {
-  return Astro.redirect(route("/landscape/topology"))
+	return Astro.redirect(route("/landscape/topology"));
 }
 
-const summary = await getEntry("analysis", "summary")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
-const dataDir = resolveDataDir()
+const dataDir = resolveDataDir();
 
-type PeopleDep = { from: string; to: string; count: number; files: string[] }
+type PeopleDep = { from: string; to: string; count: number; files: string[] };
 type ContributorImpactDimensionKey =
-  | "complexity_reduction"
-  | "boundary_shaping"
-  | "knowledge_spread"
-  | "coordination_relief"
-  | "change_enablement"
+	| "complexity_reduction"
+	| "boundary_shaping"
+	| "knowledge_spread"
+	| "coordination_relief"
+	| "change_enablement";
 
 type ContributorImpactContributor = {
-  email: string
-  display_name: string
-  glue_score: number
-  snacking_score: number
-  structural_impact_score: number
-  visible_activity_score: number
-  collaborator_count: number
-  shared_files_count: number
-  commits_count: number
-  files_touched: number
-  components_touched: number
-  dominant_dimension: ContributorImpactDimensionKey
-  dimensions: Record<ContributorImpactDimensionKey, number>
-  top_components: Array<{ name: string; files: number; commits: number }>
-  top_routes: string[]
-  reasons: string[]
-  is_glue: boolean
-  is_snacking: boolean
-}
+	email: string;
+	display_name: string;
+	glue_score: number;
+	snacking_score: number;
+	structural_impact_score: number;
+	visible_activity_score: number;
+	collaborator_count: number;
+	shared_files_count: number;
+	commits_count: number;
+	files_touched: number;
+	components_touched: number;
+	dominant_dimension: ContributorImpactDimensionKey;
+	dimensions: Record<ContributorImpactDimensionKey, number>;
+	top_components: Array<{ name: string; files: number; commits: number }>;
+	top_routes: string[];
+	reasons: string[];
+	is_glue: boolean;
+	is_snacking: boolean;
+};
 
 type ContributorImpactPeriod = {
-  period_key: "all_time" | "30d" | "90d" | "180d" | "365d"
-  period_label: string
-  contributors: ContributorImpactContributor[]
-}
+	period_key: "all_time" | "30d" | "90d" | "180d" | "365d";
+	period_label: string;
+	contributors: ContributorImpactContributor[];
+};
 
 type ContributorImpactExport = {
-  periods?: ContributorImpactPeriod[]
-}
+	periods?: ContributorImpactPeriod[];
+};
 
 function loadPeriod(filename: string): PeopleDep[] {
-  const path = join(dataDir, filename)
-  if (!existsSync(path)) return []
-  try {
-    const raw = JSON.parse(readFileSync(path, "utf-8"))
-    return Array.isArray(raw) ? raw : []
-  } catch {
-    return []
-  }
+	const path = join(dataDir, filename);
+	if (!existsSync(path)) return [];
+	try {
+		const raw = JSON.parse(readFileSync(path, "utf-8"));
+		return Array.isArray(raw) ? raw : [];
+	} catch {
+		return [];
+	}
 }
 
-function loadContributorImpact(): Record<string, ContributorImpactContributor[]> {
-  const path = join(dataDir, "contributor_impact.json")
-  if (!existsSync(path)) return {}
+function loadContributorImpact(): Record<
+	string,
+	ContributorImpactContributor[]
+> {
+	const path = join(dataDir, "contributor_impact.json");
+	if (!existsSync(path)) return {};
 
-  const labelByPeriodKey: Record<ContributorImpactPeriod["period_key"], string> = {
-    all_time: "All Time",
-    "365d": "1 Year",
-    "180d": "6 Months",
-    "90d": "Quarter",
-    "30d": "Month",
-  }
+	const labelByPeriodKey: Record<
+		ContributorImpactPeriod["period_key"],
+		string
+	> = {
+		all_time: "All Time",
+		"365d": "1 Year",
+		"180d": "6 Months",
+		"90d": "Quarter",
+		"30d": "Month",
+	};
 
-  try {
-    const raw = JSON.parse(readFileSync(path, "utf-8")) as ContributorImpactExport
-    const periods = raw.periods ?? []
-    return Object.fromEntries(
-      periods.map((period) => [labelByPeriodKey[period.period_key], period.contributors ?? []]),
-    )
-  } catch {
-    return {}
-  }
+	try {
+		const raw = JSON.parse(
+			readFileSync(path, "utf-8"),
+		) as ContributorImpactExport;
+		const periods = raw.periods ?? [];
+		return Object.fromEntries(
+			periods.map((period) => [
+				labelByPeriodKey[period.period_key],
+				period.contributors ?? [],
+			]),
+		);
+	} catch {
+		return {};
+	}
 }
 
 const periods: Record<string, PeopleDep[]> = {
-  "All Time": loadPeriod("people_dependencies.json"),
-  "1 Year": loadPeriod("people_dependencies_365d.json"),
-  "6 Months": loadPeriod("people_dependencies_180d.json"),
-  "Quarter": loadPeriod("people_dependencies_90d.json"),
-  "Month": loadPeriod("people_dependencies_30d.json"),
-}
+	"All Time": loadPeriod("people_dependencies.json"),
+	"1 Year": loadPeriod("people_dependencies_365d.json"),
+	"6 Months": loadPeriod("people_dependencies_180d.json"),
+	Quarter: loadPeriod("people_dependencies_90d.json"),
+	Month: loadPeriod("people_dependencies_30d.json"),
+};
 
 // Filter out empty periods
-const availablePeriods: Record<string, PeopleDep[]> = {}
+const availablePeriods: Record<string, PeopleDep[]> = {};
 for (const [key, value] of Object.entries(periods)) {
-  if (value.length > 0) availablePeriods[key] = value
+	if (value.length > 0) availablePeriods[key] = value;
 }
 
-const contributorImpactPeriods = loadContributorImpact()
+const contributorImpactPeriods = loadContributorImpact();
 const availableImpactPeriods = Object.fromEntries(
-  Object.keys(availablePeriods).map((key) => [key, contributorImpactPeriods[key] ?? []]),
-) as Record<string, ContributorImpactContributor[]>
+	Object.keys(availablePeriods).map((key) => [
+		key,
+		contributorImpactPeriods[key] ?? [],
+	]),
+) as Record<string, ContributorImpactContributor[]>;
 
-const hasData = Object.keys(availablePeriods).length > 0
+const hasData = Object.keys(availablePeriods).length > 0;
 ---
 
 <Dashboard title="Team Topology" projectName={projectName}>

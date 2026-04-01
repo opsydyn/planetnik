@@ -1,36 +1,36 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import DonutChart from "../components/charts/DonutChart"
-import HorizontalBarChart from "../components/charts/HorizontalBarChart"
-import StaticReportTable from "../components/tables/StaticReportTable.astro"
-import { chartHelp } from "../lib/chartHelp"
-import Dashboard from "../layouts/Dashboard.astro"
+import { getCollection, getEntry } from "astro:content";
+import DonutChart from "../components/charts/DonutChart";
+import HorizontalBarChart from "../components/charts/HorizontalBarChart";
+import StaticReportTable from "../components/tables/StaticReportTable.astro";
+import Dashboard from "../layouts/Dashboard.astro";
+import { chartHelp } from "../lib/chartHelp";
 
-const summary = await getEntry("analysis", "summary")
-const filesMain = await getCollection("filesMain")
-const projectName = summary?.data.metadata.name ?? "Unknown"
+const summary = await getEntry("analysis", "summary");
+const filesMain = await getCollection("filesMain");
+const projectName = summary?.data.metadata.name ?? "Unknown";
 
 // Aggregate concerns from files
-const concernMap = new Map<string, { files: number; loc: number }>()
+const concernMap = new Map<string, { files: number; loc: number }>();
 for (const f of filesMain) {
-  for (const concern of f.data.concerns) {
-    const entry = concernMap.get(concern) ?? { files: 0, loc: 0 }
-    entry.files++
-    entry.loc += f.data.linesOfCode
-    concernMap.set(concern, entry)
-  }
+	for (const concern of f.data.concerns) {
+		const entry = concernMap.get(concern) ?? { files: 0, loc: 0 };
+		entry.files++;
+		entry.loc += f.data.linesOfCode;
+		concernMap.set(concern, entry);
+	}
 }
-const concerns = [...concernMap.entries()].sort((a, b) => b[1].loc - a[1].loc)
+const concerns = [...concernMap.entries()].sort((a, b) => b[1].loc - a[1].loc);
 
 const concernBarData = concerns.slice(0, 15).map(([name, s]) => ({
-  label: name,
-  value: s.loc,
-}))
+	label: name,
+	value: s.loc,
+}));
 
 const donutData = concerns.map(([name, s]) => ({
-  label: name,
-  value: s.loc,
-}))
+	label: name,
+	value: s.loc,
+}));
 ---
 
 <Dashboard title="Features of Interest" projectName={projectName}>

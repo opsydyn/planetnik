@@ -1,28 +1,29 @@
 ---
-import { getCollection, getEntry } from "astro:content"
-import ReportDataGrid from "../../components/tables/ReportDataGrid"
-import Dashboard from "../../layouts/Dashboard.astro"
-import { route } from "../../lib/route"
+import { getCollection, getEntry } from "astro:content";
+import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import Dashboard from "../../layouts/Dashboard.astro";
 
-const reportContext = await getEntry("reportContext", "context")
+const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const teams = await getCollection("landscapeTeams")
-const projectName = reportContext.data.title
+const teams = await getCollection("landscapeTeams");
+const projectName = reportContext.data.title;
 const rows = teams.map((team) => ({
-  id: team.id,
-  name: team.data.name,
-  description: team.data.description || "—",
-  commitsCount: team.data.commitsCount,
-  commits30d: team.data.commits30d,
-  memberCount: team.data.memberCount,
-  repositoryCount: team.data.repositoryCount,
-  latestCommitDate: team.data.latestCommitDate,
-  members: team.data.members.join(" • ") || "—",
-  repositories: team.data.repositories.map((repository) => repository.name).join(" • ") || "—",
-}))
+	id: team.id,
+	name: team.data.name,
+	description: team.data.description || "—",
+	commitsCount: team.data.commitsCount,
+	commits30d: team.data.commits30d,
+	memberCount: team.data.memberCount,
+	repositoryCount: team.data.repositoryCount,
+	latestCommitDate: team.data.latestCommitDate,
+	members: team.data.members.join(" • ") || "—",
+	repositories:
+		team.data.repositories.map((repository) => repository.name).join(" • ") ||
+		"—",
+}));
 ---
 
 <Dashboard title="Landscape Teams" projectName={projectName}>

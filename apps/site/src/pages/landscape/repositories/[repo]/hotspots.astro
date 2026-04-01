@@ -1,138 +1,220 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart"
-import DonutChart from "../../../../components/charts/DonutChart"
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart"
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid"
-import { chartHelp } from "../../../../lib/chartHelp"
-import { mapLandscapeRepositoryRoute, readLandscapeRepoJson } from "../../../../lib/landscape"
+import DistributionChart from "../../../../components/charts/DistributionChart";
+import DonutChart from "../../../../components/charts/DonutChart";
+import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
+import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import { chartHelp } from "../../../../lib/chartHelp";
 import {
-  getLandscapeRepositoryPageContext,
-  getLandscapeRepositoryStaticPaths,
-  type LandscapeRepoPageProps,
-} from "../../../../lib/landscapeRepoContext"
-import Dashboard from "../../../../layouts/Dashboard.astro"
-import { route } from "../../../../lib/route"
+	mapLandscapeRepositoryRoute,
+	readLandscapeRepoJson,
+} from "../../../../lib/landscape";
+import {
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
 
-type DominantDimension = "structuralRisk" | "changePressure" | "coordinationCost" | "knowledgeRisk"
-type Severity = "Critical" | "High" | "Medium" | "Low"
-type HotspotKind = "file" | "unit" | "component"
+type DominantDimension =
+	| "structuralRisk"
+	| "changePressure"
+	| "coordinationCost"
+	| "knowledgeRisk";
+type Severity = "Critical" | "High" | "Medium" | "Low";
+type HotspotKind = "file" | "unit" | "component";
 
 interface RepoHotspot {
-  id: string
-  kind: HotspotKind
-  name: string
-  parent?: string
-  route: string
-  score: number
-  severity: Severity
-  size: number
-  commitsCount: number
-  contributorsCount: number
-  temporalLinks: number
-  complexity: number
-  dimensions: Record<DominantDimension, number>
-  dominantDimension: DominantDimension
-  suggestedAction: string
-  reasons: string[]
+	id: string;
+	kind: HotspotKind;
+	name: string;
+	parent?: string;
+	route: string;
+	score: number;
+	severity: Severity;
+	size: number;
+	commitsCount: number;
+	contributorsCount: number;
+	temporalLinks: number;
+	complexity: number;
+	dimensions: Record<DominantDimension, number>;
+	dominantDimension: DominantDimension;
+	suggestedAction: string;
+	reasons: string[];
 }
 
 interface RepoHotspotsExport {
-  fileHotspots?: RepoHotspot[]
-  unitHotspots?: RepoHotspot[]
-  componentHotspots?: RepoHotspot[]
+	fileHotspots?: RepoHotspot[];
+	unitHotspots?: RepoHotspot[];
+	componentHotspots?: RepoHotspot[];
 }
 
 export async function getStaticPaths() {
-  return getLandscapeRepositoryStaticPaths()
+	return getLandscapeRepositoryStaticPaths();
 }
 
-const props = Astro.props as LandscapeRepoPageProps
-const { reportContext, projectName, repoName } = await getLandscapeRepositoryPageContext(props)
+const props = Astro.props as LandscapeRepoPageProps;
+const { reportContext, projectName, repoName } =
+	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-  return Astro.redirect(route("/"))
+	return Astro.redirect(route("/"));
 }
 
-const hotspotsExport = readLandscapeRepoJson<RepoHotspotsExport>(props.repoKey, "hotspots.json")
+const hotspotsExport = readLandscapeRepoJson<RepoHotspotsExport>(
+	props.repoKey,
+	"hotspots.json",
+);
 const sorted = [
-  ...(hotspotsExport?.fileHotspots ?? []),
-  ...(hotspotsExport?.unitHotspots ?? []),
-  ...(hotspotsExport?.componentHotspots ?? []),
-].sort((left, right) => right.score - left.score)
+	...(hotspotsExport?.fileHotspots ?? []),
+	...(hotspotsExport?.unitHotspots ?? []),
+	...(hotspotsExport?.componentHotspots ?? []),
+].sort((left, right) => right.score - left.score);
 
 const dimensionLabels = {
-  structuralRisk: "Structural Risk",
-  changePressure: "Change Pressure",
-  coordinationCost: "Coordination Cost",
-  knowledgeRisk: "Knowledge Risk",
-} as const
+	structuralRisk: "Structural Risk",
+	changePressure: "Change Pressure",
+	coordinationCost: "Coordination Cost",
+	knowledgeRisk: "Knowledge Risk",
+} as const;
 
 const severityCounts = {
-  critical: sorted.filter((item) => item.severity === "Critical").length,
-  high: sorted.filter((item) => item.severity === "High").length,
-  medium: sorted.filter((item) => item.severity === "Medium").length,
-  low: sorted.filter((item) => item.severity === "Low").length,
-}
+	critical: sorted.filter((item) => item.severity === "Critical").length,
+	high: sorted.filter((item) => item.severity === "High").length,
+	medium: sorted.filter((item) => item.severity === "Medium").length,
+	low: sorted.filter((item) => item.severity === "Low").length,
+};
 
 const kindCounts = {
-  files: sorted.filter((item) => item.kind === "file").length,
-  units: sorted.filter((item) => item.kind === "unit").length,
-  components: sorted.filter((item) => item.kind === "component").length,
-}
+	files: sorted.filter((item) => item.kind === "file").length,
+	units: sorted.filter((item) => item.kind === "unit").length,
+	components: sorted.filter((item) => item.kind === "component").length,
+};
 
 const dominantCounts = {
-  structuralRisk: sorted.filter((item) => item.dominantDimension === "structuralRisk").length,
-  changePressure: sorted.filter((item) => item.dominantDimension === "changePressure").length,
-  coordinationCost: sorted.filter((item) => item.dominantDimension === "coordinationCost").length,
-  knowledgeRisk: sorted.filter((item) => item.dominantDimension === "knowledgeRisk").length,
-}
+	structuralRisk: sorted.filter(
+		(item) => item.dominantDimension === "structuralRisk",
+	).length,
+	changePressure: sorted.filter(
+		(item) => item.dominantDimension === "changePressure",
+	).length,
+	coordinationCost: sorted.filter(
+		(item) => item.dominantDimension === "coordinationCost",
+	).length,
+	knowledgeRisk: sorted.filter(
+		(item) => item.dominantDimension === "knowledgeRisk",
+	).length,
+};
 
 const severityData = [
-  ...(severityCounts.critical > 0 ? [{ label: "Critical", value: severityCounts.critical, color: "#dc2626" }] : []),
-  ...(severityCounts.high > 0 ? [{ label: "High", value: severityCounts.high, color: "#ea580c" }] : []),
-  ...(severityCounts.medium > 0 ? [{ label: "Medium", value: severityCounts.medium, color: "#d97706" }] : []),
-  ...(severityCounts.low > 0 ? [{ label: "Low", value: severityCounts.low, color: "#16a34a" }] : []),
-]
+	...(severityCounts.critical > 0
+		? [{ label: "Critical", value: severityCounts.critical, color: "#dc2626" }]
+		: []),
+	...(severityCounts.high > 0
+		? [{ label: "High", value: severityCounts.high, color: "#ea580c" }]
+		: []),
+	...(severityCounts.medium > 0
+		? [{ label: "Medium", value: severityCounts.medium, color: "#d97706" }]
+		: []),
+	...(severityCounts.low > 0
+		? [{ label: "Low", value: severityCounts.low, color: "#16a34a" }]
+		: []),
+];
 
 const kindData = [
-  ...(kindCounts.files > 0 ? [{ label: "Files", value: kindCounts.files, detail: `${kindCounts.files} hotspots` }] : []),
-  ...(kindCounts.units > 0 ? [{ label: "Units", value: kindCounts.units, detail: `${kindCounts.units} hotspots` }] : []),
-  ...(kindCounts.components > 0 ? [{ label: "Components", value: kindCounts.components, detail: `${kindCounts.components} hotspots` }] : []),
-]
+	...(kindCounts.files > 0
+		? [
+				{
+					label: "Files",
+					value: kindCounts.files,
+					detail: `${kindCounts.files} hotspots`,
+				},
+			]
+		: []),
+	...(kindCounts.units > 0
+		? [
+				{
+					label: "Units",
+					value: kindCounts.units,
+					detail: `${kindCounts.units} hotspots`,
+				},
+			]
+		: []),
+	...(kindCounts.components > 0
+		? [
+				{
+					label: "Components",
+					value: kindCounts.components,
+					detail: `${kindCounts.components} hotspots`,
+				},
+			]
+		: []),
+];
 
 const dominantDimensionData = [
-  ...(dominantCounts.structuralRisk > 0 ? [{ label: "Structural Risk", value: dominantCounts.structuralRisk, detail: `${dominantCounts.structuralRisk} hotspots` }] : []),
-  ...(dominantCounts.changePressure > 0 ? [{ label: "Change Pressure", value: dominantCounts.changePressure, detail: `${dominantCounts.changePressure} hotspots` }] : []),
-  ...(dominantCounts.coordinationCost > 0 ? [{ label: "Coordination Cost", value: dominantCounts.coordinationCost, detail: `${dominantCounts.coordinationCost} hotspots` }] : []),
-  ...(dominantCounts.knowledgeRisk > 0 ? [{ label: "Knowledge Risk", value: dominantCounts.knowledgeRisk, detail: `${dominantCounts.knowledgeRisk} hotspots` }] : []),
-]
+	...(dominantCounts.structuralRisk > 0
+		? [
+				{
+					label: "Structural Risk",
+					value: dominantCounts.structuralRisk,
+					detail: `${dominantCounts.structuralRisk} hotspots`,
+				},
+			]
+		: []),
+	...(dominantCounts.changePressure > 0
+		? [
+				{
+					label: "Change Pressure",
+					value: dominantCounts.changePressure,
+					detail: `${dominantCounts.changePressure} hotspots`,
+				},
+			]
+		: []),
+	...(dominantCounts.coordinationCost > 0
+		? [
+				{
+					label: "Coordination Cost",
+					value: dominantCounts.coordinationCost,
+					detail: `${dominantCounts.coordinationCost} hotspots`,
+				},
+			]
+		: []),
+	...(dominantCounts.knowledgeRisk > 0
+		? [
+				{
+					label: "Knowledge Risk",
+					value: dominantCounts.knowledgeRisk,
+					detail: `${dominantCounts.knowledgeRisk} hotspots`,
+				},
+			]
+		: []),
+];
 
 const topHotspotData = sorted.slice(0, 15).map((item) => ({
-  label: item.name.length > 56 ? `...${item.name.slice(-53)}` : item.name,
-  value: item.score,
-}))
+	label: item.name.length > 56 ? `...${item.name.slice(-53)}` : item.name,
+	value: item.score,
+}));
 
 const hotspotRows = sorted.map((item) => ({
-  id: item.id,
-  name: item.name,
-  href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
-  kind: item.kind[0].toUpperCase() + item.kind.slice(1),
-  parent: item.parent || "—",
-  score: item.score,
-  severity: item.severity,
-  dominantDimension: dimensionLabels[item.dominantDimension],
-  size: item.size,
-  commits: item.commitsCount,
-  contributors: item.contributorsCount,
-  temporalLinks: item.temporalLinks,
-  complexity: item.complexity,
-  structuralRisk: item.dimensions.structuralRisk,
-  changePressure: item.dimensions.changePressure,
-  coordinationCost: item.dimensions.coordinationCost,
-  knowledgeRisk: item.dimensions.knowledgeRisk,
-  suggestedAction: item.suggestedAction,
-  reasons: item.reasons.join(" • "),
-}))
+	id: item.id,
+	name: item.name,
+	href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
+	kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+	parent: item.parent || "—",
+	score: item.score,
+	severity: item.severity,
+	dominantDimension: dimensionLabels[item.dominantDimension],
+	size: item.size,
+	commits: item.commitsCount,
+	contributors: item.contributorsCount,
+	temporalLinks: item.temporalLinks,
+	complexity: item.complexity,
+	structuralRisk: item.dimensions.structuralRisk,
+	changePressure: item.dimensions.changePressure,
+	coordinationCost: item.dimensions.coordinationCost,
+	knowledgeRisk: item.dimensions.knowledgeRisk,
+	suggestedAction: item.suggestedAction,
+	reasons: item.reasons.join(" • "),
+}));
 ---
 
 <Dashboard title={`${repoName} Hotspots`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
