@@ -163,6 +163,26 @@ export type ReportMetricsSummary = {
 	}>;
 };
 
+export type ReportDuplicationSummary = {
+	readonly duplicationPercentage: number;
+	readonly duplicatedLines: number;
+	readonly duplicateBlocksCount: number;
+	readonly blockSizeDistribution: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+		readonly detail: string;
+	}>;
+	readonly mostDuplicatedFiles: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+	readonly largestDuplicateBlocks: ReadonlyArray<{
+		readonly blockSize: number;
+		readonly files: number;
+		readonly locations: ReadonlyArray<string>;
+	}>;
+};
+
 export type ResolvedReportDataSource = {
 	readonly dataDir: string;
 	readonly datasetName?: string;
@@ -915,6 +935,122 @@ export function readReportMetricsSummary(
 				),
 			}))
 			.sort((left, right) => sortMetricGroups(left.groupId, right.groupId)),
+	};
+}
+
+export function readReportDuplicationSummary(
+	dataDir: string,
+): ReportDuplicationSummary | null {
+	const analysis = readJsonRecord(dataDir, "analysisResults.json");
+	const duplication =
+		analysis?.duplication && typeof analysis.duplication === "object"
+			? (analysis.duplication as Record<string, unknown>)
+			: null;
+	const duplicationPercentage = duplication?.percentage;
+	const duplicatedLines = duplication?.duplicatedLines;
+
+	const duplicatesRaw = readJsonRecord(dataDir, "duplicates.json");
+	const duplicates = Array.isArray(duplicatesRaw?.duplicates)
+		? duplicatesRaw.duplicates.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	if (
+		typeof duplicationPercentage !== "number" ||
+		typeof duplicatedLines !== "number"
+	) {
+		return null;
+	}
+
+	const sorted = duplicates
+		.map((duplicate) => {
+			const blockSize =
+				typeof duplicate.blockSize === "number" ? duplicate.blockSize : 0;
+			const duplicatedFileBlocks = Array.isArray(duplicate.duplicatedFileBlocks)
+				? duplicate.duplicatedFileBlocks.filter(
+						(block): block is Record<string, unknown> =>
+							typeof block === "object" && block !== null,
+					)
+				: [];
+
+			return {
+				blockSize,
+				duplicatedFileBlocks,
+			};
+		})
+		.filter((duplicate) => duplicate.blockSize > 0)
+		.sort((left, right) => right.blockSize - left.blockSize);
+
+	const buckets = [
+		{ label: "6-10 lines", min: 6, max: 10, count: 0 },
+		{ label: "11-20 lines", min: 11, max: 20, count: 0 },
+		{ label: "21-50 lines", min: 21, max: 50, count: 0 },
+		{ label: "51-100 lines", min: 51, max: 100, count: 0 },
+		{ label: "100+ lines", min: 101, max: Number.POSITIVE_INFINITY, count: 0 },
+	];
+	for (const duplicate of sorted) {
+		for (const bucket of buckets) {
+			if (
+				duplicate.blockSize >= bucket.min &&
+				duplicate.blockSize <= bucket.max
+			) {
+				bucket.count += 1;
+				break;
+			}
+		}
+	}
+
+	const fileDupCount = new Map<string, number>();
+	for (const duplicate of sorted) {
+		for (const block of duplicate.duplicatedFileBlocks) {
+			const file =
+				block.file && typeof block.file === "object"
+					? (block.file as Record<string, unknown>)
+					: null;
+			const relativePath =
+				typeof file?.relativePath === "string" ? file.relativePath : "";
+			if (relativePath.length === 0) {
+				continue;
+			}
+
+			fileDupCount.set(relativePath, (fileDupCount.get(relativePath) ?? 0) + 1);
+		}
+	}
+
+	return {
+		duplicationPercentage,
+		duplicatedLines,
+		duplicateBlocksCount: sorted.length,
+		blockSizeDistribution: buckets.map((bucket) => ({
+			label: bucket.label,
+			value: bucket.count,
+			detail: `${bucket.count} blocks`,
+		})),
+		mostDuplicatedFiles: [...fileDupCount.entries()]
+			.sort((left, right) => right[1] - left[1])
+			.slice(0, 15)
+			.map(([path, count]) => ({
+				label: path.split("/").at(-1) ?? path,
+				value: count,
+			})),
+		largestDuplicateBlocks: sorted.slice(0, 15).map((duplicate) => ({
+			blockSize: duplicate.blockSize,
+			files: duplicate.duplicatedFileBlocks.length,
+			locations: duplicate.duplicatedFileBlocks.map((block) => {
+				const file =
+					block.file && typeof block.file === "object"
+						? (block.file as Record<string, unknown>)
+						: null;
+				const relativePath =
+					typeof file?.relativePath === "string" ? file.relativePath : "";
+				const startLine =
+					typeof block.startLine === "number" ? block.startLine : 0;
+				const endLine = typeof block.endLine === "number" ? block.endLine : 0;
+				return `${relativePath}:${startLine}-${endLine}`;
+			}),
+		})),
 	};
 }
 

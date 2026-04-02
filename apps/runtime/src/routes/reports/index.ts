@@ -13,6 +13,7 @@ import {
 	readReportContributorDetail,
 	readReportContributorsSummary,
 	readReportContextSummary,
+	readReportDuplicationSummary,
 	readReportMetricsSummary,
 	readReportTopologySummary,
 	resolveReportDataSource,
@@ -253,6 +254,36 @@ const ReportMetricsResponseSchema = Schema.Struct({
 	metrics: ReportMetricsSummarySchema,
 });
 
+const ReportDuplicationSummarySchema = Schema.Struct({
+	duplicationPercentage: Schema.Number,
+	duplicatedLines: Schema.Number,
+	duplicateBlocksCount: Schema.Number,
+	blockSizeDistribution: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+			detail: Schema.String,
+		}),
+	),
+	mostDuplicatedFiles: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+		}),
+	),
+	largestDuplicateBlocks: Schema.Array(
+		Schema.Struct({
+			blockSize: Schema.Number,
+			files: Schema.Number,
+			locations: Schema.Array(Schema.String),
+		}),
+	),
+});
+
+const ReportDuplicationResponseSchema = Schema.Struct({
+	duplication: ReportDuplicationSummarySchema,
+});
+
 const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
 const decodeDatasetsResponse = Schema.decodeUnknownSync(DatasetsResponseSchema);
 const decodeCreateReportResponse = Schema.decodeUnknownSync(
@@ -272,6 +303,9 @@ const decodeReportTopologyResponse = Schema.decodeUnknownSync(
 );
 const decodeReportMetricsResponse = Schema.decodeUnknownSync(
 	ReportMetricsResponseSchema,
+);
+const decodeReportDuplicationResponse = Schema.decodeUnknownSync(
+	ReportDuplicationResponseSchema,
 );
 
 export const reportRoutes = new Elysia({ name: "reports" })
@@ -623,6 +657,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportMetricsResponse({
 			metrics,
+		});
+	})
+	.get("/api/reports/:slug/duplication", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const duplication = readReportDuplicationSummary(found.analysisRoot);
+		if (!duplication) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportDuplicationResponse({
+			duplication,
 		});
 	})
 	.post(

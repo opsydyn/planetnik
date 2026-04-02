@@ -302,6 +302,35 @@ const readReportMetricsSummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportDuplicationSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		duplicationPercentage: 1.8,
+		duplicatedLines: 910,
+		duplicateBlocksCount: 2,
+		blockSizeDistribution: [
+			{ label: "11-20 lines", value: 1, detail: "1 blocks" },
+			{ label: "21-50 lines", value: 1, detail: "1 blocks" },
+		],
+		mostDuplicatedFiles: [
+			{ label: "index.ts", value: 2 },
+			{ label: "app.ts", value: 1 },
+		],
+		largestDuplicateBlocks: [
+			{
+				blockSize: 24,
+				files: 2,
+				locations: [
+					"src/routes/reports/index.ts:10-33",
+					"src/app.ts:40-63",
+				],
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -328,6 +357,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportContributorDetail,
 	readReportTopologySummary,
 	readReportMetricsSummary,
+	readReportDuplicationSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -635,6 +665,55 @@ describe("runtime report routes", () => {
 			label: "Lines of Code",
 		});
 		expect(readReportMetricsSummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns duplication summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/duplication", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			duplication: {
+				duplicationPercentage: number;
+				duplicatedLines: number;
+				duplicateBlocksCount: number;
+				mostDuplicatedFiles: Array<{ label: string; value: number }>;
+			};
+		};
+
+		expect(body.duplication).toMatchObject({
+			duplicationPercentage: 1.8,
+			duplicatedLines: 910,
+			duplicateBlocksCount: 2,
+		});
+		expect(body.duplication.mostDuplicatedFiles[0]).toMatchObject({
+			label: "index.ts",
+			value: 2,
+		});
+		expect(readReportDuplicationSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
 		);
 	});

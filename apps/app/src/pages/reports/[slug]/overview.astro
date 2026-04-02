@@ -36,6 +36,9 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 				<p class="card-kicker">Overview</p>
 				<h2>{viewModel.heading}</h2>
 				<div class="card-actions">
+					<a class="button-secondary" href={`/reports/${slug}/duplication`}>
+						Open duplication
+					</a>
 					<a class="button-secondary" href={`/reports/${slug}/metrics`}>
 						Open metrics
 					</a>
@@ -78,6 +81,7 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<li>Contributors route is live for linked report datasets</li>
 					<li>Topology summary route is live for people-dependency datasets</li>
 					<li>Metrics route is live for metrics.txt-backed datasets</li>
+					<li>Duplication route is live for duplicates.json-backed datasets</li>
 					<li>Reuse static report contracts without copying Astro pages</li>
 					<li>Layer hosted intelligence onto this report shell</li>
 				</ul>

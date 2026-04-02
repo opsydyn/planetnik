@@ -199,6 +199,26 @@ export type RuntimeReportMetrics = {
   }>;
 };
 
+export type RuntimeReportDuplication = {
+  readonly duplicationPercentage: number;
+  readonly duplicatedLines: number;
+  readonly duplicateBlocksCount: number;
+  readonly blockSizeDistribution: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+    readonly detail: string;
+  }>;
+  readonly mostDuplicatedFiles: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+  readonly largestDuplicateBlocks: ReadonlyArray<{
+    readonly blockSize: number;
+    readonly files: number;
+    readonly locations: ReadonlyArray<string>;
+  }>;
+};
+
 export type CreateRuntimeReportInput = {
   readonly name?: string;
   readonly datasetName?: string;
@@ -344,4 +364,18 @@ export async function getRuntimeReportMetrics(
   }
 
   return data.metrics;
+}
+
+export async function getRuntimeReportDuplication(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportDuplication | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).duplication.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.duplication;
 }
