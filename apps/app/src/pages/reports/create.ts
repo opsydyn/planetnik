@@ -13,17 +13,21 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 	const cookie = request.headers.get("cookie") ?? "";
 
 	const rawName = formData.get("name");
+	const rawDatasetName = formData.get("datasetName");
 	const rawAnalysisRoot = formData.get("analysisRoot");
 	const name = typeof rawName === "string" ? rawName.trim() : "";
+	const datasetName =
+		typeof rawDatasetName === "string" ? rawDatasetName.trim() : "";
 	const analysisRoot =
 		typeof rawAnalysisRoot === "string" ? rawAnalysisRoot.trim() : "";
 
-	if (!name) {
+	if (!name && !datasetName && !analysisRoot) {
 		return redirect(buildLocation("reportError=missing-name"), REDIRECT_STATUS);
 	}
 
 	const created = await createRuntimeReport(cookie, {
-		name,
+		...(name ? { name } : {}),
+		...(datasetName ? { datasetName } : {}),
 		...(analysisRoot ? { analysisRoot } : {}),
 	});
 
@@ -31,5 +35,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 		return redirect(buildLocation("reportError=create-failed"), REDIRECT_STATUS);
 	}
 
-	return redirect(buildLocation("reportCreated=1"), REDIRECT_STATUS);
+	return redirect(
+		`/reports/${encodeURIComponent(created.slug)}/overview?reportCreated=1`,
+		REDIRECT_STATUS,
+	);
 };

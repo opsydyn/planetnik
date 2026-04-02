@@ -14,6 +14,7 @@ export type AppConfig = {
 	readonly port: number;
 	readonly corsOrigins: string[];
 	readonly databaseUrl: string;
+	readonly datasetsRoot?: string;
 	readonly cookieDomain?: string;
 	readonly authCookies: {
 		readonly secure: boolean;
@@ -33,6 +34,7 @@ const BetterAuthUrl = Config.nonEmptyString("BETTER_AUTH_URL");
 
 const Port = Config.port("PORT").pipe(Config.withDefault(1337));
 const CorsOrigin = Config.string("CORS_ORIGIN").pipe(Config.withDefault(""));
+const DatasetsRoot = Config.option(Config.nonEmptyString("PLANETNIK_DATASETS_ROOT"));
 const CookieDomain = Config.option(Config.nonEmptyString("COOKIE_DOMAIN"));
 const AuthCookieSecure = Config.option(Config.boolean("AUTH_COOKIE_SECURE"));
 const AuthCookieSameSite = Config.option(
@@ -90,6 +92,7 @@ const makeConfig = Effect.gen(function* () {
 	const betterAuthUrl = yield* BetterAuthUrl;
 	const port = yield* Port;
 	const corsOrigin = yield* CorsOrigin;
+	const datasetsRoot = yield* DatasetsRoot;
 	const cookieDomain = yield* CookieDomain;
 	const authCookieSecureOverride = yield* AuthCookieSecure;
 	const authCookieSameSiteOverride = yield* AuthCookieSameSite;
@@ -108,6 +111,9 @@ const makeConfig = Effect.gen(function* () {
 		authCookieSameSite === "none" && !authCookieSecure
 			? "lax"
 			: authCookieSameSite;
+	const normalizedDatasetsRoot = Option.getOrUndefined(
+		normalizeOptionalString(datasetsRoot),
+	);
 	const normalizedCookieDomain = Option.getOrUndefined(
 		normalizeOptionalString(cookieDomain),
 	);
@@ -117,6 +123,9 @@ const makeConfig = Effect.gen(function* () {
 		port,
 		corsOrigins: resolveCorsOrigins(nodeEnv, corsOrigin),
 		databaseUrl: Redacted.value(databaseUrlRedacted),
+		...(normalizedDatasetsRoot
+			? { datasetsRoot: normalizedDatasetsRoot }
+			: {}),
 		authCookies: {
 			secure: authCookieSecure,
 			sameSite: normalizedAuthCookieSameSite,

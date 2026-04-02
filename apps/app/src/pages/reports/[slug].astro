@@ -1,0 +1,146 @@
+---
+import AppShell from "../../layouts/AppShell.astro";
+import { getRuntimeReport } from "../../lib/runtime-client.js";
+import {
+	buildReportDetailViewModel,
+	shouldRedirectReportDetail,
+} from "../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
+const { report } = reportDetail;
+const viewModel = buildReportDetailViewModel(reportDetail);
+const createdAt = new Date(report.createdAt).toLocaleString("en-GB", {
+	dateStyle: "medium",
+	timeStyle: "short",
+});
+const lastSyncedAt = report.lastSyncedAt
+	? new Date(report.lastSyncedAt).toLocaleString("en-GB", {
+			dateStyle: "medium",
+			timeStyle: "short",
+		})
+	: "Not synced yet";
+---
+
+<AppShell
+	title={report.name}
+	subtitle="Hosted report detail backed by the runtime and linked to a validated Planetnik dataset."
+>
+	<div class="dashboard-stack">
+		{reportCreated ? (
+			<section class="callout">
+				<strong>Report created.</strong>
+				<span> The hosted app can now resolve this report's runtime context.</span>
+			</section>
+		) : null}
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card dashboard-card-primary">
+				<p class="card-kicker">Report</p>
+				<h2>{report.name}</h2>
+				<p>{viewModel.linkDescription}</p>
+				<div class="card-actions">
+					<a class="button-secondary" href={`/reports/${report.slug}/overview`}>
+						Open overview
+					</a>
+					<a
+						class="button-secondary"
+						href={`/reports/${report.slug}/topology`}
+					>
+						Open topology
+					</a>
+					<a
+						class="button-secondary"
+						href={`/reports/${report.slug}/contributors`}
+					>
+						Open contributors
+					</a>
+					<a class="button-secondary" href="/">Back to dashboard</a>
+					<a class="button" href="/sign-out">Sign out</a>
+				</div>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Stored record</p>
+				<h2>{report.slug}</h2>
+				<dl class="fact-list">
+					<div>
+						<dt>Status</dt>
+						<dd>{report.status}</dd>
+					</div>
+					<div>
+						<dt>Kind</dt>
+						<dd>{report.kind}</dd>
+					</div>
+					<div>
+						<dt>Created</dt>
+						<dd>{createdAt}</dd>
+					</div>
+					<div>
+						<dt>Last synced</dt>
+						<dd>{lastSyncedAt}</dd>
+					</div>
+					<div>
+						<dt>Data directory</dt>
+						<dd class="path-value">{report.analysisRoot ?? "Unavailable"}</dd>
+					</div>
+				</dl>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Context</p>
+				<h2>{viewModel.contextTitle}</h2>
+				{viewModel.contextFacts.length > 0 ? (
+					<dl class="fact-list">
+						{viewModel.contextFacts.map((fact) => (
+							<div>
+								<dt>{fact.label}</dt>
+								<dd>{fact.value}</dd>
+							</div>
+						))}
+					</dl>
+				) : (
+					<p>{viewModel.contextFallback}</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Artifact</p>
+				<h2>{viewModel.artifactTitle}</h2>
+				{viewModel.artifactFacts.length > 0 ? (
+					<dl class="fact-list">
+						{viewModel.artifactFacts.map((fact) => (
+							<div>
+								<dt>{fact.label}</dt>
+								<dd>{fact.value}</dd>
+							</div>
+						))}
+					</dl>
+				) : (
+					<p>{viewModel.artifactFallback}</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Navigation</p>
+				<h2>Primary report sections</h2>
+				{viewModel.navigationItems.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.navigationItems.map((item) => (
+							<li>{item}</li>
+						))}
+					</ul>
+				) : (
+					<p>No navigation summary is available for this report.</p>
+				)}
+			</article>
+		</section>
+	</div>
+</AppShell>

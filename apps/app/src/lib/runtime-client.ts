@@ -41,8 +41,148 @@ export type RuntimeReport = {
   readonly lastSyncedAt: string | null;
 };
 
-export type CreateRuntimeReportInput = {
+export type RuntimeDataset = {
   readonly name: string;
+  readonly dataDir: string;
+  readonly title: string;
+  readonly reportMode: string | null;
+};
+
+export type RuntimeReportContext = {
+  readonly mode: "single_repository" | "landscape";
+  readonly reportMode: "single_repository" | "landscape";
+  readonly title: string;
+  readonly rootRoute: string;
+  readonly dataVersion: number;
+  readonly source: string;
+  readonly hasLandscape: boolean;
+  readonly hasSingleRepositoryAnalysis: boolean;
+  readonly primaryNavigation: ReadonlyArray<string>;
+};
+
+export type RuntimeSingleRepositoryArtifact = {
+  readonly kind: "single_repository";
+  readonly projectName: string;
+  readonly filesCount: number;
+  readonly linesOfCode: number;
+  readonly duplicatedLines: number;
+  readonly duplicationPercentage: number;
+};
+
+export type RuntimeLandscapeArtifact = {
+  readonly kind: "landscape";
+  readonly title: string;
+  readonly landscapeName: string;
+  readonly repositoryCount: number;
+  readonly contributorCount: number;
+  readonly totalLinesOfCode: number;
+  readonly commits30d: number;
+  readonly commits90d: number;
+};
+
+export type RuntimeReportArtifact =
+  | RuntimeSingleRepositoryArtifact
+  | RuntimeLandscapeArtifact;
+
+export type RuntimeReportContributor = {
+  readonly email: string;
+  readonly userName: string;
+  readonly displayName: string;
+  readonly status: "Rookie" | "Active" | "Inactive";
+  readonly commitsAllTime: number;
+  readonly commits30Days: number;
+  readonly commits90Days: number;
+  readonly commits180Days: number;
+  readonly commits365Days: number;
+  readonly firstCommit: string;
+  readonly lastCommit: string;
+  readonly percentage: string;
+  readonly filesTouched: number | null;
+  readonly componentsTouched: number | null;
+  readonly primaryComponent: string;
+  readonly knowledgeSignal: string;
+};
+
+export type RuntimeReportDetail = {
+  readonly report: RuntimeReport;
+  readonly context: RuntimeReportContext | null;
+  readonly artifact: RuntimeReportArtifact | null;
+};
+
+export type RuntimeReportContributors = {
+  readonly contributors: ReadonlyArray<RuntimeReportContributor>;
+};
+
+export type RuntimeReportContributorDetail = {
+  readonly email: string;
+  readonly userName: string;
+  readonly displayName: string;
+  readonly status: "Rookie" | "Active" | "Inactive";
+  readonly commitsCount: number;
+  readonly commitsCount30Days: number;
+  readonly commitsCount90Days: number;
+  readonly commitsCount180Days: number;
+  readonly commitsCount365Days: number;
+  readonly firstCommitDate: string;
+  readonly latestCommitDate: string;
+  readonly percentage: string;
+  readonly activeDays: number;
+  readonly filesCount: number;
+  readonly collaboratorsCount: number;
+  readonly topCollaboratorEmail: string | null;
+  readonly topCollaboratorDisplayName: string | null;
+  readonly extensions: ReadonlyArray<{
+    readonly extension: string;
+    readonly commits: number;
+    readonly files: number;
+  }>;
+  readonly logicalComponents: ReadonlyArray<{
+    readonly name: string;
+    readonly files: number;
+    readonly linesOfCode: number;
+  }>;
+  readonly collaborators: ReadonlyArray<{
+    readonly email: string;
+    readonly displayName: string;
+    readonly sharedFiles: number;
+  }>;
+  readonly topFiles: ReadonlyArray<{
+    readonly relativePath: string;
+    readonly extension: string;
+    readonly commits: number;
+    readonly logicalComponents: ReadonlyArray<string>;
+    readonly concerns: ReadonlyArray<string>;
+  }>;
+};
+
+export type RuntimeReportTopology = {
+  readonly availablePeriods: ReadonlyArray<string>;
+  readonly strongestConnections: ReadonlyArray<{
+    readonly periodLabel: string;
+    readonly from: string;
+    readonly fromDisplayName: string;
+    readonly to: string;
+    readonly toDisplayName: string;
+    readonly sharedCommits: number;
+    readonly filesCount: number;
+  }>;
+  readonly topGlueContributors: ReadonlyArray<{
+    readonly email: string;
+    readonly displayName: string;
+    readonly glueScore: number;
+    readonly dominantDimension: string;
+  }>;
+  readonly topSnackingContributors: ReadonlyArray<{
+    readonly email: string;
+    readonly displayName: string;
+    readonly snackingScore: number;
+    readonly dominantDimension: string;
+  }>;
+};
+
+export type CreateRuntimeReportInput = {
+  readonly name?: string;
+  readonly datasetName?: string;
   readonly analysisRoot?: string;
 };
 
@@ -91,6 +231,29 @@ export async function getRuntimeReports(cookie: string): Promise<ReadonlyArray<R
   return data.reports;
 }
 
+export async function getRuntimeDatasets(): Promise<ReadonlyArray<RuntimeDataset>> {
+  const { data } = await runtimeClient.api.datasets.get();
+  if (!data || isTransportResponse(data)) {
+    return [];
+  }
+
+  return data.datasets;
+}
+
+export async function getRuntimeReport(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportDetail | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data;
+}
+
 export async function createRuntimeReport(
   cookie: string,
   input: CreateRuntimeReportInput,
@@ -104,4 +267,48 @@ export async function createRuntimeReport(
   }
 
   return data.report;
+}
+
+export async function getRuntimeReportContributors(
+  cookie: string,
+  slug: string,
+): Promise<ReadonlyArray<RuntimeReportContributor>> {
+  const { data } = await runtimeClient.api.reports({ slug }).contributors.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return [];
+  }
+
+  return data.contributors;
+}
+
+export async function getRuntimeReportContributorDetail(
+  cookie: string,
+  slug: string,
+  email: string,
+): Promise<RuntimeReportContributorDetail | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .contributors({ email })
+    .get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.contributor;
+}
+
+export async function getRuntimeReportTopology(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportTopology | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).topology.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.topology;
 }

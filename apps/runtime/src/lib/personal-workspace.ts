@@ -75,6 +75,15 @@ export async function listWorkspaceReports(
 	});
 }
 
+export async function findWorkspaceReportBySlug(
+	workspaceId: string,
+	slug: string,
+) {
+	return db.query.report.findFirst({
+		where: and(eq(report.workspaceId, workspaceId), eq(report.slug, slug)),
+	});
+}
+
 function buildReportSlug(name: string): string {
 	const normalized = slugifySegment(name);
 	return normalized || "report";
@@ -104,6 +113,7 @@ async function ensureUniqueReportSlug(
 export async function createWorkspaceReport(input: {
 	readonly workspaceId: string;
 	readonly name: string;
+	readonly datasetName?: string | null;
 	readonly analysisRoot?: string | null;
 }) {
 	const now = new Date();

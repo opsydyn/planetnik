@@ -1,0 +1,134 @@
+---
+import AppShell from "../../../../layouts/AppShell.astro";
+import {
+	buildReportContributorDetailViewModel,
+} from "../../../../lib/report-contributor-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportContributorDetail,
+} from "../../../../lib/runtime-client.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const email = Astro.params.email ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const contributor = email
+	? await getRuntimeReportContributorDetail(cookie, slug, email)
+	: null;
+
+if (!contributor) {
+	return Astro.redirect(`/reports/${slug}/contributors`);
+}
+
+const viewModel = buildReportContributorDetailViewModel({
+	slug,
+	reportName: reportDetail.report.name,
+	contributor,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Contributor`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Contributor</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				Hosted contributor drilldown stays tied to the same dataset export contract
+				as the static report app, without copying the static Astro pages directly.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={viewModel.backHref}>
+					Back to contributors
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open overview
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Profile</p>
+				<h2>Contributor facts</h2>
+				<dl class="fact-list">
+					{viewModel.facts.map((fact) => (
+						<div>
+							<dt>{fact.label}</dt>
+							<dd>{fact.value}</dd>
+						</div>
+					))}
+				</dl>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Languages</p>
+				<h2>Extension footprint</h2>
+				{viewModel.extensions.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.extensions.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No extension footprint is available.</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Components</p>
+				<h2>Logical component footprint</h2>
+				{viewModel.components.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.components.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No logical component footprint is available.</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Files</p>
+				<h2>Top touched files</h2>
+				{viewModel.topFiles.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.topFiles.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No ranked source-file footprint is available.</p>
+				)}
+			</article>
+		</section>
+	</div>
+</AppShell>

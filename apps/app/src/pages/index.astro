@@ -2,6 +2,7 @@
 import AppShell from "../layouts/AppShell.astro";
 import { SERVER_BASE_URL } from "../lib/constants.js";
 import {
+	getRuntimeDatasets,
 	getRuntimeMe,
 	getRuntimeReports,
 	getRuntimeWorkspaces,
@@ -9,6 +10,7 @@ import {
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const me = await getRuntimeMe(cookie);
+const datasets = await getRuntimeDatasets();
 const workspaces = await getRuntimeWorkspaces(cookie);
 const reports = await getRuntimeReports(cookie);
 const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
@@ -125,7 +127,10 @@ const sessionExpiry = me
 					<ul class="todo-list">
 						{reports.slice(0, 3).map((report) => (
 							<li>
-								<strong>{report.name}</strong> · {report.kind} · {report.status}
+								<a class="report-link" href={`/reports/${report.slug}/overview`}>
+									<strong>{report.name}</strong>
+								</a>{" "}
+								· {report.kind} · {report.status}
 							</li>
 						))}
 					</ul>
@@ -147,6 +152,23 @@ const sessionExpiry = me
 						/>
 					</div>
 					<div class="field">
+						<label for="dataset-name">Dataset name</label>
+						<input
+							id="dataset-name"
+							name="datasetName"
+							type="text"
+							list="available-datasets"
+							placeholder="effect-ts"
+						/>
+						{datasets.length > 0 ? (
+							<datalist id="available-datasets">
+								{datasets.map((dataset) => (
+									<option value={dataset.name}>{dataset.title}</option>
+								))}
+							</datalist>
+						) : null}
+					</div>
+					<div class="field">
 						<label for="analysis-root">Analysis root</label>
 						<input
 							id="analysis-root"
@@ -156,13 +178,23 @@ const sessionExpiry = me
 						/>
 					</div>
 					<p class="field-help">
-						Add a hosted report record now. Dataset import and sync behavior comes
-						next.
+						Choose a discovered dataset or point at a recognized Planetnik data
+						directory. The runtime validates the source before storing it.
 					</p>
 					<div class="card-actions">
 						<button class="button" type="submit">Create report</button>
 					</div>
 				</form>
+				{datasets.length > 0 ? (
+					<ul class="todo-list">
+						{datasets.slice(0, 3).map((dataset) => (
+							<li>
+								<strong>{dataset.title}</strong> · {dataset.name}
+								{dataset.reportMode ? ` · ${dataset.reportMode}` : ""}
+							</li>
+						))}
+					</ul>
+				) : null}
 				<a class="text-link" href={`${SERVER_BASE_URL}/api/reports`}>
 					Inspect reports JSON
 				</a>

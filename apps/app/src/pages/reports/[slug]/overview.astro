@@ -1,0 +1,83 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import {
+	buildReportOverviewViewModel,
+} from "../../../lib/report-overview-view-model.js";
+import { getRuntimeReport } from "../../../lib/runtime-client.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const viewModel = buildReportOverviewViewModel(reportDetail);
+const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
+---
+
+<AppShell
+	title={`${viewModel.heading} Overview`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		{reportCreated ? (
+			<section class="callout">
+				<strong>Report created.</strong>
+				<span> The hosted overview is now reading the linked report summary.</span>
+			</section>
+		) : null}
+
+			<section class="dashboard-card dashboard-card-primary">
+				<p class="card-kicker">Overview</p>
+				<h2>{viewModel.heading}</h2>
+				<div class="card-actions">
+					<a class="button-secondary" href={`/reports/${slug}/topology`}>
+						Open topology
+					</a>
+					<a class="button-secondary" href={`/reports/${slug}/contributors`}>
+						Open contributors
+					</a>
+					<a class="button-secondary" href={`/reports/${slug}`}>View report details</a>
+					<a class="button" href="/sign-out">Sign out</a>
+				</div>
+			</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Highlights</p>
+				<h2>Report framing</h2>
+				<ul class="todo-list">
+					{viewModel.highlights.map((item) => (
+						<li>{item}</li>
+					))}
+				</ul>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Next</p>
+				<h2>Reports-first hosted parity</h2>
+				<ul class="todo-list">
+					<li>Contributors route is live for linked report datasets</li>
+					<li>Topology summary route is live for people-dependency datasets</li>
+					<li>Reuse static report contracts without copying Astro pages</li>
+					<li>Layer hosted intelligence onto this report shell</li>
+				</ul>
+			</article>
+		</section>
+	</div>
+</AppShell>

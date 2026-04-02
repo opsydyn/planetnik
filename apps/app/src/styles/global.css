@@ -265,6 +265,12 @@ input {
 	gap: 1rem;
 }
 
+.overview-cards {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
 .dashboard-card {
 	display: grid;
 	gap: 0.9rem;
@@ -341,6 +347,15 @@ input {
 	font-weight: 700;
 }
 
+.report-link {
+	color: var(--ink);
+	font-weight: 700;
+}
+
+.path-value {
+	word-break: break-word;
+}
+
 .todo-list {
 	display: grid;
 	gap: 0.65rem;
@@ -395,6 +410,42 @@ input {
 	font-weight: 700;
 }
 
+.contributors-table-wrap {
+	overflow-x: auto;
+}
+
+.contributors-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95rem;
+}
+
+.contributors-table th,
+.contributors-table td {
+	padding: 0.85rem 0.7rem;
+	border-top: 1px solid var(--line);
+	text-align: left;
+	vertical-align: top;
+}
+
+.contributors-table th {
+	color: var(--muted);
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.table-primary {
+	font-weight: 700;
+}
+
+.table-secondary {
+	margin-top: 0.2rem;
+	color: var(--muted);
+	font-size: 0.88rem;
+}
+
 @media (max-width: 860px) {
 	.shell {
 		padding: 1rem;
@@ -410,6 +461,10 @@ input {
 	}
 
 	.dashboard-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.overview-cards {
 		grid-template-columns: 1fr;
 	}
 }

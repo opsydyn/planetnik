@@ -4,8 +4,18 @@ import { auth } from "../../lib/auth.js";
 import {
 	createWorkspaceReport,
 	ensurePersonalWorkspace,
+	findWorkspaceReportBySlug,
 	listWorkspaceReports,
 } from "../../lib/personal-workspace.js";
+import {
+	listAvailableDatasets,
+	readReportArtifactSummary,
+	readReportContributorDetail,
+	readReportContributorsSummary,
+	readReportContextSummary,
+	readReportTopologySummary,
+	resolveReportDataSource,
+} from "../../lib/report-datasets.js";
 
 const ReportSchema = Schema.Struct({
 	id: Schema.String,
@@ -24,11 +34,62 @@ const ReportsResponseSchema = Schema.Struct({
 	reports: Schema.Array(ReportSchema),
 });
 
+const DatasetSchema = Schema.Struct({
+	name: Schema.String,
+	dataDir: Schema.String,
+	title: Schema.String,
+	reportMode: Schema.NullOr(Schema.String),
+});
+
+const DatasetsResponseSchema = Schema.Struct({
+	datasets: Schema.Array(DatasetSchema),
+});
+
+const ReportContextSummarySchema = Schema.Struct({
+	mode: Schema.Literal("single_repository", "landscape"),
+	reportMode: Schema.Literal("single_repository", "landscape"),
+	title: Schema.String,
+	rootRoute: Schema.String,
+	dataVersion: Schema.Number,
+	source: Schema.String,
+	hasLandscape: Schema.Boolean,
+	hasSingleRepositoryAnalysis: Schema.Boolean,
+	primaryNavigation: Schema.Array(Schema.String),
+});
+
+const SingleRepositoryArtifactSummarySchema = Schema.Struct({
+	kind: Schema.Literal("single_repository"),
+	projectName: Schema.String,
+	filesCount: Schema.Number,
+	linesOfCode: Schema.Number,
+	duplicatedLines: Schema.Number,
+	duplicationPercentage: Schema.Number,
+});
+
+const LandscapeArtifactSummarySchema = Schema.Struct({
+	kind: Schema.Literal("landscape"),
+	title: Schema.String,
+	landscapeName: Schema.String,
+	repositoryCount: Schema.Number,
+	contributorCount: Schema.Number,
+	totalLinesOfCode: Schema.Number,
+	commits30d: Schema.Number,
+	commits90d: Schema.Number,
+});
+
 const CreateReportBodySchema = t.Object({
-	name: t.String({
-		minLength: 1,
-		maxLength: 120,
-	}),
+	name: t.Optional(
+		t.String({
+			minLength: 1,
+			maxLength: 120,
+		}),
+	),
+	datasetName: t.Optional(
+		t.String({
+			minLength: 1,
+			maxLength: 120,
+		}),
+	),
 	analysisRoot: t.Optional(
 		t.String({
 			minLength: 1,
@@ -41,9 +102,145 @@ const CreateReportResponseSchema = Schema.Struct({
 	report: ReportSchema,
 });
 
+const ReportDetailResponseSchema = Schema.Struct({
+	report: ReportSchema,
+	context: Schema.NullOr(ReportContextSummarySchema),
+	artifact: Schema.NullOr(
+		Schema.Union(
+			SingleRepositoryArtifactSummarySchema,
+			LandscapeArtifactSummarySchema,
+		),
+	),
+});
+
+const ReportContributorSchema = Schema.Struct({
+	email: Schema.String,
+	userName: Schema.String,
+	displayName: Schema.String,
+	status: Schema.Literal("Rookie", "Active", "Inactive"),
+	commitsAllTime: Schema.Number,
+	commits30Days: Schema.Number,
+	commits90Days: Schema.Number,
+	commits180Days: Schema.Number,
+	commits365Days: Schema.Number,
+	firstCommit: Schema.String,
+	lastCommit: Schema.String,
+	percentage: Schema.String,
+	filesTouched: Schema.NullOr(Schema.Number),
+	componentsTouched: Schema.NullOr(Schema.Number),
+	primaryComponent: Schema.String,
+	knowledgeSignal: Schema.String,
+});
+
+const ReportContributorsResponseSchema = Schema.Struct({
+	contributors: Schema.Array(ReportContributorSchema),
+});
+
+const ReportContributorDetailSchema = Schema.Struct({
+	email: Schema.String,
+	userName: Schema.String,
+	displayName: Schema.String,
+	status: Schema.Literal("Rookie", "Active", "Inactive"),
+	commitsCount: Schema.Number,
+	commitsCount30Days: Schema.Number,
+	commitsCount90Days: Schema.Number,
+	commitsCount180Days: Schema.Number,
+	commitsCount365Days: Schema.Number,
+	firstCommitDate: Schema.String,
+	latestCommitDate: Schema.String,
+	percentage: Schema.String,
+	activeDays: Schema.Number,
+	filesCount: Schema.Number,
+	collaboratorsCount: Schema.Number,
+	topCollaboratorEmail: Schema.NullOr(Schema.String),
+	topCollaboratorDisplayName: Schema.NullOr(Schema.String),
+	extensions: Schema.Array(
+		Schema.Struct({
+			extension: Schema.String,
+			commits: Schema.Number,
+			files: Schema.Number,
+		}),
+	),
+	logicalComponents: Schema.Array(
+		Schema.Struct({
+			name: Schema.String,
+			files: Schema.Number,
+			linesOfCode: Schema.Number,
+		}),
+	),
+	collaborators: Schema.Array(
+		Schema.Struct({
+			email: Schema.String,
+			displayName: Schema.String,
+			sharedFiles: Schema.Number,
+		}),
+	),
+	topFiles: Schema.Array(
+		Schema.Struct({
+			relativePath: Schema.String,
+			extension: Schema.String,
+			commits: Schema.Number,
+			logicalComponents: Schema.Array(Schema.String),
+			concerns: Schema.Array(Schema.String),
+		}),
+	),
+});
+
+const ReportContributorDetailResponseSchema = Schema.Struct({
+	contributor: ReportContributorDetailSchema,
+});
+
+const ReportTopologySummarySchema = Schema.Struct({
+	availablePeriods: Schema.Array(Schema.String),
+	strongestConnections: Schema.Array(
+		Schema.Struct({
+			periodLabel: Schema.String,
+			from: Schema.String,
+			fromDisplayName: Schema.String,
+			to: Schema.String,
+			toDisplayName: Schema.String,
+			sharedCommits: Schema.Number,
+			filesCount: Schema.Number,
+		}),
+	),
+	topGlueContributors: Schema.Array(
+		Schema.Struct({
+			email: Schema.String,
+			displayName: Schema.String,
+			glueScore: Schema.Number,
+			dominantDimension: Schema.String,
+		}),
+	),
+	topSnackingContributors: Schema.Array(
+		Schema.Struct({
+			email: Schema.String,
+			displayName: Schema.String,
+			snackingScore: Schema.Number,
+			dominantDimension: Schema.String,
+		}),
+	),
+});
+
+const ReportTopologyResponseSchema = Schema.Struct({
+	topology: ReportTopologySummarySchema,
+});
+
 const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
+const decodeDatasetsResponse = Schema.decodeUnknownSync(DatasetsResponseSchema);
 const decodeCreateReportResponse = Schema.decodeUnknownSync(
 	CreateReportResponseSchema,
+);
+const decodeReportDetailResponse = Schema.decodeUnknownSync(
+	ReportDetailResponseSchema,
+);
+const decodeReportContributorsResponse = Schema.decodeUnknownSync(
+	ReportContributorsResponseSchema,
+);
+const decodeReportContributorDetailResponse = Schema.decodeUnknownSync(
+	ReportContributorDetailResponseSchema,
+);
+const decodeReportTopologyResponse = Schema.decodeUnknownSync(
+	ReportTopologyResponseSchema,
 );
 
 export const reportRoutes = new Elysia({ name: "reports" })
@@ -84,6 +281,261 @@ export const reportRoutes = new Elysia({ name: "reports" })
 			})),
 		});
 	})
+	.get("/api/datasets", () => {
+		return decodeDatasetsResponse({
+			datasets: listAvailableDatasets().map((dataset) => ({
+				name: dataset.name,
+				dataDir: dataset.dataDir,
+				title: dataset.title,
+				reportMode: dataset.reportMode,
+			})),
+		});
+	})
+	.get("/api/reports/:slug", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const context = found.analysisRoot
+			? readReportContextSummary(found.analysisRoot)
+			: null;
+		const artifact =
+			found.analysisRoot && context
+				? readReportArtifactSummary(found.analysisRoot, context)
+				: null;
+
+		return decodeReportDetailResponse({
+			report: {
+				id: found.id,
+				workspaceId: found.workspaceId,
+				slug: found.slug,
+				name: found.name,
+				kind: found.kind,
+				status: found.status,
+				analysisRoot: found.analysisRoot ?? null,
+				createdAt: found.createdAt.toISOString(),
+				updatedAt: found.updatedAt.toISOString(),
+				lastSyncedAt: found.lastSyncedAt?.toISOString() ?? null,
+			},
+			context,
+			artifact,
+		});
+	})
+	.get("/api/reports/:slug/contributors", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportContributorsResponse({
+			contributors: found.analysisRoot
+				? [...readReportContributorsSummary(found.analysisRoot)]
+				: [],
+		});
+	})
+	.get(
+		"/api/reports/:slug/contributors/:email",
+		async ({ request, params }) => {
+			const session = await auth.api.getSession({
+				headers: request.headers,
+			});
+
+			if (!session?.session || !session.user) {
+				return new Response(
+					JSON.stringify({
+						error: "unauthorized",
+					}),
+					{
+						status: 401,
+						headers: {
+							"content-type": "application/json",
+						},
+					},
+				);
+			}
+
+			const personalWorkspace = await ensurePersonalWorkspace(session);
+			const found = await findWorkspaceReportBySlug(
+				personalWorkspace.id,
+				params.slug,
+			);
+
+			if (!found) {
+				return new Response(
+					JSON.stringify({
+						error: "not_found",
+					}),
+					{
+						status: 404,
+						headers: {
+							"content-type": "application/json",
+						},
+					},
+				);
+			}
+
+			if (!found.analysisRoot) {
+				return new Response(
+					JSON.stringify({
+						error: "not_found",
+					}),
+					{
+						status: 404,
+						headers: {
+							"content-type": "application/json",
+						},
+					},
+				);
+			}
+
+			const contributor = readReportContributorDetail(
+				found.analysisRoot,
+				params.email,
+			);
+			if (!contributor) {
+				return new Response(
+					JSON.stringify({
+						error: "not_found",
+					}),
+					{
+						status: 404,
+						headers: {
+							"content-type": "application/json",
+						},
+					},
+				);
+			}
+
+			return decodeReportContributorDetailResponse({
+				contributor,
+			});
+		},
+	)
+	.get("/api/reports/:slug/topology", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const topology = readReportTopologySummary(found.analysisRoot);
+		if (!topology) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportTopologyResponse({
+			topology,
+		});
+	})
 	.post(
 		"/api/reports",
 		async ({ request, body }) => {
@@ -106,10 +558,32 @@ export const reportRoutes = new Elysia({ name: "reports" })
 			}
 
 			const personalWorkspace = await ensurePersonalWorkspace(session);
+			const resolvedSource = resolveReportDataSource({
+				...(body.datasetName ? { datasetName: body.datasetName } : {}),
+				...(body.analysisRoot ? { analysisRoot: body.analysisRoot } : {}),
+			});
+			const reportName =
+				body.name?.trim() || resolvedSource?.title || "Imported report";
+
+			if ((body.datasetName || body.analysisRoot) && !resolvedSource) {
+				return new Response(
+					JSON.stringify({
+						error: "invalid_dataset_source",
+					}),
+					{
+						status: 400,
+						headers: {
+							"content-type": "application/json",
+						},
+					},
+				);
+			}
+
 			const created = await createWorkspaceReport({
 				workspaceId: personalWorkspace.id,
-				name: body.name.trim(),
-				analysisRoot: body.analysisRoot?.trim() || null,
+				name: reportName,
+				datasetName: body.datasetName?.trim() || null,
+				analysisRoot: resolvedSource?.dataDir ?? null,
 			});
 
 			return decodeCreateReportResponse({

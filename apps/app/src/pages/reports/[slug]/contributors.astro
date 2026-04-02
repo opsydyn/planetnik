@@ -1,0 +1,108 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import {
+	buildReportContributorsViewModel,
+} from "../../../lib/report-contributors-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportContributors,
+} from "../../../lib/runtime-client.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const contributors = await getRuntimeReportContributors(cookie, slug);
+const viewModel = buildReportContributorsViewModel({
+	slug,
+	reportName: reportDetail.report.name,
+	contributors,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Contributors`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Contributors</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				Hosted contributor summaries stay aligned with the static report contract by
+				reading <code>contributors.txt</code> plus optional
+				<code>contributor_details</code> footprint data.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open overview
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}`}>View report details</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-card">
+			<p class="card-kicker">Table</p>
+			<h2>Contributor summary</h2>
+			{viewModel.rows.length > 0 ? (
+				<div class="contributors-table-wrap">
+					<table class="contributors-table">
+						<thead>
+							<tr>
+								<th>Contributor</th>
+								<th>Status</th>
+								<th>All time</th>
+								<th>30d</th>
+								<th>Components</th>
+								<th>Primary component</th>
+								<th>Knowledge signal</th>
+							</tr>
+						</thead>
+						<tbody>
+							{viewModel.rows.map((row) => (
+								<tr>
+									<td>
+										<div class="table-primary">
+											<a class="report-link" href={row.href}>{row.contributor}</a>
+										</div>
+										{row.email ? (
+											<div class="table-secondary">{row.email}</div>
+										) : null}
+									</td>
+									<td>{row.status}</td>
+									<td>{row.allTime}</td>
+									<td>{row.commits30Days}</td>
+									<td>{row.componentsTouched || "0"}</td>
+									<td>{row.primaryComponent || "Unassigned"}</td>
+									<td>{row.knowledgeSignal || " "}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			) : (
+				<p class="muted-copy">
+					No contributor summary is available for this linked dataset yet.
+				</p>
+			)}
+		</section>
+	</div>
+</AppShell>
