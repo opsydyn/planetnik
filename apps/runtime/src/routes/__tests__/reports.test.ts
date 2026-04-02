@@ -271,6 +271,37 @@ const readReportTopologySummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportMetricsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		totalMetrics: 6,
+		headlineMetrics: {
+			mainLinesOfCode: 52000,
+			testLinesOfCode: 14000,
+			duplicatedLines: 910,
+			testVsMainPercentage: 26.9,
+			totalAnalysisTimeInMillis: 1840,
+		},
+		groupSummaries: [
+			{
+				groupId: "LINES_OF_CODE",
+				label: "Lines of Code",
+				metrics: [
+					{ id: "LINES_OF_CODE_MAIN", value: 52000 },
+					{ id: "LINES_OF_CODE_TEST", value: 14000 },
+				],
+			},
+			{
+				groupId: "DUPLICATION",
+				label: "Duplication",
+				metrics: [{ id: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES", value: 910 }],
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -296,6 +327,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportContributorsSummary,
 	readReportContributorDetail,
 	readReportTopologySummary,
+	readReportMetricsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -549,6 +581,60 @@ describe("runtime report routes", () => {
 			glueScore: 8.8,
 		});
 		expect(readReportTopologySummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns metrics summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/metrics", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			metrics: {
+				totalMetrics: number;
+				headlineMetrics: {
+					mainLinesOfCode: number;
+					duplicatedLines: number;
+				};
+				groupSummaries: Array<{
+					groupId: string;
+					label: string;
+				}>;
+			};
+		};
+
+		expect(body.metrics.totalMetrics).toBe(6);
+		expect(body.metrics.headlineMetrics).toMatchObject({
+			mainLinesOfCode: 52000,
+			duplicatedLines: 910,
+		});
+		expect(body.metrics.groupSummaries[0]).toMatchObject({
+			groupId: "LINES_OF_CODE",
+			label: "Lines of Code",
+		});
+		expect(readReportMetricsSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
 		);
 	});

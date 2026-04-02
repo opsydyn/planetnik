@@ -20,6 +20,7 @@ const {
 	readReportContributorDetail,
 	readReportContributorsSummary,
 	readReportContextSummary,
+	readReportMetricsSummary,
 	readReportTopologySummary,
 	resolveReportDataSource,
 } = await import("../report-datasets.js");
@@ -484,6 +485,60 @@ describe("runtime report dataset helpers", () => {
 					displayName: "Alan Currie",
 					snackingScore: 2.1,
 					dominantDimension: "coordination_relief",
+				},
+			],
+		});
+	});
+
+	test("reads a metrics summary from metrics.txt", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeFileSync(
+			join(dataDir, "metrics.txt"),
+			[
+				"LINES_OF_CODE_MAIN: 52000",
+				"LINES_OF_CODE_TEST: 14000",
+				"DUPLICATION_NUMBER_OF_DUPLICATED_LINES: 910",
+				"TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE: 26.9",
+				"TOTAL_ANALYSIS_TIME_IN_MILLIS: 1840",
+				"NUMBER_OF_FILES_MAIN: 240",
+			].join("\n"),
+		);
+
+		expect(readReportMetricsSummary(dataDir)).toEqual({
+			totalMetrics: 6,
+			headlineMetrics: {
+				mainLinesOfCode: 52000,
+				testLinesOfCode: 14000,
+				duplicatedLines: 910,
+				testVsMainPercentage: 26.9,
+				totalAnalysisTimeInMillis: 1840,
+			},
+			groupSummaries: [
+				{
+					groupId: "LINES_OF_CODE",
+					label: "Lines of Code",
+					metrics: [
+						{ id: "LINES_OF_CODE_MAIN", value: 52000 },
+						{ id: "LINES_OF_CODE_TEST", value: 14000 },
+						{ id: "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE", value: 26.9 },
+					],
+				},
+				{
+					groupId: "NUMBER_OF_FILES",
+					label: "Files",
+					metrics: [{ id: "NUMBER_OF_FILES_MAIN", value: 240 }],
+				},
+				{
+					groupId: "DUPLICATION",
+					label: "Duplication",
+					metrics: [{ id: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES", value: 910 }],
+				},
+				{
+					groupId: "ANALYSIS",
+					label: "Analysis",
+					metrics: [{ id: "TOTAL_ANALYSIS_TIME_IN_MILLIS", value: 1840 }],
 				},
 			],
 		});

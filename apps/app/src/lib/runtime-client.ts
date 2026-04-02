@@ -180,6 +180,25 @@ export type RuntimeReportTopology = {
   }>;
 };
 
+export type RuntimeReportMetrics = {
+  readonly totalMetrics: number;
+  readonly headlineMetrics: {
+    readonly mainLinesOfCode: number;
+    readonly testLinesOfCode: number;
+    readonly duplicatedLines: number;
+    readonly testVsMainPercentage: number;
+    readonly totalAnalysisTimeInMillis: number;
+  };
+  readonly groupSummaries: ReadonlyArray<{
+    readonly groupId: string;
+    readonly label: string;
+    readonly metrics: ReadonlyArray<{
+      readonly id: string;
+      readonly value: number;
+    }>;
+  }>;
+};
+
 export type CreateRuntimeReportInput = {
   readonly name?: string;
   readonly datasetName?: string;
@@ -311,4 +330,18 @@ export async function getRuntimeReportTopology(
   }
 
   return data.topology;
+}
+
+export async function getRuntimeReportMetrics(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportMetrics | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).metrics.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.metrics;
 }

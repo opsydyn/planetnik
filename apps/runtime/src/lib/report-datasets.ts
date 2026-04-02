@@ -144,6 +144,25 @@ export type ReportTopologySummary = {
 
 type ReportTopologyConnection = ReportTopologySummary["strongestConnections"][number];
 
+export type ReportMetricsSummary = {
+	readonly totalMetrics: number;
+	readonly headlineMetrics: {
+		readonly mainLinesOfCode: number;
+		readonly testLinesOfCode: number;
+		readonly duplicatedLines: number;
+		readonly testVsMainPercentage: number;
+		readonly totalAnalysisTimeInMillis: number;
+	};
+	readonly groupSummaries: ReadonlyArray<{
+		readonly groupId: string;
+		readonly label: string;
+		readonly metrics: ReadonlyArray<{
+			readonly id: string;
+			readonly value: number;
+		}>;
+	}>;
+};
+
 export type ResolvedReportDataSource = {
 	readonly dataDir: string;
 	readonly datasetName?: string;
@@ -281,6 +300,87 @@ function getKnowledgeSignal(componentsTouched: number | null): string {
 	}
 
 	return "";
+}
+
+function groupMetricId(id: string): string {
+	if (id === "TOTAL_NUMBER_OF_FILES" || id.startsWith("NUMBER_OF_FILES_")) {
+		return "NUMBER_OF_FILES";
+	}
+	if (
+		id.startsWith("LINES_OF_CODE_") ||
+		id.startsWith("TEST_VS_MAIN_LINES_OF_CODE")
+	) {
+		return "LINES_OF_CODE";
+	}
+	if (
+		id.startsWith("NUMBER_OF_UNITS") ||
+		id.startsWith("LINES_OF_CODE_IN_UNITS") ||
+		id.startsWith("LINES_OF_CODE_OUTSIDE_UNITS")
+	) {
+		return "UNITS";
+	}
+	if (id.includes("_RISK_FILE_SIZE_")) return "FILE_SIZE_RISK";
+	if (id.startsWith("CONDITIONAL_COMPLEXITY_")) return "CONDITIONAL_COMPLEXITY";
+	if (id.startsWith("FILE_CHANGE_HISTORY_")) return "FILE_CHANGE_HISTORY";
+	if (id.startsWith("FILE_AGE_")) return "FILE_AGE";
+	if (
+		id.startsWith("NUMBER_OF_DEPENDENCIES_") ||
+		id.startsWith("NUMBER_OF_PLACES_WITH_CYCLIC_DEPENDENCIES_")
+	) {
+		return "DEPENDENCIES";
+	}
+	if (id.startsWith("DUPLICATION_") || id.startsWith("UNIT_DUPLICATES_")) {
+		return "DUPLICATION";
+	}
+	if (id.startsWith("NUMBER_OF_CONTRIBUTORS")) return "TEAM";
+	if (id.startsWith("TOTAL_ANALYSIS_TIME_")) return "ANALYSIS";
+
+	const parts = id.split("_");
+	return parts.slice(0, Math.min(3, parts.length)).join("_");
+}
+
+function formatMetricGroupLabel(group: string): string {
+	const labels: Record<string, string> = {
+		NUMBER_OF_FILES: "Files",
+		LINES_OF_CODE: "Lines of Code",
+		UNITS: "Units",
+		FILE_SIZE_RISK: "File Size Risk",
+		CONDITIONAL_COMPLEXITY: "Conditional Complexity",
+		FILE_CHANGE_HISTORY: "File Change History",
+		FILE_AGE: "File Age",
+		DEPENDENCIES: "Dependencies",
+		DUPLICATION: "Duplication",
+		TEAM: "Team",
+		ANALYSIS: "Analysis",
+	};
+
+	return labels[group] ?? group.replaceAll("_", " ").toLowerCase();
+}
+
+function sortMetricGroups(left: string, right: string): number {
+	const groupOrder = [
+		"LINES_OF_CODE",
+		"NUMBER_OF_FILES",
+		"UNITS",
+		"CONDITIONAL_COMPLEXITY",
+		"FILE_SIZE_RISK",
+		"FILE_AGE",
+		"DEPENDENCIES",
+		"FILE_CHANGE_HISTORY",
+		"TEAM",
+		"DUPLICATION",
+		"ANALYSIS",
+	];
+	const leftIndex = groupOrder.indexOf(left);
+	const rightIndex = groupOrder.indexOf(right);
+	const resolvedLeft = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+	const resolvedRight = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+
+	if (resolvedLeft !== resolvedRight) {
+		return resolvedLeft - resolvedRight;
+	}
+
+	return left.localeCompare(right);
 }
 
 function isReportMode(
@@ -747,6 +847,74 @@ export function readReportTopologySummary(
 		strongestConnections,
 		topGlueContributors,
 		topSnackingContributors,
+	};
+}
+
+export function readReportMetricsSummary(
+	dataDir: string,
+): ReportMetricsSummary | null {
+	const text = readTextFile(dataDir, "metrics.txt");
+	if (!text) {
+		return null;
+	}
+
+	const metrics = text
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0)
+		.map((line) => {
+			const colonIdx = line.indexOf(":");
+			if (colonIdx < 0) {
+				return null;
+			}
+
+			const id = line.substring(0, colonIdx).trim();
+			const value = parseFloat(line.substring(colonIdx + 1).trim());
+			if (id.length === 0 || Number.isNaN(value)) {
+				return null;
+			}
+
+			return { id, value };
+		})
+		.filter(
+			(metric): metric is { readonly id: string; readonly value: number } =>
+				metric !== null,
+		);
+
+	if (metrics.length === 0) {
+		return null;
+	}
+
+	const metricById = new Map(metrics.map((metric) => [metric.id, metric.value] as const));
+	const groups = new Map<string, Array<{ id: string; value: number }>>();
+	for (const metric of metrics) {
+		const groupId = groupMetricId(metric.id);
+		const list = groups.get(groupId) ?? [];
+		list.push(metric);
+		groups.set(groupId, list);
+	}
+
+	return {
+		totalMetrics: metrics.length,
+		headlineMetrics: {
+			mainLinesOfCode: metricById.get("LINES_OF_CODE_MAIN") ?? 0,
+			testLinesOfCode: metricById.get("LINES_OF_CODE_TEST") ?? 0,
+			duplicatedLines:
+				metricById.get("DUPLICATION_NUMBER_OF_DUPLICATED_LINES") ?? 0,
+			testVsMainPercentage:
+				metricById.get("TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE") ?? 0,
+			totalAnalysisTimeInMillis:
+				metricById.get("TOTAL_ANALYSIS_TIME_IN_MILLIS") ?? 0,
+		},
+		groupSummaries: [...groups.entries()]
+			.map(([groupId, groupMetrics]) => ({
+				groupId,
+				label: formatMetricGroupLabel(groupId),
+				metrics: [...groupMetrics].sort((left, right) =>
+					left.id.localeCompare(right.id),
+				),
+			}))
+			.sort((left, right) => sortMetricGroups(left.groupId, right.groupId)),
 	};
 }
 
