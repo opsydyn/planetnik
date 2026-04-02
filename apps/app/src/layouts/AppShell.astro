@@ -1,0 +1,49 @@
+---
+import "../styles/global.css";
+
+interface Props {
+	title: string;
+	subtitle: string;
+}
+
+const { title, subtitle } = Astro.props;
+const userEmail =
+	typeof Astro.locals.user?.email === "string" ? Astro.locals.user.email : null;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{title} | Planetnik App</title>
+	</head>
+	<body>
+		<div class="shell">
+			<header class="topbar">
+				<a class="brand" href={userEmail ? "/" : "/sign-in"}>
+					<span class="brand-kicker">Planetnik</span>
+					<span class="brand-title">Hosted Intelligence</span>
+				</a>
+				<div class="topbar-meta">
+					<span class="status-pill">
+						<span class="status-dot"></span>
+						{userEmail ? `Session: ${userEmail}` : "Astro app shell"}
+					</span>
+				</div>
+			</header>
+
+			<main class="content-grid">
+				<section class="hero-panel">
+					<p class="eyebrow">Astro + Bun + runtime auth boundary</p>
+					<h1>{title}</h1>
+					<p class="lede">{subtitle}</p>
+				</section>
+
+				<section class="surface-panel">
+					<slot />
+				</section>
+			</main>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,20 @@
+---
+import SignUpForm from "../components/auth/SignUpForm";
+import AppShell from "../layouts/AppShell.astro";
+---
+
+<AppShell
+	title="Create your hosted account"
+	subtitle="Account creation goes through the local Astro auth proxy so the browser stays on one origin while the runtime remains the auth boundary."
+>
+	<div class="stack">
+		<SignUpForm client:load />
+		<p class="muted-copy">
+			Once this succeeds, the middleware-protected home route becomes the first
+			real SSR surface for the hosted app.
+		</p>
+		<div class="route-links">
+			<a href="/sign-in">Already have an account?</a>
+		</div>
+	</div>
+</AppShell>

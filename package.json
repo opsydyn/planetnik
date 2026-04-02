@@ -22,6 +22,7 @@
 	"scripts": {
 		"dev:site": "bun run --cwd apps/site dev",
 		"dev:cli": "bun run --cwd apps/cli dev",
+		"dev:app": "bun run --cwd apps/app dev",
 		"dev:runtime": "bun run --cwd apps/runtime dev",
 		"build": "bun run --filter '*' build",
 		"test": "bun run --filter '*' test",
