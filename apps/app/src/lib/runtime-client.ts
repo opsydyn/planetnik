@@ -219,6 +219,28 @@ export type RuntimeReportDuplication = {
   }>;
 };
 
+export type RuntimeReportDependencies = {
+  readonly sections: ReadonlyArray<{
+    readonly decompositionKey: string;
+    readonly linksCount: number;
+    readonly incoming: ReadonlyArray<{
+      readonly label: string;
+      readonly value: number;
+    }>;
+    readonly outgoing: ReadonlyArray<{
+      readonly label: string;
+      readonly value: number;
+    }>;
+    readonly links: ReadonlyArray<{
+      readonly fromComponent: string;
+      readonly toComponent: string;
+      readonly count: number;
+      readonly evidenceCount: number;
+      readonly locFrom: number;
+    }>;
+  }>;
+};
+
 export type CreateRuntimeReportInput = {
   readonly name?: string;
   readonly datasetName?: string;
@@ -378,4 +400,18 @@ export async function getRuntimeReportDuplication(
   }
 
   return data.duplication;
+}
+
+export async function getRuntimeReportDependencies(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportDependencies | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).dependencies.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.dependencies;
 }

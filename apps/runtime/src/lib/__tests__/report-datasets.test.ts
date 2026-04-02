@@ -20,6 +20,7 @@ const {
 	readReportContributorDetail,
 	readReportContributorsSummary,
 	readReportContextSummary,
+	readReportDependenciesSummary,
 	readReportDuplicationSummary,
 	readReportMetricsSummary,
 	readReportTopologySummary,
@@ -613,6 +614,67 @@ describe("runtime report dataset helpers", () => {
 					blockSize: 12,
 					files: 1,
 					locations: ["src/routes/reports/index.ts:70-81"],
+				},
+			],
+		});
+	});
+
+	test("reads a dependencies summary from component_dependencies.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "component_dependencies.json"), {
+			dependencies: [
+				{
+					decompositionKey: "components",
+					fromComponent: "site",
+					toComponent: "runtime",
+					count: 8,
+					locFrom: 1200,
+					evidenceCount: 3,
+					color: "#999999",
+				},
+				{
+					decompositionKey: "components",
+					fromComponent: "runtime",
+					toComponent: "reports",
+					count: 5,
+					locFrom: 900,
+					evidenceCount: 2,
+					color: "#999999",
+				},
+			],
+		});
+
+		expect(readReportDependenciesSummary(dataDir)).toEqual({
+			sections: [
+				{
+					decompositionKey: "components",
+					linksCount: 2,
+					incoming: [
+						{ label: "runtime", value: 8 },
+						{ label: "reports", value: 5 },
+					],
+					outgoing: [
+						{ label: "site", value: 8 },
+						{ label: "runtime", value: 5 },
+					],
+					links: [
+						{
+							fromComponent: "site",
+							toComponent: "runtime",
+							count: 8,
+							evidenceCount: 3,
+							locFrom: 1200,
+						},
+						{
+							fromComponent: "runtime",
+							toComponent: "reports",
+							count: 5,
+							evidenceCount: 2,
+							locFrom: 900,
+						},
+					],
 				},
 			],
 		});

@@ -331,6 +331,44 @@ const readReportDuplicationSummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportDependenciesSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		sections: [
+			{
+				decompositionKey: "components",
+				linksCount: 2,
+				incoming: [
+					{ label: "runtime", value: 9 },
+					{ label: "reports", value: 5 },
+				],
+				outgoing: [
+					{ label: "site", value: 8 },
+					{ label: "runtime", value: 6 },
+				],
+				links: [
+					{
+						fromComponent: "site",
+						toComponent: "runtime",
+						count: 8,
+						evidenceCount: 3,
+						locFrom: 1200,
+					},
+					{
+						fromComponent: "runtime",
+						toComponent: "reports",
+						count: 5,
+						evidenceCount: 2,
+						locFrom: 900,
+					},
+				],
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -358,6 +396,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportTopologySummary,
 	readReportMetricsSummary,
 	readReportDuplicationSummary,
+	readReportDependenciesSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -714,6 +753,55 @@ describe("runtime report routes", () => {
 			value: 2,
 		});
 		expect(readReportDuplicationSummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns dependencies summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/dependencies", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			dependencies: {
+				sections: Array<{
+					decompositionKey: string;
+					linksCount: number;
+					incoming: Array<{ label: string; value: number }>;
+				}>;
+			};
+		};
+
+		expect(body.dependencies.sections[0]).toMatchObject({
+			decompositionKey: "components",
+			linksCount: 2,
+		});
+		expect(body.dependencies.sections[0]?.incoming[0]).toMatchObject({
+			label: "runtime",
+			value: 9,
+		});
+		expect(readReportDependenciesSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
 		);
 	});

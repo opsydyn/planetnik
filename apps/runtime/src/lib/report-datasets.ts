@@ -183,6 +183,28 @@ export type ReportDuplicationSummary = {
 	}>;
 };
 
+export type ReportDependenciesSummary = {
+	readonly sections: ReadonlyArray<{
+		readonly decompositionKey: string;
+		readonly linksCount: number;
+		readonly incoming: ReadonlyArray<{
+			readonly label: string;
+			readonly value: number;
+		}>;
+		readonly outgoing: ReadonlyArray<{
+			readonly label: string;
+			readonly value: number;
+		}>;
+		readonly links: ReadonlyArray<{
+			readonly fromComponent: string;
+			readonly toComponent: string;
+			readonly count: number;
+			readonly evidenceCount: number;
+			readonly locFrom: number;
+		}>;
+	}>;
+};
+
 export type ResolvedReportDataSource = {
 	readonly dataDir: string;
 	readonly datasetName?: string;
@@ -1051,6 +1073,90 @@ export function readReportDuplicationSummary(
 				return `${relativePath}:${startLine}-${endLine}`;
 			}),
 		})),
+	};
+}
+
+export function readReportDependenciesSummary(
+	dataDir: string,
+): ReportDependenciesSummary | null {
+	const raw = readJsonRecord(dataDir, "component_dependencies.json");
+	const dependencies = Array.isArray(raw?.dependencies)
+		? raw.dependencies.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	if (dependencies.length === 0) {
+		return null;
+	}
+
+	const grouped = new Map<string, Array<Record<string, unknown>>>();
+	for (const dependency of dependencies) {
+		const decompositionKey =
+			typeof dependency.decompositionKey === "string"
+				? dependency.decompositionKey
+				: "";
+		if (decompositionKey.length === 0) {
+			continue;
+		}
+
+		const group = grouped.get(decompositionKey) ?? [];
+		group.push(dependency);
+		grouped.set(decompositionKey, group);
+	}
+
+	return {
+		sections: [...grouped.entries()]
+			.sort(([left], [right]) => left.localeCompare(right))
+			.map(([decompositionKey, group]) => {
+				const incoming = new Map<string, number>();
+				const outgoing = new Map<string, number>();
+				const links = group.map((dependency) => {
+					const fromComponent =
+						typeof dependency.fromComponent === "string"
+							? dependency.fromComponent
+							: "";
+					const toComponent =
+						typeof dependency.toComponent === "string"
+							? dependency.toComponent
+							: "";
+					const count =
+						typeof dependency.count === "number" ? dependency.count : 0;
+
+					incoming.set(toComponent, (incoming.get(toComponent) ?? 0) + count);
+					outgoing.set(
+						fromComponent,
+						(outgoing.get(fromComponent) ?? 0) + count,
+					);
+
+					return {
+						fromComponent,
+						toComponent,
+						count,
+						evidenceCount:
+							typeof dependency.evidenceCount === "number"
+								? dependency.evidenceCount
+								: 0,
+						locFrom:
+							typeof dependency.locFrom === "number"
+								? dependency.locFrom
+								: 0,
+					};
+				});
+
+				return {
+					decompositionKey,
+					linksCount: links.length,
+					incoming: [...incoming.entries()]
+						.sort((left, right) => right[1] - left[1])
+						.map(([label, value]) => ({ label, value })),
+					outgoing: [...outgoing.entries()]
+						.sort((left, right) => right[1] - left[1])
+						.map(([label, value]) => ({ label, value })),
+					links,
+				};
+			}),
 	};
 }
 
