@@ -185,6 +185,13 @@ input {
 	outline-offset: 2px;
 }
 
+.field-help {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+	line-height: 1.5;
+}
+
 .button,
 .button-secondary {
 	display: inline-flex;
@@ -282,6 +289,12 @@ input {
 	margin: 0;
 	color: var(--muted);
 	line-height: 1.6;
+}
+
+.report-form {
+	display: grid;
+	gap: 0.9rem;
+	padding-top: 0.2rem;
 }
 
 .card-kicker {

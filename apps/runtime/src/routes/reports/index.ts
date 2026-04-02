@@ -1,7 +1,8 @@
 import { Schema } from "@effect/schema";
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { auth } from "../../lib/auth.js";
 import {
+	createWorkspaceReport,
 	ensurePersonalWorkspace,
 	listWorkspaceReports,
 } from "../../lib/personal-workspace.js";
@@ -23,11 +24,30 @@ const ReportsResponseSchema = Schema.Struct({
 	reports: Schema.Array(ReportSchema),
 });
 
-const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
+const CreateReportBodySchema = t.Object({
+	name: t.String({
+		minLength: 1,
+		maxLength: 120,
+	}),
+	analysisRoot: t.Optional(
+		t.String({
+			minLength: 1,
+			maxLength: 4096,
+		}),
+	),
+});
 
-export const reportRoutes = new Elysia({ name: "reports" }).get(
-	"/api/reports",
-	async ({ request }) => {
+const CreateReportResponseSchema = Schema.Struct({
+	report: ReportSchema,
+});
+
+const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
+const decodeCreateReportResponse = Schema.decodeUnknownSync(
+	CreateReportResponseSchema,
+);
+
+export const reportRoutes = new Elysia({ name: "reports" })
+	.get("/api/reports", async ({ request }) => {
 		const session = await auth.api.getSession({
 			headers: request.headers,
 		});
@@ -63,5 +83,51 @@ export const reportRoutes = new Elysia({ name: "reports" }).get(
 				lastSyncedAt: item.lastSyncedAt?.toISOString() ?? null,
 			})),
 		});
-	},
-);
+	})
+	.post(
+		"/api/reports",
+		async ({ request, body }) => {
+			const session = await auth.api.getSession({
+				headers: request.headers,
+			});
+
+			if (!session?.session || !session.user) {
+				return new Response(
+					JSON.stringify({
+						error: "unauthorized",
+					}),
+					{
+						status: 401,
+						headers: {
+							"content-type": "application/json",
+						},
+					},
+				);
+			}
+
+			const personalWorkspace = await ensurePersonalWorkspace(session);
+			const created = await createWorkspaceReport({
+				workspaceId: personalWorkspace.id,
+				name: body.name.trim(),
+				analysisRoot: body.analysisRoot?.trim() || null,
+			});
+
+			return decodeCreateReportResponse({
+				report: {
+					id: created.id,
+					workspaceId: created.workspaceId,
+					slug: created.slug,
+					name: created.name,
+					kind: created.kind,
+					status: created.status,
+					analysisRoot: created.analysisRoot ?? null,
+					createdAt: created.createdAt.toISOString(),
+					updatedAt: created.updatedAt.toISOString(),
+					lastSyncedAt: created.lastSyncedAt?.toISOString() ?? null,
+				},
+			});
+		},
+		{
+			body: CreateReportBodySchema,
+		},
+	);
