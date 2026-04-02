@@ -205,6 +205,33 @@ export type ReportDependenciesSummary = {
 	}>;
 };
 
+export type ReportControlsSummary = {
+	readonly totalControls: number;
+	readonly statusCounts: {
+		readonly failed: number;
+		readonly tolerant: number;
+		readonly ok: number;
+		readonly ignored: number;
+	};
+	readonly goals: ReadonlyArray<{
+		readonly goal: string;
+		readonly total: number;
+		readonly failed: number;
+		readonly tolerant: number;
+		readonly ok: number;
+		readonly ignored: number;
+	}>;
+	readonly controls: ReadonlyArray<{
+		readonly id: string;
+		readonly goal: string;
+		readonly metricId: string;
+		readonly metricValue: number | null;
+		readonly desiredRangeText: string;
+		readonly status: string;
+		readonly description: string;
+	}>;
+};
+
 export type ResolvedReportDataSource = {
 	readonly dataDir: string;
 	readonly datasetName?: string;
@@ -1157,6 +1184,129 @@ export function readReportDependenciesSummary(
 					links,
 				};
 			}),
+	};
+}
+
+export function readReportControlsSummary(
+	dataDir: string,
+): ReportControlsSummary | null {
+	const raw = readJsonRecord(dataDir, "controls.json");
+	const goals = Array.isArray(raw?.goals)
+		? raw.goals.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	if (goals.length === 0) {
+		return null;
+	}
+
+	const controls: Array<{
+		id: string;
+		goal: string;
+		metricId: string;
+		metricValue: number | null;
+		desiredRangeText: string;
+		status: string;
+		description: string;
+	}> = [];
+
+	for (const goal of goals) {
+		const goalName =
+			typeof goal.goal === "string" && goal.goal.length > 0
+				? goal.goal
+				: "Controls";
+		const goalControls = Array.isArray(goal.controls)
+			? goal.controls.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+			: [];
+
+		for (let i = 0; i < goalControls.length; i += 1) {
+			const control = goalControls[i]!;
+			const metricId =
+				typeof control.metricId === "string" ? control.metricId : "";
+			controls.push({
+				id: `${goalName}::${metricId || `control-${i}`}`,
+				goal: goalName,
+				metricId,
+				metricValue:
+					typeof control.metricValue === "number" ? control.metricValue : null,
+				desiredRangeText:
+					typeof control.desiredRangeText === "string"
+						? control.desiredRangeText
+						: "",
+				status: typeof control.status === "string" ? control.status : "",
+				description:
+					typeof control.controlDescription === "string" &&
+					control.controlDescription.length > 0
+						? control.controlDescription
+						: typeof control.metricDescription === "string"
+							? control.metricDescription
+							: "",
+			});
+		}
+	}
+
+	const statusCounts = {
+		failed: controls.filter((control) => control.status === "FAILED").length,
+		tolerant: controls.filter((control) => control.status === "TOLERANT").length,
+		ok: controls.filter((control) => control.status === "OK").length,
+		ignored: controls.filter((control) =>
+			control.status.startsWith("IGNORED"),
+		).length,
+	};
+
+	const goalMap = new Map<
+		string,
+		{
+			total: number;
+			failed: number;
+			tolerant: number;
+			ok: number;
+			ignored: number;
+		}
+	>();
+	for (const control of controls) {
+		const entry = goalMap.get(control.goal) ?? {
+			total: 0,
+			failed: 0,
+			tolerant: 0,
+			ok: 0,
+			ignored: 0,
+		};
+		entry.total += 1;
+		if (control.status === "FAILED") entry.failed += 1;
+		else if (control.status === "TOLERANT") entry.tolerant += 1;
+		else if (control.status === "OK") entry.ok += 1;
+		else if (control.status.startsWith("IGNORED")) entry.ignored += 1;
+		goalMap.set(control.goal, entry);
+	}
+
+	return {
+		totalControls: controls.length,
+		statusCounts,
+		goals: [...goalMap.entries()]
+			.sort((left, right) => {
+				if (right[1].failed !== left[1].failed) {
+					return right[1].failed - left[1].failed;
+				}
+				if (right[1].tolerant !== left[1].tolerant) {
+					return right[1].tolerant - left[1].tolerant;
+				}
+				return right[1].total - left[1].total;
+			})
+			.map(([goal, stats]) => ({
+				goal,
+				total: stats.total,
+				failed: stats.failed,
+				tolerant: stats.tolerant,
+				ok: stats.ok,
+				ignored: stats.ignored,
+			})),
+		controls,
 	};
 }
 

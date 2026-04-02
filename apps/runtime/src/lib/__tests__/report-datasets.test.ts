@@ -20,6 +20,7 @@ const {
 	readReportContributorDetail,
 	readReportContributorsSummary,
 	readReportContextSummary,
+	readReportControlsSummary,
 	readReportDependenciesSummary,
 	readReportDuplicationSummary,
 	readReportMetricsSummary,
@@ -675,6 +676,109 @@ describe("runtime report dataset helpers", () => {
 							locFrom: 900,
 						},
 					],
+				},
+			],
+		});
+	});
+
+	test("reads a controls summary from controls.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "controls.json"), {
+			goals: [
+				{
+					goal: "Maintainability",
+					description: "Maintain structure",
+					controls: [
+						{
+							metricId: "LINES_OF_CODE_MAIN",
+							metricValue: 52000,
+							metricDescription: "Main LOC",
+							desiredRangeText: "< 50000",
+							status: "FAILED",
+							controlDescription: "Keep main LOC below target",
+						},
+						{
+							metricId: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES",
+							metricValue: 910,
+							metricDescription: "Duplicated lines",
+							desiredRangeText: "< 1000",
+							status: "TOLERANT",
+							controlDescription: "Keep duplication manageable",
+						},
+					],
+				},
+				{
+					goal: "Quality",
+					description: "Preserve code quality",
+					controls: [
+						{
+							metricId: "CONDITIONAL_COMPLEXITY_95_PERCENTILE",
+							metricValue: 12,
+							metricDescription: "Conditional complexity",
+							desiredRangeText: "< 15",
+							status: "OK",
+							controlDescription: "Keep complexity under control",
+						},
+					],
+				},
+			],
+		});
+
+		expect(readReportControlsSummary(dataDir)).toEqual({
+			totalControls: 3,
+			statusCounts: {
+				failed: 1,
+				tolerant: 1,
+				ok: 1,
+				ignored: 0,
+			},
+			goals: [
+				{
+					goal: "Maintainability",
+					total: 2,
+					failed: 1,
+					tolerant: 1,
+					ok: 0,
+					ignored: 0,
+				},
+				{
+					goal: "Quality",
+					total: 1,
+					failed: 0,
+					tolerant: 0,
+					ok: 1,
+					ignored: 0,
+				},
+			],
+			controls: [
+				{
+					id: "Maintainability::LINES_OF_CODE_MAIN",
+					goal: "Maintainability",
+					metricId: "LINES_OF_CODE_MAIN",
+					metricValue: 52000,
+					desiredRangeText: "< 50000",
+					status: "FAILED",
+					description: "Keep main LOC below target",
+				},
+				{
+					id: "Maintainability::DUPLICATION_NUMBER_OF_DUPLICATED_LINES",
+					goal: "Maintainability",
+					metricId: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES",
+					metricValue: 910,
+					desiredRangeText: "< 1000",
+					status: "TOLERANT",
+					description: "Keep duplication manageable",
+				},
+				{
+					id: "Quality::CONDITIONAL_COMPLEXITY_95_PERCENTILE",
+					goal: "Quality",
+					metricId: "CONDITIONAL_COMPLEXITY_95_PERCENTILE",
+					metricValue: 12,
+					desiredRangeText: "< 15",
+					status: "OK",
+					description: "Keep complexity under control",
 				},
 			],
 		});

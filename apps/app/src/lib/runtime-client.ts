@@ -241,6 +241,33 @@ export type RuntimeReportDependencies = {
   }>;
 };
 
+export type RuntimeReportControls = {
+  readonly totalControls: number;
+  readonly statusCounts: {
+    readonly failed: number;
+    readonly tolerant: number;
+    readonly ok: number;
+    readonly ignored: number;
+  };
+  readonly goals: ReadonlyArray<{
+    readonly goal: string;
+    readonly total: number;
+    readonly failed: number;
+    readonly tolerant: number;
+    readonly ok: number;
+    readonly ignored: number;
+  }>;
+  readonly controls: ReadonlyArray<{
+    readonly id: string;
+    readonly goal: string;
+    readonly metricId: string;
+    readonly metricValue: number | null;
+    readonly desiredRangeText: string;
+    readonly status: string;
+    readonly description: string;
+  }>;
+};
+
 export type CreateRuntimeReportInput = {
   readonly name?: string;
   readonly datasetName?: string;
@@ -414,4 +441,18 @@ export async function getRuntimeReportDependencies(
   }
 
   return data.dependencies;
+}
+
+export async function getRuntimeReportControls(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportControls | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).controls.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.controls;
 }

@@ -13,6 +13,7 @@ import {
 	readReportContributorDetail,
 	readReportContributorsSummary,
 	readReportContextSummary,
+	readReportControlsSummary,
 	readReportDependenciesSummary,
 	readReportDuplicationSummary,
 	readReportMetricsSummary,
@@ -319,6 +320,41 @@ const ReportDependenciesResponseSchema = Schema.Struct({
 	dependencies: ReportDependenciesSummarySchema,
 });
 
+const ReportControlsSummarySchema = Schema.Struct({
+	totalControls: Schema.Number,
+	statusCounts: Schema.Struct({
+		failed: Schema.Number,
+		tolerant: Schema.Number,
+		ok: Schema.Number,
+		ignored: Schema.Number,
+	}),
+	goals: Schema.Array(
+		Schema.Struct({
+			goal: Schema.String,
+			total: Schema.Number,
+			failed: Schema.Number,
+			tolerant: Schema.Number,
+			ok: Schema.Number,
+			ignored: Schema.Number,
+		}),
+	),
+	controls: Schema.Array(
+		Schema.Struct({
+			id: Schema.String,
+			goal: Schema.String,
+			metricId: Schema.String,
+			metricValue: Schema.NullOr(Schema.Number),
+			desiredRangeText: Schema.String,
+			status: Schema.String,
+			description: Schema.String,
+		}),
+	),
+});
+
+const ReportControlsResponseSchema = Schema.Struct({
+	controls: ReportControlsSummarySchema,
+});
+
 const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
 const decodeDatasetsResponse = Schema.decodeUnknownSync(DatasetsResponseSchema);
 const decodeCreateReportResponse = Schema.decodeUnknownSync(
@@ -344,6 +380,9 @@ const decodeReportDuplicationResponse = Schema.decodeUnknownSync(
 );
 const decodeReportDependenciesResponse = Schema.decodeUnknownSync(
 	ReportDependenciesResponseSchema,
+);
+const decodeReportControlsResponse = Schema.decodeUnknownSync(
+	ReportControlsResponseSchema,
 );
 
 export const reportRoutes = new Elysia({ name: "reports" })
@@ -811,6 +850,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportDependenciesResponse({
 			dependencies,
+		});
+	})
+	.get("/api/reports/:slug/controls", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const controls = readReportControlsSummary(found.analysisRoot);
+		if (!controls) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportControlsResponse({
+			controls,
 		});
 	})
 	.post(

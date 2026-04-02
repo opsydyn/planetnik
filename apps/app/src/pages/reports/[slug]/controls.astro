@@ -1,0 +1,113 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import {
+	buildReportControlsViewModel,
+} from "../../../lib/report-controls-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportControls,
+} from "../../../lib/runtime-client.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const controls = await getRuntimeReportControls(cookie, slug);
+if (!controls) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const viewModel = buildReportControlsViewModel({
+	reportName: reportDetail.report.name,
+	controls,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Controls`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Controls</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads the same controls export as the static report app
+				and keeps the backend contract explicit before the shared UI extraction.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open overview
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/metrics`}>
+					Open metrics
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Goals</p>
+				<h2>Goal coverage</h2>
+				<ul class="todo-list">
+					{viewModel.goals.map((goal) => (
+						<li>
+							<strong>{goal.label}</strong>: {goal.value} ({goal.detail})
+						</li>
+					))}
+				</ul>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Inventory</p>
+				<h2>Control inventory</h2>
+				<div class="contributors-table-wrap">
+					<table class="contributors-table">
+						<thead>
+							<tr>
+								<th>Goal</th>
+								<th>Metric</th>
+								<th>Value</th>
+								<th>Desired Range</th>
+								<th>Status</th>
+								<th>Description</th>
+							</tr>
+						</thead>
+						<tbody>
+							{viewModel.rows.map((row) => (
+								<tr>
+									<td>{row.goal}</td>
+									<td>
+										<div class="table-primary">{row.metric}</div>
+									</td>
+									<td>{row.value}</td>
+									<td>{row.desiredRange}</td>
+									<td>{row.status}</td>
+									<td>{row.description}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</article>
+		</section>
+	</div>
+</AppShell>
