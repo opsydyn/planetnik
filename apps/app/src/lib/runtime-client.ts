@@ -268,6 +268,40 @@ export type RuntimeReportControls = {
   }>;
 };
 
+export type RuntimeReportImpact = {
+  readonly title: string;
+  readonly timestamp: string;
+  readonly visibleActivity: {
+    readonly commits: number;
+    readonly contributors: number;
+    readonly changedFiles: number;
+    readonly changedUnits: number;
+  };
+  readonly structuralImpact: {
+    readonly overallScore: number;
+    readonly dominantDimension: string;
+  };
+  readonly impactDimensions: ReadonlyArray<{
+    readonly label: string;
+    readonly score: number;
+  }>;
+  readonly topOpportunities: ReadonlyArray<{
+    readonly name: string;
+    readonly kind: string;
+    readonly parent: string;
+    readonly impactScore: number;
+    readonly dominantDimension: string;
+    readonly suggestedAction: string;
+  }>;
+  readonly snackingCandidates: ReadonlyArray<{
+    readonly name: string;
+    readonly kind: string;
+    readonly visibleActivityScore: number;
+    readonly structuralImpactScore: number;
+    readonly reason: string;
+  }>;
+};
+
 export type CreateRuntimeReportInput = {
   readonly name?: string;
   readonly datasetName?: string;
@@ -455,4 +489,18 @@ export async function getRuntimeReportControls(
   }
 
   return data.controls;
+}
+
+export async function getRuntimeReportImpact(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportImpact | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).impact.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.impact;
 }

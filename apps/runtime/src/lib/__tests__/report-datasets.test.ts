@@ -23,6 +23,7 @@ const {
 	readReportControlsSummary,
 	readReportDependenciesSummary,
 	readReportDuplicationSummary,
+	readReportImpactSummary,
 	readReportMetricsSummary,
 	readReportTopologySummary,
 	resolveReportDataSource,
@@ -779,6 +780,90 @@ describe("runtime report dataset helpers", () => {
 					desiredRangeText: "< 15",
 					status: "OK",
 					description: "Keep complexity under control",
+				},
+			],
+		});
+	});
+
+	test("reads an impact summary from impact.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "impact.json"), {
+			title: "Impact Report",
+			timestamp: "2026-04-02T12:00:00.000Z",
+			visible_activity: {
+				commits: 48,
+				contributors: 6,
+				changed_files: 18,
+				changed_units: 11,
+			},
+			structural_impact: {
+				summary: {
+					overall_score: 7.4,
+					dominant_dimension: "coordination_relief",
+				},
+			},
+			impact_dimensions: [
+				{ label: "Coordination relief", score: 7.4 },
+				{ label: "Knowledge spread", score: 6.2 },
+			],
+			impact_opportunities: [
+				{
+					name: "Runtime auth boundary",
+					kind: "component",
+					parent: "runtime",
+					impact_score: 8.8,
+					dominant_dimension: "coordination_relief",
+					suggested_action: "Stabilize the boundary and reduce repeated coordination.",
+				},
+			],
+			snacking_candidates: [
+				{
+					name: "Small refactors in report cards",
+					kind: "file",
+					visible_activity_score: 6.4,
+					structural_impact_score: 2.1,
+					reason: "Visible motion is outpacing structural leverage.",
+				},
+			],
+		});
+
+		expect(readReportImpactSummary(dataDir)).toEqual({
+			title: "Impact Report",
+			timestamp: "2026-04-02T12:00:00.000Z",
+			visibleActivity: {
+				commits: 48,
+				contributors: 6,
+				changedFiles: 18,
+				changedUnits: 11,
+			},
+			structuralImpact: {
+				overallScore: 7.4,
+				dominantDimension: "coordination_relief",
+			},
+			impactDimensions: [
+				{ label: "Coordination relief", score: 7.4 },
+				{ label: "Knowledge spread", score: 6.2 },
+			],
+			topOpportunities: [
+				{
+					name: "Runtime auth boundary",
+					kind: "component",
+					parent: "runtime",
+					impactScore: 8.8,
+					dominantDimension: "coordination_relief",
+					suggestedAction:
+						"Stabilize the boundary and reduce repeated coordination.",
+				},
+			],
+			snackingCandidates: [
+				{
+					name: "Small refactors in report cards",
+					kind: "file",
+					visibleActivityScore: 6.4,
+					structuralImpactScore: 2.1,
+					reason: "Visible motion is outpacing structural leverage.",
 				},
 			],
 		});

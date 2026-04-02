@@ -232,6 +232,40 @@ export type ReportControlsSummary = {
 	}>;
 };
 
+export type ReportImpactSummary = {
+	readonly title: string;
+	readonly timestamp: string;
+	readonly visibleActivity: {
+		readonly commits: number;
+		readonly contributors: number;
+		readonly changedFiles: number;
+		readonly changedUnits: number;
+	};
+	readonly structuralImpact: {
+		readonly overallScore: number;
+		readonly dominantDimension: string;
+	};
+	readonly impactDimensions: ReadonlyArray<{
+		readonly label: string;
+		readonly score: number;
+	}>;
+	readonly topOpportunities: ReadonlyArray<{
+		readonly name: string;
+		readonly kind: string;
+		readonly parent: string;
+		readonly impactScore: number;
+		readonly dominantDimension: string;
+		readonly suggestedAction: string;
+	}>;
+	readonly snackingCandidates: ReadonlyArray<{
+		readonly name: string;
+		readonly kind: string;
+		readonly visibleActivityScore: number;
+		readonly structuralImpactScore: number;
+		readonly reason: string;
+	}>;
+};
+
 export type ResolvedReportDataSource = {
 	readonly dataDir: string;
 	readonly datasetName?: string;
@@ -1307,6 +1341,118 @@ export function readReportControlsSummary(
 				ignored: stats.ignored,
 			})),
 		controls,
+	};
+}
+
+export function readReportImpactSummary(
+	dataDir: string,
+): ReportImpactSummary | null {
+	const raw = readJsonRecord(dataDir, "impact.json");
+	if (!raw) {
+		return null;
+	}
+
+	const visibleActivity =
+		raw.visible_activity && typeof raw.visible_activity === "object"
+			? (raw.visible_activity as Record<string, unknown>)
+			: null;
+	const structuralImpact =
+		raw.structural_impact && typeof raw.structural_impact === "object"
+			? (raw.structural_impact as Record<string, unknown>)
+			: null;
+	const structuralSummary =
+		structuralImpact?.summary && typeof structuralImpact.summary === "object"
+			? (structuralImpact.summary as Record<string, unknown>)
+			: null;
+
+	if (
+		typeof raw.title !== "string" ||
+		typeof raw.timestamp !== "string" ||
+		typeof visibleActivity?.commits !== "number" ||
+		typeof visibleActivity?.contributors !== "number" ||
+		typeof visibleActivity?.changed_files !== "number" ||
+		typeof visibleActivity?.changed_units !== "number" ||
+		typeof structuralSummary?.overall_score !== "number" ||
+		typeof structuralSummary?.dominant_dimension !== "string"
+	) {
+		return null;
+	}
+
+	const impactDimensions = Array.isArray(raw.impact_dimensions)
+		? raw.impact_dimensions
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => ({
+					label: typeof item.label === "string" ? item.label : "",
+					score: typeof item.score === "number" ? item.score : 0,
+				}))
+		: [];
+
+	const topOpportunities = Array.isArray(raw.impact_opportunities)
+		? raw.impact_opportunities
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => ({
+					name: typeof item.name === "string" ? item.name : "",
+					kind: typeof item.kind === "string" ? item.kind : "",
+					parent: typeof item.parent === "string" ? item.parent : "",
+					impactScore:
+						typeof item.impact_score === "number" ? item.impact_score : 0,
+					dominantDimension:
+						typeof item.dominant_dimension === "string"
+							? item.dominant_dimension
+							: "",
+					suggestedAction:
+						typeof item.suggested_action === "string"
+							? item.suggested_action
+							: "",
+				}))
+				.sort((left, right) => right.impactScore - left.impactScore)
+				.slice(0, 12)
+		: [];
+
+	const snackingCandidates = Array.isArray(raw.snacking_candidates)
+		? raw.snacking_candidates
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => ({
+					name: typeof item.name === "string" ? item.name : "",
+					kind: typeof item.kind === "string" ? item.kind : "",
+					visibleActivityScore:
+						typeof item.visible_activity_score === "number"
+							? item.visible_activity_score
+							: 0,
+					structuralImpactScore:
+						typeof item.structural_impact_score === "number"
+							? item.structural_impact_score
+							: 0,
+					reason: typeof item.reason === "string" ? item.reason : "",
+				}))
+				.slice(0, 8)
+		: [];
+
+	return {
+		title: raw.title,
+		timestamp: raw.timestamp,
+		visibleActivity: {
+			commits: visibleActivity.commits,
+			contributors: visibleActivity.contributors,
+			changedFiles: visibleActivity.changed_files,
+			changedUnits: visibleActivity.changed_units,
+		},
+		structuralImpact: {
+			overallScore: structuralSummary.overall_score,
+			dominantDimension: structuralSummary.dominant_dimension,
+		},
+		impactDimensions,
+		topOpportunities,
+		snackingCandidates,
 	};
 }
 

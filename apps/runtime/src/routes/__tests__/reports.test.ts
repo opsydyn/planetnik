@@ -413,6 +413,49 @@ const readReportControlsSummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportImpactSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		title: "Impact Report",
+		timestamp: "2026-04-02T12:00:00.000Z",
+		visibleActivity: {
+			commits: 48,
+			contributors: 6,
+			changedFiles: 18,
+			changedUnits: 11,
+		},
+		structuralImpact: {
+			overallScore: 7.4,
+			dominantDimension: "coordination_relief",
+		},
+		impactDimensions: [
+			{ label: "Coordination relief", score: 7.4 },
+			{ label: "Knowledge spread", score: 6.2 },
+		],
+		topOpportunities: [
+			{
+				name: "Runtime auth boundary",
+				kind: "component",
+				parent: "runtime",
+				impactScore: 8.8,
+				dominantDimension: "coordination_relief",
+				suggestedAction: "Stabilize the boundary and reduce repeated coordination.",
+			},
+		],
+		snackingCandidates: [
+			{
+				name: "Small refactors in report cards",
+				kind: "file",
+				visibleActivityScore: 6.4,
+				structuralImpactScore: 2.1,
+				reason: "Visible motion is outpacing structural leverage.",
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -442,6 +485,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportDuplicationSummary,
 	readReportDependenciesSummary,
 	readReportControlsSummary,
+	readReportImpactSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -896,6 +940,59 @@ describe("runtime report routes", () => {
 			total: 2,
 		});
 		expect(readReportControlsSummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns impact summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/impact", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			impact: {
+				title: string;
+				visibleActivity: { commits: number; contributors: number };
+				structuralImpact: { overallScore: number; dominantDimension: string };
+				topOpportunities: Array<{ name: string; impactScore: number }>;
+			};
+		};
+
+		expect(body.impact.title).toBe("Impact Report");
+		expect(body.impact.visibleActivity).toMatchObject({
+			commits: 48,
+			contributors: 6,
+		});
+		expect(body.impact.structuralImpact).toMatchObject({
+			overallScore: 7.4,
+			dominantDimension: "coordination_relief",
+		});
+		expect(body.impact.topOpportunities[0]).toMatchObject({
+			name: "Runtime auth boundary",
+			impactScore: 8.8,
+		});
+		expect(readReportImpactSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
 		);
 	});

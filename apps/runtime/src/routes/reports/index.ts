@@ -16,6 +16,7 @@ import {
 	readReportControlsSummary,
 	readReportDependenciesSummary,
 	readReportDuplicationSummary,
+	readReportImpactSummary,
 	readReportMetricsSummary,
 	readReportTopologySummary,
 	resolveReportDataSource,
@@ -355,6 +356,50 @@ const ReportControlsResponseSchema = Schema.Struct({
 	controls: ReportControlsSummarySchema,
 });
 
+const ReportImpactSummarySchema = Schema.Struct({
+	title: Schema.String,
+	timestamp: Schema.String,
+	visibleActivity: Schema.Struct({
+		commits: Schema.Number,
+		contributors: Schema.Number,
+		changedFiles: Schema.Number,
+		changedUnits: Schema.Number,
+	}),
+	structuralImpact: Schema.Struct({
+		overallScore: Schema.Number,
+		dominantDimension: Schema.String,
+	}),
+	impactDimensions: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			score: Schema.Number,
+		}),
+	),
+	topOpportunities: Schema.Array(
+		Schema.Struct({
+			name: Schema.String,
+			kind: Schema.String,
+			parent: Schema.String,
+			impactScore: Schema.Number,
+			dominantDimension: Schema.String,
+			suggestedAction: Schema.String,
+		}),
+	),
+	snackingCandidates: Schema.Array(
+		Schema.Struct({
+			name: Schema.String,
+			kind: Schema.String,
+			visibleActivityScore: Schema.Number,
+			structuralImpactScore: Schema.Number,
+			reason: Schema.String,
+		}),
+	),
+});
+
+const ReportImpactResponseSchema = Schema.Struct({
+	impact: ReportImpactSummarySchema,
+});
+
 const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
 const decodeDatasetsResponse = Schema.decodeUnknownSync(DatasetsResponseSchema);
 const decodeCreateReportResponse = Schema.decodeUnknownSync(
@@ -383,6 +428,9 @@ const decodeReportDependenciesResponse = Schema.decodeUnknownSync(
 );
 const decodeReportControlsResponse = Schema.decodeUnknownSync(
 	ReportControlsResponseSchema,
+);
+const decodeReportImpactResponse = Schema.decodeUnknownSync(
+	ReportImpactResponseSchema,
 );
 
 export const reportRoutes = new Elysia({ name: "reports" })
@@ -908,6 +956,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportControlsResponse({
 			controls,
+		});
+	})
+	.get("/api/reports/:slug/impact", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const impact = readReportImpactSummary(found.analysisRoot);
+		if (!impact) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportImpactResponse({
+			impact,
 		});
 	})
 	.post(

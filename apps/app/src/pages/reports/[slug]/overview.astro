@@ -54,6 +54,9 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<a class="button-secondary" href={`/reports/${slug}/contributors`}>
 						Open contributors
 					</a>
+					<a class="button-secondary" href={`/reports/${slug}/impact`}>
+						Open impact
+					</a>
 					<a class="button-secondary" href={`/reports/${slug}`}>View report details</a>
 					<a class="button" href="/sign-out">Sign out</a>
 				</div>
@@ -90,6 +93,7 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<li>Duplication route is live for duplicates.json-backed datasets</li>
 					<li>Dependencies route is live for component_dependencies.json-backed datasets</li>
 					<li>Controls route is live for controls.json-backed datasets</li>
+					<li>Impact route is live for impact.json-backed datasets</li>
 					<li>Reuse static report contracts without copying Astro pages</li>
 					<li>Layer hosted intelligence onto this report shell</li>
 				</ul>
