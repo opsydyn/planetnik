@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Rejected — use [ADR-0015](0015-adopt-separate-static-reports-and-hosted-runtime-for-intelligence.md) as the active hosted platform decision
 
 ## Context
 
@@ -187,3 +187,4 @@ We are not choosing this because the site is Astro (not Next.js), the runtime is
 - ADR-0013: Adopt CopilotKit for Intelligence View (this supersedes its Phase 2 plan)
 - ADR-0001: Effect TS with Bun Runtime
 - ADR-0003: Backend-Only Parity, Astro Frontend
+

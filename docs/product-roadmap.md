@@ -17,6 +17,10 @@ More charts only matter when they support that loop.
 
 ## Platform Track: Static Reports and Hosted Intelligence
 
+The platform split is formalized by:
+
+- [ADR-0015: Adopt Separate Static Reports and Hosted Runtime for Intelligence](/Users/alan/Projects/planetnik/docs/adr/0015-adopt-separate-static-reports-and-hosted-runtime-for-intelligence.md)
+
 Alongside feature work, Planetnik now has a clear platform split to deliver:
 
 - keep `apps/site` as the easy, no-auth, static report product
@@ -48,7 +52,7 @@ This is an enabling track, not a replacement for the product roadmap above.
 
 ### Delivery order
 
-1. runtime backbone with Better Auth and Neon
+1. auth server first in `apps/runtime` with Better Auth and Neon
 2. hosted Astro shell on Azure Container Apps
 3. migrate intelligence out of the static app
 4. add Dependabot as a hosted feature

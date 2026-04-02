@@ -4,6 +4,10 @@
 
 Keep Płanetnik easy to deploy as a static report product, while introducing a separate authenticated hosted app for intelligence and other runtime-secret features.
 
+This plan is formalized by:
+
+- [ADR-0015: Adopt Separate Static Reports and Hosted Runtime for Intelligence](/Users/alan/Projects/planetnik/docs/adr/0015-adopt-separate-static-reports-and-hosted-runtime-for-intelligence.md)
+
 The core constraint is simple:
 
 - the existing static site must remain the default and cheapest deployment path
@@ -150,6 +154,7 @@ Why:
 - good fit for Bun/TypeScript
 - keeps auth at the application layer instead of forcing Azure Easy Auth too early
 - works well with an Astro frontend and a Bun runtime API
+- keeps Drizzle on the standard Neon path for auth while preserving Effect and `@effect/schema` as the repo's core runtime patterns
 
 ### Session flow
 
@@ -262,6 +267,7 @@ Deliverables:
 Outcome:
 
 - secure server-side foundation exists before UI migration
+- auth server exists before any hosted Astro shell work begins
 
 Deliverables:
 
@@ -272,10 +278,20 @@ Deliverables:
 - protected session endpoint
 - ACA Terraform/Bicep baseline
 
+Implementation order:
+
+1. create `apps/runtime`
+2. add runtime config and secrets model
+3. add Neon-backed Drizzle database wiring
+4. add Better Auth server setup
+5. expose `/api/auth/*`, `/api/auth/get-session`, and `/health`
+6. verify sign-in, sign-out, and session lookup before creating `apps/app`
+
 Success criteria:
 
 - user can sign in against the runtime
 - runtime secrets exist only in ACA
+- the runtime can resolve a valid session without any Astro app involvement
 
 ### Phase 2: Hosted Astro shell
 
@@ -368,8 +384,59 @@ Do this first:
 
 1. add `apps/runtime`
 2. stand up Better Auth with Neon
-3. add `apps/app` with Astro SSR and auth middleware
-4. move the existing intelligence route into `apps/app`
+3. add auth routes and a session endpoint
+4. prove sign-in, sign-out, and session resolution directly against the runtime
+5. only then add `apps/app` with Astro SSR and auth middleware
+6. move the existing intelligence route into `apps/app`
+
+### Auth-Server-First Slice
+
+The first implementation slice should stop before Astro SSR.
+
+Build only this:
+
+1. `apps/runtime` package scaffold
+2. runtime config loader
+3. Drizzle + Neon database client
+4. Better Auth setup
+5. auth schema and migrations
+6. `/api/auth/*` route mounting
+7. `/api/auth/get-session` verification path
+8. `/health` endpoint
+9. local and ACA env contract for runtime secrets
+
+Suggested initial file map:
+
+- `apps/runtime/package.json`
+- `apps/runtime/tsconfig.json`
+- `apps/runtime/src/index.ts`
+- `apps/runtime/src/app.ts`
+- `apps/runtime/src/config.ts`
+- `apps/runtime/src/db/index.ts`
+- `apps/runtime/src/db/schema/auth.ts`
+- `apps/runtime/src/lib/auth.ts`
+- `apps/runtime/src/routes/auth/index.ts`
+- `apps/runtime/src/routes/health/index.ts`
+- `apps/runtime/.env.example`
+
+Reference implementation shape:
+
+- reuse the Elysia auth-route pattern from the reference auth server for transport concerns
+- adapt it to Planetnik conventions for Effect-first config, Drizzle + Neon wiring, and Better Auth ownership
+
+Do not add yet:
+
+- `apps/app`
+- Astro middleware
+- hosted report pages
+- intelligence UI migration
+
+Exit criteria for this slice:
+
+- a user can sign in through the runtime
+- a session can be fetched from the runtime using auth cookies
+- sign-out clears the session correctly
+- the runtime can be deployed independently of `apps/site`
 
 Do **not** start with:
 
