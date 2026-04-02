@@ -1,37 +1,134 @@
 ---
 import AppShell from "../layouts/AppShell.astro";
 import { SERVER_BASE_URL } from "../lib/constants.js";
+import {
+	getRuntimeMe,
+	getRuntimeReports,
+	getRuntimeWorkspaces,
+} from "../lib/runtime-client.js";
 
-const sessionSnapshot = JSON.stringify(
-	{
-		user: Astro.locals.user,
-		session: Astro.locals.session,
-	},
-	null,
-	2,
-);
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const me = await getRuntimeMe(cookie);
+const workspaces = await getRuntimeWorkspaces(cookie);
+const reports = await getRuntimeReports(cookie);
+
+const displayName = me?.user.name || me?.user.email || "Signed-in user";
+const sessionExpiry = me
+	? new Date(me.session.expiresAt).toLocaleString("en-GB", {
+			dateStyle: "medium",
+			timeStyle: "short",
+		})
+	: "Unavailable";
 ---
 
 <AppShell
-	title="Hosted intelligence shell"
-	subtitle="Authenticated SSR placeholder for the future hosted product. The app shell is intentionally thin; data-rich screens come after auth and session flow are proven."
+	title="Hosted intelligence dashboard"
+	subtitle="The shell is now backed by a real authenticated runtime endpoint. Next comes report discovery, workspace context, and hosted intelligence workflows."
 >
-	<div class="stack">
-		<p class="callout">
-			Session resolution happens in Astro middleware, and the browser talks
-			directly to the runtime auth server just like the reference application.
-		</p>
+	<div class="dashboard-stack">
+		<section class="callout">
+			<strong>Runtime API connected.</strong>
+			<span>
+				{me
+					? ` Signed in as ${displayName}, session valid until ${sessionExpiry}.`
+					: " Unable to resolve /api/me from the runtime."}
+			</span>
+		</section>
 
-		<div class="split-actions">
-			<a class="button" href="/sign-out">Sign out</a>
-			<a class="button-secondary" href={`${SERVER_BASE_URL}/api/auth/get-session`}>
-				Inspect session JSON
-			</a>
-		</div>
+		<section class="dashboard-grid">
+			<article class="dashboard-card dashboard-card-primary">
+				<p class="card-kicker">Continue</p>
+				<h2>Intelligence workspace</h2>
+				<p>
+					The next hosted slice is the authenticated intelligence experience,
+					with runtime-backed context and user-scoped state.
+				</p>
+				<div class="card-actions">
+					<a class="button" href="/sign-out">Sign out</a>
+				</div>
+			</article>
 
-		<div class="json-card">
-			<h2>Current Session Snapshot</h2>
-			<pre class="json-block">{sessionSnapshot}</pre>
-		</div>
+			<article class="dashboard-card">
+				<p class="card-kicker">Account</p>
+				<h2>{displayName}</h2>
+				<dl class="fact-list">
+					<div>
+						<dt>Email</dt>
+						<dd>{me?.user.email ?? "Unavailable"}</dd>
+					</div>
+					<div>
+						<dt>Verified</dt>
+						<dd>{me?.user.emailVerified ? "Yes" : "Not yet"}</dd>
+					</div>
+					<div>
+						<dt>Session expires</dt>
+						<dd>{sessionExpiry}</dd>
+					</div>
+				</dl>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Workspace</p>
+				<h2>{workspaces[0]?.name ?? "No workspace yet"}</h2>
+				{workspaces[0] ? (
+					<dl class="fact-list">
+						<div>
+							<dt>Slug</dt>
+							<dd>{workspaces[0].slug}</dd>
+						</div>
+						<div>
+							<dt>Created</dt>
+							<dd>
+								{new Date(workspaces[0].createdAt).toLocaleString("en-GB", {
+									dateStyle: "medium",
+									timeStyle: "short",
+								})}
+							</dd>
+						</div>
+					</dl>
+				) : (
+					<p>Workspace provisioning will happen on first authenticated access.</p>
+				)}
+				<a class="text-link" href={`${SERVER_BASE_URL}/api/workspaces`}>
+					Inspect workspace JSON
+				</a>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Reports</p>
+				<h2>
+					{reports.length > 0
+						? `${reports.length} report${reports.length === 1 ? "" : "s"}`
+						: "No reports yet"}
+				</h2>
+				{reports.length > 0 ? (
+					<ul class="todo-list">
+						{reports.slice(0, 3).map((report) => (
+							<li>
+								<strong>{report.name}</strong> · {report.kind} · {report.status}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p>
+						Report discovery is wired, but no hosted report records exist yet for
+						this workspace.
+					</p>
+				)}
+				<a class="text-link" href={`${SERVER_BASE_URL}/api/reports`}>
+					Inspect reports JSON
+				</a>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Plan</p>
+				<h2>What comes next</h2>
+				<ul class="todo-list">
+					<li>Populate report records from imported Planetnik datasets</li>
+					<li>Hosted intelligence route with authenticated chat state</li>
+					<li>Multi-workspace account model beyond personal workspace</li>
+				</ul>
+			</article>
+		</section>
 	</div>
 </AppShell>
