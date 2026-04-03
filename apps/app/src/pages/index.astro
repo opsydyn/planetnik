@@ -1,5 +1,6 @@
 ---
 import AppShell from "../layouts/AppShell.astro";
+import { buildDashboardDatasetLinks } from "../lib/dashboard-datasets.js";
 import { SERVER_BASE_URL } from "../lib/constants.js";
 import {
 	getRuntimeDatasets,
@@ -13,6 +14,7 @@ const me = await getRuntimeMe(cookie);
 const datasets = await getRuntimeDatasets();
 const workspaces = await getRuntimeWorkspaces(cookie);
 const reports = await getRuntimeReports(cookie);
+const datasetLinks = buildDashboardDatasetLinks(datasets, reports);
 const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 const reportError = Astro.url.searchParams.get("reportError");
 
@@ -186,12 +188,34 @@ const sessionExpiry = me
 						<button class="button" type="submit">Create report</button>
 					</div>
 				</form>
-				{datasets.length > 0 ? (
+				{datasetLinks.length > 0 ? (
 					<ul class="todo-list">
-						{datasets.slice(0, 3).map((dataset) => (
+						{datasetLinks.slice(0, 3).map((datasetLink) => (
 							<li>
-								<strong>{dataset.title}</strong> · {dataset.name}
-								{dataset.reportMode ? ` · ${dataset.reportMode}` : ""}
+								{datasetLink.kind === "existing-report" ? (
+									<a class="report-link" href={datasetLink.href}>
+										<strong>{datasetLink.label}</strong>
+									</a>
+								) : (
+									<form
+										action="/reports/create"
+										class="inline-report-create"
+										method="POST"
+									>
+										<input
+											name="datasetName"
+											type="hidden"
+											value={datasetLink.datasetName}
+										/>
+										<button class="dataset-link-button" type="submit">
+											<strong>{datasetLink.label}</strong>
+										</button>
+									</form>
+								)}{" "}
+								· {datasetLink.dataset.name}
+								{datasetLink.dataset.reportMode
+									? ` · ${datasetLink.dataset.reportMode}`
+									: ""}
 							</li>
 						))}
 					</ul>

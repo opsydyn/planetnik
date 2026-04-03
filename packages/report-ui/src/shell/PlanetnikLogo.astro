@@ -1,0 +1,15 @@
+---
+interface Props {
+	src: string;
+	href: string;
+	variant: "sidebar" | "topbar";
+	alt?: string;
+}
+
+const { src, href, variant, alt = "Planetnik" } = Astro.props as Props;
+const imageClass = variant === "topbar" ? "topbar-logo" : "nav-logo";
+---
+
+<a class="nav-logo-link" href={href} aria-label={alt}>
+	<img src={src} alt={alt} class={imageClass} />
+</a>

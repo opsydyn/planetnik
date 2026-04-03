@@ -8,7 +8,9 @@
 		"./theme/dashboard-shell.css": "./src/theme/dashboard-shell.css",
 		"./icons/SystemIcon": "./src/icons/SystemIcon.astro",
 		"./icons/SystemIcon.react": "./src/icons/SystemIcon.tsx",
-		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro"
+		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro",
+		"./shell/Breadcrumb": "./src/shell/Breadcrumb.astro",
+		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro"
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",

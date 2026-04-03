@@ -221,7 +221,7 @@ body {
 	display: block;
 }
 
-nav {
+#sidebar {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -236,7 +236,7 @@ nav {
 	transition: transform 0.25s ease;
 }
 
-nav.open {
+#sidebar.open {
 	transform: translateX(0);
 }
 
@@ -405,7 +405,7 @@ main h2 {
 		display: none !important;
 	}
 
-	nav {
+	#sidebar {
 		transform: translateX(0);
 		transition: transform 0.2s ease;
 	}
@@ -464,7 +464,7 @@ main h2 {
 		color: var(--color-sidebar-strong);
 	}
 
-	body.sidebar-collapsed nav {
+	body.sidebar-collapsed #sidebar {
 		transform: translateX(-100%);
 	}
 

@@ -1,5 +1,7 @@
 ---
 import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
+import Breadcrumb from "@planetnik/report-ui/shell/Breadcrumb";
+import PlanetnikLogo from "@planetnik/report-ui/shell/PlanetnikLogo";
 import ThemeSwitcher from "@planetnik/report-ui/theme-switcher/ThemeSwitcher";
 import "@planetnik/report-ui/theme/dashboard-shell.css";
 import HostedBrand from "../components/shell/HostedBrand.astro";
@@ -92,30 +94,24 @@ const publicBrand = buildHostedBrandModel({
 		) : (
 			<>
 				<header class="topbar">
-					<HostedBrand
-						brand={buildHostedBrandModel({
-							href: "/",
-							variant: "sidebar",
-							subtitle: shell.scopeLabel ?? "Hosted workspace",
-						})}
-					/>
+					<PlanetnikLogo href="/" src="/planetnik-logo-2.webp" variant="topbar" />
 					<span class="topbar-project">
 						{shell.scopeLabel ? <strong>{shell.scopeLabel}</strong> : "Hosted workspace"}
 					</span>
-					<button class="menu-toggle" id="app-menu-open" aria-label="Open navigation">
+					<button class="menu-toggle" id="menu-open" aria-label="Open navigation">
 						<SystemIcon name="list" size={22} />
 					</button>
 				</header>
 
-				<div class="nav-overlay" id="app-nav-overlay"></div>
+				<div class="nav-overlay" id="nav-overlay"></div>
 
-				<nav id="app-sidebar">
+				<nav id="sidebar">
 					<div class="nav-header">
 						<div class="nav-header-content">
-							<HostedBrand brand={shell.brand} />
+							<PlanetnikLogo href="/" src="/planetnik-logo-2.webp" variant="sidebar" />
 							{shell.scopeLabel ? <div class="project-name">{shell.scopeLabel}</div> : null}
 						</div>
-						<button class="nav-close" id="app-menu-close" aria-label="Close navigation">
+						<button class="nav-close" id="menu-close" aria-label="Close navigation">
 							<SystemIcon name="x" size={20} />
 						</button>
 					</div>
@@ -144,13 +140,13 @@ const publicBrand = buildHostedBrandModel({
 						))}
 					</div>
 
-					<button class="sidebar-toggle" id="app-sidebar-collapse" aria-label="Collapse sidebar">
+					<button class="sidebar-toggle" id="sidebar-collapse" aria-label="Collapse sidebar">
 						<SystemIcon name="sidebar-simple" size={14} />
 						<span>Collapse</span>
 					</button>
 				</nav>
 
-				<button class="sidebar-expand" id="app-sidebar-expand" aria-label="Expand sidebar">
+				<button class="sidebar-expand" id="sidebar-expand" aria-label="Expand sidebar">
 					<SystemIcon name="sidebar-simple" size={14} />
 					<span>Menu</span>
 				</button>
@@ -159,19 +155,7 @@ const publicBrand = buildHostedBrandModel({
 					<div class="app-main-header">
 						<div class="app-main-copy">
 							{shell.breadcrumbs.length > 0 ? (
-								<nav class="breadcrumb" aria-label="Breadcrumb">
-									<ol>
-										{shell.breadcrumbs.map((item) => (
-											<li>
-												{item.href ? (
-													<a href={item.href}>{item.label}</a>
-												) : (
-													<span aria-current="page">{item.label}</span>
-												)}
-											</li>
-										))}
-									</ol>
-								</nav>
+								<Breadcrumb items={shell.breadcrumbs} />
 							) : null}
 							<p class="eyebrow">Hosted report shell</p>
 							<h1 class="app-page-title">{shell.pageTitle}</h1>
@@ -199,10 +183,10 @@ const publicBrand = buildHostedBrandModel({
 
 		<script is:inline>
 			function setupHostedShellNavigation() {
-				const sidebar = document.getElementById("app-sidebar")
-				const overlay = document.getElementById("app-nav-overlay")
-				const openBtn = document.getElementById("app-menu-open")
-				const closeBtn = document.getElementById("app-menu-close")
+				const sidebar = document.getElementById("sidebar")
+				const overlay = document.getElementById("nav-overlay")
+				const openBtn = document.getElementById("menu-open")
+				const closeBtn = document.getElementById("menu-close")
 
 				if (!(sidebar instanceof HTMLElement)) return
 				if (!(overlay instanceof HTMLElement)) return
@@ -237,8 +221,8 @@ const publicBrand = buildHostedBrandModel({
 		</script>
 		<script is:inline>
 			function setupHostedSidebarToggle() {
-				const collapseBtn = document.getElementById("app-sidebar-collapse")
-				const expandBtn = document.getElementById("app-sidebar-expand")
+				const collapseBtn = document.getElementById("sidebar-collapse")
+				const expandBtn = document.getElementById("sidebar-expand")
 
 				if (!(collapseBtn instanceof HTMLButtonElement)) return
 				if (!(expandBtn instanceof HTMLButtonElement)) return

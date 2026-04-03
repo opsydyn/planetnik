@@ -1,0 +1,31 @@
+---
+export interface BreadcrumbItem {
+	label: string;
+	href?: string;
+}
+
+interface Props {
+	items: ReadonlyArray<BreadcrumbItem>;
+}
+
+const { items } = Astro.props as Props;
+const visibleItems: BreadcrumbItem[] = items.filter(
+	(item: BreadcrumbItem) => item.label.trim().length > 0,
+);
+---
+
+{visibleItems.length > 1 && (
+	<nav class="breadcrumb" aria-label="Breadcrumb">
+		<ol>
+			{visibleItems.map((item) => (
+				<li>
+					{item.href ? (
+						<a href={item.href}>{item.label}</a>
+					) : (
+						<span aria-current="page">{item.label}</span>
+					)}
+				</li>
+			))}
+		</ol>
+	</nav>
+)}

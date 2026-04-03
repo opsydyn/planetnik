@@ -213,6 +213,29 @@ input {
 	color: var(--color-text);
 }
 
+.inline-report-create {
+	display: inline;
+}
+
+.dataset-link-button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+.dataset-link-button strong {
+	color: var(--color-accent-strong);
+	text-decoration: underline;
+	text-underline-offset: 0.16em;
+}
+
+.dataset-link-button:hover strong,
+.dataset-link-button:focus-visible strong {
+	color: var(--color-accent);
+}
+
 .form-error,
 .callout {
 	padding: 0.9rem 1rem;
