@@ -36,6 +36,7 @@ const {
 	readReportLandscapeRepositoryDuplicationSummary,
 	readReportLandscapeRepositoryFilesView,
 	readReportLandscapeRepositoryUnitsView,
+	readReportLandscapeRepositoryContributorsSummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -873,6 +874,106 @@ describe("runtime report dataset helpers", () => {
 				},
 			],
 		});
+	});
+
+	test("reads landscape repository contributors from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(repoDataDir, "contributors.json"), {
+			contributors: [
+				{
+					email: "alan@example.com",
+					userName: "Alan Currie",
+					commitsCount: 18,
+					commitsCount30Days: 6,
+					commitsCount90Days: 12,
+					commitsCount180Days: 15,
+					commitsCount365Days: 18,
+					firstCommitDate: "2024-01-03",
+					latestCommitDate: "2026-03-31",
+					percentage: "45.0",
+					isRookie: false,
+				},
+				{
+					email: "new@example.com",
+					userName: "",
+					commitsCount: 8,
+					commitsCount30Days: 0,
+					commitsCount90Days: 2,
+					commitsCount180Days: 4,
+					commitsCount365Days: 8,
+					firstCommitDate: "2026-02-18",
+					latestCommitDate: "2026-03-30",
+					percentage: "20.0",
+					isRookie: true,
+				},
+			],
+		});
+		writeJson(join(repoDataDir, "contributor_impact.json"), {
+			periods: [
+				{
+					period_key: "all_time",
+					contributors: [
+						{
+							email: "alan@example.com",
+							is_glue: true,
+							is_snacking: false,
+							dominant_dimension: "coordination_relief",
+						},
+						{
+							email: "new@example.com",
+							is_glue: false,
+							is_snacking: true,
+							dominant_dimension: "knowledge_spread",
+						},
+					],
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryContributorsSummary(dataDir, "acme__web-app"),
+		).toEqual([
+			{
+				email: "alan@example.com",
+				userName: "Alan Currie",
+				displayName: "Alan Currie",
+				status: "Active",
+				commitsAllTime: 18,
+				commits30Days: 6,
+				commits90Days: 12,
+				commits180Days: 15,
+				commits365Days: 18,
+				firstCommit: "2024-01-03",
+				lastCommit: "2026-03-31",
+				percentage: "45.0",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: "Glue",
+			},
+			{
+				email: "new@example.com",
+				userName: "",
+				displayName: "new@example.com",
+				status: "Rookie",
+				commitsAllTime: 8,
+				commits30Days: 0,
+				commits90Days: 2,
+				commits180Days: 4,
+				commits365Days: 8,
+				firstCommit: "2026-02-18",
+				lastCommit: "2026-03-30",
+				percentage: "20.0",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: "Snacking",
+			},
+		]);
 	});
 
 	test("reads contributor summaries from contributors.txt and contributor_details", () => {

@@ -56,7 +56,7 @@ describe("report contributors view model", () => {
 			{ label: "Single-Component Specialists", value: "1", detail: null },
 			{ label: "Cross-Component Contributors", value: "1", detail: null },
 		]);
-		expect(viewModel.rows).toEqual([
+	expect(viewModel.rows).toEqual([
 			{
 				contributor: "Alan Currie",
 				email: "alan@example.com",
@@ -80,5 +80,38 @@ describe("report contributors view model", () => {
 				href: "/reports/effect-ts/contributors/sam@example.com",
 			},
 		]);
+	});
+
+	test("supports a custom route base for repo drilldown contributor routes", () => {
+		const viewModel = buildReportContributorsViewModel({
+			slug: "platform-landscape",
+			reportName: "web-app",
+			routeBase:
+				"/reports/platform-landscape/repositories/acme__web-app/contributors",
+			contributors: [
+				{
+					email: "alan@example.com",
+					userName: "Alan Currie",
+					displayName: "Alan Currie",
+					status: "Active",
+					commitsAllTime: 18,
+					commits30Days: 6,
+					commits90Days: 12,
+					commits180Days: 15,
+					commits365Days: 18,
+					firstCommit: "2024-01-03",
+					lastCommit: "2026-03-31",
+					percentage: "45.0",
+					filesTouched: null,
+					componentsTouched: null,
+					primaryComponent: "",
+					knowledgeSignal: "Glue",
+				},
+			],
+		});
+
+		expect(viewModel.rows[0]?.href).toBe(
+			"/reports/platform-landscape/repositories/acme__web-app/contributors/alan@example.com",
+		);
 	});
 });

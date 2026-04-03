@@ -997,6 +997,55 @@ const readReportLandscapeRepositoryUnitsView = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryContributorsSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return [];
+		}
+
+		return [
+			{
+				email: "alan@example.com",
+				userName: "Alan Currie",
+				displayName: "Alan Currie",
+				status: "Active",
+				commitsAllTime: 18,
+				commits30Days: 6,
+				commits90Days: 12,
+				commits180Days: 15,
+				commits365Days: 18,
+				firstCommit: "2024-01-03",
+				lastCommit: "2026-03-31",
+				percentage: "45.0",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: "Glue",
+			},
+			{
+				email: "new@example.com",
+				userName: "",
+				displayName: "new@example.com",
+				status: "Rookie",
+				commitsAllTime: 8,
+				commits30Days: 0,
+				commits90Days: 2,
+				commits180Days: 4,
+				commits365Days: 8,
+				firstCommit: "2026-02-18",
+				lastCommit: "2026-03-30",
+				percentage: "20.0",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: "Snacking",
+			},
+		];
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1040,6 +1089,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryDuplicationSummary,
 	readReportLandscapeRepositoryFilesView,
 	readReportLandscapeRepositoryUnitsView,
+	readReportLandscapeRepositoryContributorsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1071,6 +1121,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryDuplicationSummary.mockClear();
 		readReportLandscapeRepositoryFilesView.mockClear();
 		readReportLandscapeRepositoryUnitsView.mockClear();
+		readReportLandscapeRepositoryContributorsSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2200,6 +2251,54 @@ describe("runtime report routes", () => {
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 			"size",
+		);
+	});
+
+	test("returns landscape repository contributors for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/contributors",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			contributors: Array<{
+				displayName: string;
+				status: string;
+				commitsAllTime: number;
+			}>;
+		};
+
+		expect(body.contributors[0]).toMatchObject({
+			displayName: "Alan Currie",
+			status: "Active",
+			commitsAllTime: 18,
+		});
+		expect(readReportLandscapeRepositoryContributorsSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
 		);
 	});
 

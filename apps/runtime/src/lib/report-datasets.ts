@@ -2441,6 +2441,107 @@ export function readReportLandscapeRepositoryUnitsView(
 	return readReportUnitsView(resolveLandscapeRepoDataDir(dataDir, repoKey), view);
 }
 
+export function readReportLandscapeRepositoryContributorsSummary(
+	dataDir: string,
+	repoKey: string,
+): ReadonlyArray<ReportContributorSummary> {
+	const contributors = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"contributors.json",
+	);
+	const impact = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"contributor_impact.json",
+	);
+	const impactContributors = Array.isArray(impact?.periods)
+		? impact.periods
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.find((item) => item.period_key === "all_time")
+		: null;
+	const impactEntries = Array.isArray(impactContributors?.contributors)
+		? impactContributors.contributors.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const impactByEmail = new Map<string, Record<string, unknown>>(
+		impactEntries.flatMap((item) => {
+			const email = typeof item.email === "string" ? item.email : null;
+			return email ? [[email, item] as const] : [];
+		}),
+	);
+
+	const rows = Array.isArray(contributors?.contributors)
+		? contributors.contributors.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return rows
+		.flatMap((item) => {
+			const email = typeof item.email === "string" ? item.email : "";
+			if (email.length === 0) {
+				return [];
+			}
+
+			const userName = typeof item.userName === "string" ? item.userName : "";
+			const impactEntry = impactByEmail.get(email);
+			const knowledgeSignal =
+				impactEntry?.is_glue === true
+					? "Glue"
+					: impactEntry?.is_snacking === true
+						? "Snacking"
+						: "";
+
+			return [{
+				email,
+				userName,
+				displayName: formatContributorDisplayName({ email, userName }),
+				status: getContributorStatus({
+					isRookie: item.isRookie === true,
+					isActive:
+						typeof item.commitsCount30Days === "number" &&
+						item.commitsCount30Days > 0,
+				}),
+				commitsAllTime:
+					typeof item.commitsCount === "number" ? item.commitsCount : 0,
+				commits30Days:
+					typeof item.commitsCount30Days === "number"
+						? item.commitsCount30Days
+						: 0,
+				commits90Days:
+					typeof item.commitsCount90Days === "number"
+						? item.commitsCount90Days
+						: 0,
+				commits180Days:
+					typeof item.commitsCount180Days === "number"
+						? item.commitsCount180Days
+						: 0,
+				commits365Days:
+					typeof item.commitsCount365Days === "number"
+						? item.commitsCount365Days
+						: 0,
+				firstCommit:
+					typeof item.firstCommitDate === "string" ? item.firstCommitDate : "",
+				lastCommit:
+					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+				percentage:
+					typeof item.percentage === "string" ? item.percentage : "",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal,
+			} satisfies ReportContributorSummary];
+		})
+		.sort((left, right) => right.commitsAllTime - left.commitsAllTime);
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

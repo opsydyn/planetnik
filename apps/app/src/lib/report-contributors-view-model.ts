@@ -28,8 +28,10 @@ export type ReportContributorsViewModel = {
 export function buildReportContributorsViewModel(input: {
 	readonly slug: string;
 	readonly reportName: string;
+	readonly routeBase?: string;
 	readonly contributors: ReadonlyArray<RuntimeReportContributor>;
 }): ReportContributorsViewModel {
+	const routeBase = input.routeBase ?? `/reports/${input.slug}/contributors`;
 	const totalCommits = input.contributors.reduce(
 		(sum, contributor) => sum + contributor.commitsAllTime,
 		0,
@@ -83,7 +85,7 @@ export function buildReportContributorsViewModel(input: {
 				contributor.componentsTouched?.toLocaleString("en-GB") ?? "",
 			primaryComponent: contributor.primaryComponent,
 			knowledgeSignal: contributor.knowledgeSignal,
-			href: `/reports/${input.slug}/contributors/${contributor.email}`,
+			href: `${routeBase}/${contributor.email}`,
 		})),
 	};
 }

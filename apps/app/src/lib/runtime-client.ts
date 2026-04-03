@@ -955,6 +955,22 @@ export async function getRuntimeReportLandscapeRepositoryUnitsView(
   return data.units;
 }
 
+export async function getRuntimeReportLandscapeRepositoryContributors(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<ReadonlyArray<RuntimeReportContributor>> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .contributors.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return [];
+  }
+
+  return data.contributors;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,

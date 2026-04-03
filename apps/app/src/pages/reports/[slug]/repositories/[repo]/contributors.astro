@@ -1,0 +1,128 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import {
+	buildReportContributorsViewModel,
+} from "../../../../../lib/report-contributors-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryContributors,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const contributors = await getRuntimeReportLandscapeRepositoryContributors(
+	cookie,
+	slug,
+	repo,
+);
+const viewModel = buildReportContributorsViewModel({
+	slug,
+	reportName: repository.name,
+	routeBase: `/reports/${slug}/repositories/${repo}/contributors`,
+	contributors,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Contributors`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Contributors</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				Hosted repo contributors stay aligned with the landscape drilldown by
+				reading repo-scoped <code>contributors.json</code> plus repo impact
+				signals from <code>contributor_impact.json</code>.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/units/size`}>
+					Open units
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-card">
+			<p class="card-kicker">Table</p>
+			<h2>Contributor summary</h2>
+			{viewModel.rows.length > 0 ? (
+				<div class="contributors-table-wrap">
+					<table class="contributors-table">
+						<thead>
+							<tr>
+								<th>Contributor</th>
+								<th>Status</th>
+								<th>All time</th>
+								<th>30d</th>
+								<th>Components</th>
+								<th>Primary component</th>
+								<th>Knowledge signal</th>
+							</tr>
+						</thead>
+						<tbody>
+							{viewModel.rows.map((row) => (
+								<tr>
+									<td>
+										<div class="table-primary">
+											<a class="report-link" href={row.href}>{row.contributor}</a>
+										</div>
+										{row.email ? (
+											<div class="table-secondary">{row.email}</div>
+										) : null}
+									</td>
+									<td>{row.status}</td>
+									<td>{row.allTime}</td>
+									<td>{row.commits30Days}</td>
+									<td>{row.componentsTouched || "0"}</td>
+									<td>{row.primaryComponent || "Unassigned"}</td>
+									<td>{row.knowledgeSignal || " "}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			) : (
+				<p class="muted-copy">
+					No repository contributor summary is available for this linked dataset yet.
+				</p>
+			)}
+		</section>
+	</div>
+</AppShell>
