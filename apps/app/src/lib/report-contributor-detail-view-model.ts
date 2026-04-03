@@ -30,9 +30,11 @@ export type ReportContributorDetailViewModel = {
 export function buildReportContributorDetailViewModel(input: {
 	readonly slug: string;
 	readonly reportName: string;
+	readonly routeBase?: string;
 	readonly contributor: RuntimeReportContributorDetail;
 }): ReportContributorDetailViewModel {
 	const { contributor } = input;
+	const routeBase = input.routeBase ?? `/reports/${input.slug}/contributors`;
 
 	return {
 		heading: contributor.displayName,
@@ -103,6 +105,6 @@ export function buildReportContributorDetailViewModel(input: {
 				...file.concerns,
 			].join(" · "),
 		})),
-		backHref: `/reports/${input.slug}/contributors`,
+		backHref: routeBase,
 	};
 }

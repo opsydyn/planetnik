@@ -971,6 +971,24 @@ export async function getRuntimeReportLandscapeRepositoryContributors(
   return data.contributors;
 }
 
+export async function getRuntimeReportLandscapeRepositoryContributorDetail(
+  cookie: string,
+  slug: string,
+  repo: string,
+  email: string,
+): Promise<RuntimeReportContributorDetail | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .contributors({ email })
+    .get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.contributor;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,

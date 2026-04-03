@@ -85,4 +85,54 @@ describe("report contributor detail view model", () => {
 		]);
 		expect(viewModel.backHref).toBe("/reports/effect-ts/contributors");
 	});
+
+	test("supports a custom route base for repo drilldown contributor detail routes", () => {
+		const viewModel = buildReportContributorDetailViewModel({
+			slug: "platform-landscape",
+			reportName: "web-app",
+			routeBase:
+				"/reports/platform-landscape/repositories/acme__web-app/contributors",
+			contributor: {
+				email: "alan@example.com",
+				userName: "Alan Currie",
+				displayName: "Alan Currie",
+				status: "Active",
+				commitsCount: 18,
+				commitsCount30Days: 6,
+				commitsCount90Days: 12,
+				commitsCount180Days: 15,
+				commitsCount365Days: 18,
+				firstCommitDate: "2024-01-03",
+				latestCommitDate: "2026-03-31",
+				percentage: "45.0",
+				activeDays: 1,
+				filesCount: 1,
+				collaboratorsCount: 1,
+				topCollaboratorEmail: "sam@example.com",
+				topCollaboratorDisplayName: "Sam Example",
+				extensions: [{ extension: "ts", commits: 14, files: 6 }],
+				logicalComponents: [{ name: "web", files: 6, linesOfCode: 3200 }],
+				collaborators: [
+					{
+						email: "sam@example.com",
+						displayName: "Sam Example",
+						sharedFiles: 4,
+					},
+				],
+				topFiles: [
+					{
+						relativePath: "src/index.ts",
+						extension: "ts",
+						commits: 8,
+						logicalComponents: ["web"],
+						concerns: ["ui"],
+					},
+				],
+			},
+		});
+
+		expect(viewModel.backHref).toBe(
+			"/reports/platform-landscape/repositories/acme__web-app/contributors",
+		);
+	});
 });

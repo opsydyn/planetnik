@@ -37,6 +37,7 @@ const {
 	readReportLandscapeRepositoryFilesView,
 	readReportLandscapeRepositoryUnitsView,
 	readReportLandscapeRepositoryContributorsSummary,
+	readReportLandscapeRepositoryContributorDetail,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -974,6 +975,115 @@ describe("runtime report dataset helpers", () => {
 				knowledgeSignal: "Snacking",
 			},
 		]);
+	});
+
+	test("reads landscape repository contributor detail from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		const detailsDir = join(repoDataDir, "contributor_details");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(detailsDir, { recursive: true });
+		writeJson(join(repoDataDir, "contributors.json"), {
+			contributors: [
+				{
+					email: "alan@example.com",
+					userName: "Alan Currie",
+					commitsCount: 18,
+					commitsCount30Days: 6,
+					commitsCount90Days: 12,
+					commitsCount180Days: 15,
+					commitsCount365Days: 18,
+					firstCommitDate: "2024-01-03",
+					latestCommitDate: "2026-03-31",
+					percentage: "45.0",
+					isRookie: false,
+				},
+				{
+					email: "sam@example.com",
+					userName: "Sam Example",
+					commitsCount: 10,
+					commitsCount30Days: 4,
+					commitsCount90Days: 8,
+					commitsCount180Days: 9,
+					commitsCount365Days: 10,
+					firstCommitDate: "2024-02-10",
+					latestCommitDate: "2026-03-28",
+					percentage: "25.0",
+					isRookie: false,
+				},
+			],
+		});
+		writeJson(join(detailsDir, "alan%40example.com.json"), {
+			email: "alan@example.com",
+			userName: "Alan Currie",
+			commitsCount: 18,
+			commitsCount30Days: 6,
+			commitsCount90Days: 12,
+			commitsCount180Days: 15,
+			commitsCount365Days: 18,
+			firstCommitDate: "2024-01-03",
+			latestCommitDate: "2026-03-31",
+			isActive: true,
+			isRookie: false,
+			dailyActivity: [{ date: "2026-03-31", commits: 2 }],
+			files: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					commits: 8,
+					logicalComponents: ["web"],
+					concerns: ["ui"],
+				},
+			],
+			extensions: [{ extension: "ts", commits: 14, files: 6 }],
+			logicalComponents: [{ name: "web", files: 6, linesOfCode: 3200 }],
+			collaborators: [{ email: "sam@example.com", sharedFiles: 4 }],
+		});
+
+		expect(
+			readReportLandscapeRepositoryContributorDetail(
+				dataDir,
+				"acme__web-app",
+				"alan@example.com",
+			),
+		).toEqual({
+			email: "alan@example.com",
+			userName: "Alan Currie",
+			displayName: "Alan Currie",
+			status: "Active",
+			commitsCount: 18,
+			commitsCount30Days: 6,
+			commitsCount90Days: 12,
+			commitsCount180Days: 15,
+			commitsCount365Days: 18,
+			firstCommitDate: "2024-01-03",
+			latestCommitDate: "2026-03-31",
+			percentage: "45.0",
+			activeDays: 1,
+			filesCount: 1,
+			collaboratorsCount: 1,
+			topCollaboratorEmail: "sam@example.com",
+			topCollaboratorDisplayName: "Sam Example",
+			extensions: [{ extension: "ts", commits: 14, files: 6 }],
+			logicalComponents: [{ name: "web", files: 6, linesOfCode: 3200 }],
+			collaborators: [
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					sharedFiles: 4,
+				},
+			],
+			topFiles: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					commits: 8,
+					logicalComponents: ["web"],
+					concerns: ["ui"],
+				},
+			],
+		});
 	});
 
 	test("reads contributor summaries from contributors.txt and contributor_details", () => {

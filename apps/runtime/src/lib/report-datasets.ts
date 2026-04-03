@@ -2542,6 +2542,145 @@ export function readReportLandscapeRepositoryContributorsSummary(
 		.sort((left, right) => right.commitsAllTime - left.commitsAllTime);
 }
 
+export function readReportLandscapeRepositoryContributorDetail(
+	dataDir: string,
+	repoKey: string,
+	email: string,
+): ReportContributorDetail | null {
+	const fileName = `${encodeURIComponent(email)}.json`;
+	const repoDataDir = resolveLandscapeRepoDataDir(dataDir, repoKey);
+	const detail = readJsonRecord(join(repoDataDir, "contributor_details"), fileName);
+	if (!detail) {
+		return null;
+	}
+
+	const summaries = readReportLandscapeRepositoryContributorsSummary(dataDir, repoKey);
+	const summaryByEmail = new Map(
+		summaries.map((summary) => [summary.email, summary] as const),
+	);
+	const summary = summaryByEmail.get(email);
+	const collaborators = Array.isArray(detail.collaborators)
+		? detail.collaborators
+				.filter(
+					(collaborator): collaborator is Record<string, unknown> =>
+						typeof collaborator === "object" && collaborator !== null,
+				)
+				.map((collaborator) => {
+					const collaboratorEmail =
+						typeof collaborator.email === "string" ? collaborator.email : "";
+					const summaryMatch = summaryByEmail.get(collaboratorEmail);
+
+					return {
+						email: collaboratorEmail,
+						displayName:
+							summaryMatch?.displayName ?? getContributorDisplayName({
+								email: collaboratorEmail,
+								userName: "",
+							}),
+						sharedFiles:
+							typeof collaborator.sharedFiles === "number"
+								? collaborator.sharedFiles
+								: 0,
+					};
+				})
+		: [];
+	const topCollaborator = collaborators[0] ?? null;
+
+	return {
+		email,
+		userName: typeof detail.userName === "string" ? detail.userName : "",
+		displayName:
+			summary?.displayName ??
+			getContributorDisplayName({
+				email,
+				userName: typeof detail.userName === "string" ? detail.userName : "",
+			}),
+		status:
+			summary?.status ??
+			getContributorStatus({
+				isRookie: detail.isRookie === true,
+				isActive: detail.isActive === true,
+			}),
+		commitsCount:
+			typeof detail.commitsCount === "number" ? detail.commitsCount : 0,
+		commitsCount30Days:
+			typeof detail.commitsCount30Days === "number"
+				? detail.commitsCount30Days
+				: 0,
+		commitsCount90Days:
+			typeof detail.commitsCount90Days === "number"
+				? detail.commitsCount90Days
+				: 0,
+		commitsCount180Days:
+			typeof detail.commitsCount180Days === "number"
+				? detail.commitsCount180Days
+				: 0,
+		commitsCount365Days:
+			typeof detail.commitsCount365Days === "number"
+				? detail.commitsCount365Days
+				: 0,
+		firstCommitDate:
+			typeof detail.firstCommitDate === "string" ? detail.firstCommitDate : "",
+		latestCommitDate:
+			typeof detail.latestCommitDate === "string" ? detail.latestCommitDate : "",
+		percentage: summary?.percentage ?? "",
+		activeDays: Array.isArray(detail.dailyActivity) ? detail.dailyActivity.length : 0,
+		filesCount: Array.isArray(detail.files) ? detail.files.length : 0,
+		collaboratorsCount: collaborators.length,
+		topCollaboratorEmail: topCollaborator?.email ?? null,
+		topCollaboratorDisplayName: topCollaborator?.displayName ?? null,
+		extensions: Array.isArray(detail.extensions)
+			? detail.extensions
+					.filter(
+						(entry): entry is Record<string, unknown> =>
+							typeof entry === "object" && entry !== null,
+					)
+					.map((entry) => ({
+						extension: typeof entry.extension === "string" ? entry.extension : "",
+						commits: typeof entry.commits === "number" ? entry.commits : 0,
+						files: typeof entry.files === "number" ? entry.files : 0,
+					}))
+			: [],
+		logicalComponents: Array.isArray(detail.logicalComponents)
+			? detail.logicalComponents
+					.filter(
+						(entry): entry is Record<string, unknown> =>
+							typeof entry === "object" && entry !== null,
+					)
+					.map((entry) => ({
+						name: typeof entry.name === "string" ? entry.name : "",
+						files: typeof entry.files === "number" ? entry.files : 0,
+						linesOfCode:
+							typeof entry.linesOfCode === "number" ? entry.linesOfCode : 0,
+					}))
+			: [],
+		collaborators: collaborators.sort(
+			(left, right) => right.sharedFiles - left.sharedFiles,
+		),
+		topFiles: Array.isArray(detail.files)
+			? detail.files
+					.filter(
+						(file): file is Record<string, unknown> =>
+							typeof file === "object" && file !== null,
+					)
+					.map((file) => ({
+						relativePath:
+							typeof file.relativePath === "string" ? file.relativePath : "",
+						extension: typeof file.extension === "string" ? file.extension : "",
+						commits: typeof file.commits === "number" ? file.commits : 0,
+						logicalComponents: Array.isArray(file.logicalComponents)
+							? file.logicalComponents.filter(
+									(item): item is string => typeof item === "string",
+								)
+							: [],
+						concerns: Array.isArray(file.concerns)
+							? file.concerns.filter((item): item is string => typeof item === "string")
+							: [],
+					}))
+			: [],
+	};
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

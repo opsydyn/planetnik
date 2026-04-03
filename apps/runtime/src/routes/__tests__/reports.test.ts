@@ -1046,6 +1046,55 @@ const readReportLandscapeRepositoryContributorsSummary = mock(
 		];
 	},
 );
+const readReportLandscapeRepositoryContributorDetail = mock(
+	(analysisRoot: string, repoKey: string, email: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app" ||
+			email !== "alan@example.com"
+		) {
+			return null;
+		}
+
+		return {
+			email: "alan@example.com",
+			userName: "Alan Currie",
+			displayName: "Alan Currie",
+			status: "Active",
+			commitsCount: 18,
+			commitsCount30Days: 6,
+			commitsCount90Days: 12,
+			commitsCount180Days: 15,
+			commitsCount365Days: 18,
+			firstCommitDate: "2024-01-03",
+			latestCommitDate: "2026-03-31",
+			percentage: "45.0",
+			activeDays: 1,
+			filesCount: 1,
+			collaboratorsCount: 1,
+			topCollaboratorEmail: "sam@example.com",
+			topCollaboratorDisplayName: "Sam Example",
+			extensions: [{ extension: "ts", commits: 14, files: 6 }],
+			logicalComponents: [{ name: "web", files: 6, linesOfCode: 3200 }],
+			collaborators: [
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					sharedFiles: 4,
+				},
+			],
+			topFiles: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					commits: 8,
+					logicalComponents: ["web"],
+					concerns: ["ui"],
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1090,6 +1139,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryFilesView,
 	readReportLandscapeRepositoryUnitsView,
 	readReportLandscapeRepositoryContributorsSummary,
+	readReportLandscapeRepositoryContributorDetail,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1122,6 +1172,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryFilesView.mockClear();
 		readReportLandscapeRepositoryUnitsView.mockClear();
 		readReportLandscapeRepositoryContributorsSummary.mockClear();
+		readReportLandscapeRepositoryContributorDetail.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2299,6 +2350,55 @@ describe("runtime report routes", () => {
 		expect(readReportLandscapeRepositoryContributorsSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository contributor detail for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/contributors/alan@example.com",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			contributor: {
+				displayName: string;
+				commitsCount: number;
+				topCollaboratorDisplayName: string | null;
+			};
+		};
+
+		expect(body.contributor).toMatchObject({
+			displayName: "Alan Currie",
+			commitsCount: 18,
+			topCollaboratorDisplayName: "Sam Example",
+		});
+		expect(readReportLandscapeRepositoryContributorDetail).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+			"alan@example.com",
 		);
 	});
 
