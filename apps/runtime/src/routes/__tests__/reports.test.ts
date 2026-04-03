@@ -884,6 +884,40 @@ const readReportLandscapeRepositoryDependenciesSummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryDuplicationSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			duplicationPercentage: 2.4,
+			duplicatedLines: 442,
+			duplicateBlocksCount: 2,
+			blockSizeDistribution: [
+				{ label: "11-20 lines", value: 1, detail: "1 blocks" },
+				{ label: "21-50 lines", value: 1, detail: "1 blocks" },
+			],
+			mostDuplicatedFiles: [
+				{ label: "index.ts", value: 2 },
+				{ label: "app.ts", value: 1 },
+			],
+			largestDuplicateBlocks: [
+				{
+					blockSize: 24,
+					files: 2,
+					locations: [
+						"src/routes/reports/index.ts:10-33",
+						"src/app.ts:40-63",
+					],
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -924,6 +958,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryMetricsSummary,
 	readReportLandscapeRepositoryCommitsSummary,
 	readReportLandscapeRepositoryDependenciesSummary,
+	readReportLandscapeRepositoryDuplicationSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -952,6 +987,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryMetricsSummary.mockClear();
 		readReportLandscapeRepositoryCommitsSummary.mockClear();
 		readReportLandscapeRepositoryDependenciesSummary.mockClear();
+		readReportLandscapeRepositoryDuplicationSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -1930,6 +1966,54 @@ describe("runtime report routes", () => {
 			value: 8,
 		});
 		expect(readReportLandscapeRepositoryDependenciesSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository duplication for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/duplication",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			duplication: {
+				duplicationPercentage: number;
+				duplicatedLines: number;
+				duplicateBlocksCount: number;
+			};
+		};
+
+		expect(body.duplication).toMatchObject({
+			duplicationPercentage: 2.4,
+			duplicatedLines: 442,
+			duplicateBlocksCount: 2,
+		});
+		expect(readReportLandscapeRepositoryDuplicationSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 		);

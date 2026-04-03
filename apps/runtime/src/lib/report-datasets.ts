@@ -2418,6 +2418,13 @@ export function readReportLandscapeRepositoryDependenciesSummary(
 	return readReportDependenciesSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
+export function readReportLandscapeRepositoryDuplicationSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportDuplicationSummary | null {
+	return readReportDuplicationSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

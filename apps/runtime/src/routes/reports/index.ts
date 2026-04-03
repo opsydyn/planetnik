@@ -22,6 +22,7 @@ import {
   readReportLandscapeRepositoryMetricsSummary,
   readReportLandscapeRepositoryCommitsSummary,
   readReportLandscapeRepositoryDependenciesSummary,
+  readReportLandscapeRepositoryDuplicationSummary,
   readReportSecuritySummary,
   readReportTrendsSummary,
   readReportDuplicationSummary,
@@ -1740,6 +1741,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportDependenciesResponse({
       dependencies,
+    })
+  })
+  .get("/api/reports/:slug/repositories/:repo/duplication", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const duplication = readReportLandscapeRepositoryDuplicationSummary(
+      found.analysisRoot,
+      params.repo,
+    )
+    if (!duplication) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportDuplicationResponse({
+      duplication,
     })
   })
   .get("/api/reports/:slug/files/:view", async ({ request, params }) => {

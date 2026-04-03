@@ -903,6 +903,22 @@ export async function getRuntimeReportLandscapeRepositoryDependencies(
   return data.dependencies;
 }
 
+export async function getRuntimeReportLandscapeRepositoryDuplication(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportDuplication | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .duplication.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.duplication;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,

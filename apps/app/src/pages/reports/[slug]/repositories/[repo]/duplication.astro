@@ -1,0 +1,118 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import {
+	buildReportDuplicationViewModel,
+} from "../../../../../lib/report-duplication-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryDuplication,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const duplication = await getRuntimeReportLandscapeRepositoryDuplication(
+	cookie,
+	slug,
+	repo,
+);
+if (!duplication) {
+	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+}
+
+const viewModel = buildReportDuplicationViewModel({
+	reportName: repository.name,
+	duplication,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Duplication`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Duplication</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads the repo-scoped duplication exports from the
+				landscape analysis root and keeps the contract aligned with the static
+				drilldown.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/metrics`}>
+					Open metrics
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Files</p>
+				<h2>Most duplicated files</h2>
+				{viewModel.fileRows.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.fileRows.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No duplicated files were exported.</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Blocks</p>
+				<h2>Largest duplicate blocks</h2>
+				{viewModel.blockRows.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.blockRows.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No duplicate blocks were exported.</p>
+				)}
+			</article>
+		</section>
+	</div>
+</AppShell>

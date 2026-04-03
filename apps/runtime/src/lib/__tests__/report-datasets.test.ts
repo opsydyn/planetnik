@@ -33,6 +33,7 @@ const {
 	readReportLandscapeRepositoryMetricsSummary,
 	readReportLandscapeRepositoryCommitsSummary,
 	readReportLandscapeRepositoryDependenciesSummary,
+	readReportLandscapeRepositoryDuplicationSummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -614,6 +615,83 @@ describe("runtime report dataset helpers", () => {
 							locFrom: 900,
 						},
 					],
+				},
+			],
+		});
+	});
+
+	test("reads landscape repository duplication from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(repoDataDir, "analysisResults.json"), {
+			duplication: {
+				percentage: 2.4,
+				duplicatedLines: 442,
+			},
+		});
+		writeJson(join(repoDataDir, "duplicates.json"), {
+			duplicates: [
+				{
+					blockSize: 24,
+					duplicatedFileBlocks: [
+						{
+							file: { relativePath: "src/routes/reports/index.ts" },
+							startLine: 10,
+							endLine: 33,
+						},
+						{
+							file: { relativePath: "src/app.ts" },
+							startLine: 40,
+							endLine: 63,
+						},
+					],
+				},
+				{
+					blockSize: 12,
+					duplicatedFileBlocks: [
+						{
+							file: { relativePath: "src/routes/reports/index.ts" },
+							startLine: 70,
+							endLine: 81,
+						},
+					],
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryDuplicationSummary(dataDir, "acme__web-app"),
+		).toEqual({
+			duplicationPercentage: 2.4,
+			duplicatedLines: 442,
+			duplicateBlocksCount: 2,
+			blockSizeDistribution: [
+				{ label: "6-10 lines", value: 0, detail: "0 blocks" },
+				{ label: "11-20 lines", value: 1, detail: "1 blocks" },
+				{ label: "21-50 lines", value: 1, detail: "1 blocks" },
+				{ label: "51-100 lines", value: 0, detail: "0 blocks" },
+				{ label: "100+ lines", value: 0, detail: "0 blocks" },
+			],
+			mostDuplicatedFiles: [
+				{ label: "index.ts", value: 2 },
+				{ label: "app.ts", value: 1 },
+			],
+			largestDuplicateBlocks: [
+				{
+					blockSize: 24,
+					files: 2,
+					locations: [
+						"src/routes/reports/index.ts:10-33",
+						"src/app.ts:40-63",
+					],
+				},
+				{
+					blockSize: 12,
+					files: 1,
+					locations: ["src/routes/reports/index.ts:70-81"],
 				},
 			],
 		});
