@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../../../../layouts/AppShell.astro";
+import { buildHostedRepositoryShellContext } from "../../../../../../lib/hosted-shell.js";
 import { buildReportFilesViewModel } from "../../../../../../lib/report-files-view-model.js";
 import {
 	shouldRedirectReportDetail,
@@ -54,7 +55,11 @@ const viewModel = buildReportFilesViewModel({
 });
 ---
 
-<AppShell title={`${viewModel.heading} Files`} subtitle={viewModel.subtitle}>
+<AppShell
+	title={`${viewModel.heading} Files`}
+	subtitle={viewModel.subtitle}
+	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
+>
 	<div class="dashboard-stack">
 		<section class="dashboard-card dashboard-card-primary">
 			<p class="card-kicker">Repository Files</p>

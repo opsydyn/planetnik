@@ -1,14 +1,34 @@
 ---
+import HostedBrand from "../components/shell/HostedBrand.astro";
+import {
+	buildHostedBrandModel,
+	buildHostedShellModel,
+	isHostedNavItemActive,
+	type HostedShellContext,
+} from "../lib/hosted-shell.js";
 import "../styles/global.css";
 
 interface Props {
 	title: string;
 	subtitle: string;
+	shellContext?: HostedShellContext;
 }
 
-const { title, subtitle } = Astro.props;
+const { title, subtitle, shellContext } = Astro.props;
 const userEmail =
 	typeof Astro.locals.user?.email === "string" ? Astro.locals.user.email : null;
+const shell = buildHostedShellModel({
+	title,
+	subtitle,
+	currentPath: Astro.url.pathname,
+	userEmail,
+	context: shellContext,
+});
+const publicBrand = buildHostedBrandModel({
+	href: userEmail ? "/" : "/sign-in",
+	variant: "topbar",
+	subtitle: "Hosted app",
+});
 ---
 
 <!doctype html>
@@ -19,31 +39,161 @@ const userEmail =
 		<title>{title} | Planetnik App</title>
 	</head>
 	<body>
-		<div class="shell">
-			<header class="topbar">
-				<a class="brand" href={userEmail ? "/" : "/sign-in"}>
-					<span class="brand-kicker">Planetnik</span>
-					<span class="brand-title">Hosted Intelligence</span>
-				</a>
-				<div class="topbar-meta">
-					<span class="status-pill">
-						<span class="status-dot"></span>
-						{userEmail ? `Session: ${userEmail}` : "Astro app shell"}
-					</span>
-				</div>
-			</header>
+		{shell.chrome === "public" ? (
+			<div class="shell shell-public">
+				<header class="topbar">
+					<HostedBrand brand={publicBrand} />
+					<div class="topbar-meta">
+						<span class="status-pill">
+							<span class="status-dot"></span>
+							{shell.sessionLabel}
+						</span>
+					</div>
+				</header>
 
-			<main class="content-grid">
-				<section class="hero-panel">
-					<p class="eyebrow">Astro + Bun + runtime auth boundary</p>
-					<h1>{title}</h1>
-					<p class="lede">{subtitle}</p>
-				</section>
+				<main class="content-grid">
+					<section class="hero-panel">
+						<p class="eyebrow">Astro + Bun + runtime auth boundary</p>
+						<h1>{title}</h1>
+						<p class="lede">{subtitle}</p>
+					</section>
 
-				<section class="surface-panel">
-					<slot />
-				</section>
-			</main>
-		</div>
+					<section class="surface-panel">
+						<slot />
+					</section>
+				</main>
+			</div>
+		) : (
+			<div class="app-shell">
+				<header class="app-mobile-topbar">
+					<HostedBrand
+						brand={buildHostedBrandModel({
+							href: "/",
+							variant: "topbar",
+							subtitle: shell.scopeLabel ?? "Hosted workspace",
+						})}
+					/>
+					<button class="app-menu-toggle" id="app-menu-open" aria-label="Open navigation">
+						Menu
+					</button>
+				</header>
+
+				<div class="app-nav-overlay" id="app-nav-overlay"></div>
+
+				<aside class="app-sidebar" id="app-sidebar">
+					<div class="app-sidebar-header">
+						<div class="app-sidebar-header-content">
+							<HostedBrand brand={shell.brand} />
+							{shell.scopeLabel ? <p class="app-scope-label">{shell.scopeLabel}</p> : null}
+						</div>
+						<button class="app-menu-close" id="app-menu-close" aria-label="Close navigation">
+							Close
+						</button>
+					</div>
+
+					<div class="app-sidebar-sections">
+						{shell.navSections.map((section) => (
+							<section class="app-nav-section">
+								<p class="app-nav-section-label">{section.label}</p>
+								<div class="app-nav-items">
+									{section.items.map((item) => (
+										<a
+											class:list={[
+												"app-nav-link",
+												isHostedNavItemActive(Astro.url.pathname, item.href)
+													? "is-active"
+													: null,
+											]}
+											href={item.href}
+										>
+											{item.label}
+										</a>
+									))}
+								</div>
+							</section>
+						))}
+					</div>
+
+					<div class="app-sidebar-footer">
+						<a class="button-secondary" href="/sign-out">Sign out</a>
+					</div>
+				</aside>
+
+				<main class="app-main">
+					<div class="app-main-header">
+						<div class="app-main-copy">
+							{shell.breadcrumbs.length > 0 ? (
+								<nav class="app-breadcrumbs" aria-label="Breadcrumb">
+									{shell.breadcrumbs.map((item, index) => (
+										<>
+											{index > 0 ? <span class="app-breadcrumb-separator">/</span> : null}
+											{item.href ? (
+												<a href={item.href}>{item.label}</a>
+											) : (
+												<span aria-current="page">{item.label}</span>
+											)}
+										</>
+									))}
+								</nav>
+							) : null}
+							<p class="eyebrow">Hosted report shell</p>
+							<h1 class="app-page-title">{shell.pageTitle}</h1>
+							<p class="app-page-subtitle">{shell.subtitle}</p>
+						</div>
+
+						<div class="app-topbar-meta">
+							<span class="status-pill">
+								<span class="status-dot"></span>
+								{shell.sessionLabel}
+							</span>
+							<a class="button-secondary" href="/sign-out">Sign out</a>
+						</div>
+					</div>
+
+					<section class="app-surface-panel">
+						<slot />
+					</section>
+				</main>
+			</div>
+		)}
+
+		<script is:inline>
+			function setupHostedShellNavigation() {
+				const sidebar = document.getElementById("app-sidebar")
+				const overlay = document.getElementById("app-nav-overlay")
+				const openBtn = document.getElementById("app-menu-open")
+				const closeBtn = document.getElementById("app-menu-close")
+
+				if (!(sidebar instanceof HTMLElement)) return
+				if (!(overlay instanceof HTMLElement)) return
+				if (!(openBtn instanceof HTMLButtonElement)) return
+				if (!(closeBtn instanceof HTMLButtonElement)) return
+
+				function openNav() {
+					sidebar.classList.add("open")
+					overlay.classList.add("open")
+					document.body.style.overflow = "hidden"
+				}
+
+				function closeNav() {
+					sidebar.classList.remove("open")
+					overlay.classList.remove("open")
+					document.body.style.overflow = ""
+				}
+
+				openBtn.onclick = openNav
+				closeBtn.onclick = closeNav
+				overlay.onclick = closeNav
+
+				sidebar.querySelectorAll(".app-nav-link").forEach((link) => {
+					if (link instanceof HTMLAnchorElement) {
+						link.onclick = closeNav
+					}
+				})
+			}
+
+			document.addEventListener("astro:page-load", setupHostedShellNavigation)
+			setupHostedShellNavigation()
+		</script>
 	</body>
 </html>

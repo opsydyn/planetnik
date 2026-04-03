@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../lib/hosted-shell.js";
 import { getRuntimeReport } from "../../lib/runtime-client.js";
 import {
 	buildReportDetailViewModel,
@@ -33,6 +34,7 @@ const isLandscapeReport = reportDetail.context?.reportMode === "landscape";
 <AppShell
 	title={report.name}
 	subtitle="Hosted report detail backed by the runtime and linked to a validated Planetnik dataset."
+	shellContext={buildHostedReportShellContext(reportDetail)}
 >
 	<div class="dashboard-stack">
 		{reportCreated ? (

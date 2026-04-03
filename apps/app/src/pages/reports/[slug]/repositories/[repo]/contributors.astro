@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../../../layouts/AppShell.astro";
+import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import {
 	buildReportContributorsViewModel,
 } from "../../../../../lib/report-contributors-view-model.js";
@@ -48,6 +49,7 @@ const viewModel = buildReportContributorsViewModel({
 <AppShell
 	title={`${viewModel.heading} Contributors`}
 	subtitle={viewModel.subtitle}
+	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
 	<div class="dashboard-stack">
 		<section class="dashboard-card dashboard-card-primary">

@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../../../layouts/AppShell.astro";
+import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import { buildReportCommitsViewModel } from "../../../../../lib/report-commits-view-model.js";
 import {
 	shouldRedirectReportDetail,
@@ -44,6 +45,7 @@ const viewModel = buildReportCommitsViewModel({
 <AppShell
 	title={`${viewModel.heading} Commits`}
 	subtitle={viewModel.subtitle}
+	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
 	<div class="dashboard-stack">
 		<section class="dashboard-card dashboard-card-primary">

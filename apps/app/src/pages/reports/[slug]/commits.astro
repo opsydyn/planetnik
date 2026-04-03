@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import { buildReportCommitsViewModel } from "../../../lib/report-commits-view-model.js";
 import {
 	getRuntimeReport,
@@ -31,6 +32,7 @@ const viewModel = buildReportCommitsViewModel({
 <AppShell
 	title={`${viewModel.heading} Commits`}
 	subtitle={viewModel.subtitle}
+	shellContext={buildHostedReportShellContext(reportDetail)}
 >
 	<div class="dashboard-stack">
 		<section class="dashboard-card dashboard-card-primary">

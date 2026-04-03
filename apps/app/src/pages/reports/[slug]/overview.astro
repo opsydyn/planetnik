@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import {
 	buildReportOverviewViewModel,
 } from "../../../lib/report-overview-view-model.js";
@@ -24,6 +25,7 @@ const isLandscapeReport = reportDetail.context?.reportMode === "landscape";
 <AppShell
 	title={`${viewModel.heading} Overview`}
 	subtitle={viewModel.subtitle}
+	shellContext={buildHostedReportShellContext(reportDetail)}
 >
 	<div class="dashboard-stack">
 		{reportCreated ? (

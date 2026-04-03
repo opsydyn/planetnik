@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../../lib/hosted-shell.js";
 import { buildReportUnitsViewModel } from "../../../../lib/report-units-view-model.js";
 import {
 	getRuntimeReport,
@@ -35,7 +36,11 @@ const viewModel = buildReportUnitsViewModel({
 });
 ---
 
-<AppShell title={`${viewModel.heading} Units`} subtitle={viewModel.subtitle}>
+<AppShell
+	title={`${viewModel.heading} Units`}
+	subtitle={viewModel.subtitle}
+	shellContext={buildHostedReportShellContext(reportDetail)}
+>
 	<div class="dashboard-stack">
 		<section class="dashboard-card dashboard-card-primary">
 			<p class="card-kicker">Units</p>

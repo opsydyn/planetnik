@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../lib/report-detail-view-model.js";
@@ -31,6 +32,7 @@ const viewModel = buildReportTrendsViewModel({
 <AppShell
 	title={`${viewModel.heading} Trends`}
 	subtitle={viewModel.subtitle}
+	shellContext={buildHostedReportShellContext(reportDetail)}
 >
 	<div class="dashboard-stack">
 		<section class="dashboard-card dashboard-card-primary">
