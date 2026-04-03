@@ -331,6 +331,26 @@ export type ReportLandscapeRepositorySummary = {
 	}>;
 };
 
+export type ReportLandscapeRepositoriesSummary = {
+	readonly totalRepositories: number;
+	readonly active30d: number;
+	readonly totalMainLoc: number;
+	readonly averageMainLoc: number;
+	readonly repositories: ReadonlyArray<{
+		readonly repoKey: string;
+		readonly name: string;
+		readonly description: string;
+		readonly mainLinesOfCode: number;
+		readonly mainFilesCount: number;
+		readonly commits30d: number;
+		readonly commits90d: number;
+		readonly contributorsCount: number;
+		readonly contributors30d: number;
+		readonly latestCommitDate: string;
+		readonly tags: ReadonlyArray<string>;
+	}>;
+};
+
 export type ReportComponentsSummary = {
 	readonly totalComponents: number;
 	readonly singleOwnerComponents: number;
@@ -2773,6 +2793,88 @@ export function readReportLandscapeRepositorySummary(
 			typeof duplication?.percentage === "number" ? duplication.percentage : null,
 		links,
 		topContributors,
+	};
+}
+
+export function readReportLandscapeRepositoriesSummary(
+	dataDir: string,
+): ReportLandscapeRepositoriesSummary | null {
+	const repositories = readJsonRecord(dataDir, "landscape_repositories.json");
+	const repositoryEntries = Array.isArray(repositories?.repositories)
+		? repositories.repositories.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	if (repositoryEntries.length === 0) {
+		return null;
+	}
+
+	const rows = repositoryEntries
+		.map((item) => {
+			const repoKey = typeof item.repoKey === "string" ? item.repoKey : null;
+			const name = typeof item.name === "string" ? item.name : null;
+			const latestCommitDate =
+				typeof item.latestCommitDate === "string" ? item.latestCommitDate : null;
+
+			if (!repoKey || !name || !latestCommitDate) {
+				return null;
+			}
+
+			const tags = Array.isArray(item.tags)
+				? item.tags
+						.filter(
+							(tag): tag is Record<string, unknown> =>
+								typeof tag === "object" && tag !== null,
+						)
+						.map((tag) =>
+							typeof tag.name === "string" ? tag.name : null,
+						)
+						.filter((tag): tag is string => tag !== null)
+				: [];
+
+			return {
+				repoKey,
+				name,
+				description:
+					typeof item.description === "string" && item.description.trim().length > 0
+						? item.description
+						: "—",
+				mainLinesOfCode:
+					typeof item.mainLinesOfCode === "number" ? item.mainLinesOfCode : 0,
+				mainFilesCount:
+					typeof item.mainFilesCount === "number" ? item.mainFilesCount : 0,
+				commits30d: typeof item.commits30d === "number" ? item.commits30d : 0,
+				commits90d: typeof item.commits90d === "number" ? item.commits90d : 0,
+				contributorsCount:
+					typeof item.contributorsCount === "number" ? item.contributorsCount : 0,
+				contributors30d:
+					typeof item.contributors30d === "number" ? item.contributors30d : 0,
+				latestCommitDate,
+				tags,
+			};
+		})
+		.filter((item): item is NonNullable<typeof item> => item !== null)
+		.sort((left, right) => right.mainLinesOfCode - left.mainLinesOfCode);
+
+	if (rows.length === 0) {
+		return null;
+	}
+
+	const totalRepositories = rows.length;
+	const active30d = rows.filter((repository) => repository.commits30d > 0).length;
+	const totalMainLoc = rows.reduce(
+		(sum, repository) => sum + repository.mainLinesOfCode,
+		0,
+	);
+
+	return {
+		totalRepositories,
+		active30d,
+		totalMainLoc,
+		averageMainLoc: Math.round(totalMainLoc / Math.max(totalRepositories, 1)),
+		repositories: rows,
 	};
 }
 

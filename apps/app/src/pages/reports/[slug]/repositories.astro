@@ -1,0 +1,67 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
+import { buildReportLandscapeRepositoriesViewModel } from "../../../lib/report-landscape-repositories-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepositories,
+} from "../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repositories = await getRuntimeReportLandscapeRepositories(cookie, slug);
+if (!repositories) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const viewModel = buildReportLandscapeRepositoriesViewModel({
+	slug,
+	reportName: reportDetail.report.name,
+	repositories,
+});
+---
+
+<AppShell
+	title={`${reportDetail.report.name} Repositories`}
+	subtitle={viewModel.subtitle}
+	shellContext={buildHostedReportShellContext(reportDetail)}
+>
+	<div class="dashboard-stack">
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-card">
+			<p class="card-kicker">Largest repositories</p>
+			<h2>{viewModel.heading}</h2>
+			<ul class="todo-list">
+				{viewModel.topRepositories.map((repository) => (
+					<li>
+						<a class="report-link" href={repository.href}>
+							<strong>{repository.name}</strong>
+						</a>
+						: {repository.detail}
+					</li>
+				))}
+			</ul>
+		</section>
+	</div>
+</AppShell>

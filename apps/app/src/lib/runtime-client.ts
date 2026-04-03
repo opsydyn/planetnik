@@ -528,6 +528,26 @@ export type RuntimeReportLandscapeRepository = {
   }>;
 };
 
+export type RuntimeReportLandscapeRepositories = {
+  readonly totalRepositories: number;
+  readonly active30d: number;
+  readonly totalMainLoc: number;
+  readonly averageMainLoc: number;
+  readonly repositories: ReadonlyArray<{
+    readonly repoKey: string;
+    readonly name: string;
+    readonly description: string;
+    readonly mainLinesOfCode: number;
+    readonly mainFilesCount: number;
+    readonly commits30d: number;
+    readonly commits90d: number;
+    readonly contributorsCount: number;
+    readonly contributors30d: number;
+    readonly latestCommitDate: string;
+    readonly tags: ReadonlyArray<string>;
+  }>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -678,6 +698,10 @@ function withRuntimeCookie(cookie: string): RuntimeHeaders {
 
 function isTransportResponse(value: unknown): value is Response {
   return value instanceof Response;
+}
+
+function encodeRuntimePathParam(value: string): string {
+  return encodeURIComponent(value);
 }
 
 export async function getRuntimeMe(cookie: string): Promise<RuntimeMe | null> {
@@ -920,14 +944,29 @@ export async function getRuntimeReportLandscapeRepository(
   slug: string,
   repo: string,
 ): Promise<RuntimeReportLandscapeRepository | null> {
-  const { data } = await runtimeClient.api.reports({ slug }).repositories({ repo }).get(
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
+    .get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.repository;
+}
+
+export async function getRuntimeReportLandscapeRepositories(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportLandscapeRepositories | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).repositories.get(
     withRuntimeCookie(cookie),
   );
   if (!data || isTransportResponse(data)) {
     return null;
   }
 
-  return data.repository;
+  return data.repositories;
 }
 
 export async function getRuntimeReportLandscapeRepositoryMetrics(
@@ -937,7 +976,7 @@ export async function getRuntimeReportLandscapeRepositoryMetrics(
 ): Promise<RuntimeReportMetrics | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .metrics.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -953,7 +992,7 @@ export async function getRuntimeReportLandscapeRepositoryCommits(
 ): Promise<RuntimeReportCommits | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .commits.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -969,7 +1008,7 @@ export async function getRuntimeReportLandscapeRepositoryDependencies(
 ): Promise<RuntimeReportDependencies | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .dependencies.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -985,7 +1024,7 @@ export async function getRuntimeReportLandscapeRepositoryDuplication(
 ): Promise<RuntimeReportDuplication | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .duplication.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -1002,7 +1041,7 @@ export async function getRuntimeReportLandscapeRepositoryFilesView(
 ): Promise<RuntimeReportFilesView | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .files({ view })
     .get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
@@ -1020,7 +1059,7 @@ export async function getRuntimeReportLandscapeRepositoryUnitsView(
 ): Promise<RuntimeReportUnitsView | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .units({ view })
     .get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
@@ -1037,7 +1076,7 @@ export async function getRuntimeReportLandscapeRepositoryContributors(
 ): Promise<ReadonlyArray<RuntimeReportContributor>> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .contributors.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return [];
@@ -1054,8 +1093,8 @@ export async function getRuntimeReportLandscapeRepositoryContributorDetail(
 ): Promise<RuntimeReportContributorDetail | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
-    .contributors({ email })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
+    .contributors({ email: encodeRuntimePathParam(email) })
     .get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -1071,7 +1110,7 @@ export async function getRuntimeReportLandscapeRepositoryTopology(
 ): Promise<RuntimeReportTopology | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .topology.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -1087,7 +1126,7 @@ export async function getRuntimeReportLandscapeRepositoryImpact(
 ): Promise<RuntimeReportImpact | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .impact.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -1103,7 +1142,7 @@ export async function getRuntimeReportLandscapeRepositoryControls(
 ): Promise<RuntimeReportControls | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .controls.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -1119,7 +1158,7 @@ export async function getRuntimeReportLandscapeRepositoryComponents(
 ): Promise<RuntimeReportComponents | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .components.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;
@@ -1135,7 +1174,7 @@ export async function getRuntimeReportLandscapeRepositoryCoupling(
 ): Promise<RuntimeReportCoupling | null> {
   const { data } = await runtimeClient.api
     .reports({ slug })
-    .repositories({ repo })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
     .coupling.get(withRuntimeCookie(cookie));
   if (!data || isTransportResponse(data)) {
     return null;

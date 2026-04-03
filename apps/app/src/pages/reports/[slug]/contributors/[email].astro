@@ -2,6 +2,9 @@
 import AppShell from "../../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../../lib/hosted-shell.js";
 import {
+	getHostedReportContributorEmailFromParam,
+} from "../../../../lib/hosted-routes.js";
+import {
 	buildReportContributorDetailViewModel,
 } from "../../../../lib/report-contributor-detail-view-model.js";
 import {
@@ -14,7 +17,7 @@ import {
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
-const email = Astro.params.email ?? "";
+const email = getHostedReportContributorEmailFromParam(Astro.params.email ?? "");
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
 
 if (shouldRedirectReportDetail(reportDetail)) {

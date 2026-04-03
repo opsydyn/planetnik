@@ -1,6 +1,10 @@
 ---
 import AppShell from "../../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../../lib/hosted-shell.js";
+import {
+	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryPageHref,
+} from "../../../../../../lib/hosted-routes.js";
 import { buildReportUnitsViewModel } from "../../../../../../lib/report-units-view-model.js";
 import {
 	shouldRedirectReportDetail,
@@ -13,11 +17,11 @@ import {
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
-const repo = Astro.params.repo ?? "";
+const repo = getHostedReportRepoKeyFromParam(Astro.params.repo ?? "");
 const view = Astro.params.view;
 
 if (view !== "size" && view !== "complexity") {
-	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
@@ -44,13 +48,13 @@ const units = await getRuntimeReportLandscapeRepositoryUnitsView(
 	view,
 );
 if (!units) {
-	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
 const viewModel = buildReportUnitsViewModel({
 	reportName: repository.name,
 	slug,
-	routeBase: `/reports/${slug}/repositories/${repo}/units`,
+	routeBase: getHostedReportRepositoryPageHref(slug, repo, "/units"),
 	units,
 });
 ---

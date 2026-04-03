@@ -3,6 +3,20 @@ import { SERVER_BASE_URL } from "../lib/constants.js";
 
 const SIGN_IN_PATH = "/sign-in" as const;
 const REDIRECT_STATUS = 302 as const;
+const CLEAR_AUTH_COOKIE_NAMES = [
+	"better-auth.session_token",
+	"better-auth.session_data",
+	"better-auth.dont_remember",
+	"better-auth.account_data",
+	"__Secure-better-auth.session_token",
+	"__Secure-better-auth.session_data",
+	"__Secure-better-auth.dont_remember",
+	"__Secure-better-auth.account_data",
+	"__Host-better-auth.session_token",
+	"__Host-better-auth.session_data",
+	"__Host-better-auth.dont_remember",
+	"__Host-better-auth.account_data",
+] as const;
 
 type HeadersWithSetCookie = Headers & {
 	getSetCookie?: () => string[];
@@ -18,6 +32,18 @@ function readSetCookieHeaders(headers: Headers): string[] {
 
 	const single = headers.get("set-cookie");
 	return single ? [single] : [];
+}
+
+function appendExpiredCookie(
+	headers: Headers,
+	name: string,
+	secure: boolean,
+): void {
+	const parts = [`${name}=`, "Max-Age=0", "Path=/", "HttpOnly", "SameSite=Lax"];
+	if (secure) {
+		parts.push("Secure");
+	}
+	headers.append("set-cookie", parts.join("; "));
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -41,6 +67,11 @@ export const GET: APIRoute = async ({ request }) => {
 
 	for (const value of readSetCookieHeaders(response.headers)) {
 		headers.append("set-cookie", value);
+	}
+
+	for (const name of CLEAR_AUTH_COOKIE_NAMES) {
+		appendExpiredCookie(headers, name, false);
+		appendExpiredCookie(headers, name, true);
 	}
 
 	return new Response(null, {

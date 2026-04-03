@@ -73,6 +73,11 @@ const isLandscapeReport = reportDetail.context?.reportMode === "landscape";
 						Open trends
 					</a>
 					{isLandscapeReport ? (
+						<a class="button-secondary" href={`/reports/${slug}/repositories`}>
+							Open repositories
+						</a>
+					) : null}
+					{isLandscapeReport ? (
 						<a class="button-secondary" href={`/reports/${slug}/security`}>
 							Open security
 						</a>

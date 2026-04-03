@@ -2,6 +2,12 @@
 import AppShell from "../../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../../lib/hosted-shell.js";
 import {
+	getHostedReportContributorEmailFromParam,
+	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryHref,
+	getHostedReportRepositoryPageHref,
+} from "../../../../../../lib/hosted-routes.js";
+import {
 	buildReportContributorDetailViewModel,
 } from "../../../../../../lib/report-contributor-detail-view-model.js";
 import {
@@ -15,8 +21,8 @@ import {
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
-const repo = Astro.params.repo ?? "";
-const email = Astro.params.email ?? "";
+const repo = getHostedReportRepoKeyFromParam(Astro.params.repo ?? "");
+const email = getHostedReportContributorEmailFromParam(Astro.params.email ?? "");
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
 
 if (shouldRedirectReportDetail(reportDetail)) {
@@ -44,13 +50,13 @@ const contributor = email
 	: null;
 
 if (!contributor) {
-	return Astro.redirect(`/reports/${slug}/repositories/${repo}/contributors`);
+	return Astro.redirect(getHostedReportRepositoryPageHref(slug, repo, "/contributors"));
 }
 
 const viewModel = buildReportContributorDetailViewModel({
 	slug,
 	reportName: repository.name,
-	routeBase: `/reports/${slug}/repositories/${repo}/contributors`,
+	routeBase: getHostedReportRepositoryPageHref(slug, repo, "/contributors"),
 	contributor,
 });
 ---
@@ -73,7 +79,7 @@ const viewModel = buildReportContributorDetailViewModel({
 				<a class="button-secondary" href={viewModel.backHref}>
 					Back to contributors
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
 					Open repository dashboard
 				</a>
 				<a class="button" href="/sign-out">Sign out</a>

@@ -18,6 +18,7 @@ import {
   readReportFilesView,
   readReportHotspotsSummary,
   readReportCommitsSummary,
+  readReportLandscapeRepositoriesSummary,
   readReportLandscapeRepositorySummary,
   readReportLandscapeRepositoryMetricsSummary,
   readReportLandscapeRepositoryCommitsSummary,
@@ -701,6 +702,32 @@ const ReportLandscapeRepositoryResponseSchema = Schema.Struct({
   repository: ReportLandscapeRepositorySummarySchema,
 })
 
+const ReportLandscapeRepositoriesSummarySchema = Schema.Struct({
+  totalRepositories: Schema.Number,
+  active30d: Schema.Number,
+  totalMainLoc: Schema.Number,
+  averageMainLoc: Schema.Number,
+  repositories: Schema.Array(
+    Schema.Struct({
+      repoKey: Schema.String,
+      name: Schema.String,
+      description: Schema.String,
+      mainLinesOfCode: Schema.Number,
+      mainFilesCount: Schema.Number,
+      commits30d: Schema.Number,
+      commits90d: Schema.Number,
+      contributorsCount: Schema.Number,
+      contributors30d: Schema.Number,
+      latestCommitDate: Schema.String,
+      tags: Schema.Array(Schema.String),
+    }),
+  ),
+})
+
+const ReportLandscapeRepositoriesResponseSchema = Schema.Struct({
+  repositories: ReportLandscapeRepositoriesSummarySchema,
+})
+
 const ReportFileInventoryRowSchema = Schema.Struct({
   relativePath: Schema.String,
   extension: Schema.String,
@@ -871,6 +898,7 @@ const decodeReportCommitsResponse = Schema.decodeUnknownSync(ReportCommitsRespon
 const decodeReportTrendsResponse = Schema.decodeUnknownSync(ReportTrendsResponseSchema)
 const decodeReportSecurityResponse = Schema.decodeUnknownSync(ReportSecurityResponseSchema)
 const decodeReportLandscapeRepositoryResponse = Schema.decodeUnknownSync(ReportLandscapeRepositoryResponseSchema)
+const decodeReportLandscapeRepositoriesResponse = Schema.decodeUnknownSync(ReportLandscapeRepositoriesResponseSchema)
 const decodeReportFilesViewResponse = Schema.decodeUnknownSync(ReportFilesViewResponseSchema)
 const decodeReportUnitsViewResponse = Schema.decodeUnknownSync(ReportUnitsViewResponseSchema)
 
@@ -1620,6 +1648,61 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportSecurityResponse({
       security,
+    })
+  })
+  .get("/api/reports/:slug/repositories", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const repositories = readReportLandscapeRepositoriesSummary(found.analysisRoot)
+    if (!repositories) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportLandscapeRepositoriesResponse({
+      repositories,
     })
   })
   .get("/api/reports/:slug/repositories/:repo", async ({ request, params }) => {

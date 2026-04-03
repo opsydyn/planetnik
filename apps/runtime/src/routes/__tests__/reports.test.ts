@@ -724,6 +724,46 @@ const readReportSecuritySummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportLandscapeRepositoriesSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/platform-landscape/data") {
+		return null;
+	}
+
+	return {
+		totalRepositories: 2,
+		active30d: 1,
+		totalMainLoc: 27650,
+		averageMainLoc: 13825,
+		repositories: [
+			{
+				repoKey: "acme__web-app",
+				name: "web-app",
+				description: "Customer-facing application.",
+				mainLinesOfCode: 18450,
+				mainFilesCount: 128,
+				commits30d: 12,
+				commits90d: 34,
+				contributorsCount: 4,
+				contributors30d: 2,
+				latestCommitDate: "2026-03-31",
+				tags: ["Web"],
+			},
+			{
+				repoKey: "acme__api",
+				name: "api",
+				description: "Public API.",
+				mainLinesOfCode: 9200,
+				mainFilesCount: 76,
+				commits30d: 0,
+				commits90d: 11,
+				contributorsCount: 3,
+				contributors30d: 0,
+				latestCommitDate: "2026-03-18",
+				tags: ["Backend"],
+			},
+		],
+	};
+});
 const readReportLandscapeRepositorySummary = mock(
 	(analysisRoot: string, repoKey: string) => {
 		if (
@@ -1400,6 +1440,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportCommitsSummary,
 	readReportTrendsSummary,
 	readReportSecuritySummary,
+	readReportLandscapeRepositoriesSummary,
 	readReportLandscapeRepositorySummary,
 	readReportLandscapeRepositoryMetricsSummary,
 	readReportLandscapeRepositoryCommitsSummary,
@@ -1438,6 +1479,7 @@ describe("runtime report routes", () => {
 		readReportCommitsSummary.mockClear();
 		readReportTrendsSummary.mockClear();
 		readReportSecuritySummary.mockClear();
+		readReportLandscapeRepositoriesSummary.mockClear();
 		readReportLandscapeRepositorySummary.mockClear();
 		readReportLandscapeRepositoryMetricsSummary.mockClear();
 		readReportLandscapeRepositoryCommitsSummary.mockClear();
@@ -2228,7 +2270,56 @@ describe("runtime report routes", () => {
 			repoKey: "acme__web-app",
 			openAlerts: 3,
 		});
-		expect(readReportSecuritySummary).toHaveBeenCalledWith(
+	expect(readReportSecuritySummary).toHaveBeenCalledWith(
+		"/datasets/platform-landscape/data",
+	);
+	});
+
+	test("returns a landscape repository inventory for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/platform-landscape/repositories", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			repositories: {
+				totalRepositories: number;
+				active30d: number;
+				totalMainLoc: number;
+				averageMainLoc: number;
+				repositories: Array<{ repoKey: string; name: string }>;
+			};
+		};
+
+		expect(body.repositories.totalRepositories).toBe(2);
+		expect(body.repositories.active30d).toBe(1);
+		expect(body.repositories.totalMainLoc).toBe(27650);
+		expect(body.repositories.averageMainLoc).toBe(13825);
+		expect(body.repositories.repositories[0]).toMatchObject({
+			repoKey: "acme__web-app",
+			name: "web-app",
+		});
+		expect(readReportLandscapeRepositoriesSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 		);
 	});

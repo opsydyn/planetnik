@@ -1,4 +1,5 @@
 import type { RuntimeReportContributor } from "./runtime-client.js";
+import { getHostedReportContributorRouteParam } from "./hosted-routes.js";
 
 export type ReportContributorsCard = {
 	readonly label: string;
@@ -85,7 +86,7 @@ export function buildReportContributorsViewModel(input: {
 				contributor.componentsTouched?.toLocaleString("en-GB") ?? "",
 			primaryComponent: contributor.primaryComponent,
 			knowledgeSignal: contributor.knowledgeSignal,
-			href: `${routeBase}/${contributor.email}`,
+			href: `${routeBase}/${getHostedReportContributorRouteParam(contributor.email)}`,
 		})),
 	};
 }

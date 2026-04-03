@@ -102,7 +102,7 @@ describe("hosted shell", () => {
 		]);
 	});
 
-	test("adds a dedicated security section for landscape reports", () => {
+	test("builds portfolio navigation for landscape reports", () => {
 		const shell = buildHostedShellModel({
 			title: "Security",
 			subtitle: "Landscape dependency health",
@@ -136,9 +136,155 @@ describe("hosted shell", () => {
 			}),
 		});
 
-		expect(shell.navSections.at(-1)).toEqual({
-			label: "Security",
-			items: [{ href: "/reports/platform-landscape/security", label: "Dependency Security" }],
+		expect(shell.navSections).toEqual([
+			{
+				label: "Overview",
+				items: [
+					{
+						href: "/reports/platform-landscape/overview",
+						label: "Landscape Dashboard",
+					},
+					{ href: "/reports/platform-landscape", label: "Report Details" },
+				],
+			},
+			{
+				label: "Landscape",
+				items: [
+					{
+						href: "/reports/platform-landscape/repositories",
+						label: "Repositories",
+					},
+					{
+						href: "/reports/platform-landscape/contributors",
+						label: "Contributors",
+					},
+					{
+						href: "/reports/platform-landscape/topology",
+						label: "Team Topology",
+					},
+					{
+						href: "/reports/platform-landscape/security",
+						label: "Dependency Security",
+					},
+				],
+			},
+		]);
+	});
+
+	test("keeps repo drilldown navigation anchored in the landscape inventory", () => {
+		const shell = buildHostedShellModel({
+			title: "Metrics",
+			subtitle: "Repository metrics summary",
+			currentPath: "/reports/platform-landscape/repositories/catalog-api/metrics",
+			userEmail: "alan@example.com",
+			context: buildHostedRepositoryShellContext(
+				{
+					report: {
+						id: "report-2",
+						workspaceId: "workspace-1",
+						slug: "platform-landscape",
+						name: "Platform Landscape",
+						kind: "planetnik-report",
+						status: "connected",
+						analysisRoot: "/datasets/platform-landscape/data",
+						createdAt: "2026-04-02T17:20:19.145Z",
+						updatedAt: "2026-04-02T17:20:19.145Z",
+						lastSyncedAt: "2026-04-02T17:20:19.145Z",
+					},
+					context: {
+						mode: "landscape",
+						reportMode: "landscape",
+						title: "Platform Landscape",
+						rootRoute: "/landscape",
+						dataVersion: 1,
+						source: "landscape",
+						hasLandscape: true,
+						hasSingleRepositoryAnalysis: false,
+						primaryNavigation: ["overview", "repositories"],
+					},
+					artifact: null,
+				},
+				{
+					repoKey: "catalog-api",
+					name: "Catalog API",
+				},
+			),
+		});
+
+		expect(shell.navSections[0]).toEqual({
+			label: "Landscape",
+			items: [
+				{
+					href: "/reports/platform-landscape/overview",
+					label: "Landscape Dashboard",
+				},
+				{
+					href: "/reports/platform-landscape/repositories",
+					label: "Repositories",
+				},
+				{
+					href: "/reports/platform-landscape/contributors",
+					label: "Contributors",
+				},
+				{
+					href: "/reports/platform-landscape/topology",
+					label: "Team Topology",
+				},
+				{
+					href: "/reports/platform-landscape/security",
+					label: "Dependency Security",
+				},
+			],
+		});
+	});
+
+	test("encodes repo route params in repository breadcrumbs and drilldown links", () => {
+		const shell = buildHostedShellModel({
+			title: "Metrics",
+			subtitle: "Repository metrics summary",
+			currentPath:
+				"/reports/platform-landscape/repositories/acme$2Fcatalog-api/metrics",
+			userEmail: "alan@example.com",
+			context: buildHostedRepositoryShellContext(
+				{
+					report: {
+						id: "report-2",
+						workspaceId: "workspace-1",
+						slug: "platform-landscape",
+						name: "Platform Landscape",
+						kind: "planetnik-report",
+						status: "connected",
+						analysisRoot: "/datasets/platform-landscape/data",
+						createdAt: "2026-04-02T17:20:19.145Z",
+						updatedAt: "2026-04-02T17:20:19.145Z",
+						lastSyncedAt: "2026-04-02T17:20:19.145Z",
+					},
+					context: {
+						mode: "landscape",
+						reportMode: "landscape",
+						title: "Platform Landscape",
+						rootRoute: "/landscape",
+						dataVersion: 1,
+						source: "landscape",
+						hasLandscape: true,
+						hasSingleRepositoryAnalysis: false,
+						primaryNavigation: ["overview", "repositories"],
+					},
+					artifact: null,
+				},
+				{
+					repoKey: "acme/catalog-api",
+					name: "Catalog API",
+				},
+			),
+		});
+
+		expect(shell.navSections[1]?.items[0]?.href).toBe(
+			"/reports/platform-landscape/repositories/acme$2Fcatalog-api",
+		);
+		expect(shell.breadcrumbs[3]).toEqual({
+			label: "Catalog API",
+			href: "/reports/platform-landscape/repositories/acme$2Fcatalog-api",
 		});
 	});
 
@@ -184,7 +330,7 @@ describe("hosted shell", () => {
 
 		expect(shell.scopeLabel).toBe("Landscape for Platform Landscape • Catalog API");
 		expect(shell.navSections.map((section) => section.label)).toEqual([
-			"Report",
+			"Landscape",
 			"Repository",
 			"Structure",
 			"Files",
@@ -209,6 +355,10 @@ describe("hosted shell", () => {
 		expect(shell.breadcrumbs).toEqual([
 			{ label: "Home", href: "/" },
 			{ label: "Platform Landscape", href: "/reports/platform-landscape/overview" },
+			{
+				label: "Repositories",
+				href: "/reports/platform-landscape/repositories",
+			},
 			{
 				label: "Catalog API",
 				href: "/reports/platform-landscape/repositories/catalog-api",

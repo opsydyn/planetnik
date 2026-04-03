@@ -2,6 +2,10 @@
 import AppShell from "../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../lib/hosted-shell.js";
 import {
+	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryPageHref,
+} from "../../../../lib/hosted-routes.js";
+import {
 	shouldRedirectReportDetail,
 } from "../../../../lib/report-detail-view-model.js";
 import { buildReportLandscapeRepositoryViewModel } from "../../../../lib/report-landscape-repository-view-model.js";
@@ -12,7 +16,7 @@ import {
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
-const repo = Astro.params.repo ?? "";
+const repo = getHostedReportRepoKeyFromParam(Astro.params.repo ?? "");
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
 
 if (shouldRedirectReportDetail(reportDetail)) {
@@ -50,40 +54,40 @@ const viewModel = buildReportLandscapeRepositoryViewModel({
 				<a class="button-secondary" href={`/reports/${slug}/overview`}>
 					Open landscape overview
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/metrics`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/metrics")}>
 					Open metrics
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/commits`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/commits")}>
 					Open commits
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/dependencies`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/dependencies")}>
 					Open dependencies
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/duplication`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/duplication")}>
 					Open duplication
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/files/size`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/files/size")}>
 					Open files
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/units/size`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/units/size")}>
 					Open units
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/contributors`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/contributors")}>
 					Open contributors
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/components`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/components")}>
 					Open components
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/coupling`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/coupling")}>
 					Open coupling
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/topology`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/topology")}>
 					Open topology
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/impact`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/impact")}>
 					Open impact
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/controls`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/controls")}>
 					Open controls
 				</a>
 				<a class="button-secondary" href={`/reports/${slug}/security`}>

@@ -56,7 +56,7 @@ describe("report contributors view model", () => {
 			{ label: "Single-Component Specialists", value: "1", detail: null },
 			{ label: "Cross-Component Contributors", value: "1", detail: null },
 		]);
-	expect(viewModel.rows).toEqual([
+		expect(viewModel.rows).toEqual([
 			{
 				contributor: "Alan Currie",
 				email: "alan@example.com",
@@ -66,7 +66,7 @@ describe("report contributors view model", () => {
 				componentsTouched: "1",
 				primaryComponent: "runtime",
 				knowledgeSignal: "Single-component specialist",
-				href: "/reports/effect-ts/contributors/alan@example.com",
+				href: "/reports/effect-ts/contributors/alan$40example.com",
 			},
 			{
 				contributor: "sam@example.com",
@@ -77,7 +77,7 @@ describe("report contributors view model", () => {
 				componentsTouched: "5",
 				primaryComponent: "reports",
 				knowledgeSignal: "Cross-context knowledge",
-				href: "/reports/effect-ts/contributors/sam@example.com",
+				href: "/reports/effect-ts/contributors/sam$40example.com",
 			},
 		]);
 	});
@@ -111,7 +111,7 @@ describe("report contributors view model", () => {
 		});
 
 		expect(viewModel.rows[0]?.href).toBe(
-			"/reports/platform-landscape/repositories/acme__web-app/contributors/alan@example.com",
+			"/reports/platform-landscape/repositories/acme__web-app/contributors/alan$40example.com",
 		);
 	});
 });

@@ -1,6 +1,11 @@
 import type {
 	RuntimeReportDetail,
 } from "./runtime-client.js";
+import {
+	getHostedReportRepositoriesHref,
+	getHostedReportRepositoryHref,
+	getHostedReportRepositoryPageHref,
+} from "./hosted-routes.js";
 
 export type HostedNavItem = {
 	readonly href: string;
@@ -208,8 +213,12 @@ export function buildHostedShellModel(
 				href: `/reports/${context.reportSlug}/overview`,
 			},
 			{
+				label: "Repositories",
+				href: getHostedReportRepositoriesHref(context.reportSlug),
+			},
+			{
 				label: context.repoName,
-				href: `/reports/${context.reportSlug}/repositories/${context.repoKey}`,
+				href: getHostedReportRepositoryHref(context.reportSlug, context.repoKey),
 			},
 			{ label: input.title },
 		],
@@ -224,6 +233,28 @@ function buildReportNavSections(
 	context: Extract<HostedShellContext, { kind: "report" }>,
 ): ReadonlyArray<HostedNavSection> {
 	const baseHref = `/reports/${context.reportSlug}`;
+
+	if (context.reportMode === "landscape") {
+		return [
+			{
+				label: "Overview",
+				items: [
+					{ href: `${baseHref}/overview`, label: "Landscape Dashboard" },
+					{ href: baseHref, label: "Report Details" },
+				],
+			},
+			{
+				label: "Landscape",
+				items: [
+					{ href: `${baseHref}/repositories`, label: "Repositories" },
+					{ href: `${baseHref}/contributors`, label: "Contributors" },
+					{ href: `${baseHref}/topology`, label: "Team Topology" },
+					{ href: `${baseHref}/security`, label: "Dependency Security" },
+				],
+			},
+		];
+	}
+
 	const sections: HostedNavSection[] = [
 		{
 			label: "Overview",
@@ -278,13 +309,6 @@ function buildReportNavSections(
 		},
 	];
 
-	if (context.reportMode === "landscape") {
-		sections.push({
-			label: "Security",
-			items: [{ href: `${baseHref}/security`, label: "Dependency Security" }],
-		});
-	}
-
 	return sections;
 }
 
@@ -292,12 +316,18 @@ function buildRepositoryNavSections(
 	context: Extract<HostedShellContext, { kind: "repository" }>,
 ): ReadonlyArray<HostedNavSection> {
 	const reportHref = `/reports/${context.reportSlug}`;
-	const repoHref = `${reportHref}/repositories/${context.repoKey}`;
+	const repoHref = getHostedReportRepositoryHref(
+		context.reportSlug,
+		context.repoKey,
+	);
 	const sections: HostedNavSection[] = [
 		{
-			label: "Report",
+			label: "Landscape",
 			items: [
-				{ href: `${reportHref}/overview`, label: "Overview" },
+				{ href: `${reportHref}/overview`, label: "Landscape Dashboard" },
+				{ href: getHostedReportRepositoriesHref(context.reportSlug), label: "Repositories" },
+				{ href: `${reportHref}/contributors`, label: "Contributors" },
+				{ href: `${reportHref}/topology`, label: "Team Topology" },
 				{ href: `${reportHref}/security`, label: "Dependency Security" },
 			],
 		},
@@ -305,27 +335,94 @@ function buildRepositoryNavSections(
 			label: "Repository",
 			items: [
 				{ href: repoHref, label: `${context.repoName} Dashboard` },
-				{ href: `${repoHref}/metrics`, label: "Metrics" },
-				{ href: `${repoHref}/commits`, label: "Commits" },
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/metrics",
+					),
+					label: "Metrics",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/commits",
+					),
+					label: "Commits",
+				},
 			],
 		},
 		{
 			label: "Structure",
 			items: [
-				{ href: `${repoHref}/components`, label: "Components" },
-				{ href: `${repoHref}/coupling`, label: "Balanced Coupling" },
-				{ href: `${repoHref}/dependencies`, label: "Dependencies" },
-				{ href: `${repoHref}/duplication`, label: "Duplication" },
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/components",
+					),
+					label: "Components",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/coupling",
+					),
+					label: "Balanced Coupling",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/dependencies",
+					),
+					label: "Dependencies",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/duplication",
+					),
+					label: "Duplication",
+				},
 			],
 		},
 		{
 			label: "Files",
 			items: [
-				{ href: `${repoHref}/files/size`, label: "File Size" },
-				{ href: `${repoHref}/files/age`, label: "File Age" },
-				{ href: `${repoHref}/files/churn`, label: "File Churn" },
 				{
-					href: `${repoHref}/files/temporal`,
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/files/size",
+					),
+					label: "File Size",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/files/age",
+					),
+					label: "File Age",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/files/churn",
+					),
+					label: "File Churn",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/files/temporal",
+					),
 					label: "Temporal Dependencies",
 				},
 			],
@@ -333,9 +430,20 @@ function buildRepositoryNavSections(
 		{
 			label: "Units",
 			items: [
-				{ href: `${repoHref}/units/size`, label: "Unit Size" },
 				{
-					href: `${repoHref}/units/complexity`,
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/units/size",
+					),
+					label: "Unit Size",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/units/complexity",
+					),
 					label: "Conditional Complexity",
 				},
 			],
@@ -343,15 +451,43 @@ function buildRepositoryNavSections(
 		{
 			label: "Team",
 			items: [
-				{ href: `${repoHref}/contributors`, label: "Contributors" },
-				{ href: `${repoHref}/topology`, label: "Team Topology" },
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/contributors",
+					),
+					label: "Contributors",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/topology",
+					),
+					label: "Team Topology",
+				},
 			],
 		},
 		{
 			label: "Quality",
 			items: [
-				{ href: `${repoHref}/impact`, label: "Impact" },
-				{ href: `${repoHref}/controls`, label: "Goals & Controls" },
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/impact",
+					),
+					label: "Impact",
+				},
+				{
+					href: getHostedReportRepositoryPageHref(
+						context.reportSlug,
+						context.repoKey,
+						"/controls",
+					),
+					label: "Goals & Controls",
+				},
 			],
 		},
 	];

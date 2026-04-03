@@ -29,6 +29,7 @@ const {
 	readReportMetricsSummary,
 	readReportCommitsSummary,
 	readReportSecuritySummary,
+	readReportLandscapeRepositoriesSummary,
 	readReportLandscapeRepositorySummary,
 	readReportLandscapeRepositoryMetricsSummary,
 	readReportLandscapeRepositoryCommitsSummary,
@@ -305,6 +306,77 @@ describe("runtime report dataset helpers", () => {
 					},
 					meanTimeToResolveDays: null,
 					oldestOpenAlertDays: null,
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repositories summary for drilldown discovery", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_repositories.json"), {
+			repositories: [
+				{
+					repoKey: "acme__web-app",
+					name: "web-app",
+					description: "Customer-facing application.",
+					mainLinesOfCode: 18450,
+					mainFilesCount: 128,
+					commits30d: 12,
+					commits90d: 34,
+					contributorsCount: 4,
+					contributors30d: 2,
+					latestCommitDate: "2026-03-31",
+					tags: [{ key: "team:web", group: "team", name: "Web" }],
+				},
+				{
+					repoKey: "acme__api",
+					name: "api",
+					description: "",
+					mainLinesOfCode: 9200,
+					mainFilesCount: 76,
+					commits30d: 0,
+					commits90d: 11,
+					contributorsCount: 3,
+					contributors30d: 0,
+					latestCommitDate: "2026-03-18",
+					tags: [],
+				},
+			],
+		});
+
+		expect(readReportLandscapeRepositoriesSummary(dataDir)).toEqual({
+			totalRepositories: 2,
+			active30d: 1,
+			totalMainLoc: 27650,
+			averageMainLoc: 13825,
+			repositories: [
+				{
+					repoKey: "acme__web-app",
+					name: "web-app",
+					description: "Customer-facing application.",
+					mainLinesOfCode: 18450,
+					mainFilesCount: 128,
+					commits30d: 12,
+					commits90d: 34,
+					contributorsCount: 4,
+					contributors30d: 2,
+					latestCommitDate: "2026-03-31",
+					tags: ["Web"],
+				},
+				{
+					repoKey: "acme__api",
+					name: "api",
+					description: "—",
+					mainLinesOfCode: 9200,
+					mainFilesCount: 76,
+					commits30d: 0,
+					commits90d: 11,
+					contributorsCount: 3,
+					contributors30d: 0,
+					latestCommitDate: "2026-03-18",
+					tags: [],
 				},
 			],
 		});

@@ -2,6 +2,11 @@
 import AppShell from "../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import {
+	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryHref,
+	getHostedReportRepositoryPageHref,
+} from "../../../../../lib/hosted-routes.js";
+import {
 	buildReportComponentsViewModel,
 } from "../../../../../lib/report-components-view-model.js";
 import {
@@ -15,7 +20,7 @@ import {
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
-const repo = Astro.params.repo ?? "";
+const repo = getHostedReportRepoKeyFromParam(Astro.params.repo ?? "");
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
 
 if (shouldRedirectReportDetail(reportDetail)) {
@@ -39,7 +44,7 @@ const components = await getRuntimeReportLandscapeRepositoryComponents(
 	repo,
 );
 if (!components) {
-	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
 const viewModel = buildReportComponentsViewModel({
@@ -63,10 +68,10 @@ const viewModel = buildReportComponentsViewModel({
 				landscape drilldown.
 			</p>
 			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
 					Open repository dashboard
 				</a>
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/contributors`}>
+				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/contributors")}>
 					Open contributors
 				</a>
 				<a class="button" href="/sign-out">Sign out</a>
