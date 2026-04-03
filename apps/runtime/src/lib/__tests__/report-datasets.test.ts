@@ -23,9 +23,11 @@ const {
 	readReportControlsSummary,
 	readReportDependenciesSummary,
 	readReportDuplicationSummary,
+	readReportFilesView,
 	readReportImpactSummary,
 	readReportMetricsSummary,
 	readReportTopologySummary,
+	readReportUnitsView,
 	resolveReportDataSource,
 } = await import("../report-datasets.js");
 
@@ -864,6 +866,220 @@ describe("runtime report dataset helpers", () => {
 					visibleActivityScore: 6.4,
 					structuralImpactScore: 2.1,
 					reason: "Visible motion is outpacing structural leverage.",
+				},
+			],
+		});
+	});
+
+	test("reads a file size summary from files_main.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "files_main.json"), {
+			files: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					linesOfCode: 1100,
+					components: ["runtime"],
+					concerns: ["auth"],
+					commitsCount: 18,
+					contributorsCount: 4,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-31",
+				},
+				{
+					relativePath: "src/app.ts",
+					extension: "ts",
+					linesOfCode: 320,
+					components: ["runtime"],
+					concerns: ["routing"],
+				},
+				{
+					relativePath: "README.md",
+					extension: "md",
+					linesOfCode: 40,
+					components: [],
+					concerns: [],
+				},
+			],
+		});
+
+		expect(readReportFilesView(dataDir, "size")).toEqual({
+			view: "size",
+			headline: {
+				fileCount: 3,
+				totalLinesOfCode: 1460,
+			},
+			sizeDistribution: [
+				{
+					label: "1-50 LOC",
+					value: 40,
+					detail: "1 files",
+				},
+				{
+					label: "201-500 LOC",
+					value: 320,
+					detail: "1 files",
+				},
+				{
+					label: "1001+ LOC",
+					value: 1100,
+					detail: "1 files",
+				},
+			],
+			largestFiles: [
+				{
+					label: "index.ts",
+					value: 1100,
+				},
+				{
+					label: "app.ts",
+					value: 320,
+				},
+				{
+					label: "README.md",
+					value: 40,
+				},
+			],
+			rows: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					linesOfCode: 1100,
+					commitsCount: 18,
+					contributorsCount: 4,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-31",
+				},
+				{
+					relativePath: "src/app.ts",
+					extension: "ts",
+					linesOfCode: 320,
+					commitsCount: null,
+					contributorsCount: null,
+					firstDate: null,
+					latestDate: null,
+				},
+				{
+					relativePath: "README.md",
+					extension: "md",
+					linesOfCode: 40,
+					commitsCount: null,
+					contributorsCount: null,
+					firstDate: null,
+					latestDate: null,
+				},
+			],
+		});
+	});
+
+	test("reads a unit size summary from units.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "units.json"), {
+			units: [
+				{
+					shortName: "createRuntimeReport",
+					longName: "createRuntimeReport",
+					relativeFileName: "src/lib/runtime-client.ts",
+					linesOfCode: 180,
+					mcCabeIndex: 12,
+					numberOfParameters: 3,
+					startLine: 120,
+					endLine: 300,
+					components: ["runtime"],
+				},
+				{
+					shortName: "buildViewModel",
+					longName: "buildViewModel",
+					relativeFileName: "src/lib/report-overview-view-model.ts",
+					linesOfCode: 32,
+					mcCabeIndex: 4,
+					numberOfParameters: 1,
+					startLine: 10,
+					endLine: 45,
+					components: ["app"],
+				},
+				{
+					shortName: "tiny",
+					longName: "tiny",
+					relativeFileName: "src/lib/tiny.ts",
+					linesOfCode: 8,
+					mcCabeIndex: 1,
+					numberOfParameters: 0,
+					startLine: 1,
+					endLine: 8,
+					components: ["shared"],
+				},
+			],
+		});
+
+		expect(readReportUnitsView(dataDir, "size")).toEqual({
+			view: "size",
+			headline: {
+				unitCount: 3,
+				totalLinesOfCode: 220,
+			},
+			sizeRisk: [
+				{
+					label: "Low (1-20 LOC)",
+					value: 1,
+				},
+				{
+					label: "Medium (21-50 LOC)",
+					value: 1,
+				},
+				{
+					label: "Very High (101+ LOC)",
+					value: 1,
+				},
+			],
+			sizeDistribution: [
+				{
+					label: "1-10 LOC",
+					value: 8,
+					detail: "1 units",
+				},
+				{
+					label: "21-50 LOC",
+					value: 32,
+					detail: "1 units",
+				},
+				{
+					label: "101+ LOC",
+					value: 180,
+					detail: "1 units",
+				},
+			],
+			rows: [
+				{
+					shortName: "createRuntimeReport",
+					relativeFileName: "src/lib/runtime-client.ts",
+					linesOfCode: 180,
+					mcCabeIndex: 12,
+					numberOfParameters: 3,
+					startLine: 120,
+					endLine: 300,
+				},
+				{
+					shortName: "buildViewModel",
+					relativeFileName: "src/lib/report-overview-view-model.ts",
+					linesOfCode: 32,
+					mcCabeIndex: 4,
+					numberOfParameters: 1,
+					startLine: 10,
+					endLine: 45,
+				},
+				{
+					shortName: "tiny",
+					relativeFileName: "src/lib/tiny.ts",
+					linesOfCode: 8,
+					mcCabeIndex: 1,
+					numberOfParameters: 0,
+					startLine: 1,
+					endLine: 8,
 				},
 			],
 		});

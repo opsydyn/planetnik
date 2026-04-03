@@ -54,6 +54,12 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<a class="button-secondary" href={`/reports/${slug}/contributors`}>
 						Open contributors
 					</a>
+					<a class="button-secondary" href={`/reports/${slug}/files/size`}>
+						Open files
+					</a>
+					<a class="button-secondary" href={`/reports/${slug}/units/size`}>
+						Open units
+					</a>
 					<a class="button-secondary" href={`/reports/${slug}/impact`}>
 						Open impact
 					</a>
@@ -93,6 +99,8 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<li>Duplication route is live for duplicates.json-backed datasets</li>
 					<li>Dependencies route is live for component_dependencies.json-backed datasets</li>
 					<li>Controls route is live for controls.json-backed datasets</li>
+					<li>Files route is live for files_main.json, metrics.txt, and temporal_dependencies.json-backed datasets</li>
+					<li>Units route is live for units.json-backed datasets</li>
 					<li>Impact route is live for impact.json-backed datasets</li>
 					<li>Reuse static report contracts without copying Astro pages</li>
 					<li>Layer hosted intelligence onto this report shell</li>

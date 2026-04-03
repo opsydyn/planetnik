@@ -456,6 +456,112 @@ const readReportImpactSummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportFilesView = mock((analysisRoot: string, view: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data" || view !== "size") {
+		return null;
+	}
+
+	return {
+		view: "size" as const,
+		headline: {
+			fileCount: 3,
+			totalLinesOfCode: 1460,
+		},
+		sizeDistribution: [
+			{
+				label: "1-50 LOC",
+				value: 40,
+				detail: "1 files",
+			},
+			{
+				label: "201-500 LOC",
+				value: 320,
+				detail: "1 files",
+			},
+			{
+				label: "1001+ LOC",
+				value: 1100,
+				detail: "1 files",
+			},
+		],
+		largestFiles: [
+			{
+				label: "index.ts",
+				value: 1100,
+			},
+			{
+				label: "app.ts",
+				value: 320,
+			},
+		],
+		rows: [
+			{
+				relativePath: "src/index.ts",
+				extension: "ts",
+				linesOfCode: 1100,
+				commitsCount: 18,
+				contributorsCount: 4,
+				firstDate: "2024-01-03",
+				latestDate: "2026-03-31",
+			},
+		],
+	};
+});
+const readReportUnitsView = mock((analysisRoot: string, view: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data" || view !== "size") {
+		return null;
+	}
+
+	return {
+		view: "size" as const,
+		headline: {
+			unitCount: 3,
+			totalLinesOfCode: 220,
+		},
+		sizeRisk: [
+			{
+				label: "Low (1-20 LOC)",
+				value: 1,
+			},
+			{
+				label: "Medium (21-50 LOC)",
+				value: 1,
+			},
+			{
+				label: "Very High (101+ LOC)",
+				value: 1,
+			},
+		],
+		sizeDistribution: [
+			{
+				label: "1-10 LOC",
+				value: 8,
+				detail: "1 units",
+			},
+			{
+				label: "21-50 LOC",
+				value: 32,
+				detail: "1 units",
+			},
+			{
+				label: "101+ LOC",
+				value: 180,
+				detail: "1 units",
+			},
+		],
+		rows: [
+			{
+				shortName: "createRuntimeReport",
+				relativeFileName: "src/lib/runtime-client.ts",
+				linesOfCode: 180,
+				mcCabeIndex: 12,
+				numberOfParameters: 3,
+				startLine: 120,
+				endLine: 300,
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -486,6 +592,8 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportDependenciesSummary,
 	readReportControlsSummary,
 	readReportImpactSummary,
+	readReportFilesView,
+	readReportUnitsView,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -504,6 +612,8 @@ describe("runtime report routes", () => {
 		resolveReportDataSource.mockClear();
 		readReportContextSummary.mockClear();
 		readReportArtifactSummary.mockClear();
+		readReportFilesView.mockClear();
+		readReportUnitsView.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -994,6 +1104,104 @@ describe("runtime report routes", () => {
 		});
 		expect(readReportImpactSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns file size summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/files/size", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			files: {
+				view: string;
+				headline: { fileCount: number; totalLinesOfCode: number };
+				largestFiles: Array<{ label: string; value: number }>;
+			};
+		};
+
+		expect(body.files.view).toBe("size");
+		expect(body.files.headline).toMatchObject({
+			fileCount: 3,
+			totalLinesOfCode: 1460,
+		});
+		expect(body.files.largestFiles[0]).toMatchObject({
+			label: "index.ts",
+			value: 1100,
+		});
+		expect(readReportFilesView).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+			"size",
+		);
+	});
+
+	test("returns unit size summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/units/size", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			units: {
+				view: string;
+				headline: { unitCount: number; totalLinesOfCode: number };
+				rows: Array<{ shortName: string; linesOfCode: number }>;
+			};
+		};
+
+		expect(body.units.view).toBe("size");
+		expect(body.units.headline).toMatchObject({
+			unitCount: 3,
+			totalLinesOfCode: 220,
+		});
+		expect(body.units.rows[0]).toMatchObject({
+			shortName: "createRuntimeReport",
+			linesOfCode: 180,
+		});
+		expect(readReportUnitsView).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+			"size",
 		);
 	});
 

@@ -266,6 +266,138 @@ export type ReportImpactSummary = {
 	}>;
 };
 
+export type ReportFileViewName = "size" | "age" | "churn" | "temporal";
+
+export type ReportFileInventoryRow = {
+	readonly relativePath: string;
+	readonly extension: string;
+	readonly linesOfCode: number;
+	readonly commitsCount: number | null;
+	readonly contributorsCount: number | null;
+	readonly firstDate: string | null;
+	readonly latestDate: string | null;
+};
+
+export type ReportFilesSizeView = {
+	readonly view: "size";
+	readonly headline: {
+		readonly fileCount: number;
+		readonly totalLinesOfCode: number;
+	};
+	readonly sizeDistribution: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+		readonly detail: string;
+	}>;
+	readonly largestFiles: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+	readonly rows: ReadonlyArray<ReportFileInventoryRow>;
+};
+
+export type ReportFilesAgeView = {
+	readonly view: "age";
+	readonly headline: {
+		readonly ageInDays: number | null;
+		readonly activeDays: number | null;
+		readonly weeks: number | null;
+	};
+	readonly categories: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+};
+
+export type ReportFilesChurnView = {
+	readonly view: "churn";
+	readonly headline: {
+		readonly activeDays: number | null;
+		readonly weeks: number | null;
+		readonly estimatedWorkingDays: number | null;
+		readonly filesWithHistoryCount: number;
+	};
+	readonly mostChangedFiles: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+	readonly rows: ReadonlyArray<ReportFileInventoryRow>;
+};
+
+export type ReportFilesTemporalView = {
+	readonly view: "temporal";
+	readonly sections: ReadonlyArray<{
+		readonly periodKey: string;
+		readonly periodLabel: string;
+		readonly periodDays: number;
+		readonly dependencies: ReadonlyArray<{
+			readonly file1: string;
+			readonly file2: string;
+			readonly sameCommits: number;
+			readonly commitsFile1: number;
+			readonly commitsFile2: number;
+			readonly latestCommit: string;
+		}>;
+	}>;
+};
+
+export type ReportFilesView =
+	| ReportFilesSizeView
+	| ReportFilesAgeView
+	| ReportFilesChurnView
+	| ReportFilesTemporalView;
+
+export type ReportUnitViewName = "size" | "complexity";
+
+export type ReportUnitInventoryRow = {
+	readonly shortName: string;
+	readonly relativeFileName: string;
+	readonly linesOfCode: number;
+	readonly mcCabeIndex: number;
+	readonly numberOfParameters: number;
+	readonly startLine: number;
+	readonly endLine: number;
+};
+
+export type ReportUnitsSizeView = {
+	readonly view: "size";
+	readonly headline: {
+		readonly unitCount: number;
+		readonly totalLinesOfCode: number;
+	};
+	readonly sizeRisk: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+	readonly sizeDistribution: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+		readonly detail: string;
+	}>;
+	readonly rows: ReadonlyArray<ReportUnitInventoryRow>;
+};
+
+export type ReportUnitsComplexityView = {
+	readonly view: "complexity";
+	readonly headline: {
+		readonly unitCount: number;
+	};
+	readonly complexityRisk: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+	readonly complexityDistribution: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+		readonly detail: string;
+	}>;
+	readonly rows: ReadonlyArray<ReportUnitInventoryRow>;
+};
+
+export type ReportUnitsView =
+	| ReportUnitsSizeView
+	| ReportUnitsComplexityView;
+
 export type ResolvedReportDataSource = {
 	readonly dataDir: string;
 	readonly datasetName?: string;
@@ -319,6 +451,113 @@ function readTextFile(dataDir: string, fileName: string): string | null {
 	} catch {
 		return null;
 	}
+}
+
+type ReportFileRecord = {
+	readonly relativePath: string;
+	readonly extension: string;
+	readonly linesOfCode: number;
+	readonly commitsCount: number | null;
+	readonly contributorsCount: number | null;
+	readonly firstDate: string | null;
+	readonly latestDate: string | null;
+};
+
+type ReportUnitRecord = {
+	readonly shortName: string;
+	readonly relativeFileName: string;
+	readonly linesOfCode: number;
+	readonly mcCabeIndex: number;
+	readonly numberOfParameters: number;
+	readonly startLine: number;
+	readonly endLine: number;
+};
+
+function readMetricsMap(dataDir: string): Map<string, number> {
+	const text = readTextFile(dataDir, "metrics.txt");
+	if (!text) {
+		return new Map();
+	}
+
+	const metrics = new Map<string, number>();
+	for (const line of text.split("\n").map((entry) => entry.trim())) {
+		if (line.length === 0) {
+			continue;
+		}
+
+		const colonIdx = line.indexOf(":");
+		if (colonIdx < 0) {
+			continue;
+		}
+
+		const id = line.substring(0, colonIdx).trim();
+		const value = parseFloat(line.substring(colonIdx + 1).trim());
+		if (id.length === 0 || Number.isNaN(value)) {
+			continue;
+		}
+
+		metrics.set(id, value);
+	}
+
+	return metrics;
+}
+
+function readFileInventory(dataDir: string): ReadonlyArray<ReportFileRecord> {
+	const raw = readJsonRecord(dataDir, "files_main.json");
+	const files = Array.isArray(raw?.files)
+		? raw.files.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return files
+		.map((file) => ({
+			relativePath:
+				typeof file.relativePath === "string" ? file.relativePath : "",
+			extension: typeof file.extension === "string" ? file.extension : "",
+			linesOfCode: typeof file.linesOfCode === "number" ? file.linesOfCode : 0,
+			commitsCount:
+				typeof file.commitsCount === "number" ? file.commitsCount : null,
+			contributorsCount:
+				typeof file.contributorsCount === "number"
+					? file.contributorsCount
+					: null,
+			firstDate: typeof file.firstDate === "string" ? file.firstDate : null,
+			latestDate: typeof file.latestDate === "string" ? file.latestDate : null,
+		}))
+		.filter(
+			(file) => file.relativePath.length > 0 && file.linesOfCode >= 0,
+		);
+}
+
+function readUnitInventory(dataDir: string): ReadonlyArray<ReportUnitRecord> {
+	const raw = readJsonRecord(dataDir, "units.json");
+	const units = Array.isArray(raw?.units)
+		? raw.units.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return units
+		.map((unit) => ({
+			shortName: typeof unit.shortName === "string" ? unit.shortName : "",
+			relativeFileName:
+				typeof unit.relativeFileName === "string" ? unit.relativeFileName : "",
+			linesOfCode: typeof unit.linesOfCode === "number" ? unit.linesOfCode : 0,
+			mcCabeIndex:
+				typeof unit.mcCabeIndex === "number" ? unit.mcCabeIndex : 0,
+			numberOfParameters:
+				typeof unit.numberOfParameters === "number"
+					? unit.numberOfParameters
+					: 0,
+			startLine: typeof unit.startLine === "number" ? unit.startLine : 0,
+			endLine: typeof unit.endLine === "number" ? unit.endLine : 0,
+		}))
+		.filter(
+			(unit) => unit.shortName.length > 0 && unit.relativeFileName.length > 0,
+		);
 }
 
 function readContributorDetailsByEmail(
@@ -953,36 +1192,354 @@ export function readReportTopologySummary(
 	};
 }
 
-export function readReportMetricsSummary(
+export function readReportFilesView(
 	dataDir: string,
-): ReportMetricsSummary | null {
-	const text = readTextFile(dataDir, "metrics.txt");
-	if (!text) {
+	view: ReportFileViewName,
+): ReportFilesView | null {
+	const fileInventory = readFileInventory(dataDir);
+
+	if (view === "size") {
+		if (fileInventory.length === 0) {
+			return null;
+		}
+
+		const sorted = [...fileInventory].sort(
+			(left, right) => right.linesOfCode - left.linesOfCode,
+		);
+		const buckets = [
+			{ label: "1-50 LOC", min: 1, max: 50, loc: 0, count: 0 },
+			{ label: "51-100 LOC", min: 51, max: 100, loc: 0, count: 0 },
+			{ label: "101-200 LOC", min: 101, max: 200, loc: 0, count: 0 },
+			{ label: "201-500 LOC", min: 201, max: 500, loc: 0, count: 0 },
+			{ label: "501-1000 LOC", min: 501, max: 1000, loc: 0, count: 0 },
+			{
+				label: "1001+ LOC",
+				min: 1001,
+				max: Number.POSITIVE_INFINITY,
+				loc: 0,
+				count: 0,
+			},
+		];
+
+		for (const file of sorted) {
+			for (const bucket of buckets) {
+				if (
+					file.linesOfCode >= bucket.min &&
+					file.linesOfCode <= bucket.max
+				) {
+					bucket.count += 1;
+					bucket.loc += file.linesOfCode;
+					break;
+				}
+			}
+		}
+
+		return {
+			view: "size",
+			headline: {
+				fileCount: sorted.length,
+				totalLinesOfCode: sorted.reduce(
+					(sum, file) => sum + file.linesOfCode,
+					0,
+				),
+			},
+			sizeDistribution: buckets
+				.filter((bucket) => bucket.count > 0)
+				.map((bucket) => ({
+					label: bucket.label,
+					value: bucket.loc,
+					detail: `${bucket.count} files`,
+				})),
+			largestFiles: sorted.slice(0, 15).map((file) => ({
+				label: file.relativePath.split("/").pop() ?? file.relativePath,
+				value: file.linesOfCode,
+			})),
+			rows: sorted,
+		};
+	}
+
+	const metrics = readMetricsMap(dataDir);
+
+	if (view === "age") {
+		const categories = [
+			{ label: "Negligible Risk", metricId: "FILE_AGE_NEGLIGIBLE_RISK_COUNT" },
+			{ label: "Low Risk", metricId: "FILE_AGE_LOW_RISK_COUNT" },
+			{ label: "Medium Risk", metricId: "FILE_AGE_MEDIUM_RISK_COUNT" },
+			{ label: "High Risk", metricId: "FILE_AGE_HIGH_RISK_COUNT" },
+			{ label: "Very High Risk", metricId: "FILE_AGE_VERY_HIGH_RISK_COUNT" },
+		]
+			.map((category) => ({
+				label: category.label,
+				value: metrics.get(category.metricId) ?? 0,
+			}))
+			.filter((category) => category.value > 0);
+
+		const ageInDays = metrics.get("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS") ?? null;
+		const activeDays = metrics.get("FILE_CHANGE_HISTORY_ACTIVE_DAYS") ?? null;
+		const weeks = metrics.get("FILE_CHANGE_HISTORY_WEEKS") ?? null;
+		if (categories.length === 0 && ageInDays === null && activeDays === null && weeks === null) {
+			return null;
+		}
+
+		return {
+			view: "age",
+			headline: {
+				ageInDays,
+				activeDays,
+				weeks,
+			},
+			categories,
+		};
+	}
+
+	if (view === "churn") {
+		const filesWithHistory = fileInventory
+			.filter(
+				(file): file is ReportFileInventoryRow & { readonly commitsCount: number } =>
+					typeof file.commitsCount === "number" && file.commitsCount > 0,
+			)
+			.sort((left, right) => right.commitsCount - left.commitsCount);
+
+		const activeDays = metrics.get("FILE_CHANGE_HISTORY_ACTIVE_DAYS") ?? null;
+		const weeks = metrics.get("FILE_CHANGE_HISTORY_WEEKS") ?? null;
+		const estimatedWorkingDays =
+			metrics.get("FILE_CHANGE_HISTORY_ESTIMATED_WORKING_DAYS") ?? null;
+		if (
+			filesWithHistory.length === 0 &&
+			activeDays === null &&
+			weeks === null &&
+			estimatedWorkingDays === null
+		) {
+			return null;
+		}
+
+		return {
+			view: "churn",
+			headline: {
+				activeDays,
+				weeks,
+				estimatedWorkingDays,
+				filesWithHistoryCount: filesWithHistory.length,
+			},
+			mostChangedFiles: filesWithHistory.slice(0, 15).map((file) => ({
+				label: file.relativePath.split("/").pop() ?? file.relativePath,
+				value: file.commitsCount,
+			})),
+			rows: filesWithHistory,
+		};
+	}
+
+	const raw = readJsonRecord(dataDir, "temporal_dependencies.json");
+	const dependencies = Array.isArray(raw?.dependencies)
+		? raw.dependencies.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	if (view === "temporal") {
+		if (dependencies.length === 0) {
+			return null;
+		}
+
+		const grouped = new Map<string, Array<Record<string, unknown>>>();
+		for (const dependency of dependencies) {
+			const key =
+				typeof dependency.periodKey === "string" ? dependency.periodKey : "";
+			if (key.length === 0) {
+				continue;
+			}
+
+			const group = grouped.get(key) ?? [];
+			group.push(dependency);
+			grouped.set(key, group);
+		}
+
+		const sections = [...grouped.entries()]
+			.map(([periodKey, group]) => {
+				const first = group[0];
+				if (!first) {
+					return null;
+				}
+
+				return {
+					periodKey,
+					periodLabel:
+						typeof first.periodLabel === "string" ? first.periodLabel : periodKey,
+					periodDays:
+						typeof first.periodDays === "number" ? first.periodDays : 0,
+					dependencies: group
+						.map((dependency) => ({
+							file1: typeof dependency.file1 === "string" ? dependency.file1 : "",
+							file2: typeof dependency.file2 === "string" ? dependency.file2 : "",
+							sameCommits:
+								typeof dependency.sameCommits === "number"
+									? dependency.sameCommits
+									: 0,
+							commitsFile1:
+								typeof dependency.commitsFile1 === "number"
+									? dependency.commitsFile1
+									: 0,
+							commitsFile2:
+								typeof dependency.commitsFile2 === "number"
+									? dependency.commitsFile2
+									: 0,
+							latestCommit:
+								typeof dependency.latestCommit === "string"
+									? dependency.latestCommit
+									: "",
+						}))
+						.filter(
+							(dependency) =>
+								dependency.file1.length > 0 && dependency.file2.length > 0,
+						)
+						.sort((left, right) => right.sameCommits - left.sameCommits),
+				};
+			})
+			.filter((section): section is NonNullable<typeof section> => section !== null)
+			.sort((left, right) => left.periodDays - right.periodDays);
+
+		return sections.length === 0
+			? null
+			: {
+					view: "temporal",
+					sections,
+				};
+	}
+
+	return null;
+}
+
+export function readReportUnitsView(
+	dataDir: string,
+	view: ReportUnitViewName,
+): ReportUnitsView | null {
+	const unitInventory = readUnitInventory(dataDir);
+	if (unitInventory.length === 0) {
 		return null;
 	}
 
-	const metrics = text
-		.split("\n")
-		.map((line) => line.trim())
-		.filter((line) => line.length > 0)
-		.map((line) => {
-			const colonIdx = line.indexOf(":");
-			if (colonIdx < 0) {
-				return null;
-			}
-
-			const id = line.substring(0, colonIdx).trim();
-			const value = parseFloat(line.substring(colonIdx + 1).trim());
-			if (id.length === 0 || Number.isNaN(value)) {
-				return null;
-			}
-
-			return { id, value };
-		})
-		.filter(
-			(metric): metric is { readonly id: string; readonly value: number } =>
-				metric !== null,
+	if (view === "size") {
+		const sorted = [...unitInventory].sort(
+			(left, right) => right.linesOfCode - left.linesOfCode,
 		);
+		const buckets = [
+			{ label: "1-10 LOC", min: 1, max: 10, loc: 0, count: 0 },
+			{ label: "11-20 LOC", min: 11, max: 20, loc: 0, count: 0 },
+			{ label: "21-50 LOC", min: 21, max: 50, loc: 0, count: 0 },
+			{ label: "51-100 LOC", min: 51, max: 100, loc: 0, count: 0 },
+			{
+				label: "101+ LOC",
+				min: 101,
+				max: Number.POSITIVE_INFINITY,
+				loc: 0,
+				count: 0,
+			},
+		];
+
+		for (const unit of sorted) {
+			for (const bucket of buckets) {
+				if (
+					unit.linesOfCode >= bucket.min &&
+					unit.linesOfCode <= bucket.max
+				) {
+					bucket.count += 1;
+					bucket.loc += unit.linesOfCode;
+					break;
+				}
+			}
+		}
+
+		return {
+			view: "size",
+			headline: {
+				unitCount: sorted.length,
+				totalLinesOfCode: sorted.reduce(
+					(sum, unit) => sum + unit.linesOfCode,
+					0,
+				),
+			},
+			sizeRisk: [
+				{
+					label: "Low (1-20 LOC)",
+					value: (buckets[0]?.count ?? 0) + (buckets[1]?.count ?? 0),
+				},
+				{
+					label: "Medium (21-50 LOC)",
+					value: buckets[2]?.count ?? 0,
+				},
+				{
+					label: "High (51-100 LOC)",
+					value: buckets[3]?.count ?? 0,
+				},
+				{
+					label: "Very High (101+ LOC)",
+					value: buckets[4]?.count ?? 0,
+				},
+			].filter((bucket) => bucket.value > 0),
+			sizeDistribution: buckets
+				.filter((bucket) => bucket.count > 0)
+				.map((bucket) => ({
+					label: bucket.label,
+					value: bucket.loc,
+					detail: `${bucket.count} units`,
+				})),
+			rows: sorted,
+		};
+	}
+
+	const sorted = [...unitInventory].sort(
+		(left, right) => right.mcCabeIndex - left.mcCabeIndex,
+	);
+	const buckets = [
+		{ label: "1-5 (simple)", min: 1, max: 5, count: 0 },
+		{ label: "6-10 (moderate)", min: 6, max: 10, count: 0 },
+		{ label: "11-25 (complex)", min: 11, max: 25, count: 0 },
+		{
+			label: "26+ (very complex)",
+			min: 26,
+			max: Number.POSITIVE_INFINITY,
+			count: 0,
+		},
+	];
+
+	for (const unit of sorted) {
+		for (const bucket of buckets) {
+			if (unit.mcCabeIndex >= bucket.min && unit.mcCabeIndex <= bucket.max) {
+				bucket.count += 1;
+				break;
+			}
+		}
+	}
+
+	return {
+		view: "complexity",
+		headline: {
+			unitCount: sorted.length,
+		},
+		complexityRisk: buckets
+			.filter((bucket) => bucket.count > 0)
+			.map((bucket) => ({
+				label: bucket.label,
+				value: bucket.count,
+			})),
+		complexityDistribution: buckets
+			.filter((bucket) => bucket.count > 0)
+			.map((bucket) => ({
+				label: bucket.label,
+				value: bucket.count,
+				detail: `${bucket.count} units`,
+			})),
+		rows: sorted,
+	};
+}
+
+export function readReportMetricsSummary(
+	dataDir: string,
+): ReportMetricsSummary | null {
+	const metrics = [...readMetricsMap(dataDir).entries()].map(([id, value]) => ({
+		id,
+		value,
+	}));
 
 	if (metrics.length === 0) {
 		return null;

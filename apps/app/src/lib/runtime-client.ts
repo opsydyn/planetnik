@@ -302,6 +302,134 @@ export type RuntimeReportImpact = {
   }>;
 };
 
+export type RuntimeReportFileInventoryRow = {
+  readonly relativePath: string;
+  readonly extension: string;
+  readonly linesOfCode: number;
+  readonly commitsCount: number | null;
+  readonly contributorsCount: number | null;
+  readonly firstDate: string | null;
+  readonly latestDate: string | null;
+};
+
+export type RuntimeReportFilesSizeView = {
+  readonly view: "size";
+  readonly headline: {
+    readonly fileCount: number;
+    readonly totalLinesOfCode: number;
+  };
+  readonly sizeDistribution: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+    readonly detail: string;
+  }>;
+  readonly largestFiles: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+  readonly rows: ReadonlyArray<RuntimeReportFileInventoryRow>;
+};
+
+export type RuntimeReportFilesAgeView = {
+  readonly view: "age";
+  readonly headline: {
+    readonly ageInDays: number | null;
+    readonly activeDays: number | null;
+    readonly weeks: number | null;
+  };
+  readonly categories: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+};
+
+export type RuntimeReportFilesChurnView = {
+  readonly view: "churn";
+  readonly headline: {
+    readonly activeDays: number | null;
+    readonly weeks: number | null;
+    readonly estimatedWorkingDays: number | null;
+    readonly filesWithHistoryCount: number;
+  };
+  readonly mostChangedFiles: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+  readonly rows: ReadonlyArray<RuntimeReportFileInventoryRow>;
+};
+
+export type RuntimeReportFilesTemporalView = {
+  readonly view: "temporal";
+  readonly sections: ReadonlyArray<{
+    readonly periodKey: string;
+    readonly periodLabel: string;
+    readonly periodDays: number;
+    readonly dependencies: ReadonlyArray<{
+      readonly file1: string;
+      readonly file2: string;
+      readonly sameCommits: number;
+      readonly commitsFile1: number;
+      readonly commitsFile2: number;
+      readonly latestCommit: string;
+    }>;
+  }>;
+};
+
+export type RuntimeReportFilesView =
+  | RuntimeReportFilesSizeView
+  | RuntimeReportFilesAgeView
+  | RuntimeReportFilesChurnView
+  | RuntimeReportFilesTemporalView;
+
+export type RuntimeReportUnitInventoryRow = {
+  readonly shortName: string;
+  readonly relativeFileName: string;
+  readonly linesOfCode: number;
+  readonly mcCabeIndex: number;
+  readonly numberOfParameters: number;
+  readonly startLine: number;
+  readonly endLine: number;
+};
+
+export type RuntimeReportUnitsSizeView = {
+  readonly view: "size";
+  readonly headline: {
+    readonly unitCount: number;
+    readonly totalLinesOfCode: number;
+  };
+  readonly sizeRisk: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+  readonly sizeDistribution: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+    readonly detail: string;
+  }>;
+  readonly rows: ReadonlyArray<RuntimeReportUnitInventoryRow>;
+};
+
+export type RuntimeReportUnitsComplexityView = {
+  readonly view: "complexity";
+  readonly headline: {
+    readonly unitCount: number;
+  };
+  readonly complexityRisk: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+  readonly complexityDistribution: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+    readonly detail: string;
+  }>;
+  readonly rows: ReadonlyArray<RuntimeReportUnitInventoryRow>;
+};
+
+export type RuntimeReportUnitsView =
+  | RuntimeReportUnitsSizeView
+  | RuntimeReportUnitsComplexityView;
+
 export type CreateRuntimeReportInput = {
   readonly name?: string;
   readonly datasetName?: string;
@@ -503,4 +631,34 @@ export async function getRuntimeReportImpact(
   }
 
   return data.impact;
+}
+
+export async function getRuntimeReportFilesView(
+  cookie: string,
+  slug: string,
+  view: "size" | "age" | "churn" | "temporal",
+): Promise<RuntimeReportFilesView | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).files({ view }).get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.files;
+}
+
+export async function getRuntimeReportUnitsView(
+  cookie: string,
+  slug: string,
+  view: "size" | "complexity",
+): Promise<RuntimeReportUnitsView | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).units({ view }).get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.units;
 }

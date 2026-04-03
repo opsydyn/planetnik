@@ -15,10 +15,12 @@ import {
 	readReportContextSummary,
 	readReportControlsSummary,
 	readReportDependenciesSummary,
+	readReportFilesView,
 	readReportDuplicationSummary,
 	readReportImpactSummary,
 	readReportMetricsSummary,
 	readReportTopologySummary,
+	readReportUnitsView,
 	resolveReportDataSource,
 } from "../../lib/report-datasets.js";
 
@@ -400,6 +402,160 @@ const ReportImpactResponseSchema = Schema.Struct({
 	impact: ReportImpactSummarySchema,
 });
 
+const ReportFileInventoryRowSchema = Schema.Struct({
+	relativePath: Schema.String,
+	extension: Schema.String,
+	linesOfCode: Schema.Number,
+	commitsCount: Schema.NullOr(Schema.Number),
+	contributorsCount: Schema.NullOr(Schema.Number),
+	firstDate: Schema.NullOr(Schema.String),
+	latestDate: Schema.NullOr(Schema.String),
+});
+
+const ReportFilesSizeViewSchema = Schema.Struct({
+	view: Schema.Literal("size"),
+	headline: Schema.Struct({
+		fileCount: Schema.Number,
+		totalLinesOfCode: Schema.Number,
+	}),
+	sizeDistribution: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+			detail: Schema.String,
+		}),
+	),
+	largestFiles: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+		}),
+	),
+	rows: Schema.Array(ReportFileInventoryRowSchema),
+});
+
+const ReportFilesAgeViewSchema = Schema.Struct({
+	view: Schema.Literal("age"),
+	headline: Schema.Struct({
+		ageInDays: Schema.NullOr(Schema.Number),
+		activeDays: Schema.NullOr(Schema.Number),
+		weeks: Schema.NullOr(Schema.Number),
+	}),
+	categories: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+		}),
+	),
+});
+
+const ReportFilesChurnViewSchema = Schema.Struct({
+	view: Schema.Literal("churn"),
+	headline: Schema.Struct({
+		activeDays: Schema.NullOr(Schema.Number),
+		weeks: Schema.NullOr(Schema.Number),
+		estimatedWorkingDays: Schema.NullOr(Schema.Number),
+		filesWithHistoryCount: Schema.Number,
+	}),
+	mostChangedFiles: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+		}),
+	),
+	rows: Schema.Array(ReportFileInventoryRowSchema),
+});
+
+const ReportFilesTemporalViewSchema = Schema.Struct({
+	view: Schema.Literal("temporal"),
+	sections: Schema.Array(
+		Schema.Struct({
+			periodKey: Schema.String,
+			periodLabel: Schema.String,
+			periodDays: Schema.Number,
+			dependencies: Schema.Array(
+				Schema.Struct({
+					file1: Schema.String,
+					file2: Schema.String,
+					sameCommits: Schema.Number,
+					commitsFile1: Schema.Number,
+					commitsFile2: Schema.Number,
+					latestCommit: Schema.String,
+				}),
+			),
+		}),
+	),
+});
+
+const ReportFilesViewResponseSchema = Schema.Struct({
+	files: Schema.Union(
+		ReportFilesSizeViewSchema,
+		ReportFilesAgeViewSchema,
+		ReportFilesChurnViewSchema,
+		ReportFilesTemporalViewSchema,
+	),
+});
+
+const ReportUnitInventoryRowSchema = Schema.Struct({
+	shortName: Schema.String,
+	relativeFileName: Schema.String,
+	linesOfCode: Schema.Number,
+	mcCabeIndex: Schema.Number,
+	numberOfParameters: Schema.Number,
+	startLine: Schema.Number,
+	endLine: Schema.Number,
+});
+
+const ReportUnitsSizeViewSchema = Schema.Struct({
+	view: Schema.Literal("size"),
+	headline: Schema.Struct({
+		unitCount: Schema.Number,
+		totalLinesOfCode: Schema.Number,
+	}),
+	sizeRisk: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+		}),
+	),
+	sizeDistribution: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+			detail: Schema.String,
+		}),
+	),
+	rows: Schema.Array(ReportUnitInventoryRowSchema),
+});
+
+const ReportUnitsComplexityViewSchema = Schema.Struct({
+	view: Schema.Literal("complexity"),
+	headline: Schema.Struct({
+		unitCount: Schema.Number,
+	}),
+	complexityRisk: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+		}),
+	),
+	complexityDistribution: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+			detail: Schema.String,
+		}),
+	),
+	rows: Schema.Array(ReportUnitInventoryRowSchema),
+});
+
+const ReportUnitsViewResponseSchema = Schema.Struct({
+	units: Schema.Union(
+		ReportUnitsSizeViewSchema,
+		ReportUnitsComplexityViewSchema,
+	),
+});
+
 const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema);
 const decodeDatasetsResponse = Schema.decodeUnknownSync(DatasetsResponseSchema);
 const decodeCreateReportResponse = Schema.decodeUnknownSync(
@@ -431,6 +587,12 @@ const decodeReportControlsResponse = Schema.decodeUnknownSync(
 );
 const decodeReportImpactResponse = Schema.decodeUnknownSync(
 	ReportImpactResponseSchema,
+);
+const decodeReportFilesViewResponse = Schema.decodeUnknownSync(
+	ReportFilesViewResponseSchema,
+);
+const decodeReportUnitsViewResponse = Schema.decodeUnknownSync(
+	ReportUnitsViewResponseSchema,
 );
 
 export const reportRoutes = new Elysia({ name: "reports" })
@@ -1014,6 +1176,155 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportImpactResponse({
 			impact,
+		});
+	})
+	.get("/api/reports/:slug/files/:view", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		if (
+			params.view !== "size" &&
+			params.view !== "age" &&
+			params.view !== "churn" &&
+			params.view !== "temporal"
+		) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const files = readReportFilesView(found.analysisRoot, params.view);
+		if (!files) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportFilesViewResponse({
+			files,
+		});
+	})
+	.get("/api/reports/:slug/units/:view", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		if (params.view !== "size" && params.view !== "complexity") {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const units = readReportUnitsView(found.analysisRoot, params.view);
+		if (!units) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportUnitsViewResponse({
+			units,
 		});
 	})
 	.post(
