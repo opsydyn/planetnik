@@ -18,6 +18,7 @@
 		"@astrojs/node": "^10.0.4",
 		"@astrojs/react": "^5.0.2",
 		"@elysiajs/eden": "^1.4.1",
+		"@planetnik/report-ui": "workspace:*",
 		"astro": "^6.1.2",
 		"better-auth": "^1.4.19",
 		"react": "^19.2.4",

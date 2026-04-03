@@ -1,0 +1,22 @@
+{
+	"name": "@planetnik/report-ui",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./theme/dashboard-shell.css": "./src/theme/dashboard-shell.css",
+		"./icons/SystemIcon": "./src/icons/SystemIcon.astro",
+		"./icons/SystemIcon.react": "./src/icons/SystemIcon.tsx",
+		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro"
+	},
+	"scripts": {
+		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@phosphor-icons/react": "^2.1.10",
+		"react": "^19.2.4"
+	}
+}

@@ -8,8 +8,10 @@ interface Props {
 const { brand } = Astro.props;
 ---
 
-<a class:list={["hosted-brand", `hosted-brand-${brand.variant}`]} href={brand.href}>
-	<span class="hosted-brand-kicker">{brand.kicker}</span>
-	<span class="hosted-brand-title">{brand.title}</span>
-	{brand.subtitle ? <span class="hosted-brand-subtitle">{brand.subtitle}</span> : null}
+<a class:list={["nav-logo-link", `hosted-brand-${brand.variant}`]} href={brand.href}>
+	<span class="nav-wordmark">
+		<span class="nav-wordmark-kicker">{brand.kicker}</span>
+		<span class="nav-wordmark-title">{brand.title}</span>
+		{brand.subtitle ? <span class="nav-wordmark-subtitle">{brand.subtitle}</span> : null}
+	</span>
 </a>
