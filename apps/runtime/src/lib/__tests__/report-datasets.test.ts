@@ -28,6 +28,7 @@ const {
 	readReportImpactSummary,
 	readReportMetricsSummary,
 	readReportCommitsSummary,
+	readReportSecuritySummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -167,6 +168,129 @@ describe("runtime report dataset helpers", () => {
 			totalLinesOfCode: 91234,
 			commits30d: 87,
 			commits90d: 241,
+		});
+	});
+
+	test("reads a landscape security summary and joins repo keys from the landscape repository index", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_repositories.json"), {
+			repositories: [
+				{ name: "web-app", repoKey: "acme__web-app" },
+				{ name: "api", repoKey: "acme__api" },
+			],
+		});
+		writeJson(join(dataDir, "landscape_dependency_health.json"), {
+			totalRepos: 3,
+			reposWithAlerts: 2,
+			totalAlerts: 8,
+			totalOpenAlerts: 5,
+			severityCounts: {
+				critical: 1,
+				high: 2,
+				medium: 1,
+				low: 1,
+			},
+			meanTimeToResolveDays: 14,
+			supplyChainExposureScore: 0.67,
+			sharedVulnerablePackages: [
+				{
+					ecosystem: "npm",
+					name: "lodash",
+					severity: "high",
+					affectedRepos: ["web-app", "api"],
+				},
+			],
+			repoHealth: [
+				{
+					owner: "acme",
+					repo: "web-app",
+					totalAlerts: 5,
+					openAlerts: 3,
+					fixedAlerts: 2,
+					severityCounts: {
+						critical: 1,
+						high: 1,
+						medium: 1,
+						low: 0,
+					},
+					meanTimeToResolveDays: 21,
+					oldestOpenAlertDays: 40,
+				},
+				{
+					owner: "acme",
+					repo: "mobile",
+					totalAlerts: 3,
+					openAlerts: 2,
+					fixedAlerts: 1,
+					severityCounts: {
+						critical: 0,
+						high: 1,
+						medium: 0,
+						low: 1,
+					},
+					meanTimeToResolveDays: null,
+					oldestOpenAlertDays: null,
+				},
+			],
+		});
+
+		expect(readReportSecuritySummary(dataDir)).toEqual({
+			totalRepos: 3,
+			reposWithAlerts: 2,
+			totalAlerts: 8,
+			totalOpenAlerts: 5,
+			severityCounts: {
+				critical: 1,
+				high: 2,
+				medium: 1,
+				low: 1,
+			},
+			meanTimeToResolveDays: 14,
+			supplyChainExposureScore: 0.67,
+			sharedVulnerablePackages: [
+				{
+					ecosystem: "npm",
+					name: "lodash",
+					severity: "high",
+					affectedRepos: ["web-app", "api"],
+				},
+			],
+			repoHealth: [
+				{
+					owner: "acme",
+					repo: "web-app",
+					repoKey: "acme__web-app",
+					totalAlerts: 5,
+					openAlerts: 3,
+					fixedAlerts: 2,
+					severityCounts: {
+						critical: 1,
+						high: 1,
+						medium: 1,
+						low: 0,
+					},
+					meanTimeToResolveDays: 21,
+					oldestOpenAlertDays: 40,
+				},
+				{
+					owner: "acme",
+					repo: "mobile",
+					repoKey: null,
+					totalAlerts: 3,
+					openAlerts: 2,
+					fixedAlerts: 1,
+					severityCounts: {
+						critical: 0,
+						high: 1,
+						medium: 0,
+						low: 1,
+					},
+					meanTimeToResolveDays: null,
+					oldestOpenAlertDays: null,
+				},
+			],
 		});
 	});
 

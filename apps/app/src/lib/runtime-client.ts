@@ -388,6 +388,43 @@ export type RuntimeReportTrends = {
   readonly hint: string;
 };
 
+export type RuntimeReportSecurity = {
+  readonly totalRepos: number;
+  readonly reposWithAlerts: number;
+  readonly totalAlerts: number;
+  readonly totalOpenAlerts: number;
+  readonly severityCounts: {
+    readonly critical: number;
+    readonly high: number;
+    readonly medium: number;
+    readonly low: number;
+  };
+  readonly meanTimeToResolveDays: number | null;
+  readonly supplyChainExposureScore: number;
+  readonly sharedVulnerablePackages: ReadonlyArray<{
+    readonly ecosystem: string;
+    readonly name: string;
+    readonly severity: string;
+    readonly affectedRepos: ReadonlyArray<string>;
+  }>;
+  readonly repoHealth: ReadonlyArray<{
+    readonly owner: string;
+    readonly repo: string;
+    readonly repoKey: string | null;
+    readonly totalAlerts: number;
+    readonly openAlerts: number;
+    readonly fixedAlerts: number;
+    readonly severityCounts: {
+      readonly critical: number;
+      readonly high: number;
+      readonly medium: number;
+      readonly low: number;
+    };
+    readonly meanTimeToResolveDays: number | null;
+    readonly oldestOpenAlertDays: number | null;
+  }>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -759,6 +796,20 @@ export async function getRuntimeReportTrends(
   }
 
   return data.trends;
+}
+
+export async function getRuntimeReportSecurity(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportSecurity | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).security.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.security;
 }
 
 export async function getRuntimeReportFilesView(

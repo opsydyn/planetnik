@@ -27,6 +27,7 @@ const lastSyncedAt = report.lastSyncedAt
 			timeStyle: "short",
 		})
 	: "Not synced yet";
+const isLandscapeReport = reportDetail.context?.reportMode === "landscape";
 ---
 
 <AppShell
@@ -116,6 +117,14 @@ const lastSyncedAt = report.lastSyncedAt
 					>
 						Open trends
 					</a>
+					{isLandscapeReport ? (
+						<a
+							class="button-secondary"
+							href={`/reports/${report.slug}/security`}
+						>
+							Open security
+						</a>
+					) : null}
 					<a
 						class="button-secondary"
 						href={`/reports/${report.slug}/impact`}

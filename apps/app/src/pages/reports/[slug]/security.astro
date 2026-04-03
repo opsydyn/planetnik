@@ -1,0 +1,103 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
+import { buildReportSecurityViewModel } from "../../../lib/report-security-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportSecurity,
+} from "../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const security = await getRuntimeReportSecurity(cookie, slug);
+if (!security) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const viewModel = buildReportSecurityViewModel({
+	reportName: reportDetail.report.name,
+	security,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Security`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Security</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads the same landscape dependency health export as
+				the static site and keeps the contract explicit before the shared UI
+				pass.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open overview
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}`}>
+					View report details
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Repositories</p>
+				<h2>Repository security health</h2>
+				{viewModel.repoRows.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.repoRows.map((row) => (
+							<li>
+								<strong>{row.label}</strong>: {row.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No repository-level security rows were exported.</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Supply Chain</p>
+				<h2>Shared vulnerable packages</h2>
+				{viewModel.packageRows.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.packageRows.map((row) => (
+							<li>
+								<strong>{row.label}</strong>: {row.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No shared vulnerable packages were exported.</p>
+				)}
+			</article>
+		</section>
+	</div>
+</AppShell>

@@ -18,6 +18,7 @@ import {
 	readReportFilesView,
 	readReportHotspotsSummary,
 	readReportCommitsSummary,
+	readReportSecuritySummary,
 	readReportTrendsSummary,
 	readReportDuplicationSummary,
 	readReportImpactSummary,
@@ -513,6 +514,51 @@ const ReportTrendsResponseSchema = Schema.Struct({
 	trends: ReportTrendsSummarySchema,
 });
 
+const ReportSecuritySummarySchema = Schema.Struct({
+	totalRepos: Schema.Number,
+	reposWithAlerts: Schema.Number,
+	totalAlerts: Schema.Number,
+	totalOpenAlerts: Schema.Number,
+	severityCounts: Schema.Struct({
+		critical: Schema.Number,
+		high: Schema.Number,
+		medium: Schema.Number,
+		low: Schema.Number,
+	}),
+	meanTimeToResolveDays: Schema.NullOr(Schema.Number),
+	supplyChainExposureScore: Schema.Number,
+	sharedVulnerablePackages: Schema.Array(
+		Schema.Struct({
+			ecosystem: Schema.String,
+			name: Schema.String,
+			severity: Schema.String,
+			affectedRepos: Schema.Array(Schema.String),
+		}),
+	),
+	repoHealth: Schema.Array(
+		Schema.Struct({
+			owner: Schema.String,
+			repo: Schema.String,
+			repoKey: Schema.NullOr(Schema.String),
+			totalAlerts: Schema.Number,
+			openAlerts: Schema.Number,
+			fixedAlerts: Schema.Number,
+			severityCounts: Schema.Struct({
+				critical: Schema.Number,
+				high: Schema.Number,
+				medium: Schema.Number,
+				low: Schema.Number,
+			}),
+			meanTimeToResolveDays: Schema.NullOr(Schema.Number),
+			oldestOpenAlertDays: Schema.NullOr(Schema.Number),
+		}),
+	),
+});
+
+const ReportSecurityResponseSchema = Schema.Struct({
+	security: ReportSecuritySummarySchema,
+});
+
 const ReportFileInventoryRowSchema = Schema.Struct({
 	relativePath: Schema.String,
 	extension: Schema.String,
@@ -707,6 +753,9 @@ const decodeReportCommitsResponse = Schema.decodeUnknownSync(
 );
 const decodeReportTrendsResponse = Schema.decodeUnknownSync(
 	ReportTrendsResponseSchema,
+);
+const decodeReportSecurityResponse = Schema.decodeUnknownSync(
+	ReportSecurityResponseSchema,
 );
 const decodeReportFilesViewResponse = Schema.decodeUnknownSync(
 	ReportFilesViewResponseSchema,
@@ -1455,6 +1504,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportTrendsResponse({
 			trends: readReportTrendsSummary(found.analysisRoot),
+		});
+	})
+	.get("/api/reports/:slug/security", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const security = readReportSecuritySummary(found.analysisRoot);
+		if (!security) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportSecurityResponse({
+			security,
 		});
 	})
 	.get("/api/reports/:slug/files/:view", async ({ request, params }) => {

@@ -678,6 +678,52 @@ const readReportTrendsSummary = mock((analysisRoot: string) => {
 		hint: "Run planetnik generateReports periodically. Each run adds a snapshot to the trend baseline.",
 	};
 });
+const readReportSecuritySummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/platform-landscape/data") {
+		return null;
+	}
+
+	return {
+		totalRepos: 3,
+		reposWithAlerts: 2,
+		totalAlerts: 8,
+		totalOpenAlerts: 5,
+		severityCounts: {
+			critical: 1,
+			high: 2,
+			medium: 1,
+			low: 1,
+		},
+		meanTimeToResolveDays: 14,
+		supplyChainExposureScore: 0.67,
+		sharedVulnerablePackages: [
+			{
+				ecosystem: "npm",
+				name: "lodash",
+				severity: "high",
+				affectedRepos: ["web-app", "api"],
+			},
+		],
+		repoHealth: [
+			{
+				owner: "acme",
+				repo: "web-app",
+				repoKey: "acme__web-app",
+				totalAlerts: 5,
+				openAlerts: 3,
+				fixedAlerts: 2,
+				severityCounts: {
+					critical: 1,
+					high: 1,
+					medium: 1,
+					low: 0,
+				},
+				meanTimeToResolveDays: 21,
+				oldestOpenAlertDays: 40,
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -713,6 +759,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportHotspotsSummary,
 	readReportCommitsSummary,
 	readReportTrendsSummary,
+	readReportSecuritySummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -736,6 +783,7 @@ describe("runtime report routes", () => {
 		readReportHotspotsSummary.mockClear();
 		readReportCommitsSummary.mockClear();
 		readReportTrendsSummary.mockClear();
+		readReportSecuritySummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -1466,6 +1514,54 @@ describe("runtime report routes", () => {
 		});
 		expect(readReportTrendsSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns landscape security summary for a connected landscape report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/platform-landscape/security", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			security: {
+				totalRepos: number;
+				totalOpenAlerts: number;
+				supplyChainExposureScore: number;
+				repoHealth: Array<{ repo: string; repoKey: string | null; openAlerts: number }>;
+			};
+		};
+
+		expect(body.security.totalRepos).toBe(3);
+		expect(body.security.totalOpenAlerts).toBe(5);
+		expect(body.security.supplyChainExposureScore).toBe(0.67);
+		expect(body.security.repoHealth[0]).toMatchObject({
+			repo: "web-app",
+			repoKey: "acme__web-app",
+			openAlerts: 3,
+		});
+		expect(readReportSecuritySummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
 		);
 	});
 

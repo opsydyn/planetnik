@@ -266,6 +266,43 @@ export type ReportImpactSummary = {
 	}>;
 };
 
+export type ReportSecuritySummary = {
+	readonly totalRepos: number;
+	readonly reposWithAlerts: number;
+	readonly totalAlerts: number;
+	readonly totalOpenAlerts: number;
+	readonly severityCounts: {
+		readonly critical: number;
+		readonly high: number;
+		readonly medium: number;
+		readonly low: number;
+	};
+	readonly meanTimeToResolveDays: number | null;
+	readonly supplyChainExposureScore: number;
+	readonly sharedVulnerablePackages: ReadonlyArray<{
+		readonly ecosystem: string;
+		readonly name: string;
+		readonly severity: string;
+		readonly affectedRepos: ReadonlyArray<string>;
+	}>;
+	readonly repoHealth: ReadonlyArray<{
+		readonly owner: string;
+		readonly repo: string;
+		readonly repoKey: string | null;
+		readonly totalAlerts: number;
+		readonly openAlerts: number;
+		readonly fixedAlerts: number;
+		readonly severityCounts: {
+			readonly critical: number;
+			readonly high: number;
+			readonly medium: number;
+			readonly low: number;
+		};
+		readonly meanTimeToResolveDays: number | null;
+		readonly oldestOpenAlertDays: number | null;
+	}>;
+};
+
 export type ReportHotspotsSummary = {
 	readonly totalHotspots: number;
 	readonly severityCounts: {
@@ -1831,6 +1868,145 @@ export function readReportCommitsSummary(
 		],
 		timeline,
 		extensions,
+	};
+}
+
+export function readReportSecuritySummary(
+	dataDir: string,
+): ReportSecuritySummary | null {
+	const health = readJsonRecord(dataDir, "landscape_dependency_health.json");
+	if (!health) {
+		return null;
+	}
+
+	const landscapeRepositories = readJsonRecord(
+		dataDir,
+		"landscape_repositories.json",
+	);
+	const repositoryEntries = Array.isArray(landscapeRepositories?.repositories)
+		? landscapeRepositories.repositories.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const repoKeyByName = new Map<string, string>(
+		repositoryEntries.flatMap((item) => {
+			const name = typeof item.name === "string" ? item.name : null;
+			const repoKey = typeof item.repoKey === "string" ? item.repoKey : null;
+			return name && repoKey ? [[name, repoKey] as const] : [];
+		}),
+	);
+
+	const severityCounts =
+		health.severityCounts && typeof health.severityCounts === "object"
+			? (health.severityCounts as Record<string, unknown>)
+			: null;
+	const repoHealthEntries = Array.isArray(health.repoHealth)
+		? health.repoHealth.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const sharedPackages = Array.isArray(health.sharedVulnerablePackages)
+		? health.sharedVulnerablePackages.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	if (
+		typeof health.totalRepos !== "number" ||
+		typeof health.reposWithAlerts !== "number" ||
+		typeof health.totalAlerts !== "number" ||
+		typeof health.totalOpenAlerts !== "number" ||
+		typeof health.meanTimeToResolveDays !== "number" &&
+			health.meanTimeToResolveDays !== null &&
+			typeof health.meanTimeToResolveDays !== "undefined" ||
+		typeof health.supplyChainExposureScore !== "number" ||
+		!severityCounts
+	) {
+		return null;
+	}
+
+	return {
+		totalRepos: health.totalRepos,
+		reposWithAlerts: health.reposWithAlerts,
+		totalAlerts: health.totalAlerts,
+		totalOpenAlerts: health.totalOpenAlerts,
+		severityCounts: {
+			critical:
+				typeof severityCounts.critical === "number" ? severityCounts.critical : 0,
+			high: typeof severityCounts.high === "number" ? severityCounts.high : 0,
+			medium:
+				typeof severityCounts.medium === "number" ? severityCounts.medium : 0,
+			low: typeof severityCounts.low === "number" ? severityCounts.low : 0,
+		},
+		meanTimeToResolveDays:
+			typeof health.meanTimeToResolveDays === "number"
+				? health.meanTimeToResolveDays
+				: null,
+		supplyChainExposureScore: health.supplyChainExposureScore,
+		sharedVulnerablePackages: sharedPackages
+			.map((item) => ({
+				ecosystem: typeof item.ecosystem === "string" ? item.ecosystem : "",
+				name: typeof item.name === "string" ? item.name : "",
+				severity: typeof item.severity === "string" ? item.severity : "",
+				affectedRepos: Array.isArray(item.affectedRepos)
+					? item.affectedRepos.filter(
+							(repo): repo is string => typeof repo === "string",
+						)
+					: [],
+			}))
+			.filter(
+				(item) =>
+					item.ecosystem.length > 0 &&
+					item.name.length > 0 &&
+					item.severity.length > 0,
+			),
+		repoHealth: repoHealthEntries
+			.map((item) => {
+				const rowSeverityCounts =
+					item.severityCounts && typeof item.severityCounts === "object"
+						? (item.severityCounts as Record<string, unknown>)
+						: {};
+				const repo = typeof item.repo === "string" ? item.repo : "";
+
+				return {
+					owner: typeof item.owner === "string" ? item.owner : "",
+					repo,
+					repoKey: repoKeyByName.get(repo) ?? null,
+					totalAlerts: typeof item.totalAlerts === "number" ? item.totalAlerts : 0,
+					openAlerts: typeof item.openAlerts === "number" ? item.openAlerts : 0,
+					fixedAlerts: typeof item.fixedAlerts === "number" ? item.fixedAlerts : 0,
+					severityCounts: {
+						critical:
+							typeof rowSeverityCounts.critical === "number"
+								? rowSeverityCounts.critical
+								: 0,
+						high:
+							typeof rowSeverityCounts.high === "number"
+								? rowSeverityCounts.high
+								: 0,
+						medium:
+							typeof rowSeverityCounts.medium === "number"
+								? rowSeverityCounts.medium
+								: 0,
+						low:
+							typeof rowSeverityCounts.low === "number"
+								? rowSeverityCounts.low
+								: 0,
+					},
+					meanTimeToResolveDays:
+						typeof item.meanTimeToResolveDays === "number"
+							? item.meanTimeToResolveDays
+							: null,
+					oldestOpenAlertDays:
+						typeof item.oldestOpenAlertDays === "number"
+							? item.oldestOpenAlertDays
+							: null,
+				};
+			})
+			.filter((item) => item.owner.length > 0 && item.repo.length > 0),
 	};
 }
 
