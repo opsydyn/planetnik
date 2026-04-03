@@ -919,6 +919,24 @@ export async function getRuntimeReportLandscapeRepositoryDuplication(
   return data.duplication;
 }
 
+export async function getRuntimeReportLandscapeRepositoryFilesView(
+  cookie: string,
+  slug: string,
+  repo: string,
+  view: "size" | "age" | "churn" | "temporal",
+): Promise<RuntimeReportFilesView | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .files({ view })
+    .get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.files;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,

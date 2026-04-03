@@ -70,13 +70,64 @@ describe("report files view model", () => {
 				],
 			},
 		]);
-		expect(viewModel.viewLinks).toEqual([
+	expect(viewModel.viewLinks).toEqual([
 			{ label: "Size", href: "/reports/effect-ts/files/size", active: true },
 			{ label: "Age", href: "/reports/effect-ts/files/age", active: false },
 			{ label: "Churn", href: "/reports/effect-ts/files/churn", active: false },
 			{
 				label: "Temporal",
 				href: "/reports/effect-ts/files/temporal",
+				active: false,
+			},
+		]);
+	});
+
+	test("supports a custom route base for repo drilldown files routes", () => {
+		const viewModel = buildReportFilesViewModel({
+			reportName: "web-app",
+			slug: "platform-landscape",
+			routeBase: "/reports/platform-landscape/repositories/acme__web-app/files",
+			files: {
+				view: "size",
+				headline: {
+					fileCount: 1,
+					totalLinesOfCode: 1100,
+				},
+				sizeDistribution: [{ label: "1001+ LOC", value: 1100, detail: "1 files" }],
+				largestFiles: [{ label: "index.ts", value: 1100 }],
+				rows: [
+					{
+						relativePath: "src/index.ts",
+						extension: "ts",
+						linesOfCode: 1100,
+						commitsCount: 18,
+						contributorsCount: 4,
+						firstDate: "2024-01-03",
+						latestDate: "2026-03-31",
+					},
+				],
+			},
+		});
+
+		expect(viewModel.viewLinks).toEqual([
+			{
+				label: "Size",
+				href: "/reports/platform-landscape/repositories/acme__web-app/files/size",
+				active: true,
+			},
+			{
+				label: "Age",
+				href: "/reports/platform-landscape/repositories/acme__web-app/files/age",
+				active: false,
+			},
+			{
+				label: "Churn",
+				href: "/reports/platform-landscape/repositories/acme__web-app/files/churn",
+				active: false,
+			},
+			{
+				label: "Temporal",
+				href: "/reports/platform-landscape/repositories/acme__web-app/files/temporal",
 				active: false,
 			},
 		]);

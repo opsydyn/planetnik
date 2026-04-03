@@ -2425,6 +2425,14 @@ export function readReportLandscapeRepositoryDuplicationSummary(
 	return readReportDuplicationSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
+export function readReportLandscapeRepositoryFilesView(
+	dataDir: string,
+	repoKey: string,
+	view: ReportFileViewName,
+): ReportFilesView | null {
+	return readReportFilesView(resolveLandscapeRepoDataDir(dataDir, repoKey), view);
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

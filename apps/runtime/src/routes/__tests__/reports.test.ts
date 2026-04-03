@@ -918,6 +918,45 @@ const readReportLandscapeRepositoryDuplicationSummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryFilesView = mock(
+	(analysisRoot: string, repoKey: string, view: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app" ||
+			view !== "size"
+		) {
+			return null;
+		}
+
+		return {
+			view: "size" as const,
+			headline: {
+				fileCount: 3,
+				totalLinesOfCode: 1460,
+			},
+			sizeDistribution: [
+				{ label: "1-50 LOC", value: 40, detail: "1 files" },
+				{ label: "201-500 LOC", value: 320, detail: "1 files" },
+				{ label: "1001+ LOC", value: 1100, detail: "1 files" },
+			],
+			largestFiles: [
+				{ label: "index.ts", value: 1100 },
+				{ label: "app.ts", value: 320 },
+			],
+			rows: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					linesOfCode: 1100,
+					commitsCount: 18,
+					contributorsCount: 4,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-31",
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -959,6 +998,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryCommitsSummary,
 	readReportLandscapeRepositoryDependenciesSummary,
 	readReportLandscapeRepositoryDuplicationSummary,
+	readReportLandscapeRepositoryFilesView,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -988,6 +1028,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryCommitsSummary.mockClear();
 		readReportLandscapeRepositoryDependenciesSummary.mockClear();
 		readReportLandscapeRepositoryDuplicationSummary.mockClear();
+		readReportLandscapeRepositoryFilesView.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2016,6 +2057,54 @@ describe("runtime report routes", () => {
 		expect(readReportLandscapeRepositoryDuplicationSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository file size summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/files/size",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			files: {
+				view: string;
+				headline: { fileCount: number; totalLinesOfCode: number };
+			};
+		};
+
+		expect(body.files.view).toBe("size");
+		expect(body.files.headline).toMatchObject({
+			fileCount: 3,
+			totalLinesOfCode: 1460,
+		});
+		expect(readReportLandscapeRepositoryFilesView).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+			"size",
 		);
 	});
 

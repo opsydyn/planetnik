@@ -408,6 +408,10 @@ If the goal is maximum product value with minimal new backend work, the best imm
 - advanced semantic/runtime/lifecycle coupling
 - robust offboarding simulation with scenario analysis
 
+### OWASP updates realtime security threat tracking
+tbc
+
+
 ## References
 
 - CodeScene Code Health: https://codescene.com/code-health

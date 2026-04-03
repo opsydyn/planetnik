@@ -34,6 +34,7 @@ const {
 	readReportLandscapeRepositoryCommitsSummary,
 	readReportLandscapeRepositoryDependenciesSummary,
 	readReportLandscapeRepositoryDuplicationSummary,
+	readReportLandscapeRepositoryFilesView,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -692,6 +693,94 @@ describe("runtime report dataset helpers", () => {
 					blockSize: 12,
 					files: 1,
 					locations: ["src/routes/reports/index.ts:70-81"],
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository file size view from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(repoDataDir, "files_main.json"), {
+			files: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					linesOfCode: 1100,
+					commitsCount: 18,
+					contributorsCount: 4,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-31",
+				},
+				{
+					relativePath: "src/app.ts",
+					extension: "ts",
+					linesOfCode: 320,
+					commitsCount: 8,
+					contributorsCount: 2,
+					firstDate: "2024-02-14",
+					latestDate: "2026-03-20",
+				},
+				{
+					relativePath: "README.md",
+					extension: "md",
+					linesOfCode: 40,
+					commitsCount: 4,
+					contributorsCount: 1,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-10",
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryFilesView(dataDir, "acme__web-app", "size"),
+		).toEqual({
+			view: "size",
+			headline: {
+				fileCount: 3,
+				totalLinesOfCode: 1460,
+			},
+			sizeDistribution: [
+				{ label: "1-50 LOC", value: 40, detail: "1 files" },
+				{ label: "201-500 LOC", value: 320, detail: "1 files" },
+				{ label: "1001+ LOC", value: 1100, detail: "1 files" },
+			],
+			largestFiles: [
+				{ label: "index.ts", value: 1100 },
+				{ label: "app.ts", value: 320 },
+				{ label: "README.md", value: 40 },
+			],
+			rows: [
+				{
+					relativePath: "src/index.ts",
+					extension: "ts",
+					linesOfCode: 1100,
+					commitsCount: 18,
+					contributorsCount: 4,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-31",
+				},
+				{
+					relativePath: "src/app.ts",
+					extension: "ts",
+					linesOfCode: 320,
+					commitsCount: 8,
+					contributorsCount: 2,
+					firstDate: "2024-02-14",
+					latestDate: "2026-03-20",
+				},
+				{
+					relativePath: "README.md",
+					extension: "md",
+					linesOfCode: 40,
+					commitsCount: 4,
+					contributorsCount: 1,
+					firstDate: "2024-01-03",
+					latestDate: "2026-03-10",
 				},
 			],
 		});
