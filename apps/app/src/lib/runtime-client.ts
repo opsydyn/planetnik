@@ -302,6 +302,28 @@ export type RuntimeReportImpact = {
   }>;
 };
 
+export type RuntimeReportComponents = {
+  readonly totalComponents: number;
+  readonly singleOwnerComponents: number;
+  readonly lowBackupComponents: number;
+  readonly distributedComponents: number;
+  readonly unassignedFiles: number;
+  readonly topComponents: ReadonlyArray<{
+    readonly name: string;
+    readonly files: number;
+    readonly linesOfCode: number;
+    readonly contributors: number;
+    readonly risk: string;
+  }>;
+  readonly inventory: ReadonlyArray<{
+    readonly name: string;
+    readonly files: number;
+    readonly linesOfCode: number;
+    readonly contributors: number | null;
+    readonly risk: string;
+  }>;
+};
+
 export type RuntimeReportHotspots = {
   readonly totalHotspots: number;
   readonly severityCounts: {
@@ -1035,6 +1057,22 @@ export async function getRuntimeReportLandscapeRepositoryControls(
   }
 
   return data.controls;
+}
+
+export async function getRuntimeReportLandscapeRepositoryComponents(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportComponents | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .components.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.components;
 }
 
 export async function getRuntimeReportFilesView(

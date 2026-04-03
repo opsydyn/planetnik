@@ -1233,6 +1233,63 @@ const readReportLandscapeRepositoryControlsSummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryComponentsSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			totalComponents: 2,
+			singleOwnerComponents: 0,
+			lowBackupComponents: 1,
+			distributedComponents: 1,
+			unassignedFiles: 1,
+			topComponents: [
+				{
+					name: "web",
+					files: 2,
+					linesOfCode: 500,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+				{
+					name: "api",
+					files: 1,
+					linesOfCode: 220,
+					contributors: 3,
+					risk: "",
+				},
+			],
+			inventory: [
+				{
+					name: "web",
+					files: 2,
+					linesOfCode: 500,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+				{
+					name: "api",
+					files: 1,
+					linesOfCode: 220,
+					contributors: 3,
+					risk: "",
+				},
+				{
+					name: "(unassigned)",
+					files: 1,
+					linesOfCode: 40,
+					contributors: null,
+					risk: "",
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1281,6 +1338,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryTopologySummary,
 	readReportLandscapeRepositoryImpactSummary,
 	readReportLandscapeRepositoryControlsSummary,
+	readReportLandscapeRepositoryComponentsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1317,6 +1375,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryTopologySummary.mockClear();
 		readReportLandscapeRepositoryImpactSummary.mockClear();
 		readReportLandscapeRepositoryControlsSummary.mockClear();
+		readReportLandscapeRepositoryComponentsSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2699,6 +2758,55 @@ describe("runtime report routes", () => {
 			total: 2,
 		});
 		expect(readReportLandscapeRepositoryControlsSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository components for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/components",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			components: {
+				totalComponents: number;
+				lowBackupComponents: number;
+				topComponents: Array<{ name: string; linesOfCode: number }>;
+			};
+		};
+
+		expect(body.components.totalComponents).toBe(2);
+		expect(body.components.lowBackupComponents).toBe(1);
+		expect(body.components.topComponents[0]).toMatchObject({
+			name: "web",
+			linesOfCode: 500,
+		});
+		expect(readReportLandscapeRepositoryComponentsSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 		);

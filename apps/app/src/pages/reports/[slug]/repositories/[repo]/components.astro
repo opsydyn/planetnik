@@ -1,0 +1,146 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import {
+	buildReportComponentsViewModel,
+} from "../../../../../lib/report-components-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryComponents,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const components = await getRuntimeReportLandscapeRepositoryComponents(
+	cookie,
+	slug,
+	repo,
+);
+if (!components) {
+	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+}
+
+const viewModel = buildReportComponentsViewModel({
+	reportName: repository.name,
+	components,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Components`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Components</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads the repo-scoped <code>files_main.json</code>
+				export and keeps the logical-component contract aligned with the static
+				landscape drilldown.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/contributors`}>
+					Open contributors
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		{viewModel.hasComponents ? (
+			<>
+				<section class="overview-cards">
+					{viewModel.cards.map((card) => (
+						<article class="dashboard-card">
+							<p class="card-kicker">{card.label}</p>
+							<h2>{card.value}</h2>
+							{card.detail ? <p>{card.detail}</p> : <p> </p>}
+						</article>
+					))}
+				</section>
+
+				<section class="dashboard-grid">
+					<article class="dashboard-card">
+						<p class="card-kicker">Top Components</p>
+						<h2>Largest logical components</h2>
+						{viewModel.topComponents.length > 0 ? (
+							<ul class="todo-list">
+								{viewModel.topComponents.map((item) => (
+									<li>
+										<strong>{item.label}</strong>: {item.value}
+									</li>
+								))}
+							</ul>
+						) : (
+							<p class="muted-copy">No component inventory was exported.</p>
+						)}
+					</article>
+
+					<article class="dashboard-card">
+						<p class="card-kicker">Inventory</p>
+						<h2>Component inventory</h2>
+						<div class="contributors-table-wrap">
+							<table class="contributors-table">
+								<thead>
+									<tr>
+										<th>Component</th>
+										<th>Files</th>
+										<th>LOC</th>
+										<th>Contributors</th>
+										<th>Risk</th>
+									</tr>
+								</thead>
+								<tbody>
+									{viewModel.rows.map((row) => (
+										<tr>
+											<td>
+												<div class="table-primary">{row.component}</div>
+											</td>
+											<td>{row.files}</td>
+											<td>{row.linesOfCode}</td>
+											<td>{row.contributors}</td>
+											<td>{row.risk}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</article>
+				</section>
+			</>
+		) : (
+			<section class="dashboard-card">
+				<p class="card-kicker">Components</p>
+				<h2>No logical decomposition configured</h2>
+				<p class="muted-copy">
+					Add <code>logicalDecompositions</code> to the source Planetnik
+					configuration to group repository files into components.
+				</p>
+			</section>
+		)}
+	</div>
+</AppShell>

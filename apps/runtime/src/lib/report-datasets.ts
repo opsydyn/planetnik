@@ -331,6 +331,28 @@ export type ReportLandscapeRepositorySummary = {
 	}>;
 };
 
+export type ReportComponentsSummary = {
+	readonly totalComponents: number;
+	readonly singleOwnerComponents: number;
+	readonly lowBackupComponents: number;
+	readonly distributedComponents: number;
+	readonly unassignedFiles: number;
+	readonly topComponents: ReadonlyArray<{
+		readonly name: string;
+		readonly files: number;
+		readonly linesOfCode: number;
+		readonly contributors: number;
+		readonly risk: string;
+	}>;
+	readonly inventory: ReadonlyArray<{
+		readonly name: string;
+		readonly files: number;
+		readonly linesOfCode: number;
+		readonly contributors: number | null;
+		readonly risk: string;
+	}>;
+};
+
 export type ReportHotspotsSummary = {
 	readonly totalHotspots: number;
 	readonly severityCounts: {
@@ -614,6 +636,13 @@ type ReportFileRecord = {
 	readonly latestDate: string | null;
 };
 
+type ReportComponentSourceFile = {
+	readonly relativePath: string;
+	readonly linesOfCode: number;
+	readonly components: ReadonlyArray<string>;
+	readonly contributors: ReadonlyArray<string>;
+};
+
 type ReportUnitRecord = {
 	readonly shortName: string;
 	readonly relativeFileName: string;
@@ -680,6 +709,118 @@ function readFileInventory(dataDir: string): ReadonlyArray<ReportFileRecord> {
 		.filter(
 			(file) => file.relativePath.length > 0 && file.linesOfCode >= 0,
 		);
+}
+
+function readComponentSourceFiles(
+	dataDir: string,
+): ReadonlyArray<ReportComponentSourceFile> {
+	const raw = readJsonRecord(dataDir, "files_main.json");
+	const files = Array.isArray(raw?.files)
+		? raw.files.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return files
+		.map((file) => ({
+			relativePath:
+				typeof file.relativePath === "string" ? file.relativePath : "",
+			linesOfCode: typeof file.linesOfCode === "number" ? file.linesOfCode : 0,
+			components: Array.isArray(file.components)
+				? file.components.filter((item): item is string => typeof item === "string")
+				: [],
+			contributors: Array.isArray(file.contributors)
+				? file.contributors.filter((item): item is string => typeof item === "string")
+				: [],
+		}))
+		.filter(
+			(file) => file.relativePath.length > 0 && file.linesOfCode >= 0,
+		);
+}
+
+function summarizeComponents(
+	files: ReadonlyArray<ReportComponentSourceFile>,
+): ReportComponentsSummary {
+	const componentMap = new Map<
+		string,
+		{ files: number; linesOfCode: number; contributors: Set<string> }
+	>();
+
+	for (const file of files) {
+		for (const component of file.components) {
+			const entry = componentMap.get(component) ?? {
+				files: 0,
+				linesOfCode: 0,
+				contributors: new Set<string>(),
+			};
+			entry.files += 1;
+			entry.linesOfCode += file.linesOfCode;
+			for (const contributor of file.contributors) {
+				entry.contributors.add(contributor);
+			}
+			componentMap.set(component, entry);
+		}
+	}
+
+	const components = [...componentMap.entries()].sort(
+		(left, right) => right[1].linesOfCode - left[1].linesOfCode,
+	);
+	const unassignedFiles = files.filter((file) => file.components.length === 0);
+	const singleOwnerComponents = components.filter(
+		([, summary]) => summary.contributors.size === 1,
+	).length;
+	const lowBackupComponents = components.filter(
+		([, summary]) =>
+			summary.contributors.size > 0 && summary.contributors.size <= 2,
+	).length;
+	const distributedComponents = components.filter(
+		([, summary]) => summary.contributors.size >= 3,
+	).length;
+
+	const inventory = components.map(([name, summary]) => ({
+		name,
+		files: summary.files,
+		linesOfCode: summary.linesOfCode,
+		contributors:
+			summary.contributors.size > 0 ? summary.contributors.size : null,
+		risk:
+			summary.contributors.size > 0 && summary.contributors.size <= 2
+				? "Bus factor risk"
+				: "",
+	}));
+
+	if (unassignedFiles.length > 0) {
+		inventory.push({
+			name: "(unassigned)",
+			files: unassignedFiles.length,
+			linesOfCode: unassignedFiles.reduce(
+				(sum, file) => sum + file.linesOfCode,
+				0,
+			),
+			contributors: null,
+			risk: "",
+		});
+	}
+
+	return {
+		totalComponents: components.length,
+		singleOwnerComponents,
+		lowBackupComponents,
+		distributedComponents,
+		unassignedFiles: unassignedFiles.length,
+		topComponents: inventory
+			.filter((entry) => entry.name !== "(unassigned)")
+			.slice(0, 15)
+			.map((entry) => ({
+				name: entry.name,
+				files: entry.files,
+				linesOfCode: entry.linesOfCode,
+				contributors: entry.contributors ?? 0,
+				risk: entry.risk,
+			})),
+		inventory,
+	};
 }
 
 function readUnitInventory(dataDir: string): ReadonlyArray<ReportUnitRecord> {
@@ -2700,6 +2841,24 @@ export function readReportLandscapeRepositoryControlsSummary(
 	repoKey: string,
 ): ReportControlsSummary | null {
 	return readReportControlsSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
+export function readReportComponentsSummary(
+	dataDir: string,
+): ReportComponentsSummary | null {
+	const files = readComponentSourceFiles(dataDir);
+	if (files.length === 0) {
+		return null;
+	}
+
+	return summarizeComponents(files);
+}
+
+export function readReportLandscapeRepositoryComponentsSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportComponentsSummary | null {
+	return readReportComponentsSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
 export function readReportTrendsSummary(

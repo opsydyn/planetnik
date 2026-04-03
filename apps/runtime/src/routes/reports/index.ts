@@ -30,12 +30,14 @@ import {
   readReportLandscapeRepositoryTopologySummary,
   readReportLandscapeRepositoryImpactSummary,
   readReportLandscapeRepositoryControlsSummary,
+  readReportLandscapeRepositoryComponentsSummary,
   readReportSecuritySummary,
   readReportTrendsSummary,
   readReportDuplicationSummary,
   readReportImpactSummary,
   readReportMetricsSummary,
   readReportTopologySummary,
+  readReportComponentsSummary,
   readReportUnitsView,
   resolveReportDataSource,
 } from "../../lib/report-datasets.js"
@@ -413,6 +415,36 @@ const ReportImpactResponseSchema = Schema.Struct({
   impact: ReportImpactSummarySchema,
 })
 
+const ReportComponentsSummarySchema = Schema.Struct({
+  totalComponents: Schema.Number,
+  singleOwnerComponents: Schema.Number,
+  lowBackupComponents: Schema.Number,
+  distributedComponents: Schema.Number,
+  unassignedFiles: Schema.Number,
+  topComponents: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      files: Schema.Number,
+      linesOfCode: Schema.Number,
+      contributors: Schema.Number,
+      risk: Schema.String,
+    }),
+  ),
+  inventory: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      files: Schema.Number,
+      linesOfCode: Schema.Number,
+      contributors: Schema.NullOr(Schema.Number),
+      risk: Schema.String,
+    }),
+  ),
+})
+
+const ReportComponentsResponseSchema = Schema.Struct({
+  components: ReportComponentsSummarySchema,
+})
+
 const ReportHotspotsSummarySchema = Schema.Struct({
   totalHotspots: Schema.Number,
   severityCounts: Schema.Struct({
@@ -765,6 +797,7 @@ const decodeReportDuplicationResponse = Schema.decodeUnknownSync(ReportDuplicati
 const decodeReportDependenciesResponse = Schema.decodeUnknownSync(ReportDependenciesResponseSchema)
 const decodeReportControlsResponse = Schema.decodeUnknownSync(ReportControlsResponseSchema)
 const decodeReportImpactResponse = Schema.decodeUnknownSync(ReportImpactResponseSchema)
+const decodeReportComponentsResponse = Schema.decodeUnknownSync(ReportComponentsResponseSchema)
 const decodeReportHotspotsResponse = Schema.decodeUnknownSync(ReportHotspotsResponseSchema)
 const decodeReportCommitsResponse = Schema.decodeUnknownSync(ReportCommitsResponseSchema)
 const decodeReportTrendsResponse = Schema.decodeUnknownSync(ReportTrendsResponseSchema)
@@ -2230,6 +2263,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportControlsResponse({
       controls,
+    })
+  })
+  .get("/api/reports/:slug/repositories/:repo/components", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const components = readReportLandscapeRepositoryComponentsSummary(
+      found.analysisRoot,
+      params.repo,
+    )
+    if (!components) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportComponentsResponse({
+      components,
     })
   })
   .get("/api/reports/:slug/files/:view", async ({ request, params }) => {

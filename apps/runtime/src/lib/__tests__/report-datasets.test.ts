@@ -41,8 +41,10 @@ const {
 	readReportLandscapeRepositoryTopologySummary,
 	readReportLandscapeRepositoryImpactSummary,
 	readReportLandscapeRepositoryControlsSummary,
+	readReportLandscapeRepositoryComponentsSummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
+	readReportComponentsSummary,
 	readReportUnitsView,
 	resolveReportDataSource,
 } = await import("../report-datasets.js");
@@ -2085,6 +2087,163 @@ describe("runtime report dataset helpers", () => {
 					desiredRangeText: "< 5",
 					status: "OK",
 					description: "Keep duplication in check",
+				},
+			],
+		});
+	});
+
+	test("reads a components summary from files_main.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "files_main.json"), {
+			files: [
+				{
+					relativePath: "src/runtime/index.ts",
+					linesOfCode: 400,
+					components: ["runtime"],
+					contributors: ["alan@example.com"],
+				},
+				{
+					relativePath: "src/runtime/auth.ts",
+					linesOfCode: 200,
+					components: ["runtime"],
+					contributors: ["alan@example.com", "sam@example.com"],
+				},
+				{
+					relativePath: "src/reports/cards.ts",
+					linesOfCode: 300,
+					components: ["reports"],
+					contributors: [
+						"alan@example.com",
+						"sam@example.com",
+						"pat@example.com",
+					],
+				},
+				{
+					relativePath: "src/scripts/misc.ts",
+					linesOfCode: 50,
+					components: [],
+					contributors: [],
+				},
+			],
+		});
+
+		expect(readReportComponentsSummary(dataDir)).toEqual({
+			totalComponents: 2,
+			singleOwnerComponents: 0,
+			lowBackupComponents: 1,
+			distributedComponents: 1,
+			unassignedFiles: 1,
+			topComponents: [
+				{
+					name: "runtime",
+					files: 2,
+					linesOfCode: 600,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+				{
+					name: "reports",
+					files: 1,
+					linesOfCode: 300,
+					contributors: 3,
+					risk: "",
+				},
+			],
+			inventory: [
+				{
+					name: "runtime",
+					files: 2,
+					linesOfCode: 600,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+				{
+					name: "reports",
+					files: 1,
+					linesOfCode: 300,
+					contributors: 3,
+					risk: "",
+				},
+				{
+					name: "(unassigned)",
+					files: 1,
+					linesOfCode: 50,
+					contributors: null,
+					risk: "",
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository components summary from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDir = join(root, "acme__web-app", "data");
+		mkdirSync(repoDir, { recursive: true });
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(repoDir, "files_main.json"), {
+			files: [
+				{
+					relativePath: "src/app.ts",
+					linesOfCode: 320,
+					components: ["web"],
+					contributors: ["alan@example.com"],
+				},
+				{
+					relativePath: "src/session.ts",
+					linesOfCode: 180,
+					components: ["web"],
+					contributors: ["alan@example.com", "sam@example.com"],
+				},
+				{
+					relativePath: "src/api.ts",
+					linesOfCode: 220,
+					components: ["api"],
+					contributors: ["sam@example.com", "pat@example.com"],
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryComponentsSummary(dataDir, "acme__web-app"),
+		).toEqual({
+			totalComponents: 2,
+			singleOwnerComponents: 0,
+			lowBackupComponents: 2,
+			distributedComponents: 0,
+			unassignedFiles: 0,
+			topComponents: [
+				{
+					name: "web",
+					files: 2,
+					linesOfCode: 500,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+				{
+					name: "api",
+					files: 1,
+					linesOfCode: 220,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+			],
+			inventory: [
+				{
+					name: "web",
+					files: 2,
+					linesOfCode: 500,
+					contributors: 2,
+					risk: "Bus factor risk",
+				},
+				{
+					name: "api",
+					files: 1,
+					linesOfCode: 220,
+					contributors: 2,
+					risk: "Bus factor risk",
 				},
 			],
 		});
