@@ -24,6 +24,7 @@ import {
   readReportLandscapeRepositoryDependenciesSummary,
   readReportLandscapeRepositoryDuplicationSummary,
   readReportLandscapeRepositoryFilesView,
+  readReportLandscapeRepositoryUnitsView,
   readReportSecuritySummary,
   readReportTrendsSummary,
   readReportDuplicationSummary,
@@ -1873,6 +1874,79 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportFilesViewResponse({
       files,
+    })
+  })
+  .get("/api/reports/:slug/repositories/:repo/units/:view", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    if (params.view !== "size" && params.view !== "complexity") {
+      return new Response(
+        JSON.stringify({
+          error: "invalid_view",
+        }),
+        {
+          status: 400,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const units = readReportLandscapeRepositoryUnitsView(
+      found.analysisRoot,
+      params.repo,
+      params.view,
+    )
+    if (!units) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportUnitsViewResponse({
+      units,
     })
   })
   .get("/api/reports/:slug/files/:view", async ({ request, params }) => {

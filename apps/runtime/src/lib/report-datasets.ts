@@ -2433,6 +2433,14 @@ export function readReportLandscapeRepositoryFilesView(
 	return readReportFilesView(resolveLandscapeRepoDataDir(dataDir, repoKey), view);
 }
 
+export function readReportLandscapeRepositoryUnitsView(
+	dataDir: string,
+	repoKey: string,
+	view: ReportUnitViewName,
+): ReportUnitsView | null {
+	return readReportUnitsView(resolveLandscapeRepoDataDir(dataDir, repoKey), view);
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

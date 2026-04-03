@@ -937,6 +937,24 @@ export async function getRuntimeReportLandscapeRepositoryFilesView(
   return data.files;
 }
 
+export async function getRuntimeReportLandscapeRepositoryUnitsView(
+  cookie: string,
+  slug: string,
+  repo: string,
+  view: "size" | "complexity",
+): Promise<RuntimeReportUnitsView | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .units({ view })
+    .get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.units;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,

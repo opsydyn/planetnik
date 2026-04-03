@@ -81,4 +81,45 @@ describe("report units view model", () => {
 			},
 		]);
 	});
+
+	test("supports a custom route base for repo drilldown unit routes", () => {
+		const viewModel = buildReportUnitsViewModel({
+			reportName: "web-app",
+			slug: "platform-landscape",
+			routeBase: "/reports/platform-landscape/repositories/acme__web-app/units",
+			units: {
+				view: "size",
+				headline: {
+					unitCount: 1,
+					totalLinesOfCode: 180,
+				},
+				sizeRisk: [{ label: "Very High (101+ LOC)", value: 1 }],
+				sizeDistribution: [{ label: "101+ LOC", value: 180, detail: "1 units" }],
+				rows: [
+					{
+						shortName: "createRuntimeReport",
+						relativeFileName: "src/lib/runtime-client.ts",
+						linesOfCode: 180,
+						mcCabeIndex: 12,
+						numberOfParameters: 3,
+						startLine: 120,
+						endLine: 300,
+					},
+				],
+			},
+		});
+
+		expect(viewModel.viewLinks).toEqual([
+			{
+				label: "Size",
+				href: "/reports/platform-landscape/repositories/acme__web-app/units/size",
+				active: true,
+			},
+			{
+				label: "Complexity",
+				href: "/reports/platform-landscape/repositories/acme__web-app/units/complexity",
+				active: false,
+			},
+		]);
+	});
 });

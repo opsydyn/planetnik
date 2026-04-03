@@ -957,6 +957,46 @@ const readReportLandscapeRepositoryFilesView = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryUnitsView = mock(
+	(analysisRoot: string, repoKey: string, view: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app" ||
+			view !== "size"
+		) {
+			return null;
+		}
+
+		return {
+			view: "size" as const,
+			headline: {
+				unitCount: 3,
+				totalLinesOfCode: 220,
+			},
+			sizeRisk: [
+				{ label: "Low (1-20 LOC)", value: 1 },
+				{ label: "Medium (21-50 LOC)", value: 1 },
+				{ label: "Very High (101+ LOC)", value: 1 },
+			],
+			sizeDistribution: [
+				{ label: "1-10 LOC", value: 8, detail: "1 units" },
+				{ label: "21-50 LOC", value: 32, detail: "1 units" },
+				{ label: "101+ LOC", value: 180, detail: "1 units" },
+			],
+			rows: [
+				{
+					shortName: "createRuntimeReport",
+					relativeFileName: "src/lib/runtime-client.ts",
+					linesOfCode: 180,
+					mcCabeIndex: 12,
+					numberOfParameters: 3,
+					startLine: 120,
+					endLine: 300,
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -999,6 +1039,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryDependenciesSummary,
 	readReportLandscapeRepositoryDuplicationSummary,
 	readReportLandscapeRepositoryFilesView,
+	readReportLandscapeRepositoryUnitsView,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1029,6 +1070,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryDependenciesSummary.mockClear();
 		readReportLandscapeRepositoryDuplicationSummary.mockClear();
 		readReportLandscapeRepositoryFilesView.mockClear();
+		readReportLandscapeRepositoryUnitsView.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2102,6 +2144,59 @@ describe("runtime report routes", () => {
 			totalLinesOfCode: 1460,
 		});
 		expect(readReportLandscapeRepositoryFilesView).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+			"size",
+		);
+	});
+
+	test("returns landscape repository unit size summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/units/size",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			units: {
+				view: string;
+				headline: { unitCount: number; totalLinesOfCode: number };
+				rows: Array<{ shortName: string; linesOfCode: number }>;
+			};
+		};
+
+		expect(body.units.view).toBe("size");
+		expect(body.units.headline).toMatchObject({
+			unitCount: 3,
+			totalLinesOfCode: 220,
+		});
+		expect(body.units.rows[0]).toMatchObject({
+			shortName: "createRuntimeReport",
+			linesOfCode: 180,
+		});
+		expect(readReportLandscapeRepositoryUnitsView).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 			"size",

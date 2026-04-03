@@ -35,6 +35,7 @@ const {
 	readReportLandscapeRepositoryDependenciesSummary,
 	readReportLandscapeRepositoryDuplicationSummary,
 	readReportLandscapeRepositoryFilesView,
+	readReportLandscapeRepositoryUnitsView,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -781,6 +782,94 @@ describe("runtime report dataset helpers", () => {
 					contributorsCount: 1,
 					firstDate: "2024-01-03",
 					latestDate: "2026-03-10",
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository unit size view from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(repoDataDir, "units.json"), {
+			units: [
+				{
+					shortName: "createRuntimeReport",
+					relativeFileName: "src/lib/runtime-client.ts",
+					linesOfCode: 180,
+					mcCabeIndex: 12,
+					numberOfParameters: 3,
+					startLine: 120,
+					endLine: 300,
+				},
+				{
+					shortName: "reportRoute",
+					relativeFileName: "src/routes/reports/index.ts",
+					linesOfCode: 32,
+					mcCabeIndex: 4,
+					numberOfParameters: 2,
+					startLine: 40,
+					endLine: 72,
+				},
+				{
+					shortName: "buttonCard",
+					relativeFileName: "src/components/Button.tsx",
+					linesOfCode: 8,
+					mcCabeIndex: 1,
+					numberOfParameters: 1,
+					startLine: 10,
+					endLine: 18,
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryUnitsView(dataDir, "acme__web-app", "size"),
+		).toEqual({
+			view: "size",
+			headline: {
+				unitCount: 3,
+				totalLinesOfCode: 220,
+			},
+			sizeRisk: [
+				{ label: "Low (1-20 LOC)", value: 1 },
+				{ label: "Medium (21-50 LOC)", value: 1 },
+				{ label: "Very High (101+ LOC)", value: 1 },
+			],
+			sizeDistribution: [
+				{ label: "1-10 LOC", value: 8, detail: "1 units" },
+				{ label: "21-50 LOC", value: 32, detail: "1 units" },
+				{ label: "101+ LOC", value: 180, detail: "1 units" },
+			],
+			rows: [
+				{
+					shortName: "createRuntimeReport",
+					relativeFileName: "src/lib/runtime-client.ts",
+					linesOfCode: 180,
+					mcCabeIndex: 12,
+					numberOfParameters: 3,
+					startLine: 120,
+					endLine: 300,
+				},
+				{
+					shortName: "reportRoute",
+					relativeFileName: "src/routes/reports/index.ts",
+					linesOfCode: 32,
+					mcCabeIndex: 4,
+					numberOfParameters: 2,
+					startLine: 40,
+					endLine: 72,
+				},
+				{
+					shortName: "buttonCard",
+					relativeFileName: "src/components/Button.tsx",
+					linesOfCode: 8,
+					mcCabeIndex: 1,
+					numberOfParameters: 1,
+					startLine: 10,
+					endLine: 18,
 				},
 			],
 		});

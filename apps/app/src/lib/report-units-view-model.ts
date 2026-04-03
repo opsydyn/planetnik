@@ -43,11 +43,13 @@ function formatCount(value: number): string {
 export function buildReportUnitsViewModel(input: {
 	readonly reportName: string;
 	readonly slug: string;
+	readonly routeBase?: string;
 	readonly units: RuntimeReportUnitsView;
 }): ReportUnitsViewModel {
+	const routeBase = input.routeBase ?? `/reports/${input.slug}/units`;
 	const viewLinks = unitViews.map((view) => ({
 		label: view.label,
-		href: `/reports/${input.slug}/units/${view.value}`,
+		href: `${routeBase}/${view.value}`,
 		active: view.value === input.units.view,
 	}));
 
