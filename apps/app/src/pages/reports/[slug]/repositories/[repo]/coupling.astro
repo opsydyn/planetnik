@@ -1,0 +1,135 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import {
+	buildReportCouplingViewModel,
+} from "../../../../../lib/report-coupling-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryCoupling,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const coupling = await getRuntimeReportLandscapeRepositoryCoupling(
+	cookie,
+	slug,
+	repo,
+);
+if (!coupling) {
+	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+}
+
+const viewModel = buildReportCouplingViewModel({
+	reportName: repository.name,
+	coupling,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Coupling`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Coupling</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads repo-scoped logical components, static
+				dependencies, temporal coupling, and component hotspots to keep the
+				balanced-coupling contract aligned with the static landscape drilldown.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/components`}>
+					Open components
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			{viewModel.sections.map((section) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">Coupling</p>
+					<h2>{section.title}</h2>
+					{section.rows.length > 0 ? (
+						<ul class="todo-list">
+							{section.rows.map((row) => (
+								<li>
+									<strong>{row.label}</strong>: {row.value}
+								</li>
+							))}
+						</ul>
+					) : (
+						<p class="muted-copy">No coupling summary rows were exported.</p>
+					)}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-card">
+			<p class="card-kicker">Inventory</p>
+			<h2>Coupling inventory</h2>
+			<div class="contributors-table-wrap">
+				<table class="contributors-table">
+					<thead>
+						<tr>
+							<th>Component</th>
+							<th>Tier</th>
+							<th>Risk</th>
+							<th>Primary dimension</th>
+							<th>Why it matters</th>
+						</tr>
+					</thead>
+					<tbody>
+						{viewModel.rows.map((row) => (
+							<tr>
+								<td>
+									<div class="table-primary">{row.component}</div>
+								</td>
+								<td>{row.tier}</td>
+								<td>{row.risk}</td>
+								<td>{row.dominantDimension}</td>
+								<td>{row.explainability}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	</div>
+</AppShell>

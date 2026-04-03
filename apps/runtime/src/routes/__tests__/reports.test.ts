@@ -1290,6 +1290,80 @@ const readReportLandscapeRepositoryComponentsSummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryCouplingSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			decompositionKey: "primary",
+			temporalWindowLabel: "Quarter",
+			aggregate: {
+				totalComponents: 2,
+				overloadedComponents: 1,
+				knowledgeExposedComponents: 2,
+				averageRisk: 6.8,
+			},
+			riskTierCounts: {
+				critical: 1,
+				high: 0,
+				medium: 1,
+				low: 0,
+			},
+			dimensionMix: [
+				{ label: "Static", value: 5.2 },
+				{ label: "Temporal", value: 4.0 },
+				{ label: "Coordination", value: 6.3 },
+				{ label: "Knowledge", value: 7.2 },
+			],
+			dominantBreakdown: [
+				{ label: "Coordination", value: 1, detail: "1 components" },
+				{ label: "Knowledge", value: 1, detail: "1 components" },
+			],
+			topRiskComponents: [
+				{
+					component: "api",
+					systemicRisk: 8.1,
+					riskTier: "Critical",
+					dominantDimension: "Knowledge",
+					explainability: [
+						"single-owner knowledge exposure",
+						"High coordination cost",
+					],
+				},
+			],
+			inventory: [
+				{
+					component: "api",
+					systemicRisk: 8.1,
+					overallLoad: 7.2,
+					balanceScore: 5.8,
+					riskTier: "Critical",
+					dominantDimension: "Knowledge",
+					files: 1,
+					linesOfCode: 250,
+					contributors: 1,
+					incomingDependencies: 5,
+					outgoingDependencies: 0,
+					temporalPartners: 1,
+					contributorOverlap: 1,
+					staticCoupling: 7.5,
+					temporalCoupling: 4.0,
+					coordinationCoupling: 6.1,
+					knowledgeRisk: 9.2,
+					explainability: [
+						"single-owner knowledge exposure",
+						"High coordination cost",
+					],
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1339,6 +1413,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryImpactSummary,
 	readReportLandscapeRepositoryControlsSummary,
 	readReportLandscapeRepositoryComponentsSummary,
+	readReportLandscapeRepositoryCouplingSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1376,6 +1451,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryImpactSummary.mockClear();
 		readReportLandscapeRepositoryControlsSummary.mockClear();
 		readReportLandscapeRepositoryComponentsSummary.mockClear();
+		readReportLandscapeRepositoryCouplingSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2807,6 +2883,60 @@ describe("runtime report routes", () => {
 			linesOfCode: 500,
 		});
 		expect(readReportLandscapeRepositoryComponentsSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository coupling for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/coupling",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			coupling: {
+				decompositionKey: string;
+				temporalWindowLabel: string | null;
+				aggregate: { totalComponents: number; averageRisk: number };
+				topRiskComponents: Array<{ component: string; riskTier: string }>;
+			};
+		};
+
+		expect(body.coupling.decompositionKey).toBe("primary");
+		expect(body.coupling.temporalWindowLabel).toBe("Quarter");
+		expect(body.coupling.aggregate).toMatchObject({
+			totalComponents: 2,
+			averageRisk: 6.8,
+		});
+		expect(body.coupling.topRiskComponents[0]).toMatchObject({
+			component: "api",
+			riskTier: "Critical",
+		});
+		expect(readReportLandscapeRepositoryCouplingSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 		);

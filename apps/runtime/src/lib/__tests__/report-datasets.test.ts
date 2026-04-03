@@ -45,6 +45,8 @@ const {
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportComponentsSummary,
+	readReportCouplingSummary,
+	readReportLandscapeRepositoryCouplingSummary,
 	readReportUnitsView,
 	resolveReportDataSource,
 } = await import("../report-datasets.js");
@@ -2247,6 +2249,156 @@ describe("runtime report dataset helpers", () => {
 				},
 			],
 		});
+	});
+
+	test("reads a coupling summary from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "files_main.json"), {
+			files: [
+				{
+					relativePath: "src/app.ts",
+					linesOfCode: 300,
+					components: ["web"],
+					contributors: ["alan@example.com", "sam@example.com"],
+				},
+				{
+					relativePath: "src/session.ts",
+					linesOfCode: 200,
+					components: ["web"],
+					contributors: ["alan@example.com"],
+				},
+				{
+					relativePath: "src/api.ts",
+					linesOfCode: 250,
+					components: ["api"],
+					contributors: ["sam@example.com"],
+				},
+			],
+		});
+		writeJson(join(dataDir, "component_dependencies.json"), {
+			dependencies: [
+				{
+					decompositionKey: "primary",
+					fromComponent: "web",
+					toComponent: "api",
+					count: 5,
+				},
+				{
+					decompositionKey: "primary",
+					fromComponent: "api",
+					toComponent: "web",
+					count: 2,
+				},
+			],
+		});
+		writeJson(join(dataDir, "temporal_dependencies.json"), {
+			dependencies: [
+				{
+					periodKey: "quarter",
+					periodLabel: "Quarter",
+					periodDays: 90,
+					file1: "src/app.ts",
+					file2: "src/api.ts",
+					sameCommits: 4,
+				},
+			],
+		});
+		writeJson(join(dataDir, "hotspots.json"), {
+			componentHotspots: [
+				{
+					name: "api",
+					parent: "primary",
+					score: 82,
+					dimensions: {
+						structuralRisk: 7.8,
+						changePressure: 6.2,
+						coordinationCost: 8.1,
+						knowledgeRisk: 9.4,
+					},
+					reasons: ["High coordination cost", "Single-owner knowledge exposure"],
+				},
+			],
+		});
+
+		const summary = readReportCouplingSummary(dataDir);
+		expect(summary).not.toBeNull();
+		expect(summary?.decompositionKey).toBe("primary");
+		expect(summary?.temporalWindowLabel).toBe("Quarter");
+		expect(summary?.aggregate.totalComponents).toBe(2);
+		expect(summary?.topRiskComponents[0]?.component).toBe("api");
+		expect(summary?.inventory).toHaveLength(2);
+	});
+
+	test("reads a landscape repository coupling summary from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDir = join(root, "acme__web-app", "data");
+		mkdirSync(repoDir, { recursive: true });
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(repoDir, "files_main.json"), {
+			files: [
+				{
+					relativePath: "src/app.ts",
+					linesOfCode: 300,
+					components: ["web"],
+					contributors: ["alan@example.com", "sam@example.com"],
+				},
+				{
+					relativePath: "src/api.ts",
+					linesOfCode: 250,
+					components: ["api"],
+					contributors: ["sam@example.com"],
+				},
+			],
+		});
+		writeJson(join(repoDir, "component_dependencies.json"), {
+			dependencies: [
+				{
+					decompositionKey: "primary",
+					fromComponent: "web",
+					toComponent: "api",
+					count: 5,
+				},
+			],
+		});
+		writeJson(join(repoDir, "temporal_dependencies.json"), {
+			dependencies: [
+				{
+					periodKey: "quarter",
+					periodLabel: "Quarter",
+					periodDays: 90,
+					file1: "src/app.ts",
+					file2: "src/api.ts",
+					sameCommits: 4,
+				},
+			],
+		});
+		writeJson(join(repoDir, "hotspots.json"), {
+			componentHotspots: [
+				{
+					name: "api",
+					parent: "primary",
+					score: 82,
+					dimensions: {
+						structuralRisk: 7.8,
+						changePressure: 6.2,
+						coordinationCost: 8.1,
+						knowledgeRisk: 9.4,
+					},
+					reasons: ["High coordination cost", "Single-owner knowledge exposure"],
+				},
+			],
+		});
+
+		const summary = readReportLandscapeRepositoryCouplingSummary(
+			dataDir,
+			"acme__web-app",
+		);
+		expect(summary).not.toBeNull();
+		expect(summary?.decompositionKey).toBe("primary");
+		expect(summary?.topRiskComponents[0]?.component).toBe("api");
 	});
 
 	test("reads a file size summary from files_main.json", () => {

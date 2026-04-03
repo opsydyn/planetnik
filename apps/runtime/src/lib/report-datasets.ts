@@ -353,6 +353,59 @@ export type ReportComponentsSummary = {
 	}>;
 };
 
+export type ReportCouplingSummary = {
+	readonly decompositionKey: string;
+	readonly temporalWindowLabel: string | null;
+	readonly aggregate: {
+		readonly totalComponents: number;
+		readonly overloadedComponents: number;
+		readonly knowledgeExposedComponents: number;
+		readonly averageRisk: number;
+	};
+	readonly riskTierCounts: {
+		readonly critical: number;
+		readonly high: number;
+		readonly medium: number;
+		readonly low: number;
+	};
+	readonly dimensionMix: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+	}>;
+	readonly dominantBreakdown: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+		readonly detail: string;
+	}>;
+	readonly topRiskComponents: ReadonlyArray<{
+		readonly component: string;
+		readonly systemicRisk: number;
+		readonly riskTier: "Low" | "Medium" | "High" | "Critical";
+		readonly dominantDimension: string;
+		readonly explainability: ReadonlyArray<string>;
+	}>;
+	readonly inventory: ReadonlyArray<{
+		readonly component: string;
+		readonly systemicRisk: number;
+		readonly overallLoad: number;
+		readonly balanceScore: number;
+		readonly riskTier: "Low" | "Medium" | "High" | "Critical";
+		readonly dominantDimension: string;
+		readonly files: number;
+		readonly linesOfCode: number;
+		readonly contributors: number;
+		readonly incomingDependencies: number;
+		readonly outgoingDependencies: number;
+		readonly temporalPartners: number;
+		readonly contributorOverlap: number;
+		readonly staticCoupling: number;
+		readonly temporalCoupling: number;
+		readonly coordinationCoupling: number;
+		readonly knowledgeRisk: number;
+		readonly explainability: ReadonlyArray<string>;
+	}>;
+};
+
 export type ReportHotspotsSummary = {
 	readonly totalHotspots: number;
 	readonly severityCounts: {
@@ -643,6 +696,41 @@ type ReportComponentSourceFile = {
 	readonly contributors: ReadonlyArray<string>;
 };
 
+type ReportComponentDependencyRecord = {
+	readonly decompositionKey: string;
+	readonly fromComponent: string;
+	readonly toComponent: string;
+	readonly count: number;
+};
+
+type ReportTemporalDependencyRecord = {
+	readonly periodKey: string;
+	readonly periodLabel: string;
+	readonly periodDays: number;
+	readonly file1: string;
+	readonly file2: string;
+	readonly sameCommits: number;
+};
+
+type ReportComponentHotspotRecord = {
+	readonly name: string;
+	readonly parent: string;
+	readonly score: number;
+	readonly dimensions: {
+		readonly structuralRisk: number;
+		readonly changePressure: number;
+		readonly coordinationCost: number;
+		readonly knowledgeRisk: number;
+	};
+	readonly reasons: ReadonlyArray<string>;
+};
+
+type CouplingDimensionId =
+	| "staticCoupling"
+	| "temporalCoupling"
+	| "coordinationCoupling"
+	| "knowledgeRisk";
+
 type ReportUnitRecord = {
 	readonly shortName: string;
 	readonly relativeFileName: string;
@@ -737,6 +825,257 @@ function readComponentSourceFiles(
 		.filter(
 			(file) => file.relativePath.length > 0 && file.linesOfCode >= 0,
 		);
+}
+
+function readComponentDependencyRecords(
+	dataDir: string,
+): ReadonlyArray<ReportComponentDependencyRecord> {
+	const raw = readJsonRecord(dataDir, "component_dependencies.json");
+	const dependencies = Array.isArray(raw?.dependencies)
+		? raw.dependencies.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return dependencies
+		.map((dependency) => ({
+			decompositionKey:
+				typeof dependency.decompositionKey === "string"
+					? dependency.decompositionKey
+					: "",
+			fromComponent:
+				typeof dependency.fromComponent === "string"
+					? dependency.fromComponent
+					: "",
+			toComponent:
+				typeof dependency.toComponent === "string"
+					? dependency.toComponent
+					: "",
+			count: typeof dependency.count === "number" ? dependency.count : 0,
+		}))
+		.filter(
+			(dependency) =>
+				dependency.decompositionKey.length > 0 &&
+				dependency.fromComponent.length > 0 &&
+				dependency.toComponent.length > 0,
+		);
+}
+
+function readTemporalDependencyRecords(
+	dataDir: string,
+): ReadonlyArray<ReportTemporalDependencyRecord> {
+	const raw = readJsonRecord(dataDir, "temporal_dependencies.json");
+	const dependencies = Array.isArray(raw?.dependencies)
+		? raw.dependencies.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return dependencies
+		.map((dependency) => ({
+			periodKey:
+				typeof dependency.periodKey === "string" ? dependency.periodKey : "",
+			periodLabel:
+				typeof dependency.periodLabel === "string"
+					? dependency.periodLabel
+					: "",
+			periodDays:
+				typeof dependency.periodDays === "number" ? dependency.periodDays : 0,
+			file1: typeof dependency.file1 === "string" ? dependency.file1 : "",
+			file2: typeof dependency.file2 === "string" ? dependency.file2 : "",
+			sameCommits:
+				typeof dependency.sameCommits === "number"
+					? dependency.sameCommits
+					: 0,
+		}))
+		.filter(
+			(dependency) =>
+				dependency.periodKey.length > 0 &&
+				dependency.file1.length > 0 &&
+				dependency.file2.length > 0,
+		);
+}
+
+function readComponentHotspotRecords(
+	dataDir: string,
+): ReadonlyArray<ReportComponentHotspotRecord> {
+	const raw = readJsonRecord(dataDir, "hotspots.json");
+	const hotspots = Array.isArray(raw?.componentHotspots)
+		? raw.componentHotspots.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return hotspots
+		.map((hotspot) => {
+			const dimensions =
+				hotspot.dimensions && typeof hotspot.dimensions === "object"
+					? (hotspot.dimensions as Record<string, unknown>)
+					: null;
+
+			return {
+				name: typeof hotspot.name === "string" ? hotspot.name : "",
+				parent: typeof hotspot.parent === "string" ? hotspot.parent : "",
+				score: typeof hotspot.score === "number" ? hotspot.score : 0,
+				dimensions: {
+					structuralRisk:
+						typeof dimensions?.structuralRisk === "number"
+							? dimensions.structuralRisk
+							: 0,
+					changePressure:
+						typeof dimensions?.changePressure === "number"
+							? dimensions.changePressure
+							: 0,
+					coordinationCost:
+						typeof dimensions?.coordinationCost === "number"
+							? dimensions.coordinationCost
+							: 0,
+					knowledgeRisk:
+						typeof dimensions?.knowledgeRisk === "number"
+							? dimensions.knowledgeRisk
+							: 0,
+				},
+				reasons: Array.isArray(hotspot.reasons)
+					? hotspot.reasons.filter((item): item is string => typeof item === "string")
+					: [],
+			};
+		})
+		.filter((hotspot) => hotspot.name.length > 0);
+}
+
+const COUPLING_DIMENSION_LABELS: Record<CouplingDimensionId, string> = {
+	staticCoupling: "Static",
+	temporalCoupling: "Temporal",
+	coordinationCoupling: "Coordination",
+	knowledgeRisk: "Knowledge",
+};
+
+function round1(value: number): number {
+	return Math.round(value * 10) / 10;
+}
+
+function clamp(value: number, min = 0, max = 10): number {
+	return Math.min(Math.max(value, min), max);
+}
+
+function normalizeToTen(value: number, max: number): number {
+	if (max <= 0) {
+		return 0;
+	}
+
+	return round1((value / max) * 10);
+}
+
+function average(values: ReadonlyArray<number>): number {
+	if (values.length === 0) {
+		return 0;
+	}
+
+	return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function standardDeviation(values: ReadonlyArray<number>): number {
+	if (values.length === 0) {
+		return 0;
+	}
+
+	const mean = average(values);
+	const variance = average(values.map((value) => (value - mean) ** 2));
+	return Math.sqrt(variance);
+}
+
+function getCouplingRiskTier(
+	score: number,
+): "Low" | "Medium" | "High" | "Critical" {
+	if (score >= 7.5) {
+		return "Critical";
+	}
+	if (score >= 5.5) {
+		return "High";
+	}
+	if (score >= 3.5) {
+		return "Medium";
+	}
+	return "Low";
+}
+
+function getDominantCouplingDimension(
+	scores: Record<CouplingDimensionId, number>,
+): CouplingDimensionId {
+	return (
+		(Object.entries(scores) as Array<[CouplingDimensionId, number]>).sort(
+			(left, right) => right[1] - left[1],
+		)[0]?.[0] ?? "staticCoupling"
+	);
+}
+
+function getHeuristicKnowledgeRisk(contributors: number): number {
+	if (contributors <= 1) {
+		return 10;
+	}
+	if (contributors === 2) {
+		return 7.5;
+	}
+	if (contributors === 3) {
+		return 5;
+	}
+	if (contributors === 4) {
+		return 3.5;
+	}
+	return 2;
+}
+
+function buildCouplingExplainability(input: {
+	readonly incomingDependencies: number;
+	readonly outgoingDependencies: number;
+	readonly temporalPartners: number;
+	readonly contributorOverlap: number;
+	readonly contributors: number;
+	readonly hotspot: ReportComponentHotspotRecord | undefined;
+	readonly dominantDimension: CouplingDimensionId;
+}): ReadonlyArray<string> {
+	const reasons = new Set<string>();
+
+	for (const reason of input.hotspot?.reasons ?? []) {
+		reasons.add(reason);
+	}
+
+	const dependencyCentrality =
+		input.incomingDependencies + input.outgoingDependencies;
+	if (dependencyCentrality >= 4) {
+		reasons.add(
+			`dependency centrality across ${dependencyCentrality} component edges`,
+		);
+	}
+
+	if (input.temporalPartners >= 3) {
+		reasons.add(
+			`co-change pressure with ${input.temporalPartners} partner components`,
+		);
+	}
+
+	if (input.contributorOverlap >= 3) {
+		reasons.add(
+			`shared contributor traffic across ${input.contributorOverlap} cross-component overlaps`,
+		);
+	}
+
+	if (input.contributors <= 1) {
+		reasons.add("single-owner knowledge exposure");
+	} else if (input.contributors === 2) {
+		reasons.add("thin backup coverage");
+	}
+
+	if (reasons.size === 0) {
+		reasons.add(
+			`dominant ${COUPLING_DIMENSION_LABELS[input.dominantDimension].toLowerCase()} pressure`,
+		);
+	}
+
+	return [...reasons].slice(0, 4);
 }
 
 function summarizeComponents(
@@ -2859,6 +3198,372 @@ export function readReportLandscapeRepositoryComponentsSummary(
 	repoKey: string,
 ): ReportComponentsSummary | null {
 	return readReportComponentsSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
+export function readReportCouplingSummary(
+	dataDir: string,
+): ReportCouplingSummary | null {
+	const files = readComponentSourceFiles(dataDir);
+	const dependencies = readComponentDependencyRecords(dataDir);
+	const temporalDependencies = readTemporalDependencyRecords(dataDir);
+	const hotspots = readComponentHotspotRecords(dataDir);
+
+	const dependencyKeys = [
+		...new Set(
+			dependencies.map((dependency) => dependency.decompositionKey).filter(Boolean),
+		),
+	];
+	const hotspotKeys = [
+		...new Set(hotspots.map((hotspot) => hotspot.parent).filter(Boolean)),
+	];
+	const decompositionKey = dependencyKeys.includes("primary")
+		? "primary"
+		: hotspotKeys.includes("primary")
+			? "primary"
+			: (dependencyKeys[0] ?? hotspotKeys[0] ?? "primary");
+
+	const temporalSections = [...new Set(temporalDependencies.map((item) => item.periodKey))]
+		.map((periodKey) => {
+			const items = temporalDependencies.filter(
+				(item) => item.periodKey === periodKey,
+			);
+			const first = items[0];
+			if (!first) {
+				return null;
+			}
+
+			return {
+				periodLabel: first.periodLabel,
+				periodDays: first.periodDays,
+				items,
+			};
+		})
+		.filter((section): section is NonNullable<typeof section> => section !== null)
+		.sort((left, right) => right.periodDays - left.periodDays);
+
+	const selectedTemporal = temporalSections[0];
+
+	const componentStats = new Map<
+		string,
+		{
+			files: number;
+			linesOfCode: number;
+			contributors: Set<string>;
+		}
+	>();
+
+	for (const file of files) {
+		for (const component of file.components) {
+			const entry = componentStats.get(component) ?? {
+				files: 0,
+				linesOfCode: 0,
+				contributors: new Set<string>(),
+			};
+			entry.files += 1;
+			entry.linesOfCode += file.linesOfCode;
+			for (const contributor of file.contributors) {
+				entry.contributors.add(contributor);
+			}
+			componentStats.set(component, entry);
+		}
+	}
+
+	const hotspotMap = new Map(
+		hotspots
+			.filter((hotspot) => hotspot.parent === decompositionKey)
+			.map((hotspot) => [hotspot.name, hotspot] as const),
+	);
+
+	for (const hotspot of hotspotMap.values()) {
+		if (!componentStats.has(hotspot.name)) {
+			componentStats.set(hotspot.name, {
+				files: 0,
+				linesOfCode: 0,
+				contributors: new Set<string>(),
+			});
+		}
+	}
+
+	const filteredDependencies = dependencies.filter(
+		(dependency) => dependency.decompositionKey === decompositionKey,
+	);
+	const incoming = new Map<string, number>();
+	const outgoing = new Map<string, number>();
+
+	for (const dependency of filteredDependencies) {
+		outgoing.set(
+			dependency.fromComponent,
+			(outgoing.get(dependency.fromComponent) ?? 0) + dependency.count,
+		);
+		incoming.set(
+			dependency.toComponent,
+			(incoming.get(dependency.toComponent) ?? 0) + dependency.count,
+		);
+
+		if (!componentStats.has(dependency.fromComponent)) {
+			componentStats.set(dependency.fromComponent, {
+				files: 0,
+				linesOfCode: 0,
+				contributors: new Set<string>(),
+			});
+		}
+		if (!componentStats.has(dependency.toComponent)) {
+			componentStats.set(dependency.toComponent, {
+				files: 0,
+				linesOfCode: 0,
+				contributors: new Set<string>(),
+			});
+		}
+	}
+
+	const fileToComponents = new Map<string, ReadonlyArray<string>>();
+	for (const file of files) {
+		fileToComponents.set(file.relativePath, file.components);
+	}
+
+	const temporalWeights = new Map<string, number>();
+	const temporalPartners = new Map<string, Set<string>>();
+
+	for (const dependency of selectedTemporal?.items ?? []) {
+		const leftComponents = new Set(fileToComponents.get(dependency.file1) ?? []);
+		const rightComponents = new Set(fileToComponents.get(dependency.file2) ?? []);
+
+		for (const left of leftComponents) {
+			for (const right of rightComponents) {
+				if (left === right) {
+					continue;
+				}
+
+				temporalWeights.set(
+					left,
+					(temporalWeights.get(left) ?? 0) + dependency.sameCommits,
+				);
+				temporalWeights.set(
+					right,
+					(temporalWeights.get(right) ?? 0) + dependency.sameCommits,
+				);
+
+				const leftPartners = temporalPartners.get(left) ?? new Set<string>();
+				leftPartners.add(right);
+				temporalPartners.set(left, leftPartners);
+
+				const rightPartners = temporalPartners.get(right) ?? new Set<string>();
+				rightPartners.add(left);
+				temporalPartners.set(right, rightPartners);
+			}
+		}
+	}
+
+	const contributorOverlap = new Map<string, number>();
+	const componentEntries = [...componentStats.entries()];
+	for (let index = 0; index < componentEntries.length; index += 1) {
+		const [leftComponent, leftStats] = componentEntries[index]!;
+		for (let inner = index + 1; inner < componentEntries.length; inner += 1) {
+			const [rightComponent, rightStats] = componentEntries[inner]!;
+			let overlap = 0;
+
+			for (const contributor of leftStats.contributors) {
+				if (rightStats.contributors.has(contributor)) {
+					overlap += 1;
+				}
+			}
+
+			if (overlap === 0) {
+				continue;
+			}
+
+			contributorOverlap.set(
+				leftComponent,
+				(contributorOverlap.get(leftComponent) ?? 0) + overlap,
+			);
+			contributorOverlap.set(
+				rightComponent,
+				(contributorOverlap.get(rightComponent) ?? 0) + overlap,
+			);
+		}
+	}
+
+	const staticWeights = componentEntries.map(
+		([component]) => (incoming.get(component) ?? 0) + (outgoing.get(component) ?? 0),
+	);
+	const temporalValues = componentEntries.map(
+		([component]) => temporalWeights.get(component) ?? 0,
+	);
+	const overlapValues = componentEntries.map(
+		([component]) => contributorOverlap.get(component) ?? 0,
+	);
+
+	const maxStatic = Math.max(...staticWeights, 0);
+	const maxTemporal = Math.max(...temporalValues, 0);
+	const maxOverlap = Math.max(...overlapValues, 0);
+
+	const snapshots = componentEntries
+		.map(([component, stats]) => {
+			const hotspot = hotspotMap.get(component);
+			const incomingDependencies = incoming.get(component) ?? 0;
+			const outgoingDependencies = outgoing.get(component) ?? 0;
+			const dependencyPressure = normalizeToTen(
+				incomingDependencies + outgoingDependencies,
+				maxStatic,
+			);
+			const temporalPressure = normalizeToTen(
+				temporalWeights.get(component) ?? 0,
+				maxTemporal,
+			);
+			const overlapPressure = normalizeToTen(
+				contributorOverlap.get(component) ?? 0,
+				maxOverlap,
+			);
+
+			const staticCoupling = round1(
+				dependencyPressure * 0.7 +
+					((hotspot?.dimensions.structuralRisk ?? 0) / 10) * 0.3,
+			);
+			const temporalCoupling = round1(temporalPressure);
+			const coordinationCoupling = round1(
+				overlapPressure * 0.6 +
+					((hotspot?.dimensions.coordinationCost ?? 0) / 10) * 0.4,
+			);
+			const knowledgeRisk = round1(
+				getHeuristicKnowledgeRisk(stats.contributors.size) * 0.4 +
+					((hotspot?.dimensions.knowledgeRisk ?? 0) / 10) * 0.6,
+			);
+
+			const scores = {
+				staticCoupling,
+				temporalCoupling,
+				coordinationCoupling,
+				knowledgeRisk,
+			};
+			const overallLoad = round1(
+				staticCoupling * 0.3 +
+					temporalCoupling * 0.25 +
+					coordinationCoupling * 0.25 +
+					knowledgeRisk * 0.2,
+			);
+			const balanceScore = round1(
+				clamp(10 - standardDeviation(Object.values(scores)) * 1.5),
+			);
+			const systemicRisk = round1(
+				clamp(overallLoad * 0.72 + (10 - balanceScore) * 0.28),
+			);
+			const dominantDimension = getDominantCouplingDimension(scores);
+
+			return {
+				component,
+				systemicRisk,
+				overallLoad,
+				balanceScore,
+				riskTier: getCouplingRiskTier(systemicRisk),
+				dominantDimension: COUPLING_DIMENSION_LABELS[dominantDimension],
+				files: stats.files,
+				linesOfCode: stats.linesOfCode,
+				contributors: stats.contributors.size,
+				incomingDependencies,
+				outgoingDependencies,
+				temporalPartners: temporalPartners.get(component)?.size ?? 0,
+				contributorOverlap: contributorOverlap.get(component) ?? 0,
+				staticCoupling,
+				temporalCoupling,
+				coordinationCoupling,
+				knowledgeRisk,
+				explainability: buildCouplingExplainability({
+					incomingDependencies,
+					outgoingDependencies,
+					temporalPartners: temporalPartners.get(component)?.size ?? 0,
+					contributorOverlap: contributorOverlap.get(component) ?? 0,
+					contributors: stats.contributors.size,
+					hotspot,
+					dominantDimension,
+				}),
+			};
+		})
+		.sort((left, right) => {
+			if (left.systemicRisk !== right.systemicRisk) {
+				return right.systemicRisk - left.systemicRisk;
+			}
+			return right.overallLoad - left.overallLoad;
+		});
+
+	if (snapshots.length === 0) {
+		return null;
+	}
+
+	const riskTierCounts = {
+		critical: snapshots.filter((snapshot) => snapshot.riskTier === "Critical")
+			.length,
+		high: snapshots.filter((snapshot) => snapshot.riskTier === "High").length,
+		medium: snapshots.filter((snapshot) => snapshot.riskTier === "Medium").length,
+		low: snapshots.filter((snapshot) => snapshot.riskTier === "Low").length,
+	};
+
+	const dominantBreakdownMap = new Map<string, number>();
+	for (const snapshot of snapshots) {
+		dominantBreakdownMap.set(
+			snapshot.dominantDimension,
+			(dominantBreakdownMap.get(snapshot.dominantDimension) ?? 0) + 1,
+		);
+	}
+
+	return {
+		decompositionKey,
+		temporalWindowLabel: selectedTemporal?.periodLabel ?? null,
+		aggregate: {
+			totalComponents: snapshots.length,
+			overloadedComponents: snapshots.filter(
+				(snapshot) => snapshot.systemicRisk >= 7.5,
+			).length,
+			knowledgeExposedComponents: snapshots.filter(
+				(snapshot) => snapshot.contributors <= 2,
+			).length,
+			averageRisk: round1(
+				average(snapshots.map((snapshot) => snapshot.systemicRisk)),
+			),
+		},
+		riskTierCounts,
+		dimensionMix: [
+			{
+				label: COUPLING_DIMENSION_LABELS.staticCoupling,
+				value: round1(average(snapshots.map((snapshot) => snapshot.staticCoupling))),
+			},
+			{
+				label: COUPLING_DIMENSION_LABELS.temporalCoupling,
+				value: round1(average(snapshots.map((snapshot) => snapshot.temporalCoupling))),
+			},
+			{
+				label: COUPLING_DIMENSION_LABELS.coordinationCoupling,
+				value: round1(
+					average(snapshots.map((snapshot) => snapshot.coordinationCoupling)),
+				),
+			},
+			{
+				label: COUPLING_DIMENSION_LABELS.knowledgeRisk,
+				value: round1(average(snapshots.map((snapshot) => snapshot.knowledgeRisk))),
+			},
+		],
+		dominantBreakdown: [...dominantBreakdownMap.entries()].map(
+			([label, value]) => ({
+				label,
+				value,
+				detail: `${value} components`,
+			}),
+		),
+		topRiskComponents: snapshots.slice(0, 12).map((snapshot) => ({
+			component: snapshot.component,
+			systemicRisk: snapshot.systemicRisk,
+			riskTier: snapshot.riskTier,
+			dominantDimension: snapshot.dominantDimension,
+			explainability: snapshot.explainability,
+		})),
+		inventory: snapshots,
+	};
+}
+
+export function readReportLandscapeRepositoryCouplingSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportCouplingSummary | null {
+	return readReportCouplingSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
 export function readReportTrendsSummary(

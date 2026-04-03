@@ -31,6 +31,7 @@ import {
   readReportLandscapeRepositoryImpactSummary,
   readReportLandscapeRepositoryControlsSummary,
   readReportLandscapeRepositoryComponentsSummary,
+  readReportLandscapeRepositoryCouplingSummary,
   readReportSecuritySummary,
   readReportTrendsSummary,
   readReportDuplicationSummary,
@@ -38,6 +39,7 @@ import {
   readReportMetricsSummary,
   readReportTopologySummary,
   readReportComponentsSummary,
+  readReportCouplingSummary,
   readReportUnitsView,
   resolveReportDataSource,
 } from "../../lib/report-datasets.js"
@@ -445,6 +447,71 @@ const ReportComponentsResponseSchema = Schema.Struct({
   components: ReportComponentsSummarySchema,
 })
 
+const ReportCouplingSummarySchema = Schema.Struct({
+  decompositionKey: Schema.String,
+  temporalWindowLabel: Schema.NullOr(Schema.String),
+  aggregate: Schema.Struct({
+    totalComponents: Schema.Number,
+    overloadedComponents: Schema.Number,
+    knowledgeExposedComponents: Schema.Number,
+    averageRisk: Schema.Number,
+  }),
+  riskTierCounts: Schema.Struct({
+    critical: Schema.Number,
+    high: Schema.Number,
+    medium: Schema.Number,
+    low: Schema.Number,
+  }),
+  dimensionMix: Schema.Array(
+    Schema.Struct({
+      label: Schema.String,
+      value: Schema.Number,
+    }),
+  ),
+  dominantBreakdown: Schema.Array(
+    Schema.Struct({
+      label: Schema.String,
+      value: Schema.Number,
+      detail: Schema.String,
+    }),
+  ),
+  topRiskComponents: Schema.Array(
+    Schema.Struct({
+      component: Schema.String,
+      systemicRisk: Schema.Number,
+      riskTier: Schema.Literal("Low", "Medium", "High", "Critical"),
+      dominantDimension: Schema.String,
+      explainability: Schema.Array(Schema.String),
+    }),
+  ),
+  inventory: Schema.Array(
+    Schema.Struct({
+      component: Schema.String,
+      systemicRisk: Schema.Number,
+      overallLoad: Schema.Number,
+      balanceScore: Schema.Number,
+      riskTier: Schema.Literal("Low", "Medium", "High", "Critical"),
+      dominantDimension: Schema.String,
+      files: Schema.Number,
+      linesOfCode: Schema.Number,
+      contributors: Schema.Number,
+      incomingDependencies: Schema.Number,
+      outgoingDependencies: Schema.Number,
+      temporalPartners: Schema.Number,
+      contributorOverlap: Schema.Number,
+      staticCoupling: Schema.Number,
+      temporalCoupling: Schema.Number,
+      coordinationCoupling: Schema.Number,
+      knowledgeRisk: Schema.Number,
+      explainability: Schema.Array(Schema.String),
+    }),
+  ),
+})
+
+const ReportCouplingResponseSchema = Schema.Struct({
+  coupling: ReportCouplingSummarySchema,
+})
+
 const ReportHotspotsSummarySchema = Schema.Struct({
   totalHotspots: Schema.Number,
   severityCounts: Schema.Struct({
@@ -798,6 +865,7 @@ const decodeReportDependenciesResponse = Schema.decodeUnknownSync(ReportDependen
 const decodeReportControlsResponse = Schema.decodeUnknownSync(ReportControlsResponseSchema)
 const decodeReportImpactResponse = Schema.decodeUnknownSync(ReportImpactResponseSchema)
 const decodeReportComponentsResponse = Schema.decodeUnknownSync(ReportComponentsResponseSchema)
+const decodeReportCouplingResponse = Schema.decodeUnknownSync(ReportCouplingResponseSchema)
 const decodeReportHotspotsResponse = Schema.decodeUnknownSync(ReportHotspotsResponseSchema)
 const decodeReportCommitsResponse = Schema.decodeUnknownSync(ReportCommitsResponseSchema)
 const decodeReportTrendsResponse = Schema.decodeUnknownSync(ReportTrendsResponseSchema)
@@ -2321,6 +2389,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportComponentsResponse({
       components,
+    })
+  })
+  .get("/api/reports/:slug/repositories/:repo/coupling", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const coupling = readReportLandscapeRepositoryCouplingSummary(
+      found.analysisRoot,
+      params.repo,
+    )
+    if (!coupling) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportCouplingResponse({
+      coupling,
     })
   })
   .get("/api/reports/:slug/files/:view", async ({ request, params }) => {

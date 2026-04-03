@@ -324,6 +324,59 @@ export type RuntimeReportComponents = {
   }>;
 };
 
+export type RuntimeReportCoupling = {
+  readonly decompositionKey: string;
+  readonly temporalWindowLabel: string | null;
+  readonly aggregate: {
+    readonly totalComponents: number;
+    readonly overloadedComponents: number;
+    readonly knowledgeExposedComponents: number;
+    readonly averageRisk: number;
+  };
+  readonly riskTierCounts: {
+    readonly critical: number;
+    readonly high: number;
+    readonly medium: number;
+    readonly low: number;
+  };
+  readonly dimensionMix: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+  }>;
+  readonly dominantBreakdown: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+    readonly detail: string;
+  }>;
+  readonly topRiskComponents: ReadonlyArray<{
+    readonly component: string;
+    readonly systemicRisk: number;
+    readonly riskTier: "Low" | "Medium" | "High" | "Critical";
+    readonly dominantDimension: string;
+    readonly explainability: ReadonlyArray<string>;
+  }>;
+  readonly inventory: ReadonlyArray<{
+    readonly component: string;
+    readonly systemicRisk: number;
+    readonly overallLoad: number;
+    readonly balanceScore: number;
+    readonly riskTier: "Low" | "Medium" | "High" | "Critical";
+    readonly dominantDimension: string;
+    readonly files: number;
+    readonly linesOfCode: number;
+    readonly contributors: number;
+    readonly incomingDependencies: number;
+    readonly outgoingDependencies: number;
+    readonly temporalPartners: number;
+    readonly contributorOverlap: number;
+    readonly staticCoupling: number;
+    readonly temporalCoupling: number;
+    readonly coordinationCoupling: number;
+    readonly knowledgeRisk: number;
+    readonly explainability: ReadonlyArray<string>;
+  }>;
+};
+
 export type RuntimeReportHotspots = {
   readonly totalHotspots: number;
   readonly severityCounts: {
@@ -1073,6 +1126,22 @@ export async function getRuntimeReportLandscapeRepositoryComponents(
   }
 
   return data.components;
+}
+
+export async function getRuntimeReportLandscapeRepositoryCoupling(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportCoupling | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .coupling.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.coupling;
 }
 
 export async function getRuntimeReportFilesView(
