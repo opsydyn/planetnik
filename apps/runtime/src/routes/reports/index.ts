@@ -16,6 +16,8 @@ import {
 	readReportControlsSummary,
 	readReportDependenciesSummary,
 	readReportFilesView,
+	readReportHotspotsSummary,
+	readReportCommitsSummary,
 	readReportDuplicationSummary,
 	readReportImpactSummary,
 	readReportMetricsSummary,
@@ -402,6 +404,104 @@ const ReportImpactResponseSchema = Schema.Struct({
 	impact: ReportImpactSummarySchema,
 });
 
+const ReportHotspotsSummarySchema = Schema.Struct({
+	totalHotspots: Schema.Number,
+	severityCounts: Schema.Struct({
+		critical: Schema.Number,
+		high: Schema.Number,
+		medium: Schema.Number,
+		low: Schema.Number,
+	}),
+	kindCounts: Schema.Struct({
+		files: Schema.Number,
+		units: Schema.Number,
+		components: Schema.Number,
+	}),
+	dominantCounts: Schema.Struct({
+		structuralRisk: Schema.Number,
+		changePressure: Schema.Number,
+		coordinationCost: Schema.Number,
+		knowledgeRisk: Schema.Number,
+	}),
+	topHotspots: Schema.Array(
+		Schema.Struct({
+			name: Schema.String,
+			score: Schema.Number,
+			severity: Schema.String,
+			kind: Schema.String,
+			dominantDimension: Schema.String,
+			suggestedAction: Schema.String,
+		}),
+	),
+	rows: Schema.Array(
+		Schema.Struct({
+			name: Schema.String,
+			route: Schema.String,
+			kind: Schema.String,
+			parent: Schema.String,
+			score: Schema.Number,
+			severity: Schema.String,
+			dominantDimension: Schema.String,
+			size: Schema.Number,
+			commitsCount: Schema.Number,
+			contributorsCount: Schema.Number,
+			temporalLinks: Schema.Number,
+			complexity: Schema.Number,
+			structuralRisk: Schema.Number,
+			changePressure: Schema.Number,
+			coordinationCost: Schema.Number,
+			knowledgeRisk: Schema.Number,
+			suggestedAction: Schema.String,
+			reasons: Schema.Array(Schema.String),
+		}),
+	),
+});
+
+const ReportHotspotsResponseSchema = Schema.Struct({
+	hotspots: ReportHotspotsSummarySchema,
+});
+
+const ReportCommitsSummarySchema = Schema.Struct({
+	totalCommits: Schema.Number,
+	totalContributors: Schema.Number,
+	activeContributors: Schema.Struct({
+		days30: Schema.Number,
+		days90: Schema.Number,
+		days365: Schema.Number,
+	}),
+	repoAgeDays: Schema.NullOr(Schema.Number),
+	activeDays: Schema.NullOr(Schema.Number),
+	rookieCount: Schema.Number,
+	activity: Schema.Array(
+		Schema.Struct({
+			label: Schema.String,
+			value: Schema.Number,
+			detail: Schema.String,
+		}),
+	),
+	timeline: Schema.Array(
+		Schema.Struct({
+			timeSlot: Schema.String,
+			commits: Schema.Number,
+			contributors: Schema.Number,
+		}),
+	),
+	extensions: Schema.Array(
+		Schema.Struct({
+			extension: Schema.String,
+			commitsCount: Schema.Number,
+			committersCount: Schema.Number,
+			filesCount: Schema.Number,
+			commitsCount30Days: Schema.Number,
+			commitsCount90Days: Schema.Number,
+		}),
+	),
+});
+
+const ReportCommitsResponseSchema = Schema.Struct({
+	commits: ReportCommitsSummarySchema,
+});
+
 const ReportFileInventoryRowSchema = Schema.Struct({
 	relativePath: Schema.String,
 	extension: Schema.String,
@@ -587,6 +687,12 @@ const decodeReportControlsResponse = Schema.decodeUnknownSync(
 );
 const decodeReportImpactResponse = Schema.decodeUnknownSync(
 	ReportImpactResponseSchema,
+);
+const decodeReportHotspotsResponse = Schema.decodeUnknownSync(
+	ReportHotspotsResponseSchema,
+);
+const decodeReportCommitsResponse = Schema.decodeUnknownSync(
+	ReportCommitsResponseSchema,
 );
 const decodeReportFilesViewResponse = Schema.decodeUnknownSync(
 	ReportFilesViewResponseSchema,
@@ -1176,6 +1282,122 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportImpactResponse({
 			impact,
+		});
+	})
+	.get("/api/reports/:slug/hotspots", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const hotspots = readReportHotspotsSummary(found.analysisRoot);
+		if (!hotspots) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportHotspotsResponse({
+			hotspots,
+		});
+	})
+	.get("/api/reports/:slug/commits", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const commits = readReportCommitsSummary(found.analysisRoot);
+		if (!commits) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportCommitsResponse({
+			commits,
 		});
 	})
 	.get("/api/reports/:slug/files/:view", async ({ request, params }) => {

@@ -266,6 +266,86 @@ export type ReportImpactSummary = {
 	}>;
 };
 
+export type ReportHotspotsSummary = {
+	readonly totalHotspots: number;
+	readonly severityCounts: {
+		readonly critical: number;
+		readonly high: number;
+		readonly medium: number;
+		readonly low: number;
+	};
+	readonly kindCounts: {
+		readonly files: number;
+		readonly units: number;
+		readonly components: number;
+	};
+	readonly dominantCounts: {
+		readonly structuralRisk: number;
+		readonly changePressure: number;
+		readonly coordinationCost: number;
+		readonly knowledgeRisk: number;
+	};
+	readonly topHotspots: ReadonlyArray<{
+		readonly name: string;
+		readonly score: number;
+		readonly severity: string;
+		readonly kind: string;
+		readonly dominantDimension: string;
+		readonly suggestedAction: string;
+	}>;
+	readonly rows: ReadonlyArray<{
+		readonly name: string;
+		readonly route: string;
+		readonly kind: string;
+		readonly parent: string;
+		readonly score: number;
+		readonly severity: string;
+		readonly dominantDimension: string;
+		readonly size: number;
+		readonly commitsCount: number;
+		readonly contributorsCount: number;
+		readonly temporalLinks: number;
+		readonly complexity: number;
+		readonly structuralRisk: number;
+		readonly changePressure: number;
+		readonly coordinationCost: number;
+		readonly knowledgeRisk: number;
+		readonly suggestedAction: string;
+		readonly reasons: ReadonlyArray<string>;
+	}>;
+};
+
+export type ReportCommitsSummary = {
+	readonly totalCommits: number;
+	readonly totalContributors: number;
+	readonly activeContributors: {
+		readonly days30: number;
+		readonly days90: number;
+		readonly days365: number;
+	};
+	readonly repoAgeDays: number | null;
+	readonly activeDays: number | null;
+	readonly rookieCount: number;
+	readonly activity: ReadonlyArray<{
+		readonly label: string;
+		readonly value: number;
+		readonly detail: string;
+	}>;
+	readonly timeline: ReadonlyArray<{
+		readonly timeSlot: string;
+		readonly commits: number;
+		readonly contributors: number;
+	}>;
+	readonly extensions: ReadonlyArray<{
+		readonly extension: string;
+		readonly commitsCount: number;
+		readonly committersCount: number;
+		readonly filesCount: number;
+		readonly commitsCount30Days: number;
+		readonly commitsCount90Days: number;
+	}>;
+};
+
 export type ReportFileViewName = "size" | "age" | "churn" | "temporal";
 
 export type ReportFileInventoryRow = {
@@ -1531,6 +1611,243 @@ export function readReportUnitsView(
 			})),
 		rows: sorted,
 	};
+}
+
+export function readReportHotspotsSummary(
+	dataDir: string,
+): ReportHotspotsSummary | null {
+	const raw = readJsonRecord(dataDir, "hotspots.json");
+	if (!raw) {
+		return null;
+	}
+
+	const groups = [
+		...(Array.isArray(raw.fileHotspots) ? raw.fileHotspots : []),
+		...(Array.isArray(raw.unitHotspots) ? raw.unitHotspots : []),
+		...(Array.isArray(raw.componentHotspots) ? raw.componentHotspots : []),
+	]
+		.filter(
+			(item): item is Record<string, unknown> =>
+				typeof item === "object" && item !== null,
+		)
+		.map((item) => {
+			const dimensions =
+				item.dimensions && typeof item.dimensions === "object"
+					? (item.dimensions as Record<string, unknown>)
+					: null;
+
+			return {
+				name: typeof item.name === "string" ? item.name : "",
+				route: typeof item.route === "string" ? item.route : "",
+				kind: typeof item.kind === "string" ? item.kind : "",
+				parent: typeof item.parent === "string" ? item.parent : "",
+				score: typeof item.score === "number" ? item.score : 0,
+				severity: typeof item.severity === "string" ? item.severity : "",
+				dominantDimension:
+					typeof item.dominantDimension === "string"
+						? item.dominantDimension
+						: "",
+				size: typeof item.size === "number" ? item.size : 0,
+				commitsCount:
+					typeof item.commitsCount === "number" ? item.commitsCount : 0,
+				contributorsCount:
+					typeof item.contributorsCount === "number"
+						? item.contributorsCount
+						: 0,
+				temporalLinks:
+					typeof item.temporalLinks === "number" ? item.temporalLinks : 0,
+				complexity: typeof item.complexity === "number" ? item.complexity : 0,
+				structuralRisk:
+					typeof dimensions?.structuralRisk === "number"
+						? dimensions.structuralRisk
+						: 0,
+				changePressure:
+					typeof dimensions?.changePressure === "number"
+						? dimensions.changePressure
+						: 0,
+				coordinationCost:
+					typeof dimensions?.coordinationCost === "number"
+						? dimensions.coordinationCost
+						: 0,
+				knowledgeRisk:
+					typeof dimensions?.knowledgeRisk === "number"
+						? dimensions.knowledgeRisk
+						: 0,
+				suggestedAction:
+					typeof item.suggestedAction === "string" ? item.suggestedAction : "",
+				reasons: Array.isArray(item.reasons)
+					? item.reasons.filter((reason): reason is string => typeof reason === "string")
+					: [],
+			};
+		})
+		.filter((item) => item.name.length > 0 && item.kind.length > 0)
+		.sort((left, right) => right.score - left.score);
+
+	if (groups.length === 0) {
+		return null;
+	}
+
+	return {
+		totalHotspots: groups.length,
+		severityCounts: {
+			critical: groups.filter((item) => item.severity === "Critical").length,
+			high: groups.filter((item) => item.severity === "High").length,
+			medium: groups.filter((item) => item.severity === "Medium").length,
+			low: groups.filter((item) => item.severity === "Low").length,
+		},
+		kindCounts: {
+			files: groups.filter((item) => item.kind === "file").length,
+			units: groups.filter((item) => item.kind === "unit").length,
+			components: groups.filter((item) => item.kind === "component").length,
+		},
+		dominantCounts: {
+			structuralRisk: groups.filter(
+				(item) => item.dominantDimension === "structuralRisk",
+			).length,
+			changePressure: groups.filter(
+				(item) => item.dominantDimension === "changePressure",
+			).length,
+			coordinationCost: groups.filter(
+				(item) => item.dominantDimension === "coordinationCost",
+			).length,
+			knowledgeRisk: groups.filter(
+				(item) => item.dominantDimension === "knowledgeRisk",
+			).length,
+		},
+		topHotspots: groups.slice(0, 15).map((item) => ({
+			name: item.name,
+			score: item.score,
+			severity: item.severity,
+			kind: item.kind,
+			dominantDimension: item.dominantDimension,
+			suggestedAction: item.suggestedAction,
+		})),
+		rows: groups,
+	};
+}
+
+export function readReportCommitsSummary(
+	dataDir: string,
+): ReportCommitsSummary | null {
+	const contributors = readReportContributorsSummary(dataDir);
+	const metrics = readMetricsMap(dataDir);
+	const timelineRaw = readJsonRecord(dataDir, "contributor_timeline.json");
+	const perYear = Array.isArray(timelineRaw?.perYear)
+		? timelineRaw.perYear.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const extensionsRaw = readJsonFileArray(dataDir, "commits_per_extension.json");
+
+	const totalContributors = contributors.length;
+	const totalCommits = contributors.reduce(
+		(sum, contributor) => sum + contributor.commitsAllTime,
+		0,
+	);
+	const activeContributors = {
+		days30: contributors.filter((contributor) => contributor.commits30Days > 0)
+			.length,
+		days90: contributors.filter((contributor) => contributor.commits90Days > 0)
+			.length,
+		days365: contributors.filter((contributor) => contributor.commits365Days > 0)
+			.length,
+	};
+
+	const timeline = perYear
+		.map((entry) => ({
+			timeSlot: typeof entry.timeSlot === "string" ? entry.timeSlot : "",
+			commits: typeof entry.commits === "number" ? entry.commits : 0,
+			contributors:
+				typeof entry.contributors === "number" ? entry.contributors : 0,
+		}))
+		.filter((entry) => entry.timeSlot.length > 0)
+		.sort((left, right) => left.timeSlot.localeCompare(right.timeSlot));
+
+	const extensions = extensionsRaw
+		.map((entry) => ({
+			extension: typeof entry.extension === "string" ? entry.extension : "",
+			commitsCount:
+				typeof entry.commitsCount === "number" ? entry.commitsCount : 0,
+			committersCount:
+				typeof entry.committersCount === "number" ? entry.committersCount : 0,
+			filesCount: typeof entry.filesCount === "number" ? entry.filesCount : 0,
+			commitsCount30Days:
+				typeof entry.commitsCount30Days === "number"
+					? entry.commitsCount30Days
+					: 0,
+			commitsCount90Days:
+				typeof entry.commitsCount90Days === "number"
+					? entry.commitsCount90Days
+					: 0,
+		}))
+		.filter((entry) => entry.extension.length > 0)
+		.sort((left, right) => right.commitsCount - left.commitsCount);
+
+	if (
+		totalContributors === 0 &&
+		totalCommits === 0 &&
+		timeline.length === 0 &&
+		extensions.length === 0
+	) {
+		return null;
+	}
+
+	return {
+		totalCommits,
+		totalContributors,
+		activeContributors,
+		repoAgeDays: metrics.get("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS") ?? null,
+		activeDays: metrics.get("FILE_CHANGE_HISTORY_ACTIVE_DAYS") ?? null,
+		rookieCount: contributors.filter((contributor) => contributor.status === "Rookie")
+			.length,
+		activity: [
+			{
+				label: "Past 30 days",
+				value: activeContributors.days30,
+				detail: `${activeContributors.days30} contributors`,
+			},
+			{
+				label: "Past 90 days",
+				value: activeContributors.days90,
+				detail: `${activeContributors.days90} contributors`,
+			},
+			{
+				label: "Past year",
+				value: activeContributors.days365,
+				detail: `${activeContributors.days365} contributors`,
+			},
+			{
+				label: "All time",
+				value: totalContributors,
+				detail: `${totalContributors} contributors`,
+			},
+		],
+		timeline,
+		extensions,
+	};
+}
+
+function readJsonFileArray(
+	dataDir: string,
+	fileName: string,
+): ReadonlyArray<Record<string, unknown>> {
+	const filePath = join(dataDir, fileName);
+	if (!existsSync(filePath)) {
+		return [];
+	}
+
+	try {
+		const raw = JSON.parse(readFileSync(filePath, "utf-8")) as unknown;
+		return Array.isArray(raw)
+			? raw.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+			: [];
+	} catch {
+		return [];
+	}
 }
 
 export function readReportMetricsSummary(

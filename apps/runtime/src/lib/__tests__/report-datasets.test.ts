@@ -24,8 +24,10 @@ const {
 	readReportDependenciesSummary,
 	readReportDuplicationSummary,
 	readReportFilesView,
+	readReportHotspotsSummary,
 	readReportImpactSummary,
 	readReportMetricsSummary,
+	readReportCommitsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
 	resolveReportDataSource,
@@ -1080,6 +1082,304 @@ describe("runtime report dataset helpers", () => {
 					numberOfParameters: 0,
 					startLine: 1,
 					endLine: 8,
+				},
+			],
+		});
+	});
+
+	test("reads a hotspot summary from hotspots.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "hotspots.json"), {
+			fileHotspots: [
+				{
+					kind: "file",
+					name: "src/runtime/index.ts",
+					parent: "runtime",
+					route: "/files/churn",
+					score: 8.8,
+					severity: "Critical",
+					size: 1100,
+					commitsCount: 18,
+					contributorsCount: 4,
+					temporalLinks: 7,
+					complexity: 12,
+					dimensions: {
+						structuralRisk: 6.1,
+						changePressure: 7.4,
+						coordinationCost: 8.8,
+						knowledgeRisk: 4.2,
+					},
+					dominantDimension: "coordinationCost",
+					suggestedAction: "Stabilize the runtime boundary.",
+					reasons: ["High coordination cost", "Sustained change pressure"],
+				},
+			],
+			unitHotspots: [
+				{
+					kind: "unit",
+					name: "createRuntimeReport",
+					parent: "runtime-client",
+					route: "/units/complexity",
+					score: 7.2,
+					severity: "High",
+					size: 180,
+					commitsCount: 12,
+					contributorsCount: 3,
+					temporalLinks: 5,
+					complexity: 12,
+					dimensions: {
+						structuralRisk: 5.1,
+						changePressure: 7.2,
+						coordinationCost: 6.4,
+						knowledgeRisk: 4.1,
+					},
+					dominantDimension: "changePressure",
+					suggestedAction: "Split the report creation flow.",
+					reasons: ["Too many change vectors"],
+				},
+			],
+			componentHotspots: [
+				{
+					kind: "component",
+					name: "runtime",
+					parent: "",
+					route: "/dependencies",
+					score: 6.6,
+					severity: "Medium",
+					size: 4200,
+					commitsCount: 22,
+					contributorsCount: 5,
+					temporalLinks: 9,
+					complexity: 0,
+					dimensions: {
+						structuralRisk: 6.6,
+						changePressure: 5.8,
+						coordinationCost: 6.1,
+						knowledgeRisk: 5.2,
+					},
+					dominantDimension: "structuralRisk",
+					suggestedAction: "Clarify seams and ownership.",
+					reasons: ["Large coordination surface"],
+				},
+			],
+		});
+
+		expect(readReportHotspotsSummary(dataDir)).toEqual({
+			totalHotspots: 3,
+			severityCounts: {
+				critical: 1,
+				high: 1,
+				medium: 1,
+				low: 0,
+			},
+			kindCounts: {
+				files: 1,
+				units: 1,
+				components: 1,
+			},
+			dominantCounts: {
+				structuralRisk: 1,
+				changePressure: 1,
+				coordinationCost: 1,
+				knowledgeRisk: 0,
+			},
+			topHotspots: [
+				{
+					name: "src/runtime/index.ts",
+					score: 8.8,
+					severity: "Critical",
+					kind: "file",
+					dominantDimension: "coordinationCost",
+					suggestedAction: "Stabilize the runtime boundary.",
+				},
+				{
+					name: "createRuntimeReport",
+					score: 7.2,
+					severity: "High",
+					kind: "unit",
+					dominantDimension: "changePressure",
+					suggestedAction: "Split the report creation flow.",
+				},
+				{
+					name: "runtime",
+					score: 6.6,
+					severity: "Medium",
+					kind: "component",
+					dominantDimension: "structuralRisk",
+					suggestedAction: "Clarify seams and ownership.",
+				},
+			],
+			rows: [
+				{
+					name: "src/runtime/index.ts",
+					route: "/files/churn",
+					kind: "file",
+					parent: "runtime",
+					score: 8.8,
+					severity: "Critical",
+					dominantDimension: "coordinationCost",
+					size: 1100,
+					commitsCount: 18,
+					contributorsCount: 4,
+					temporalLinks: 7,
+					complexity: 12,
+					structuralRisk: 6.1,
+					changePressure: 7.4,
+					coordinationCost: 8.8,
+					knowledgeRisk: 4.2,
+					suggestedAction: "Stabilize the runtime boundary.",
+					reasons: ["High coordination cost", "Sustained change pressure"],
+				},
+				{
+					name: "createRuntimeReport",
+					route: "/units/complexity",
+					kind: "unit",
+					parent: "runtime-client",
+					score: 7.2,
+					severity: "High",
+					dominantDimension: "changePressure",
+					size: 180,
+					commitsCount: 12,
+					contributorsCount: 3,
+					temporalLinks: 5,
+					complexity: 12,
+					structuralRisk: 5.1,
+					changePressure: 7.2,
+					coordinationCost: 6.4,
+					knowledgeRisk: 4.1,
+					suggestedAction: "Split the report creation flow.",
+					reasons: ["Too many change vectors"],
+				},
+				{
+					name: "runtime",
+					route: "/dependencies",
+					kind: "component",
+					parent: "",
+					score: 6.6,
+					severity: "Medium",
+					dominantDimension: "structuralRisk",
+					size: 4200,
+					commitsCount: 22,
+					contributorsCount: 5,
+					temporalLinks: 9,
+					complexity: 0,
+					structuralRisk: 6.6,
+					changePressure: 5.8,
+					coordinationCost: 6.1,
+					knowledgeRisk: 5.2,
+					suggestedAction: "Clarify seams and ownership.",
+					reasons: ["Large coordination surface"],
+				},
+			],
+		});
+	});
+
+	test("reads a commit summary from contributors, metrics, extensions, and timeline exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeFileSync(
+			join(dataDir, "contributors.txt"),
+			[
+				"email\tcommitsAllTime\tcommits30Days\tcommits90Days\tcommits180Days\tcommits365Days\tfirstCommit\tlastCommit\tpercentage\tuserName\tisRookie\tisActive",
+				"alan@example.com\t32\t6\t12\t18\t24\t2024-01-03\t2026-03-31\t50.0\tAlan Currie\tfalse\ttrue",
+				"sam@example.com\t22\t2\t6\t10\t14\t2024-06-10\t2026-03-30\t34.4\tSam Example\tfalse\ttrue",
+				"new@example.com\t10\t0\t1\t2\t4\t2026-02-18\t2026-03-21\t15.6\tNew Dev\ttrue\tfalse",
+			].join("\n"),
+		);
+		writeFileSync(
+			join(dataDir, "metrics.txt"),
+			[
+				"FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS: 420",
+				"FILE_CHANGE_HISTORY_ACTIVE_DAYS: 118",
+			].join("\n"),
+		);
+		writeJson(join(dataDir, "commits_per_extension.json"), [
+			{
+				extension: "ts",
+				commitsCount: 42,
+				committersCount: 3,
+				filesCount: 16,
+				commitsCount30Days: 8,
+				committersCount30Days: 2,
+				filesCount30Days: 4,
+				commitsCount90Days: 18,
+				committersCount90Days: 3,
+				filesCount90Days: 9,
+			},
+			{
+				extension: "astro",
+				commitsCount: 12,
+				committersCount: 2,
+				filesCount: 5,
+				commitsCount30Days: 4,
+				committersCount30Days: 1,
+				filesCount30Days: 2,
+				commitsCount90Days: 7,
+				committersCount90Days: 2,
+				filesCount90Days: 3,
+			},
+		]);
+		writeJson(join(dataDir, "contributor_timeline.json"), {
+			perYear: [
+				{
+					timeSlot: "2024",
+					contributors: 2,
+					commits: 18,
+				},
+				{
+					timeSlot: "2025",
+					contributors: 3,
+					commits: 22,
+				},
+				{
+					timeSlot: "2026",
+					contributors: 3,
+					commits: 24,
+				},
+			],
+		});
+
+		expect(readReportCommitsSummary(dataDir)).toEqual({
+			totalCommits: 64,
+			totalContributors: 3,
+			activeContributors: {
+				days30: 2,
+				days90: 3,
+				days365: 3,
+			},
+			repoAgeDays: 420,
+			activeDays: 118,
+			rookieCount: 1,
+			activity: [
+				{ label: "Past 30 days", value: 2, detail: "2 contributors" },
+				{ label: "Past 90 days", value: 3, detail: "3 contributors" },
+				{ label: "Past year", value: 3, detail: "3 contributors" },
+				{ label: "All time", value: 3, detail: "3 contributors" },
+			],
+			timeline: [
+				{ timeSlot: "2024", commits: 18, contributors: 2 },
+				{ timeSlot: "2025", commits: 22, contributors: 3 },
+				{ timeSlot: "2026", commits: 24, contributors: 3 },
+			],
+			extensions: [
+				{
+					extension: "ts",
+					commitsCount: 42,
+					committersCount: 3,
+					filesCount: 16,
+					commitsCount30Days: 8,
+					commitsCount90Days: 18,
+				},
+				{
+					extension: "astro",
+					commitsCount: 12,
+					committersCount: 2,
+					filesCount: 5,
+					commitsCount30Days: 4,
+					commitsCount90Days: 7,
 				},
 			],
 		});

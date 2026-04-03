@@ -562,6 +562,111 @@ const readReportUnitsView = mock((analysisRoot: string, view: string) => {
 		],
 	};
 });
+const readReportHotspotsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		totalHotspots: 3,
+		severityCounts: {
+			critical: 1,
+			high: 1,
+			medium: 1,
+			low: 0,
+		},
+		kindCounts: {
+			files: 1,
+			units: 1,
+			components: 1,
+		},
+		dominantCounts: {
+			structuralRisk: 1,
+			changePressure: 1,
+			coordinationCost: 1,
+			knowledgeRisk: 0,
+		},
+		topHotspots: [
+			{
+				name: "src/runtime/index.ts",
+				score: 8.8,
+				severity: "Critical",
+				kind: "file",
+				dominantDimension: "coordinationCost",
+				suggestedAction: "Stabilize the runtime boundary.",
+			},
+		],
+		rows: [
+			{
+				name: "src/runtime/index.ts",
+				route: "/files/churn",
+				kind: "file",
+				parent: "runtime",
+				score: 8.8,
+				severity: "Critical",
+				dominantDimension: "coordinationCost",
+				size: 1100,
+				commitsCount: 18,
+				contributorsCount: 4,
+				temporalLinks: 7,
+				complexity: 12,
+				structuralRisk: 6.1,
+				changePressure: 7.4,
+				coordinationCost: 8.8,
+				knowledgeRisk: 4.2,
+				suggestedAction: "Stabilize the runtime boundary.",
+				reasons: ["High coordination cost", "Sustained change pressure"],
+			},
+		],
+	};
+});
+const readReportCommitsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		totalCommits: 64,
+		totalContributors: 3,
+		activeContributors: {
+			days30: 2,
+			days90: 3,
+			days365: 3,
+		},
+		repoAgeDays: 420,
+		activeDays: 118,
+		rookieCount: 1,
+		activity: [
+			{ label: "Past 30 days", value: 2, detail: "2 contributors" },
+			{ label: "Past 90 days", value: 3, detail: "3 contributors" },
+			{ label: "Past year", value: 3, detail: "3 contributors" },
+			{ label: "All time", value: 3, detail: "3 contributors" },
+		],
+		timeline: [
+			{ timeSlot: "2024", commits: 18, contributors: 2 },
+			{ timeSlot: "2025", commits: 22, contributors: 3 },
+			{ timeSlot: "2026", commits: 24, contributors: 3 },
+		],
+		extensions: [
+			{
+				extension: "ts",
+				commitsCount: 42,
+				committersCount: 3,
+				filesCount: 16,
+				commitsCount30Days: 8,
+				commitsCount90Days: 18,
+			},
+			{
+				extension: "astro",
+				commitsCount: 12,
+				committersCount: 2,
+				filesCount: 5,
+				commitsCount30Days: 4,
+				commitsCount90Days: 7,
+			},
+		],
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -594,6 +699,8 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportImpactSummary,
 	readReportFilesView,
 	readReportUnitsView,
+	readReportHotspotsSummary,
+	readReportCommitsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -614,6 +721,8 @@ describe("runtime report routes", () => {
 		readReportArtifactSummary.mockClear();
 		readReportFilesView.mockClear();
 		readReportUnitsView.mockClear();
+		readReportHotspotsSummary.mockClear();
+		readReportCommitsSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -1202,6 +1311,104 @@ describe("runtime report routes", () => {
 		expect(readReportUnitsView).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
 			"size",
+		);
+	});
+
+	test("returns hotspot summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/hotspots", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			hotspots: {
+				totalHotspots: number;
+				severityCounts: { critical: number; high: number };
+				topHotspots: Array<{ name: string; score: number }>;
+			};
+		};
+
+		expect(body.hotspots.totalHotspots).toBe(3);
+		expect(body.hotspots.severityCounts).toMatchObject({
+			critical: 1,
+			high: 1,
+		});
+		expect(body.hotspots.topHotspots[0]).toMatchObject({
+			name: "src/runtime/index.ts",
+			score: 8.8,
+		});
+		expect(readReportHotspotsSummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns commit summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/commits", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			commits: {
+				totalCommits: number;
+				totalContributors: number;
+				activeContributors: { days30: number; days90: number };
+				timeline: Array<{ timeSlot: string; commits: number }>;
+			};
+		};
+
+		expect(body.commits.totalCommits).toBe(64);
+		expect(body.commits.totalContributors).toBe(3);
+		expect(body.commits.activeContributors).toMatchObject({
+			days30: 2,
+			days90: 3,
+		});
+		expect(body.commits.timeline[0]).toMatchObject({
+			timeSlot: "2024",
+			commits: 18,
+		});
+		expect(readReportCommitsSummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
 		);
 	});
 

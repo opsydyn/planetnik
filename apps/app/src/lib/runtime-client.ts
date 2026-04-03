@@ -302,6 +302,86 @@ export type RuntimeReportImpact = {
   }>;
 };
 
+export type RuntimeReportHotspots = {
+  readonly totalHotspots: number;
+  readonly severityCounts: {
+    readonly critical: number;
+    readonly high: number;
+    readonly medium: number;
+    readonly low: number;
+  };
+  readonly kindCounts: {
+    readonly files: number;
+    readonly units: number;
+    readonly components: number;
+  };
+  readonly dominantCounts: {
+    readonly structuralRisk: number;
+    readonly changePressure: number;
+    readonly coordinationCost: number;
+    readonly knowledgeRisk: number;
+  };
+  readonly topHotspots: ReadonlyArray<{
+    readonly name: string;
+    readonly score: number;
+    readonly severity: string;
+    readonly kind: string;
+    readonly dominantDimension: string;
+    readonly suggestedAction: string;
+  }>;
+  readonly rows: ReadonlyArray<{
+    readonly name: string;
+    readonly route: string;
+    readonly kind: string;
+    readonly parent: string;
+    readonly score: number;
+    readonly severity: string;
+    readonly dominantDimension: string;
+    readonly size: number;
+    readonly commitsCount: number;
+    readonly contributorsCount: number;
+    readonly temporalLinks: number;
+    readonly complexity: number;
+    readonly structuralRisk: number;
+    readonly changePressure: number;
+    readonly coordinationCost: number;
+    readonly knowledgeRisk: number;
+    readonly suggestedAction: string;
+    readonly reasons: ReadonlyArray<string>;
+  }>;
+};
+
+export type RuntimeReportCommits = {
+  readonly totalCommits: number;
+  readonly totalContributors: number;
+  readonly activeContributors: {
+    readonly days30: number;
+    readonly days90: number;
+    readonly days365: number;
+  };
+  readonly repoAgeDays: number | null;
+  readonly activeDays: number | null;
+  readonly rookieCount: number;
+  readonly activity: ReadonlyArray<{
+    readonly label: string;
+    readonly value: number;
+    readonly detail: string;
+  }>;
+  readonly timeline: ReadonlyArray<{
+    readonly timeSlot: string;
+    readonly commits: number;
+    readonly contributors: number;
+  }>;
+  readonly extensions: ReadonlyArray<{
+    readonly extension: string;
+    readonly commitsCount: number;
+    readonly committersCount: number;
+    readonly filesCount: number;
+    readonly commitsCount30Days: number;
+    readonly commitsCount90Days: number;
+  }>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -631,6 +711,34 @@ export async function getRuntimeReportImpact(
   }
 
   return data.impact;
+}
+
+export async function getRuntimeReportHotspots(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportHotspots | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).hotspots.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.hotspots;
+}
+
+export async function getRuntimeReportCommits(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportCommits | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).commits.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.commits;
 }
 
 export async function getRuntimeReportFilesView(
