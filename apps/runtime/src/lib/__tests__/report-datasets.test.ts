@@ -29,6 +29,7 @@ const {
 	readReportMetricsSummary,
 	readReportCommitsSummary,
 	readReportSecuritySummary,
+	readReportLandscapeRepositorySummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -289,6 +290,107 @@ describe("runtime report dataset helpers", () => {
 					},
 					meanTimeToResolveDays: null,
 					oldestOpenAlertDays: null,
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository summary from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_repositories.json"), {
+			repositories: [
+				{
+					name: "web-app",
+					repoKey: "acme__web-app",
+					description: "Customer-facing web application.",
+					latestCommitDate: "2026-03-31",
+					commits30d: 12,
+					commits90d: 34,
+					contributorsCount: 4,
+					mainFilesCount: 128,
+					mainLinesOfCode: 18450,
+					metadata: {
+						links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+					},
+				},
+			],
+		});
+		writeJson(join(repoDataDir, "analysisResults.json"), {
+			metadata: {
+				name: "web-app",
+				description: "Customer-facing web application.",
+				links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+			},
+			filesCount: 128,
+			linesOfCode: 18450,
+			duplication: {
+				percentage: 2.4,
+				duplicatedLines: 442,
+			},
+		});
+		writeJson(join(repoDataDir, "contributors.json"), {
+			contributors: [
+				{
+					email: "alan@example.com",
+					userName: "Alan Currie",
+					commitsCount: 18,
+					commitsCount30Days: 6,
+					commitsCount90Days: 12,
+					firstCommitDate: "2024-01-03",
+					latestCommitDate: "2026-03-31",
+					isBot: false,
+				},
+			],
+		});
+		writeJson(join(repoDataDir, "contributor_impact.json"), {
+			periods: [
+				{
+					period_key: "all_time",
+					contributors: [
+						{
+							email: "alan@example.com",
+							glue_score: 8.8,
+							snacking_score: 2.4,
+							structural_impact_score: 7.1,
+							visible_activity_score: 6.4,
+							dominant_dimension: "coordination_relief",
+							is_glue: true,
+							is_snacking: false,
+						},
+					],
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositorySummary(dataDir, "acme__web-app"),
+		).toEqual({
+			repoKey: "acme__web-app",
+			name: "web-app",
+			description: "Customer-facing web application.",
+			latestCommitDate: "2026-03-31",
+			commits30d: 12,
+			commits90d: 34,
+			contributorsCount: 4,
+			filesCount: 128,
+			linesOfCode: 18450,
+			duplicationPercentage: 2.4,
+			links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+			topContributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					commitsCount: 18,
+					commits30d: 6,
+					commits90d: 12,
+					firstCommitDate: "2024-01-03",
+					latestCommitDate: "2026-03-31",
+					type: "Human",
+					signal: "Glue",
 				},
 			],
 		});

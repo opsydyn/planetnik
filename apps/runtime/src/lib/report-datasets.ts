@@ -303,6 +303,34 @@ export type ReportSecuritySummary = {
 	}>;
 };
 
+export type ReportLandscapeRepositorySummary = {
+	readonly repoKey: string;
+	readonly name: string;
+	readonly description: string;
+	readonly latestCommitDate: string;
+	readonly commits30d: number;
+	readonly commits90d: number;
+	readonly contributorsCount: number;
+	readonly filesCount: number;
+	readonly linesOfCode: number;
+	readonly duplicationPercentage: number | null;
+	readonly links: ReadonlyArray<{
+		readonly label: string;
+		readonly href: string;
+	}>;
+	readonly topContributors: ReadonlyArray<{
+		readonly email: string;
+		readonly displayName: string;
+		readonly commitsCount: number;
+		readonly commits30d: number;
+		readonly commits90d: number;
+		readonly firstCommitDate: string;
+		readonly latestCommitDate: string;
+		readonly type: "Human" | "Bot";
+		readonly signal: string;
+	}>;
+};
+
 export type ReportHotspotsSummary = {
 	readonly totalHotspots: number;
 	readonly severityCounts: {
@@ -2007,6 +2035,223 @@ export function readReportSecuritySummary(
 				};
 			})
 			.filter((item) => item.owner.length > 0 && item.repo.length > 0),
+	};
+}
+
+function resolveLandscapeRepoDataDir(dataDir: string, repoKey: string): string {
+	const candidates = [
+		join(resolve(dataDir, "../../.."), repoKey, "data"),
+		join(resolve(dataDir, ".."), repoKey, "data"),
+		join(resolve(dataDir), repoKey, "data"),
+	];
+
+	return (
+		candidates.find((candidate) => existsSync(candidate)) ??
+		candidates[0] ??
+		join(resolve(dataDir, "../../.."), repoKey, "data")
+	);
+}
+
+function readLandscapeRepoJsonRecord(
+	dataDir: string,
+	repoKey: string,
+	fileName: string,
+): Record<string, unknown> | null {
+	const path = join(resolveLandscapeRepoDataDir(dataDir, repoKey), fileName);
+	if (!existsSync(path)) {
+		return null;
+	}
+
+	const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+	return typeof parsed === "object" && parsed !== null
+		? (parsed as Record<string, unknown>)
+		: null;
+}
+
+function formatContributorDisplayName(input: {
+	readonly email: string;
+	readonly userName?: string | null;
+}): string {
+	const userName = input.userName?.trim() ?? "";
+	return userName.length > 0 ? userName : input.email;
+}
+
+export function readReportLandscapeRepositorySummary(
+	dataDir: string,
+	repoKey: string,
+): ReportLandscapeRepositorySummary | null {
+	const repositories = readJsonRecord(dataDir, "landscape_repositories.json");
+	const repositoryEntries = Array.isArray(repositories?.repositories)
+		? repositories.repositories.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const repositoryEntry =
+		repositoryEntries.find((item) => item.repoKey === repoKey) ?? null;
+
+	if (!repositoryEntry) {
+		return null;
+	}
+
+	const analysis = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"analysisResults.json",
+	);
+	const contributors = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"contributors.json",
+	);
+	const contributorImpact = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"contributor_impact.json",
+	);
+	const metadata =
+		analysis?.metadata && typeof analysis.metadata === "object"
+			? (analysis.metadata as Record<string, unknown>)
+			: null;
+	const duplication =
+		analysis?.duplication && typeof analysis.duplication === "object"
+			? (analysis.duplication as Record<string, unknown>)
+			: null;
+	const periods = Array.isArray(contributorImpact?.periods)
+		? contributorImpact.periods.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const allTimeImpact = periods.find((item) => item.period_key === "all_time");
+	const impactContributors = Array.isArray(allTimeImpact?.contributors)
+		? allTimeImpact.contributors.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const impactByEmail = new Map<string, Record<string, unknown>>(
+		impactContributors.flatMap((item) => {
+			const email = typeof item.email === "string" ? item.email : null;
+			return email ? [[email, item] as const] : [];
+		}),
+	);
+	const contributorRows = Array.isArray(contributors?.contributors)
+		? contributors.contributors.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	const links = Array.isArray(metadata?.links)
+		? metadata.links
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => ({
+					label:
+						typeof item.label === "string" && item.label.length > 0
+							? item.label
+							: "Open repository",
+					href: typeof item.href === "string" ? item.href : "",
+				}))
+				.filter((item) => item.href.length > 0)
+		: [];
+
+	const topContributors = contributorRows
+		.map((item) => {
+			const email = typeof item.email === "string" ? item.email : "";
+			const impact = impactByEmail.get(email);
+			const isGlue = impact?.is_glue === true;
+			const isSnacking = impact?.is_snacking === true;
+			const dominantDimension =
+				typeof impact?.dominant_dimension === "string"
+					? impact.dominant_dimension.replaceAll("_", " ")
+					: "—";
+
+			return {
+				email,
+				displayName: formatContributorDisplayName({
+					email,
+					userName: typeof item.userName === "string" ? item.userName : null,
+				}),
+				commitsCount:
+					typeof item.commitsCount === "number" ? item.commitsCount : 0,
+				commits30d:
+					typeof item.commitsCount30Days === "number"
+						? item.commitsCount30Days
+						: 0,
+				commits90d:
+					typeof item.commitsCount90Days === "number"
+						? item.commitsCount90Days
+						: 0,
+				firstCommitDate:
+					typeof item.firstCommitDate === "string" ? item.firstCommitDate : "",
+				latestCommitDate:
+					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+				type: item.isBot === true ? ("Bot" as const) : ("Human" as const),
+				signal: isGlue ? "Glue" : isSnacking ? "Snacking" : dominantDimension,
+			};
+		})
+		.filter((item) => item.email.length > 0)
+		.sort(
+			(left, right) =>
+				right.commitsCount - left.commitsCount ||
+				left.email.localeCompare(right.email),
+		);
+
+	const name =
+		typeof repositoryEntry.name === "string"
+			? repositoryEntry.name
+			: typeof metadata?.name === "string"
+				? metadata.name
+				: "";
+	if (name.length === 0) {
+		return null;
+	}
+
+	return {
+		repoKey,
+		name,
+		description:
+			typeof repositoryEntry.description === "string"
+				? repositoryEntry.description
+				: typeof metadata?.description === "string"
+					? metadata.description
+					: "Repository drilldown within the current landscape analysis.",
+		latestCommitDate:
+			typeof repositoryEntry.latestCommitDate === "string"
+				? repositoryEntry.latestCommitDate
+				: "",
+		commits30d:
+			typeof repositoryEntry.commits30d === "number"
+				? repositoryEntry.commits30d
+				: 0,
+		commits90d:
+			typeof repositoryEntry.commits90d === "number"
+				? repositoryEntry.commits90d
+				: 0,
+		contributorsCount:
+			typeof repositoryEntry.contributorsCount === "number"
+				? repositoryEntry.contributorsCount
+				: topContributors.length,
+		filesCount:
+			typeof analysis?.filesCount === "number"
+				? analysis.filesCount
+				: typeof repositoryEntry.mainFilesCount === "number"
+					? repositoryEntry.mainFilesCount
+					: 0,
+		linesOfCode:
+			typeof analysis?.linesOfCode === "number"
+				? analysis.linesOfCode
+				: typeof repositoryEntry.mainLinesOfCode === "number"
+					? repositoryEntry.mainLinesOfCode
+					: 0,
+		duplicationPercentage:
+			typeof duplication?.percentage === "number" ? duplication.percentage : null,
+		links,
+		topContributors,
 	};
 }
 

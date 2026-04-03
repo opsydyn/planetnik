@@ -1,0 +1,102 @@
+---
+import AppShell from "../../../../layouts/AppShell.astro";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../lib/report-detail-view-model.js";
+import { buildReportLandscapeRepositoryViewModel } from "../../../../lib/report-landscape-repository-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+} from "../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const viewModel = buildReportLandscapeRepositoryViewModel({
+	reportName: reportDetail.report.name,
+	repository,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Repository`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository</p>
+			<h2>{viewModel.heading}</h2>
+			<p>{repository.description}</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open landscape overview
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/security`}>
+					Open security
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Contributors</p>
+				<h2>Top contributors</h2>
+				{viewModel.contributorRows.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.contributorRows.map((row) => (
+							<li>
+								<strong>{row.label}</strong>: {row.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No repository contributors were exported.</p>
+				)}
+			</article>
+
+			{repository.links.length > 0 ? (
+				<article class="dashboard-card">
+					<p class="card-kicker">Links</p>
+					<h2>Repository links</h2>
+					<ul class="todo-list">
+						{repository.links.map((link) => (
+							<li>
+								<a href={link.href} target="_blank" rel="noreferrer">
+									{link.label}
+								</a>
+							</li>
+						))}
+					</ul>
+				</article>
+			) : null}
+		</section>
+	</div>
+</AppShell>

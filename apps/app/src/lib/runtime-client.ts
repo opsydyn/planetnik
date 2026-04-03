@@ -425,6 +425,34 @@ export type RuntimeReportSecurity = {
   }>;
 };
 
+export type RuntimeReportLandscapeRepository = {
+  readonly repoKey: string;
+  readonly name: string;
+  readonly description: string;
+  readonly latestCommitDate: string;
+  readonly commits30d: number;
+  readonly commits90d: number;
+  readonly contributorsCount: number;
+  readonly filesCount: number;
+  readonly linesOfCode: number;
+  readonly duplicationPercentage: number | null;
+  readonly links: ReadonlyArray<{
+    readonly label: string;
+    readonly href: string;
+  }>;
+  readonly topContributors: ReadonlyArray<{
+    readonly email: string;
+    readonly displayName: string;
+    readonly commitsCount: number;
+    readonly commits30d: number;
+    readonly commits90d: number;
+    readonly firstCommitDate: string;
+    readonly latestCommitDate: string;
+    readonly type: "Human" | "Bot";
+    readonly signal: string;
+  }>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -810,6 +838,21 @@ export async function getRuntimeReportSecurity(
   }
 
   return data.security;
+}
+
+export async function getRuntimeReportLandscapeRepository(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportLandscapeRepository | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).repositories({ repo }).get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.repository;
 }
 
 export async function getRuntimeReportFilesView(
