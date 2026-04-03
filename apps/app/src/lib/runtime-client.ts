@@ -855,6 +855,54 @@ export async function getRuntimeReportLandscapeRepository(
   return data.repository;
 }
 
+export async function getRuntimeReportLandscapeRepositoryMetrics(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportMetrics | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .metrics.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.metrics;
+}
+
+export async function getRuntimeReportLandscapeRepositoryCommits(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportCommits | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .commits.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.commits;
+}
+
+export async function getRuntimeReportLandscapeRepositoryDependencies(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportDependencies | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .dependencies.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.dependencies;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,

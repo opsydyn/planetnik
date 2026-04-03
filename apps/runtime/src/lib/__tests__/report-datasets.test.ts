@@ -30,6 +30,9 @@ const {
 	readReportCommitsSummary,
 	readReportSecuritySummary,
 	readReportLandscapeRepositorySummary,
+	readReportLandscapeRepositoryMetricsSummary,
+	readReportLandscapeRepositoryCommitsSummary,
+	readReportLandscapeRepositoryDependenciesSummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -391,6 +394,226 @@ describe("runtime report dataset helpers", () => {
 					latestCommitDate: "2026-03-31",
 					type: "Human",
 					signal: "Glue",
+				},
+			],
+		});
+	});
+
+	test("reads landscape repository metrics from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(repoDataDir, { recursive: true });
+		mkdirSync(dataDir, { recursive: true });
+		writeFileSync(
+			join(repoDataDir, "metrics.txt"),
+			[
+				"LINES_OF_CODE_MAIN: 18450",
+				"LINES_OF_CODE_TEST: 4200",
+				"DUPLICATION_NUMBER_OF_DUPLICATED_LINES: 442",
+				"TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE: 22.8",
+				"TOTAL_ANALYSIS_TIME_IN_MILLIS: 960",
+				"NUMBER_OF_FILES_MAIN: 128",
+			].join("\n"),
+		);
+
+		expect(
+			readReportLandscapeRepositoryMetricsSummary(dataDir, "acme__web-app"),
+		).toEqual({
+			totalMetrics: 6,
+			headlineMetrics: {
+				mainLinesOfCode: 18450,
+				testLinesOfCode: 4200,
+				duplicatedLines: 442,
+				testVsMainPercentage: 22.8,
+				totalAnalysisTimeInMillis: 960,
+			},
+			groupSummaries: [
+				{
+					groupId: "LINES_OF_CODE",
+					label: "Lines of Code",
+					metrics: [
+						{ id: "LINES_OF_CODE_MAIN", value: 18450 },
+						{ id: "LINES_OF_CODE_TEST", value: 4200 },
+						{ id: "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE", value: 22.8 },
+					],
+				},
+				{
+					groupId: "NUMBER_OF_FILES",
+					label: "Files",
+					metrics: [{ id: "NUMBER_OF_FILES_MAIN", value: 128 }],
+				},
+				{
+					groupId: "DUPLICATION",
+					label: "Duplication",
+					metrics: [{ id: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES", value: 442 }],
+				},
+				{
+					groupId: "ANALYSIS",
+					label: "Analysis",
+					metrics: [{ id: "TOTAL_ANALYSIS_TIME_IN_MILLIS", value: 960 }],
+				},
+			],
+		});
+	});
+
+	test("reads landscape repository commits from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(repoDataDir, { recursive: true });
+		mkdirSync(dataDir, { recursive: true });
+		writeFileSync(
+			join(repoDataDir, "contributors.json"),
+			JSON.stringify({
+				contributors: [
+					{
+						email: "alan@example.com",
+						commitsCount: 18,
+						commitsCount30Days: 6,
+						commitsCount90Days: 12,
+						commitsCount365Days: 18,
+						isRookie: false,
+					},
+					{
+						email: "sam@example.com",
+						commitsCount: 14,
+						commitsCount30Days: 4,
+						commitsCount90Days: 10,
+						commitsCount365Days: 14,
+						isRookie: false,
+					},
+					{
+						email: "new@example.com",
+						commitsCount: 8,
+						commitsCount30Days: 0,
+						commitsCount90Days: 2,
+						commitsCount365Days: 8,
+						isRookie: true,
+					},
+				],
+			}),
+		);
+		writeFileSync(
+			join(repoDataDir, "metrics.txt"),
+			[
+				"FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS: 420",
+				"FILE_CHANGE_HISTORY_ACTIVE_DAYS: 118",
+			].join("\n"),
+		);
+		writeJson(join(repoDataDir, "commits_per_extension.json"), [
+			{
+				extension: "ts",
+				commitsCount: 24,
+				committersCount: 3,
+				filesCount: 12,
+				commitsCount30Days: 5,
+				commitsCount90Days: 11,
+			},
+		]);
+		writeJson(join(repoDataDir, "contributor_timeline.json"), {
+			perYear: [
+				{ timeSlot: "2024", contributors: 2, commits: 10 },
+				{ timeSlot: "2025", contributors: 3, commits: 14 },
+				{ timeSlot: "2026", contributors: 3, commits: 16 },
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryCommitsSummary(dataDir, "acme__web-app"),
+		).toEqual({
+			totalCommits: 40,
+			totalContributors: 3,
+			activeContributors: {
+				days30: 2,
+				days90: 3,
+				days365: 3,
+			},
+			repoAgeDays: 420,
+			activeDays: 118,
+			rookieCount: 1,
+			activity: [
+				{ label: "Past 30 days", value: 2, detail: "2 contributors" },
+				{ label: "Past 90 days", value: 3, detail: "3 contributors" },
+				{ label: "Past year", value: 3, detail: "3 contributors" },
+				{ label: "All time", value: 3, detail: "3 contributors" },
+			],
+			timeline: [
+				{ timeSlot: "2024", commits: 10, contributors: 2 },
+				{ timeSlot: "2025", commits: 14, contributors: 3 },
+				{ timeSlot: "2026", commits: 16, contributors: 3 },
+			],
+			extensions: [
+				{
+					extension: "ts",
+					commitsCount: 24,
+					committersCount: 3,
+					filesCount: 12,
+					commitsCount30Days: 5,
+					commitsCount90Days: 11,
+				},
+			],
+		});
+	});
+
+	test("reads landscape repository dependencies from the repo export folder", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(repoDataDir, "component_dependencies.json"), {
+			dependencies: [
+				{
+					decompositionKey: "components",
+					fromComponent: "web",
+					toComponent: "runtime",
+					count: 8,
+					evidenceCount: 3,
+					locFrom: 1200,
+				},
+				{
+					decompositionKey: "components",
+					fromComponent: "runtime",
+					toComponent: "reports",
+					count: 5,
+					evidenceCount: 2,
+					locFrom: 900,
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryDependenciesSummary(dataDir, "acme__web-app"),
+		).toEqual({
+			sections: [
+				{
+					decompositionKey: "components",
+					linksCount: 2,
+					incoming: [
+						{ label: "runtime", value: 8 },
+						{ label: "reports", value: 5 },
+					],
+					outgoing: [
+						{ label: "web", value: 8 },
+						{ label: "runtime", value: 5 },
+					],
+					links: [
+						{
+							fromComponent: "web",
+							toComponent: "runtime",
+							count: 8,
+							evidenceCount: 3,
+							locFrom: 1200,
+						},
+						{
+							fromComponent: "runtime",
+							toComponent: "reports",
+							count: 5,
+							evidenceCount: 2,
+							locFrom: 900,
+						},
+					],
 				},
 			],
 		});

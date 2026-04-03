@@ -1,0 +1,107 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import { buildReportMetricsViewModel } from "../../../../../lib/report-metrics-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryMetrics,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const metrics = await getRuntimeReportLandscapeRepositoryMetrics(cookie, slug, repo);
+if (!metrics) {
+	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+}
+
+const viewModel = buildReportMetricsViewModel({
+	reportName: repository.name,
+	metrics,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Metrics`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Metrics</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads the repo-scoped `metrics.txt` export from the
+				landscape analysis root and keeps the contract aligned with the static
+				drilldown.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open landscape overview
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-stack">
+			{viewModel.groups.map((group) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">Metric Group</p>
+					<h2>{group.label}</h2>
+					<div class="contributors-table-wrap">
+						<table class="contributors-table">
+							<thead>
+								<tr>
+									<th>Metric</th>
+									<th>Value</th>
+								</tr>
+							</thead>
+							<tbody>
+								{group.rows.map((row) => (
+									<tr>
+										<td>
+											<div class="table-primary">{row.metric}</div>
+										</td>
+										<td>{row.value}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</article>
+			))}
+		</section>
+	</div>
+</AppShell>

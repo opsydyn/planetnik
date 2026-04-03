@@ -761,6 +761,129 @@ const readReportLandscapeRepositorySummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryMetricsSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			totalMetrics: 6,
+			headlineMetrics: {
+				mainLinesOfCode: 18450,
+				testLinesOfCode: 4200,
+				duplicatedLines: 442,
+				testVsMainPercentage: 22.8,
+				totalAnalysisTimeInMillis: 960,
+			},
+			groupSummaries: [
+				{
+					groupId: "LINES_OF_CODE",
+					label: "Lines of Code",
+					metrics: [
+						{ id: "LINES_OF_CODE_MAIN", value: 18450 },
+						{ id: "LINES_OF_CODE_TEST", value: 4200 },
+					],
+				},
+				{
+					groupId: "DUPLICATION",
+					label: "Duplication",
+					metrics: [{ id: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES", value: 442 }],
+				},
+			],
+		};
+	},
+);
+const readReportLandscapeRepositoryCommitsSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			totalCommits: 40,
+			totalContributors: 3,
+			activeContributors: {
+				days30: 2,
+				days90: 3,
+				days365: 3,
+			},
+			repoAgeDays: 420,
+			activeDays: 118,
+			rookieCount: 1,
+			activity: [
+				{ label: "Past 30 days", value: 2, detail: "2 contributors" },
+				{ label: "Past 90 days", value: 3, detail: "3 contributors" },
+				{ label: "Past year", value: 3, detail: "3 contributors" },
+				{ label: "All time", value: 3, detail: "3 contributors" },
+			],
+			timeline: [
+				{ timeSlot: "2024", commits: 10, contributors: 2 },
+				{ timeSlot: "2025", commits: 14, contributors: 3 },
+				{ timeSlot: "2026", commits: 16, contributors: 3 },
+			],
+			extensions: [
+				{
+					extension: "ts",
+					commitsCount: 24,
+					committersCount: 3,
+					filesCount: 12,
+					commitsCount30Days: 5,
+					commitsCount90Days: 11,
+				},
+			],
+		};
+	},
+);
+const readReportLandscapeRepositoryDependenciesSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			sections: [
+				{
+					decompositionKey: "components",
+					linksCount: 2,
+					incoming: [
+						{ label: "runtime", value: 8 },
+						{ label: "reports", value: 5 },
+					],
+					outgoing: [
+						{ label: "web", value: 8 },
+						{ label: "runtime", value: 5 },
+					],
+					links: [
+						{
+							fromComponent: "web",
+							toComponent: "runtime",
+							count: 8,
+							evidenceCount: 3,
+							locFrom: 1200,
+						},
+						{
+							fromComponent: "runtime",
+							toComponent: "reports",
+							count: 5,
+							evidenceCount: 2,
+							locFrom: 900,
+						},
+					],
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -798,6 +921,9 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportTrendsSummary,
 	readReportSecuritySummary,
 	readReportLandscapeRepositorySummary,
+	readReportLandscapeRepositoryMetricsSummary,
+	readReportLandscapeRepositoryCommitsSummary,
+	readReportLandscapeRepositoryDependenciesSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -823,6 +949,9 @@ describe("runtime report routes", () => {
 		readReportTrendsSummary.mockClear();
 		readReportSecuritySummary.mockClear();
 		readReportLandscapeRepositorySummary.mockClear();
+		readReportLandscapeRepositoryMetricsSummary.mockClear();
+		readReportLandscapeRepositoryCommitsSummary.mockClear();
+		readReportLandscapeRepositoryDependenciesSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -1652,6 +1781,155 @@ describe("runtime report routes", () => {
 			signal: "Glue",
 		});
 		expect(readReportLandscapeRepositorySummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository metrics for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/metrics",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			metrics: {
+				totalMetrics: number;
+				headlineMetrics: { mainLinesOfCode: number; duplicatedLines: number };
+			};
+		};
+
+		expect(body.metrics.totalMetrics).toBe(6);
+		expect(body.metrics.headlineMetrics).toMatchObject({
+			mainLinesOfCode: 18450,
+			duplicatedLines: 442,
+		});
+		expect(readReportLandscapeRepositoryMetricsSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository commits for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/commits",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			commits: {
+				totalCommits: number;
+				totalContributors: number;
+				activeContributors: { days30: number; days90: number };
+			};
+		};
+
+		expect(body.commits.totalCommits).toBe(40);
+		expect(body.commits.totalContributors).toBe(3);
+		expect(body.commits.activeContributors).toMatchObject({
+			days30: 2,
+			days90: 3,
+		});
+		expect(readReportLandscapeRepositoryCommitsSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository dependencies for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/dependencies",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			dependencies: {
+				sections: Array<{
+					decompositionKey: string;
+					linksCount: number;
+					incoming: Array<{ label: string; value: number }>;
+				}>;
+			};
+		};
+
+		expect(body.dependencies.sections[0]).toMatchObject({
+			decompositionKey: "components",
+			linksCount: 2,
+		});
+		expect(body.dependencies.sections[0]?.incoming[0]).toMatchObject({
+			label: "runtime",
+			value: 8,
+		});
+		expect(readReportLandscapeRepositoryDependenciesSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 		);

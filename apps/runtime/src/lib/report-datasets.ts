@@ -2076,6 +2076,47 @@ function formatContributorDisplayName(input: {
 	return userName.length > 0 ? userName : input.email;
 }
 
+type LandscapeRepoContributorCommits = {
+	readonly commitsCount: number;
+	readonly commitsCount30Days: number;
+	readonly commitsCount90Days: number;
+	readonly commitsCount365Days: number;
+	readonly isRookie: boolean;
+};
+
+function readLandscapeRepoContributorCommits(
+	dataDir: string,
+	repoKey: string,
+): ReadonlyArray<LandscapeRepoContributorCommits> {
+	const contributors = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"contributors.json",
+	);
+	const rows = Array.isArray(contributors?.contributors)
+		? contributors.contributors.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	return rows.map((item) => ({
+		commitsCount:
+			typeof item.commitsCount === "number" ? item.commitsCount : 0,
+		commitsCount30Days:
+			typeof item.commitsCount30Days === "number" ? item.commitsCount30Days : 0,
+		commitsCount90Days:
+			typeof item.commitsCount90Days === "number" ? item.commitsCount90Days : 0,
+		commitsCount365Days:
+			typeof item.commitsCount365Days === "number"
+				? item.commitsCount365Days
+				: typeof item.commitsCount === "number"
+					? item.commitsCount
+					: 0,
+		isRookie: item.isRookie === true,
+	}));
+}
+
 export function readReportLandscapeRepositorySummary(
 	dataDir: string,
 	repoKey: string,
@@ -2253,6 +2294,128 @@ export function readReportLandscapeRepositorySummary(
 		links,
 		topContributors,
 	};
+}
+
+export function readReportLandscapeRepositoryMetricsSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportMetricsSummary | null {
+	return readReportMetricsSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
+export function readReportLandscapeRepositoryCommitsSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportCommitsSummary | null {
+	const repoDataDir = resolveLandscapeRepoDataDir(dataDir, repoKey);
+	const contributors = readLandscapeRepoContributorCommits(dataDir, repoKey);
+	const metrics = readMetricsMap(repoDataDir);
+	const timelineRaw = readLandscapeRepoJsonRecord(
+		dataDir,
+		repoKey,
+		"contributor_timeline.json",
+	);
+	const perYear = Array.isArray(timelineRaw?.perYear)
+		? timelineRaw.perYear.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+	const extensionsRaw = readJsonFileArray(repoDataDir, "commits_per_extension.json");
+
+	const totalContributors = contributors.length;
+	const totalCommits = contributors.reduce(
+		(sum, contributor) => sum + contributor.commitsCount,
+		0,
+	);
+	const activeContributors = {
+		days30: contributors.filter((contributor) => contributor.commitsCount30Days > 0)
+			.length,
+		days90: contributors.filter((contributor) => contributor.commitsCount90Days > 0)
+			.length,
+		days365: contributors.filter(
+			(contributor) => contributor.commitsCount365Days > 0,
+		).length,
+	};
+
+	const timeline = perYear
+		.map((entry) => ({
+			timeSlot: typeof entry.timeSlot === "string" ? entry.timeSlot : "",
+			commits: typeof entry.commits === "number" ? entry.commits : 0,
+			contributors:
+				typeof entry.contributors === "number" ? entry.contributors : 0,
+		}))
+		.filter((entry) => entry.timeSlot.length > 0)
+		.sort((left, right) => left.timeSlot.localeCompare(right.timeSlot));
+
+	const extensions = extensionsRaw
+		.map((entry) => ({
+			extension: typeof entry.extension === "string" ? entry.extension : "",
+			commitsCount:
+				typeof entry.commitsCount === "number" ? entry.commitsCount : 0,
+			committersCount:
+				typeof entry.committersCount === "number" ? entry.committersCount : 0,
+			filesCount: typeof entry.filesCount === "number" ? entry.filesCount : 0,
+			commitsCount30Days:
+				typeof entry.commitsCount30Days === "number"
+					? entry.commitsCount30Days
+					: 0,
+			commitsCount90Days:
+				typeof entry.commitsCount90Days === "number"
+					? entry.commitsCount90Days
+					: 0,
+		}))
+		.filter((entry) => entry.extension.length > 0)
+		.sort((left, right) => right.commitsCount - left.commitsCount);
+
+	if (
+		totalContributors === 0 &&
+		totalCommits === 0 &&
+		timeline.length === 0 &&
+		extensions.length === 0
+	) {
+		return null;
+	}
+
+	return {
+		totalCommits,
+		totalContributors,
+		activeContributors,
+		repoAgeDays: metrics.get("FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS") ?? null,
+		activeDays: metrics.get("FILE_CHANGE_HISTORY_ACTIVE_DAYS") ?? null,
+		rookieCount: contributors.filter((contributor) => contributor.isRookie).length,
+		activity: [
+			{
+				label: "Past 30 days",
+				value: activeContributors.days30,
+				detail: `${activeContributors.days30} contributors`,
+			},
+			{
+				label: "Past 90 days",
+				value: activeContributors.days90,
+				detail: `${activeContributors.days90} contributors`,
+			},
+			{
+				label: "Past year",
+				value: activeContributors.days365,
+				detail: `${activeContributors.days365} contributors`,
+			},
+			{
+				label: "All time",
+				value: totalContributors,
+				detail: `${totalContributors} contributors`,
+			},
+		],
+		timeline,
+		extensions,
+	};
+}
+
+export function readReportLandscapeRepositoryDependenciesSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportDependenciesSummary | null {
+	return readReportDependenciesSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
 export function readReportTrendsSummary(
