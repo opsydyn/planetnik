@@ -22,7 +22,7 @@ describe("hosted shell", () => {
 		expect(shell.chrome).toBe("public");
 		expect(shell.navSections).toEqual([]);
 		expect(shell.breadcrumbs).toEqual([]);
-		expect(shell.sessionLabel).toBe("Hosted app access");
+		expect(shell.sessionLabel).toBe("Planetnik access");
 	});
 
 	test("uses application chrome for the signed-in dashboard", () => {
@@ -391,7 +391,7 @@ describe("hosted shell", () => {
 			href: "/",
 			variant: "sidebar",
 			kicker: "Planetnik",
-			title: "Hosted Intelligence",
+			title: "Planetnik",
 			subtitle: null,
 		});
 		expect(buildHostedBrandModel({
@@ -402,7 +402,7 @@ describe("hosted shell", () => {
 			href: "/",
 			variant: "topbar",
 			kicker: "Planetnik",
-			title: "Hosted Intelligence",
+			title: "Planetnik",
 			subtitle: "Report shell",
 		});
 	});

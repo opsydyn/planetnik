@@ -4,9 +4,7 @@ import Breadcrumb from "@planetnik/report-ui/shell/Breadcrumb";
 import PlanetnikLogo from "@planetnik/report-ui/shell/PlanetnikLogo";
 import ThemeSwitcher from "@planetnik/report-ui/theme-switcher/ThemeSwitcher";
 import "@planetnik/report-ui/theme/dashboard-shell.css";
-import HostedBrand from "../components/shell/HostedBrand.astro";
 import {
-	buildHostedBrandModel,
 	buildHostedShellModel,
 	isHostedNavItemActive,
 	type HostedShellContext,
@@ -28,11 +26,6 @@ const shell = buildHostedShellModel({
 	currentPath: Astro.url.pathname,
 	userEmail,
 	context: shellContext,
-});
-const publicBrand = buildHostedBrandModel({
-	href: userEmail ? "/" : "/sign-in",
-	variant: "topbar",
-	subtitle: "Hosted app",
 });
 ---
 
@@ -68,27 +61,31 @@ const publicBrand = buildHostedBrandModel({
 		{shell.chrome === "public" ? (
 			<div class="shell-public">
 				<div class="shell-public-inner">
-				<header class="public-topbar">
-					<HostedBrand brand={publicBrand} />
-					<div class="topbar-meta">
-						<span class="status-pill">
-							<span class="status-dot"></span>
-							{shell.sessionLabel}
-						</span>
-					</div>
-				</header>
+					<header class="public-topbar">
+						<PlanetnikLogo
+							href={userEmail ? "/" : "/sign-in"}
+							src="/planetnik-logo-2.webp"
+							variant="sidebar"
+						/>
+						<div class="topbar-meta">
+							<span class="status-pill">
+								<span class="status-dot"></span>
+								{shell.sessionLabel}
+							</span>
+						</div>
+					</header>
 
-				<main class="public-content-grid">
-					<section class="hero-panel">
-						<p class="eyebrow">Astro + Bun + runtime auth boundary</p>
-						<h1>{title}</h1>
-						<p class="lede">{subtitle}</p>
-					</section>
+					<main class="public-content-grid">
+						<section class="hero-panel">
+							<p class="eyebrow">Astro + Bun + runtime auth boundary</p>
+							<h1>{title}</h1>
+							<p class="lede">{subtitle}</p>
+						</section>
 
-					<section class="surface-panel">
-						<slot />
-					</section>
-				</main>
+						<section class="surface-panel">
+							<slot />
+						</section>
+					</main>
 				</div>
 			</div>
 		) : (

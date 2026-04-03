@@ -85,7 +85,7 @@ export function buildHostedBrandModel(input: {
 		href: input.href,
 		variant: input.variant,
 		kicker: "Planetnik",
-		title: "Hosted Intelligence",
+		title: "Planetnik",
 		subtitle: input.subtitle ?? null,
 	};
 }
@@ -133,7 +133,7 @@ export function buildHostedShellModel(
 	const context = input.context ?? { kind: "public" } satisfies HostedShellContext;
 	const sessionLabel = input.userEmail
 		? `Session: ${input.userEmail}`
-		: "Hosted app access";
+		: "Planetnik access";
 
 	if (context.kind === "public") {
 		return {
@@ -141,7 +141,6 @@ export function buildHostedShellModel(
 			brand: buildHostedBrandModel({
 				href: "/sign-in",
 				variant: "topbar",
-				subtitle: "Hosted app",
 			}),
 			navSections: [],
 			breadcrumbs: [],
