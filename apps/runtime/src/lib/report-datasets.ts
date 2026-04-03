@@ -2695,6 +2695,13 @@ export function readReportLandscapeRepositoryImpactSummary(
 	return readReportImpactSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
+export function readReportLandscapeRepositoryControlsSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportControlsSummary | null {
+	return readReportControlsSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

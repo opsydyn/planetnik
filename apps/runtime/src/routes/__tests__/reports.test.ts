@@ -1184,6 +1184,55 @@ const readReportLandscapeRepositoryImpactSummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryControlsSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			totalControls: 3,
+			statusCounts: {
+				failed: 1,
+				tolerant: 1,
+				ok: 1,
+				ignored: 0,
+			},
+			goals: [
+				{
+					goal: "Maintainability",
+					total: 2,
+					failed: 1,
+					tolerant: 1,
+					ok: 0,
+					ignored: 0,
+				},
+				{
+					goal: "Quality",
+					total: 1,
+					failed: 0,
+					tolerant: 0,
+					ok: 1,
+					ignored: 0,
+				},
+			],
+			controls: [
+				{
+					id: "Maintainability::LINES_OF_CODE_MAIN",
+					goal: "Maintainability",
+					metricId: "LINES_OF_CODE_MAIN",
+					metricValue: 18450,
+					desiredRangeText: "< 15000",
+					status: "FAILED",
+					description: "Keep main LOC below target",
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1231,6 +1280,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryContributorDetail,
 	readReportLandscapeRepositoryTopologySummary,
 	readReportLandscapeRepositoryImpactSummary,
+	readReportLandscapeRepositoryControlsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1266,6 +1316,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryContributorDetail.mockClear();
 		readReportLandscapeRepositoryTopologySummary.mockClear();
 		readReportLandscapeRepositoryImpactSummary.mockClear();
+		readReportLandscapeRepositoryControlsSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2595,6 +2646,59 @@ describe("runtime report routes", () => {
 			impactScore: 7.9,
 		});
 		expect(readReportLandscapeRepositoryImpactSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository controls for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/controls",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			controls: {
+				totalControls: number;
+				statusCounts: { failed: number; tolerant: number; ok: number };
+				goals: Array<{ goal: string; total: number }>;
+			};
+		};
+
+		expect(body.controls.totalControls).toBe(3);
+		expect(body.controls.statusCounts).toMatchObject({
+			failed: 1,
+			tolerant: 1,
+			ok: 1,
+		});
+		expect(body.controls.goals[0]).toMatchObject({
+			goal: "Maintainability",
+			total: 2,
+		});
+		expect(readReportLandscapeRepositoryControlsSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 		);

@@ -40,6 +40,7 @@ const {
 	readReportLandscapeRepositoryContributorDetail,
 	readReportLandscapeRepositoryTopologySummary,
 	readReportLandscapeRepositoryImpactSummary,
+	readReportLandscapeRepositoryControlsSummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -1979,6 +1980,111 @@ describe("runtime report dataset helpers", () => {
 					visibleActivityScore: 5.8,
 					structuralImpactScore: 1.9,
 					reason: "Visible motion is outpacing structural leverage.",
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository controls summary from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDir = join(root, "acme__web-app", "data");
+		mkdirSync(repoDir, { recursive: true });
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(repoDir, "controls.json"), {
+			goals: [
+				{
+					goal: "Maintainability",
+					controls: [
+						{
+							metricId: "LINES_OF_CODE_MAIN",
+							metricValue: 18450,
+							desiredRangeText: "< 15000",
+							status: "FAILED",
+							controlDescription: "Keep main LOC below target",
+						},
+						{
+							metricId: "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE",
+							metricValue: 22.8,
+							desiredRangeText: "> 20",
+							status: "TOLERANT",
+							controlDescription: "Keep test coverage pressure healthy",
+						},
+					],
+				},
+				{
+					goal: "Quality",
+					controls: [
+						{
+							metricId: "DUPLICATION_PERCENTAGE",
+							metricValue: 2.4,
+							desiredRangeText: "< 5",
+							status: "OK",
+							controlDescription: "Keep duplication in check",
+						},
+					],
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryControlsSummary(
+				dataDir,
+				"acme__web-app",
+			),
+		).toEqual({
+			totalControls: 3,
+			statusCounts: {
+				failed: 1,
+				tolerant: 1,
+				ok: 1,
+				ignored: 0,
+			},
+			goals: [
+				{
+					goal: "Maintainability",
+					total: 2,
+					failed: 1,
+					tolerant: 1,
+					ok: 0,
+					ignored: 0,
+				},
+				{
+					goal: "Quality",
+					total: 1,
+					failed: 0,
+					tolerant: 0,
+					ok: 1,
+					ignored: 0,
+				},
+			],
+			controls: [
+				{
+					id: "Maintainability::LINES_OF_CODE_MAIN",
+					goal: "Maintainability",
+					metricId: "LINES_OF_CODE_MAIN",
+					metricValue: 18450,
+					desiredRangeText: "< 15000",
+					status: "FAILED",
+					description: "Keep main LOC below target",
+				},
+				{
+					id: "Maintainability::TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE",
+					goal: "Maintainability",
+					metricId: "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE",
+					metricValue: 22.8,
+					desiredRangeText: "> 20",
+					status: "TOLERANT",
+					description: "Keep test coverage pressure healthy",
+				},
+				{
+					id: "Quality::DUPLICATION_PERCENTAGE",
+					goal: "Quality",
+					metricId: "DUPLICATION_PERCENTAGE",
+					metricValue: 2.4,
+					desiredRangeText: "< 5",
+					status: "OK",
+					description: "Keep duplication in check",
 				},
 			],
 		});

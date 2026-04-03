@@ -1,0 +1,130 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import {
+	buildReportControlsViewModel,
+} from "../../../../../lib/report-controls-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryControls,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const controls = await getRuntimeReportLandscapeRepositoryControls(cookie, slug, repo);
+if (!controls) {
+	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+}
+
+const viewModel = buildReportControlsViewModel({
+	reportName: repository.name,
+	controls,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Controls`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Controls</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route reads the repo-scoped `controls.json` export from the
+				landscape analysis root and keeps the contract aligned with the static
+				drilldown.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/metrics`}>
+					Open metrics
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open landscape overview
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Goals</p>
+				<h2>Goal coverage</h2>
+				<ul class="todo-list">
+					{viewModel.goals.map((goal) => (
+						<li>
+							<strong>{goal.label}</strong>: {goal.value} ({goal.detail})
+						</li>
+					))}
+				</ul>
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Inventory</p>
+				<h2>Control inventory</h2>
+				<div class="contributors-table-wrap">
+					<table class="contributors-table">
+						<thead>
+							<tr>
+								<th>Goal</th>
+								<th>Metric</th>
+								<th>Value</th>
+								<th>Desired Range</th>
+								<th>Status</th>
+								<th>Description</th>
+							</tr>
+						</thead>
+						<tbody>
+							{viewModel.rows.map((row) => (
+								<tr>
+									<td>{row.goal}</td>
+									<td>
+										<div class="table-primary">{row.metric}</div>
+									</td>
+									<td>{row.value}</td>
+									<td>{row.desiredRange}</td>
+									<td>{row.status}</td>
+									<td>{row.description}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			</article>
+		</section>
+	</div>
+</AppShell>

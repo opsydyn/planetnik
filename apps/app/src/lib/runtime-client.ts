@@ -1021,6 +1021,22 @@ export async function getRuntimeReportLandscapeRepositoryImpact(
   return data.impact;
 }
 
+export async function getRuntimeReportLandscapeRepositoryControls(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportControls | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .controls.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.controls;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,
