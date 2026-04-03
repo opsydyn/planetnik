@@ -39,6 +39,7 @@ const {
 	readReportLandscapeRepositoryContributorsSummary,
 	readReportLandscapeRepositoryContributorDetail,
 	readReportLandscapeRepositoryTopologySummary,
+	readReportLandscapeRepositoryImpactSummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -1887,6 +1888,96 @@ describe("runtime report dataset helpers", () => {
 					kind: "file",
 					visibleActivityScore: 6.4,
 					structuralImpactScore: 2.1,
+					reason: "Visible motion is outpacing structural leverage.",
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository impact summary from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDir = join(root, "acme__web-app", "data");
+		mkdirSync(repoDir, { recursive: true });
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(repoDir, "impact.json"), {
+			title: "Web App Impact",
+			timestamp: "2026-04-02T12:00:00.000Z",
+			visible_activity: {
+				commits: 18,
+				contributors: 4,
+				changed_files: 9,
+				changed_units: 6,
+			},
+			structural_impact: {
+				summary: {
+					overall_score: 6.8,
+					dominant_dimension: "coordination_relief",
+				},
+			},
+			impact_dimensions: [
+				{ label: "Coordination relief", score: 6.8 },
+				{ label: "Knowledge spread", score: 5.4 },
+			],
+			impact_opportunities: [
+				{
+					name: "Runtime auth boundary",
+					kind: "component",
+					parent: "runtime",
+					impact_score: 7.9,
+					dominant_dimension: "coordination_relief",
+					suggested_action: "Tighten the boundary and cut repeated coordination.",
+				},
+			],
+			snacking_candidates: [
+				{
+					name: "Small UI cleanups",
+					kind: "file",
+					visible_activity_score: 5.8,
+					structural_impact_score: 1.9,
+					reason: "Visible motion is outpacing structural leverage.",
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryImpactSummary(
+				dataDir,
+				"acme__web-app",
+			),
+		).toEqual({
+			title: "Web App Impact",
+			timestamp: "2026-04-02T12:00:00.000Z",
+			visibleActivity: {
+				commits: 18,
+				contributors: 4,
+				changedFiles: 9,
+				changedUnits: 6,
+			},
+			structuralImpact: {
+				overallScore: 6.8,
+				dominantDimension: "coordination_relief",
+			},
+			impactDimensions: [
+				{ label: "Coordination relief", score: 6.8 },
+				{ label: "Knowledge spread", score: 5.4 },
+			],
+			topOpportunities: [
+				{
+					name: "Runtime auth boundary",
+					kind: "component",
+					parent: "runtime",
+					impactScore: 7.9,
+					dominantDimension: "coordination_relief",
+					suggestedAction: "Tighten the boundary and cut repeated coordination.",
+				},
+			],
+			snackingCandidates: [
+				{
+					name: "Small UI cleanups",
+					kind: "file",
+					visibleActivityScore: 5.8,
+					structuralImpactScore: 1.9,
 					reason: "Visible motion is outpacing structural leverage.",
 				},
 			],

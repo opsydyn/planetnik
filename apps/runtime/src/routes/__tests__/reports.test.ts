@@ -1136,6 +1136,54 @@ const readReportLandscapeRepositoryTopologySummary = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryImpactSummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			title: "Web App Impact",
+			timestamp: "2026-04-02T12:00:00.000Z",
+			visibleActivity: {
+				commits: 18,
+				contributors: 4,
+				changedFiles: 9,
+				changedUnits: 6,
+			},
+			structuralImpact: {
+				overallScore: 6.8,
+				dominantDimension: "coordination_relief",
+			},
+			impactDimensions: [
+				{ label: "Coordination relief", score: 6.8 },
+				{ label: "Knowledge spread", score: 5.4 },
+			],
+			topOpportunities: [
+				{
+					name: "Runtime auth boundary",
+					kind: "component",
+					parent: "runtime",
+					impactScore: 7.9,
+					dominantDimension: "coordination_relief",
+					suggestedAction: "Tighten the boundary and cut repeated coordination.",
+				},
+			],
+			snackingCandidates: [
+				{
+					name: "Small UI cleanups",
+					kind: "file",
+					visibleActivityScore: 5.8,
+					structuralImpactScore: 1.9,
+					reason: "Visible motion is outpacing structural leverage.",
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1182,6 +1230,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryContributorsSummary,
 	readReportLandscapeRepositoryContributorDetail,
 	readReportLandscapeRepositoryTopologySummary,
+	readReportLandscapeRepositoryImpactSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1216,6 +1265,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryContributorsSummary.mockClear();
 		readReportLandscapeRepositoryContributorDetail.mockClear();
 		readReportLandscapeRepositoryTopologySummary.mockClear();
+		readReportLandscapeRepositoryImpactSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2488,6 +2538,63 @@ describe("runtime report routes", () => {
 			sharedCommits: 12,
 		});
 		expect(readReportLandscapeRepositoryTopologySummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
+		);
+	});
+
+	test("returns landscape repository impact for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/impact",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			impact: {
+				title: string;
+				visibleActivity: { commits: number; contributors: number };
+				structuralImpact: { overallScore: number; dominantDimension: string };
+				topOpportunities: Array<{ name: string; impactScore: number }>;
+			};
+		};
+
+		expect(body.impact.title).toBe("Web App Impact");
+		expect(body.impact.visibleActivity).toMatchObject({
+			commits: 18,
+			contributors: 4,
+		});
+		expect(body.impact.structuralImpact).toMatchObject({
+			overallScore: 6.8,
+			dominantDimension: "coordination_relief",
+		});
+		expect(body.impact.topOpportunities[0]).toMatchObject({
+			name: "Runtime auth boundary",
+			impactScore: 7.9,
+		});
+		expect(readReportLandscapeRepositoryImpactSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 		);

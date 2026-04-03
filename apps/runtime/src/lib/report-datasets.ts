@@ -2688,6 +2688,13 @@ export function readReportLandscapeRepositoryTopologySummary(
 	return readReportTopologySummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
+export function readReportLandscapeRepositoryImpactSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportImpactSummary | null {
+	return readReportImpactSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {
