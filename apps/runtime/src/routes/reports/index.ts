@@ -18,6 +18,7 @@ import {
 	readReportFilesView,
 	readReportHotspotsSummary,
 	readReportCommitsSummary,
+	readReportTrendsSummary,
 	readReportDuplicationSummary,
 	readReportImpactSummary,
 	readReportMetricsSummary,
@@ -502,6 +503,16 @@ const ReportCommitsResponseSchema = Schema.Struct({
 	commits: ReportCommitsSummarySchema,
 });
 
+const ReportTrendsSummarySchema = Schema.Struct({
+	available: Schema.Boolean,
+	message: Schema.String,
+	hint: Schema.String,
+});
+
+const ReportTrendsResponseSchema = Schema.Struct({
+	trends: ReportTrendsSummarySchema,
+});
+
 const ReportFileInventoryRowSchema = Schema.Struct({
 	relativePath: Schema.String,
 	extension: Schema.String,
@@ -693,6 +704,9 @@ const decodeReportHotspotsResponse = Schema.decodeUnknownSync(
 );
 const decodeReportCommitsResponse = Schema.decodeUnknownSync(
 	ReportCommitsResponseSchema,
+);
+const decodeReportTrendsResponse = Schema.decodeUnknownSync(
+	ReportTrendsResponseSchema,
 );
 const decodeReportFilesViewResponse = Schema.decodeUnknownSync(
 	ReportFilesViewResponseSchema,
@@ -1398,6 +1412,49 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
 		return decodeReportCommitsResponse({
 			commits,
+		});
+	})
+	.get("/api/reports/:slug/trends", async ({ request, params }) => {
+		const session = await auth.api.getSession({
+			headers: request.headers,
+		});
+
+		if (!session?.session || !session.user) {
+			return new Response(
+				JSON.stringify({
+					error: "unauthorized",
+				}),
+				{
+					status: 401,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		const personalWorkspace = await ensurePersonalWorkspace(session);
+		const found = await findWorkspaceReportBySlug(
+			personalWorkspace.id,
+			params.slug,
+		);
+
+		if (!found || !found.analysisRoot) {
+			return new Response(
+				JSON.stringify({
+					error: "not_found",
+				}),
+				{
+					status: 404,
+					headers: {
+						"content-type": "application/json",
+					},
+				},
+			);
+		}
+
+		return decodeReportTrendsResponse({
+			trends: readReportTrendsSummary(found.analysisRoot),
 		});
 	})
 	.get("/api/reports/:slug/files/:view", async ({ request, params }) => {

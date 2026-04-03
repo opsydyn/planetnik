@@ -667,6 +667,17 @@ const readReportCommitsSummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportTrendsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/effect-ts/data") {
+		return null;
+	}
+
+	return {
+		available: false,
+		message: "Trend data requires multiple analysis snapshots over time.",
+		hint: "Run planetnik generateReports periodically. Each run adds a snapshot to the trend baseline.",
+	};
+});
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -701,6 +712,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportUnitsView,
 	readReportHotspotsSummary,
 	readReportCommitsSummary,
+	readReportTrendsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -723,6 +735,7 @@ describe("runtime report routes", () => {
 		readReportUnitsView.mockClear();
 		readReportHotspotsSummary.mockClear();
 		readReportCommitsSummary.mockClear();
+		readReportTrendsSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -1408,6 +1421,50 @@ describe("runtime report routes", () => {
 			commits: 18,
 		});
 		expect(readReportCommitsSummary).toHaveBeenCalledWith(
+			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns trends availability summary for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "effect-ts",
+				name: "Effect TS",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/effect-ts/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/effect-ts/trends", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			trends: {
+				available: boolean;
+				message: string;
+				hint: string;
+			};
+		};
+
+		expect(body.trends).toEqual({
+			available: false,
+			message: "Trend data requires multiple analysis snapshots over time.",
+			hint: "Run planetnik generateReports periodically. Each run adds a snapshot to the trend baseline.",
+		});
+		expect(readReportTrendsSummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
 		);
 	});

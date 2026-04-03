@@ -28,6 +28,7 @@ const {
 	readReportImpactSummary,
 	readReportMetricsSummary,
 	readReportCommitsSummary,
+	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
 	resolveReportDataSource,
@@ -1382,6 +1383,18 @@ describe("runtime report dataset helpers", () => {
 					commitsCount90Days: 7,
 				},
 			],
+		});
+	});
+
+	test("returns the static trends empty state until snapshot history is exported", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "reports", "data");
+		mkdirSync(dataDir, { recursive: true });
+
+		expect(readReportTrendsSummary(dataDir)).toEqual({
+			available: false,
+			message: "Trend data requires multiple analysis snapshots over time.",
+			hint: "Run planetnik generateReports periodically. Each run adds a snapshot to the trend baseline.",
 		});
 	});
 });

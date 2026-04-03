@@ -66,6 +66,9 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<a class="button-secondary" href={`/reports/${slug}/commits`}>
 						Open commits
 					</a>
+					<a class="button-secondary" href={`/reports/${slug}/trends`}>
+						Open trends
+					</a>
 					<a class="button-secondary" href={`/reports/${slug}/impact`}>
 						Open impact
 					</a>
@@ -109,6 +112,7 @@ const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 					<li>Units route is live for units.json-backed datasets</li>
 					<li>Hotspots route is live for hotspots.json-backed datasets</li>
 					<li>Commits route is live for contributors.txt, metrics.txt, commits_per_extension.json, and contributor_timeline.json-backed datasets</li>
+					<li>Trends route is live as the same explicit empty state the static app exposes today</li>
 					<li>Impact route is live for impact.json-backed datasets</li>
 					<li>Reuse static report contracts without copying Astro pages</li>
 					<li>Layer hosted intelligence onto this report shell</li>

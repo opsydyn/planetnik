@@ -346,6 +346,12 @@ export type ReportCommitsSummary = {
 	}>;
 };
 
+export type ReportTrendsSummary = {
+	readonly available: boolean;
+	readonly message: string;
+	readonly hint: string;
+};
+
 export type ReportFileViewName = "size" | "age" | "churn" | "temporal";
 
 export type ReportFileInventoryRow = {
@@ -1825,6 +1831,16 @@ export function readReportCommitsSummary(
 		],
 		timeline,
 		extensions,
+	};
+}
+
+export function readReportTrendsSummary(
+	_dataDir: string,
+): ReportTrendsSummary {
+	return {
+		available: false,
+		message: "Trend data requires multiple analysis snapshots over time.",
+		hint: "Run planetnik generateReports periodically. Each run adds a snapshot to the trend baseline.",
 	};
 }
 

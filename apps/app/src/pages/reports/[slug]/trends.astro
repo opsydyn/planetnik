@@ -1,0 +1,71 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
+import { buildReportTrendsViewModel } from "../../../lib/report-trends-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportTrends,
+} from "../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const trends = await getRuntimeReportTrends(cookie, slug);
+if (!trends) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const viewModel = buildReportTrendsViewModel({
+	reportName: reportDetail.report.name,
+	trends,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Trends`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Trends</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted route matches the static app’s current contract: an explicit
+				empty state until multi-snapshot trend exports exist.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/overview`}>
+					Open overview
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/commits`}>
+					Open commits
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			<article class="dashboard-card">
+				<p class="card-kicker">Status</p>
+				<h2>{viewModel.statusLabel}</h2>
+				<p>{viewModel.message}</p>
+			</article>
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Trend baseline</p>
+				<h2>What is missing</h2>
+				<p>{viewModel.message}</p>
+				<p class="muted-copy">{viewModel.hint}</p>
+			</article>
+		</section>
+	</div>
+</AppShell>

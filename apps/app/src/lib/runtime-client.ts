@@ -382,6 +382,12 @@ export type RuntimeReportCommits = {
   }>;
 };
 
+export type RuntimeReportTrends = {
+  readonly available: boolean;
+  readonly message: string;
+  readonly hint: string;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -739,6 +745,20 @@ export async function getRuntimeReportCommits(
   }
 
   return data.commits;
+}
+
+export async function getRuntimeReportTrends(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportTrends | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).trends.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.trends;
 }
 
 export async function getRuntimeReportFilesView(
