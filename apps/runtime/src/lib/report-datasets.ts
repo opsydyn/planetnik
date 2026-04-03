@@ -2681,6 +2681,13 @@ export function readReportLandscapeRepositoryContributorDetail(
 	};
 }
 
+export function readReportLandscapeRepositoryTopologySummary(
+	dataDir: string,
+	repoKey: string,
+): ReportTopologySummary | null {
+	return readReportTopologySummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
 export function readReportTrendsSummary(
 	_dataDir: string,
 ): ReportTrendsSummary {

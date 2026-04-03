@@ -1095,6 +1095,47 @@ const readReportLandscapeRepositoryContributorDetail = mock(
 		};
 	},
 );
+const readReportLandscapeRepositoryTopologySummary = mock(
+	(analysisRoot: string, repoKey: string) => {
+		if (
+			analysisRoot !== "/datasets/platform-landscape/data" ||
+			repoKey !== "acme__web-app"
+		) {
+			return null;
+		}
+
+		return {
+			availablePeriods: ["All Time", "Quarter"],
+			strongestConnections: [
+				{
+					periodLabel: "All Time",
+					from: "alan@example.com",
+					fromDisplayName: "Alan Currie",
+					to: "sam@example.com",
+					toDisplayName: "Sam Example",
+					sharedCommits: 12,
+					filesCount: 3,
+				},
+			],
+			topGlueContributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					glueScore: 8.8,
+					dominantDimension: "coordination_relief",
+				},
+			],
+			topSnackingContributors: [
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					snackingScore: 6.4,
+					dominantDimension: "knowledge_spread",
+				},
+			],
+		};
+	},
+);
 
 mock.module("../../lib/auth.js", () => ({
 	auth: {
@@ -1140,6 +1181,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryUnitsView,
 	readReportLandscapeRepositoryContributorsSummary,
 	readReportLandscapeRepositoryContributorDetail,
+	readReportLandscapeRepositoryTopologySummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1173,6 +1215,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryUnitsView.mockClear();
 		readReportLandscapeRepositoryContributorsSummary.mockClear();
 		readReportLandscapeRepositoryContributorDetail.mockClear();
+		readReportLandscapeRepositoryTopologySummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {
@@ -2399,6 +2442,54 @@ describe("runtime report routes", () => {
 			"/datasets/platform-landscape/data",
 			"acme__web-app",
 			"alan@example.com",
+		);
+	});
+
+	test("returns landscape repository topology for a connected report", async () => {
+		storedReports = [
+			{
+				id: "report-1",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request(
+				"http://localhost/api/reports/platform-landscape/repositories/acme__web-app/topology",
+				{
+					headers: {
+						cookie: "better-auth.session_token=test",
+					},
+				},
+			),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			topology: {
+				availablePeriods: string[];
+				strongestConnections: Array<{ from: string; to: string; sharedCommits: number }>;
+			};
+		};
+
+		expect(body.topology.availablePeriods).toEqual(["All Time", "Quarter"]);
+		expect(body.topology.strongestConnections[0]).toMatchObject({
+			from: "alan@example.com",
+			to: "sam@example.com",
+			sharedCommits: 12,
+		});
+		expect(readReportLandscapeRepositoryTopologySummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+			"acme__web-app",
 		);
 	});
 

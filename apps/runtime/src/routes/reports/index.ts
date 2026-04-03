@@ -27,6 +27,7 @@ import {
   readReportLandscapeRepositoryUnitsView,
   readReportLandscapeRepositoryContributorsSummary,
   readReportLandscapeRepositoryContributorDetail,
+  readReportLandscapeRepositoryTopologySummary,
   readReportSecuritySummary,
   readReportTrendsSummary,
   readReportDuplicationSummary,
@@ -2053,6 +2054,64 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportContributorDetailResponse({
       contributor,
+    })
+  })
+  .get("/api/reports/:slug/repositories/:repo/topology", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const topology = readReportLandscapeRepositoryTopologySummary(
+      found.analysisRoot,
+      params.repo,
+    )
+    if (!topology) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportTopologyResponse({
+      topology,
     })
   })
   .get("/api/reports/:slug/files/:view", async ({ request, params }) => {

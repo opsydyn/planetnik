@@ -38,6 +38,7 @@ const {
 	readReportLandscapeRepositoryUnitsView,
 	readReportLandscapeRepositoryContributorsSummary,
 	readReportLandscapeRepositoryContributorDetail,
+	readReportLandscapeRepositoryTopologySummary,
 	readReportTrendsSummary,
 	readReportTopologySummary,
 	readReportUnitsView,
@@ -1081,6 +1082,108 @@ describe("runtime report dataset helpers", () => {
 					commits: 8,
 					logicalComponents: ["web"],
 					concerns: ["ui"],
+				},
+			],
+		});
+	});
+
+	test("reads a landscape repository topology summary from repo exports", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		const repoDataDir = join(root, "acme__web-app", "data");
+		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(repoDataDir, { recursive: true });
+		writeJson(join(repoDataDir, "people_dependencies.json"), [
+			{
+				from: "alan@example.com",
+				to: "sam@example.com",
+				count: 12,
+				files: ["src/index.ts", "src/app.ts", "src/routes.ts"],
+			},
+		]);
+		writeJson(join(repoDataDir, "people_dependencies_90d.json"), [
+			{
+				from: "alan@example.com",
+				to: "jane@example.com",
+				count: 5,
+				files: ["src/index.ts"],
+			},
+		]);
+		writeJson(join(repoDataDir, "contributor_impact.json"), {
+			periods: [
+				{
+					period_key: "all_time",
+					period_label: "All Time",
+					contributors: [
+						{
+							email: "alan@example.com",
+							display_name: "Alan Currie",
+							glue_score: 8.8,
+							snacking_score: 2.1,
+							dominant_dimension: "coordination_relief",
+						},
+						{
+							email: "sam@example.com",
+							display_name: "Sam Example",
+							glue_score: 4.4,
+							snacking_score: 6.4,
+							dominant_dimension: "knowledge_spread",
+						},
+					],
+				},
+			],
+		});
+
+		expect(
+			readReportLandscapeRepositoryTopologySummary(dataDir, "acme__web-app"),
+		).toEqual({
+			availablePeriods: ["All Time", "Quarter"],
+			strongestConnections: [
+				{
+					periodLabel: "All Time",
+					from: "alan@example.com",
+					fromDisplayName: "Alan Currie",
+					to: "sam@example.com",
+					toDisplayName: "Sam Example",
+					sharedCommits: 12,
+					filesCount: 3,
+				},
+				{
+					periodLabel: "Quarter",
+					from: "alan@example.com",
+					fromDisplayName: "Alan Currie",
+					to: "jane@example.com",
+					toDisplayName: "jane@example.com",
+					sharedCommits: 5,
+					filesCount: 1,
+				},
+			],
+			topGlueContributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					glueScore: 8.8,
+					dominantDimension: "coordination_relief",
+				},
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					glueScore: 4.4,
+					dominantDimension: "knowledge_spread",
+				},
+			],
+			topSnackingContributors: [
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					snackingScore: 6.4,
+					dominantDimension: "knowledge_spread",
+				},
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					snackingScore: 2.1,
+					dominantDimension: "coordination_relief",
 				},
 			],
 		});

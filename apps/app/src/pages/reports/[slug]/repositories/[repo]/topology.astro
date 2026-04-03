@@ -1,0 +1,130 @@
+---
+import AppShell from "../../../../../layouts/AppShell.astro";
+import {
+	buildReportTopologyViewModel,
+} from "../../../../../lib/report-topology-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryTopology,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = Astro.params.repo ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const topology = await getRuntimeReportLandscapeRepositoryTopology(cookie, slug, repo);
+if (!topology) {
+	return Astro.redirect(`/reports/${slug}/repositories/${repo}`);
+}
+
+const viewModel = buildReportTopologyViewModel({
+	slug,
+	reportName: repository.name,
+	topology,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Topology`}
+	subtitle={viewModel.subtitle}
+>
+	<div class="dashboard-stack">
+		<section class="dashboard-card dashboard-card-primary">
+			<p class="card-kicker">Repository Topology</p>
+			<h2>{viewModel.heading}</h2>
+			<p>
+				This hosted view keeps the repo drilldown aligned with the static topology
+				contract while staying server-rendered and summary-first.
+			</p>
+			<div class="card-actions">
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
+					Open repository dashboard
+				</a>
+				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}/contributors`}>
+					Open contributors
+				</a>
+				<a class="button" href="/sign-out">Sign out</a>
+			</div>
+		</section>
+
+		<section class="overview-cards">
+			{viewModel.cards.map((card) => (
+				<article class="dashboard-card">
+					<p class="card-kicker">{card.label}</p>
+					<h2>{card.value}</h2>
+					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+				</article>
+			))}
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card">
+				<p class="card-kicker">Connections</p>
+				<h2>Strongest collaboration links</h2>
+				{viewModel.strongestConnections.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.strongestConnections.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No shared-file contributor links were found.</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Glue</p>
+				<h2>Top glue contributors</h2>
+				{viewModel.glueContributors.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.glueContributors.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No contributor glue signals were exported.</p>
+				)}
+			</article>
+
+			<article class="dashboard-card">
+				<p class="card-kicker">Snacking</p>
+				<h2>Top snacking-risk contributors</h2>
+				{viewModel.snackingContributors.length > 0 ? (
+					<ul class="todo-list">
+						{viewModel.snackingContributors.map((item) => (
+							<li>
+								<strong>{item.label}</strong>: {item.value}
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="muted-copy">No contributor snacking signals were exported.</p>
+				)}
+			</article>
+		</section>
+	</div>
+</AppShell>

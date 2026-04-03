@@ -989,6 +989,22 @@ export async function getRuntimeReportLandscapeRepositoryContributorDetail(
   return data.contributor;
 }
 
+export async function getRuntimeReportLandscapeRepositoryTopology(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportTopology | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo })
+    .topology.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.topology;
+}
+
 export async function getRuntimeReportFilesView(
   cookie: string,
   slug: string,
