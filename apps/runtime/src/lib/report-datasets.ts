@@ -273,13 +273,26 @@ export type ReportImpactSummary = {
 		readonly impactScore: number;
 		readonly dominantDimension: string;
 		readonly suggestedAction: string;
+		readonly reasons: ReadonlyArray<string>;
+		readonly complexityReduction: number;
+		readonly boundaryShaping: number;
+		readonly knowledgeSpread: number;
+		readonly coordinationRelief: number;
+		readonly changeEnablement: number;
 	}>;
 	readonly snackingCandidates: ReadonlyArray<{
 		readonly name: string;
 		readonly kind: string;
 		readonly visibleActivityScore: number;
 		readonly structuralImpactScore: number;
+		readonly delta: number;
 		readonly reason: string;
+	}>;
+	readonly conceptMappings: ReadonlyArray<{
+		readonly concept: string;
+		readonly dimension: string;
+		readonly evidenceCount: number;
+		readonly examples: ReadonlyArray<string>;
 	}>;
 };
 
@@ -4818,21 +4831,45 @@ export function readReportImpactSummary(
 					(item): item is Record<string, unknown> =>
 						typeof item === "object" && item !== null,
 				)
-				.map((item) => ({
-					name: typeof item.name === "string" ? item.name : "",
-					kind: typeof item.kind === "string" ? item.kind : "",
-					parent: typeof item.parent === "string" ? item.parent : "",
-					impactScore:
-						typeof item.impact_score === "number" ? item.impact_score : 0,
-					dominantDimension:
-						typeof item.dominant_dimension === "string"
-							? item.dominant_dimension
-							: "",
-					suggestedAction:
-						typeof item.suggested_action === "string"
-							? item.suggested_action
-							: "",
-				}))
+				.map((item) => {
+					const dims =
+						item.dimensions && typeof item.dimensions === "object"
+							? (item.dimensions as Record<string, unknown>)
+							: {};
+					const reasons = Array.isArray(item.reasons)
+						? item.reasons.filter((r): r is string => typeof r === "string")
+						: [];
+					return {
+						name: typeof item.name === "string" ? item.name : "",
+						kind: typeof item.kind === "string" ? item.kind : "",
+						parent: typeof item.parent === "string" ? item.parent : "",
+						impactScore:
+							typeof item.impact_score === "number" ? item.impact_score : 0,
+						dominantDimension:
+							typeof item.dominant_dimension === "string"
+								? item.dominant_dimension
+								: "",
+						suggestedAction:
+							typeof item.suggested_action === "string"
+								? item.suggested_action
+								: "",
+						reasons,
+						complexityReduction:
+							typeof dims.complexity_reduction === "number"
+								? dims.complexity_reduction
+								: 0,
+						boundaryShaping:
+							typeof dims.boundary_shaping === "number" ? dims.boundary_shaping : 0,
+						knowledgeSpread:
+							typeof dims.knowledge_spread === "number" ? dims.knowledge_spread : 0,
+						coordinationRelief:
+							typeof dims.coordination_relief === "number"
+								? dims.coordination_relief
+								: 0,
+						changeEnablement:
+							typeof dims.change_enablement === "number" ? dims.change_enablement : 0,
+					};
+				})
 				.sort((left, right) => right.impactScore - left.impactScore)
 				.slice(0, 12)
 		: [];
@@ -4843,20 +4880,67 @@ export function readReportImpactSummary(
 					(item): item is Record<string, unknown> =>
 						typeof item === "object" && item !== null,
 				)
-				.map((item) => ({
-					name: typeof item.name === "string" ? item.name : "",
-					kind: typeof item.kind === "string" ? item.kind : "",
-					visibleActivityScore:
+				.map((item) => {
+					const visibleActivityScore =
 						typeof item.visible_activity_score === "number"
 							? item.visible_activity_score
-							: 0,
-					structuralImpactScore:
+							: 0;
+					const structuralImpactScore =
 						typeof item.structural_impact_score === "number"
 							? item.structural_impact_score
-							: 0,
-					reason: typeof item.reason === "string" ? item.reason : "",
-				}))
+							: 0;
+					return {
+						name: typeof item.name === "string" ? item.name : "",
+						kind: typeof item.kind === "string" ? item.kind : "",
+						visibleActivityScore,
+						structuralImpactScore,
+						delta: Math.max(visibleActivityScore - structuralImpactScore, 0),
+						reason: typeof item.reason === "string" ? item.reason : "",
+					};
+				})
 				.slice(0, 8)
+		: [];
+
+	const conceptMappings = Array.isArray(raw.concept_mappings)
+		? raw.concept_mappings
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => {
+					const exampleIds = Array.isArray(item.example_ids)
+						? item.example_ids
+								.slice(0, 3)
+								.filter((id): id is string => typeof id === "string")
+								.map((id: string) => {
+									if (id.startsWith("component:")) {
+										const parts = id.split(":");
+										const componentName = parts[2] ?? parts[1] ?? "";
+										return `component · ${componentName}`;
+									}
+									if (id.startsWith("file:")) {
+										const filePath = id.slice("file:".length);
+										return `file · ${filePath.split("/").pop() ?? filePath}`;
+									}
+									if (id.startsWith("unit:")) {
+										const unitPath = id.slice("unit:".length);
+										const sep = unitPath.lastIndexOf(":");
+										const rel = sep >= 0 ? unitPath.slice(0, sep) : unitPath;
+										const line = sep >= 0 ? unitPath.slice(sep + 1) : "";
+										const fileName = rel.split("/").pop() ?? rel;
+										return line ? `unit · ${fileName}:${line}` : `unit · ${fileName}`;
+									}
+									return id.length > 40 ? `${id.slice(0, 39)}…` : id;
+								})
+						: [];
+					return {
+						concept: typeof item.concept === "string" ? item.concept : "",
+						dimension: typeof item.dimension === "string" ? item.dimension : "",
+						evidenceCount:
+							typeof item.evidence_count === "number" ? item.evidence_count : 0,
+						examples: exampleIds,
+					};
+				})
 		: [];
 
 	return {
@@ -4875,6 +4959,7 @@ export function readReportImpactSummary(
 		impactDimensions,
 		topOpportunities,
 		snackingCandidates,
+		conceptMappings,
 	};
 }
 

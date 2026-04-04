@@ -1,0 +1,453 @@
+---
+import DistributionChart from "../charts/DistributionChart";
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import ImpactMatrix from "../impact/ImpactMatrix.astro";
+import ReportDataGrid from "../tables/ReportDataGrid";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+	readonly detail?: string | null;
+	readonly accentColor?: string;
+}
+
+interface ChartItem {
+	readonly label: string;
+	readonly value: number;
+}
+
+interface SnackingItem {
+	readonly label: string;
+	readonly value: number;
+	readonly detail: string;
+	readonly detailSecondary: string;
+}
+
+interface ConceptCard {
+	readonly concept: string;
+	readonly dimension: string;
+	readonly evidenceCount: number;
+	readonly examples: ReadonlyArray<string>;
+}
+
+interface PlaybookItem {
+	readonly title: string;
+	readonly body: string;
+	readonly href: string;
+	readonly label: string;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	backLabel?: string;
+	cards: ReadonlyArray<MetricCard>;
+	dimensionChartData: ReadonlyArray<ChartItem>;
+	topOpportunityData: ReadonlyArray<ChartItem>;
+	snackingChartData: ReadonlyArray<SnackingItem>;
+	conceptCards: ReadonlyArray<ConceptCard>;
+	playbookItems: ReadonlyArray<PlaybookItem>;
+	opportunityRows: ReadonlyArray<GridRow>;
+	snackingRows: ReadonlyArray<GridRow>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	backLabel = "Back to repository",
+	cards,
+	dimensionChartData,
+	topOpportunityData,
+	snackingChartData,
+	conceptCards,
+	playbookItems,
+	opportunityRows,
+	snackingRows,
+} = Astro.props as Props;
+
+const dimensionHelpText =
+	"Shows how structural impact is distributed across dimensions. The dominant dimension signals where this repository can gain the most leverage by intervening in the right places.";
+const opportunityHelpText =
+	"Ranks the top structural opportunities by combined impact score. The highest bars are the best starting points for deliberate engineering intervention.";
+const snackingHelpText =
+	"Shows candidates where visible activity is outpacing structural payoff. These are not necessarily bad changes — they are signals that the gap between motion and leverage is worth examining.";
+---
+
+{backHref ? (
+	<a class="back-link" href={backHref}>&larr; {backLabel}</a>
+) : null}
+
+<header class="page-header">
+	<div>
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+</header>
+
+<section class="stats-grid">
+	{cards.map((card) => (
+		<article class="stat-card">
+			<div class="stat-value" style={card.accentColor ? `color: ${card.accentColor}` : ""}>{card.value}</div>
+			<div class="stat-label">{card.label}</div>
+			{card.detail ? <div class="stat-detail">{card.detail}</div> : null}
+		</article>
+	))}
+</section>
+
+<section class="manifesto">
+	<div class="manifesto-card">
+		<p class="eyebrow">Work on what matters</p>
+		<h3>Activity is visible. Impact is structural.</h3>
+		<p>
+			Not all work has equal impact. Planetnik highlights the code paths in {heading} where reducing complexity,
+			reshaping boundaries, spreading knowledge, relieving coordination, and enabling future change matter more
+			than raw activity volume.
+		</p>
+	</div>
+	<div class="manifesto-card manifesto-callout">
+		<p class="eyebrow">Reading the signal</p>
+		<p>
+			Use this page to separate structurally meaningful work from visible but weakly leveraged work. The top queue
+			is where this repository is most likely to benefit from deliberate engineering intervention.
+		</p>
+	</div>
+</section>
+
+<section class="chart-section">
+	<h3>Avoid Snacking</h3>
+	<p class="section-copy">
+		Low-effort work is often attractive because it is visible, easy to start, and easy to report. Planetnik is
+		most valuable when it helps teams notice where effort is turning into structural leverage instead.
+	</p>
+	<ImpactMatrix />
+</section>
+
+{dimensionChartData.length > 0 && (
+	<section class="chart-section">
+		<h3>Impact Dimensions</h3>
+		<HorizontalBarChart client:visible data={dimensionChartData} valueLabel="score" helpText={dimensionHelpText} />
+	</section>
+)}
+
+{topOpportunityData.length > 0 && (
+	<section class="chart-section">
+		<h3>Top Structural Opportunities</h3>
+		<HorizontalBarChart client:visible data={topOpportunityData} valueLabel="impact" helpText={opportunityHelpText} />
+	</section>
+)}
+
+{conceptCards.length > 0 && (
+	<section class="chart-section">
+		<h3>Concept Mappings</h3>
+		<div class="concept-grid">
+			{conceptCards.map((card) => (
+				<article class="concept-card">
+					<div class="concept-topline">{card.dimension}</div>
+					<h4>{card.concept}</h4>
+					<p>{card.evidenceCount} evidence points in the current ranked queue.</p>
+					{card.examples.length > 0 && (
+						<ul>
+							{card.examples.map((example) => (
+								<li>{example}</li>
+							))}
+						</ul>
+					)}
+				</article>
+			))}
+		</div>
+	</section>
+)}
+
+{snackingChartData.length > 0 && (
+	<section class="chart-section">
+		<h3>Snacking Candidates</h3>
+		<p class="section-copy">
+			These are not necessarily bad changes. They are warnings that high visible activity is landing in places with weak
+			structural leverage, so teams should ask whether the work is shaping the system or only feeding local motion.
+		</p>
+		<DistributionChart client:visible data={snackingChartData} helpText={snackingHelpText} />
+	</section>
+)}
+
+{playbookItems.length > 0 && (
+	<section class="chart-section">
+		<h3>Impact Playbook</h3>
+		<div class="playbook-grid">
+			{playbookItems.map((item) => (
+				<article class="playbook-card">
+					<h4>{item.title}</h4>
+					<p>{item.body}</p>
+					<a href={item.href}>{item.label}</a>
+				</article>
+			))}
+		</div>
+	</section>
+)}
+
+{opportunityRows.length > 0 && (
+	<section class="chart-section">
+		<ReportDataGrid
+			client:visible
+			title="Impact Opportunities"
+			description="Search by item, parent, dimension, suggested action, or reason while keeping the structural queue above."
+			searchPlaceholder="Search opportunity, parent, or dimension"
+			rows={opportunityRows}
+			columns={[
+				{ field: "name", headerName: "Item", type: "link", hrefField: "href", secondaryField: "parent", minWidth: 320, flex: 1.5, sort: "asc" },
+				{ field: "kind", headerName: "Kind", minWidth: 110 },
+				{ field: "impactScore", headerName: "Impact", type: "number", minWidth: 100, sort: "desc" },
+				{ field: "dominantDimension", headerName: "Primary Dimension", minWidth: 180 },
+				{ field: "complexityReduction", headerName: "Complexity", type: "number", minWidth: 115 },
+				{ field: "boundaryShaping", headerName: "Boundaries", type: "number", minWidth: 115 },
+				{ field: "knowledgeSpread", headerName: "Knowledge", type: "number", minWidth: 115 },
+				{ field: "coordinationRelief", headerName: "Coordination", type: "number", minWidth: 130 },
+				{ field: "changeEnablement", headerName: "Change", type: "number", minWidth: 100 },
+				{ field: "suggestedAction", headerName: "Suggested Action", type: "multiline", minWidth: 300, flex: 1.2 },
+				{ field: "reasons", headerName: "Evidence", type: "multiline", minWidth: 340, flex: 1.6 },
+			]}
+			paginationPageSize={15}
+		/>
+	</section>
+)}
+
+{snackingRows.length > 0 && (
+	<section class="chart-section">
+		<ReportDataGrid
+			client:visible
+			title="Snacking Queue"
+			description="These items attract visible activity but currently offer weak structural leverage."
+			searchPlaceholder="Search snacking candidate"
+			rows={snackingRows}
+			columns={[
+				{ field: "name", headerName: "Item", type: "link", hrefField: "href", minWidth: 320, flex: 1.4, sort: "asc" },
+				{ field: "kind", headerName: "Kind", minWidth: 110 },
+				{ field: "visibleActivity", headerName: "Activity", type: "number", minWidth: 110, sort: "desc" },
+				{ field: "structuralImpact", headerName: "Structural", type: "number", minWidth: 110 },
+				{ field: "delta", headerName: "Gap", type: "number", minWidth: 90 },
+				{ field: "reason", headerName: "Why It Matters", type: "multiline", minWidth: 320, flex: 1.4 },
+			]}
+		/>
+	</section>
+)}
+
+<style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: 1rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+
+	.back-link:hover {
+		color: var(--color-accent);
+	}
+
+	.page-header {
+		margin-bottom: 1.25rem;
+	}
+
+	.page-header h2 {
+		margin-bottom: 0.25rem;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+		margin-top: 0.35rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.stat-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.stat-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.stat-detail {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+	}
+
+	.manifesto {
+		display: grid;
+		grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.manifesto-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		padding: 1.25rem;
+	}
+
+	.manifesto-card h3 {
+		font-size: 1.2rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.manifesto-card p {
+		color: var(--color-text-muted);
+		line-height: 1.6;
+	}
+
+	.manifesto-callout {
+		background: var(--color-accent-soft);
+	}
+
+	.eyebrow {
+		font-size: 0.8rem;
+		color: var(--color-accent);
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		margin-bottom: 0.65rem;
+		font-weight: 700;
+	}
+
+	.chart-section {
+		margin-bottom: 2rem;
+	}
+
+	.chart-section h3 {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+
+	.section-copy {
+		color: var(--color-text-muted);
+		line-height: 1.6;
+		margin-bottom: 1rem;
+		max-width: 72ch;
+	}
+
+	.concept-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1rem;
+	}
+
+	.concept-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		padding: 1rem;
+	}
+
+	.concept-topline {
+		color: var(--color-accent);
+		font-size: 0.8rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.75rem;
+	}
+
+	.concept-card h4 {
+		font-size: 1.05rem;
+		line-height: 1.25;
+		margin-bottom: 0.5rem;
+		overflow-wrap: anywhere;
+	}
+
+	.concept-card p {
+		color: var(--color-text-muted);
+		line-height: 1.5;
+		margin-bottom: 0.75rem;
+	}
+
+	.concept-card ul {
+		display: grid;
+		gap: 0.4rem;
+		margin-left: 1rem;
+		color: var(--color-text-muted);
+		line-height: 1.45;
+	}
+
+	.concept-card li {
+		overflow-wrap: anywhere;
+	}
+
+	.playbook-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1rem;
+	}
+
+	.playbook-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		padding: 1rem;
+	}
+
+	.playbook-card h4 {
+		font-size: 1rem;
+		margin-bottom: 0.55rem;
+	}
+
+	.playbook-card p {
+		color: var(--color-text-muted);
+		line-height: 1.55;
+		margin-bottom: 1rem;
+	}
+
+	.playbook-card a {
+		color: var(--color-accent);
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	.playbook-card a:hover {
+		text-decoration: underline;
+	}
+
+	@media (max-width: 900px) {
+		.manifesto {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.stats-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 0.75rem;
+		}
+
+		.stat-card {
+			padding: 1rem;
+		}
+
+		.stat-value {
+			font-size: 1.35rem;
+		}
+	}
+</style>

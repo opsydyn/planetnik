@@ -26,6 +26,8 @@
 		"./views/LandscapeOverviewView": "./src/views/LandscapeOverviewView.astro",
 		"./views/LandscapeRepositoryDashboardView": "./src/views/LandscapeRepositoryDashboardView.astro",
 		"./views/RepositoryControlsView": "./src/views/RepositoryControlsView.astro",
+		"./impact/ImpactMatrix": "./src/impact/ImpactMatrix.astro",
+		"./views/RepositoryImpactView": "./src/views/RepositoryImpactView.astro",
 		"./views/RepositoryCommitsView": "./src/views/RepositoryCommitsView.astro",
 		"./views/RepositoryDependenciesView": "./src/views/RepositoryDependenciesView.astro",
 		"./views/RepositoryDuplicationView": "./src/views/RepositoryDuplicationView.astro",

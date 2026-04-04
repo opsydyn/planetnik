@@ -2422,6 +2422,12 @@ describe("runtime report dataset helpers", () => {
 					dominantDimension: "coordination_relief",
 					suggestedAction:
 						"Stabilize the boundary and reduce repeated coordination.",
+					reasons: [],
+					complexityReduction: 0,
+					boundaryShaping: 0,
+					knowledgeSpread: 0,
+					coordinationRelief: 0,
+					changeEnablement: 0,
 				},
 			],
 			snackingCandidates: [
@@ -2430,9 +2436,11 @@ describe("runtime report dataset helpers", () => {
 					kind: "file",
 					visibleActivityScore: 6.4,
 					structuralImpactScore: 2.1,
+					delta: 4.300000000000001,
 					reason: "Visible motion is outpacing structural leverage.",
 				},
 			],
+			conceptMappings: [],
 		});
 	});
 
@@ -2512,6 +2520,12 @@ describe("runtime report dataset helpers", () => {
 					impactScore: 7.9,
 					dominantDimension: "coordination_relief",
 					suggestedAction: "Tighten the boundary and cut repeated coordination.",
+					reasons: [],
+					complexityReduction: 0,
+					boundaryShaping: 0,
+					knowledgeSpread: 0,
+					coordinationRelief: 0,
+					changeEnablement: 0,
 				},
 			],
 			snackingCandidates: [
@@ -2520,9 +2534,11 @@ describe("runtime report dataset helpers", () => {
 					kind: "file",
 					visibleActivityScore: 5.8,
 					structuralImpactScore: 1.9,
+					delta: 3.9,
 					reason: "Visible motion is outpacing structural leverage.",
 				},
 			],
+			conceptMappings: [],
 		});
 	});
 

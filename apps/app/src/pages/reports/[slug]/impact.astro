@@ -1,4 +1,5 @@
 ---
+import RepositoryImpactView from "@planetnik/report-ui/views/RepositoryImpactView";
 import AppShell from "../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import { buildReportImpactViewModel } from "../../../lib/report-impact-view-model.js";
@@ -26,6 +27,12 @@ if (!impact) {
 const viewModel = buildReportImpactViewModel({
 	reportName: reportDetail.report.name,
 	impact,
+	playbookHrefs: {
+		hotspots: `/reports/${slug}/hotspots`,
+		components: `/reports/${slug}/topology`,
+		contributors: `/reports/${slug}/contributors`,
+		controls: `/reports/${slug}/controls`,
+	},
 });
 ---
 
@@ -34,83 +41,16 @@ const viewModel = buildReportImpactViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Impact</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route reads the same impact export as the static report app
-				and keeps the backend contract explicit before the shared UI pass.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/topology`}>
-					Open topology
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Dimensions</p>
-				<h2>Structural dimensions</h2>
-				{viewModel.dimensionRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.dimensionRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No impact dimensions were exported.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Opportunities</p>
-				<h2>Highest leverage opportunities</h2>
-				{viewModel.opportunityRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.opportunityRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No impact opportunities were exported.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Snacking</p>
-				<h2>Small visible changes with low leverage</h2>
-				{viewModel.snackingRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.snackingRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No snacking candidates were exported.</p>
-				)}
-			</article>
-		</section>
-	</div>
+	<RepositoryImpactView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		cards={viewModel.cards}
+		dimensionChartData={viewModel.dimensionChartData}
+		topOpportunityData={viewModel.topOpportunityData}
+		snackingChartData={viewModel.snackingChartData}
+		conceptCards={viewModel.conceptCards}
+		playbookItems={viewModel.playbookItems}
+		opportunityRows={viewModel.opportunityRows}
+		snackingRows={viewModel.snackingRows}
+	/>
 </AppShell>

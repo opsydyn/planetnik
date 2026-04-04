@@ -500,6 +500,12 @@ const ReportImpactSummarySchema = Schema.Struct({
       impactScore: Schema.Number,
       dominantDimension: Schema.String,
       suggestedAction: Schema.String,
+      reasons: Schema.Array(Schema.String),
+      complexityReduction: Schema.Number,
+      boundaryShaping: Schema.Number,
+      knowledgeSpread: Schema.Number,
+      coordinationRelief: Schema.Number,
+      changeEnablement: Schema.Number,
     }),
   ),
   snackingCandidates: Schema.Array(
@@ -508,7 +514,16 @@ const ReportImpactSummarySchema = Schema.Struct({
       kind: Schema.String,
       visibleActivityScore: Schema.Number,
       structuralImpactScore: Schema.Number,
+      delta: Schema.Number,
       reason: Schema.String,
+    }),
+  ),
+  conceptMappings: Schema.Array(
+    Schema.Struct({
+      concept: Schema.String,
+      dimension: Schema.String,
+      evidenceCount: Schema.Number,
+      examples: Schema.Array(Schema.String),
     }),
   ),
 })

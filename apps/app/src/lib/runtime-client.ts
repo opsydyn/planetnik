@@ -302,13 +302,26 @@ export type RuntimeReportImpact = {
     readonly impactScore: number;
     readonly dominantDimension: string;
     readonly suggestedAction: string;
+    readonly reasons: ReadonlyArray<string>;
+    readonly complexityReduction: number;
+    readonly boundaryShaping: number;
+    readonly knowledgeSpread: number;
+    readonly coordinationRelief: number;
+    readonly changeEnablement: number;
   }>;
   readonly snackingCandidates: ReadonlyArray<{
     readonly name: string;
     readonly kind: string;
     readonly visibleActivityScore: number;
     readonly structuralImpactScore: number;
+    readonly delta: number;
     readonly reason: string;
+  }>;
+  readonly conceptMappings: ReadonlyArray<{
+    readonly concept: string;
+    readonly dimension: string;
+    readonly evidenceCount: number;
+    readonly examples: ReadonlyArray<string>;
   }>;
 };
 

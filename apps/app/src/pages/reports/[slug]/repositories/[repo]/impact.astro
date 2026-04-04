@@ -1,4 +1,5 @@
 ---
+import RepositoryImpactView from "@planetnik/report-ui/views/RepositoryImpactView";
 import AppShell from "../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import {
@@ -7,9 +8,11 @@ import {
 	getHostedReportRepositoryPageHref,
 } from "../../../../../lib/hosted-routes.js";
 import {
+	buildReportImpactViewModel,
+} from "../../../../../lib/report-impact-view-model.js";
+import {
 	shouldRedirectReportDetail,
 } from "../../../../../lib/report-detail-view-model.js";
-import { buildReportImpactViewModel } from "../../../../../lib/report-impact-view-model.js";
 import {
 	getRuntimeReport,
 	getRuntimeReportLandscapeRepository,
@@ -41,9 +44,17 @@ if (!impact) {
 	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
+const playbookHrefs = {
+	hotspots: getHostedReportRepositoryPageHref(slug, repo, "/hotspots"),
+	components: getHostedReportRepositoryPageHref(slug, repo, "/components"),
+	contributors: getHostedReportRepositoryPageHref(slug, repo, "/contributors"),
+	controls: getHostedReportRepositoryPageHref(slug, repo, "/controls"),
+};
+
 const viewModel = buildReportImpactViewModel({
 	reportName: repository.name,
 	impact,
+	playbookHrefs,
 });
 ---
 
@@ -52,87 +63,17 @@ const viewModel = buildReportImpactViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Impact</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route reads the repo-scoped `impact.json` export from the
-				landscape analysis root and keeps the contract aligned with the static
-				drilldown.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
-					Open repository dashboard
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/topology")}>
-					Open topology
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open landscape overview
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Dimensions</p>
-				<h2>Structural dimensions</h2>
-				{viewModel.dimensionRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.dimensionRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No impact dimensions were exported.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Opportunities</p>
-				<h2>Highest leverage opportunities</h2>
-				{viewModel.opportunityRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.opportunityRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No impact opportunities were exported.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Snacking</p>
-				<h2>Small visible changes with low leverage</h2>
-				{viewModel.snackingRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.snackingRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No snacking candidates were exported.</p>
-				)}
-			</article>
-		</section>
-	</div>
+	<RepositoryImpactView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		backHref={getHostedReportRepositoryHref(slug, repo)}
+		cards={viewModel.cards}
+		dimensionChartData={viewModel.dimensionChartData}
+		topOpportunityData={viewModel.topOpportunityData}
+		snackingChartData={viewModel.snackingChartData}
+		conceptCards={viewModel.conceptCards}
+		playbookItems={viewModel.playbookItems}
+		opportunityRows={viewModel.opportunityRows}
+		snackingRows={viewModel.snackingRows}
+	/>
 </AppShell>
