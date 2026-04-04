@@ -117,21 +117,35 @@ const resolveReportDataSource = mock(
 	},
 );
 const readReportContextSummary = mock((analysisRoot: string) => {
-	if (analysisRoot !== "/datasets/effect-ts/data") {
-		return null;
+	if (analysisRoot === "/datasets/effect-ts/data") {
+		return {
+			mode: "single_repository" as const,
+			reportMode: "single_repository" as const,
+			title: "Effect TS",
+			rootRoute: "/",
+			dataVersion: 1,
+			source: "analysisResults",
+			hasLandscape: false,
+			hasSingleRepositoryAnalysis: true,
+			primaryNavigation: ["overview", "files", "contributors"],
+		};
 	}
 
-	return {
-		mode: "single_repository" as const,
-		reportMode: "single_repository" as const,
-		title: "Effect TS",
-		rootRoute: "/",
-		dataVersion: 1,
-		source: "analysisResults",
-		hasLandscape: false,
-		hasSingleRepositoryAnalysis: true,
-		primaryNavigation: ["overview", "files", "contributors"],
-	};
+	if (analysisRoot === "/datasets/platform-landscape/data") {
+		return {
+			mode: "landscape" as const,
+			reportMode: "landscape" as const,
+			title: "Platform Landscape",
+			rootRoute: "/landscape",
+			dataVersion: 1,
+			source: "landscape",
+			hasLandscape: true,
+			hasSingleRepositoryAnalysis: false,
+			primaryNavigation: ["overview", "repositories", "topology"],
+		};
+	}
+
+	return null;
 });
 const readReportArtifactSummary = mock(() => ({
 	kind: "single_repository" as const,
@@ -333,6 +347,42 @@ const readReportTopologySummary = mock((analysisRoot: string) => {
 				displayName: "Sam Example",
 				snackingScore: 6.4,
 				dominantDimension: "knowledge_spread",
+			},
+		],
+	};
+});
+const readReportLandscapeTopologySummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/platform-landscape/data") {
+		return null;
+	}
+
+	return {
+		availablePeriods: ["All Time"],
+		strongestConnections: [
+			{
+				periodLabel: "All Time",
+				from: "alan@example.com",
+				fromDisplayName: "alan@example.com",
+				to: "sam@example.com",
+				toDisplayName: "sam@example.com",
+				sharedCommits: 11,
+				filesCount: 2,
+			},
+		],
+		topGlueContributors: [
+			{
+				email: "alan@example.com",
+				displayName: "Alan Currie",
+				glueScore: 4,
+				dominantDimension: "shared_connections",
+			},
+		],
+		topSnackingContributors: [
+			{
+				email: "sam@example.com",
+				displayName: "Sam Example",
+				snackingScore: 7,
+				dominantDimension: "shared_files",
 			},
 		],
 	};
@@ -960,6 +1010,22 @@ const readReportLandscapeRepositorySummary = mock(
 			linesOfCode: 18450,
 			duplicationPercentage: 2.4,
 			links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+			contributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					commitsCount: 18,
+					commits30d: 6,
+					commits90d: 12,
+					firstCommitDate: "2024-01-03",
+					latestCommitDate: "2026-03-31",
+					type: "Human",
+					glueScore: "8.8",
+					structuralImpact: "7.1",
+					snackRisk: "2.4",
+					signal: "Glue",
+				},
+			],
 			topContributors: [
 				{
 					email: "alan@example.com",
@@ -970,6 +1036,9 @@ const readReportLandscapeRepositorySummary = mock(
 					firstCommitDate: "2024-01-03",
 					latestCommitDate: "2026-03-31",
 					type: "Human",
+					glueScore: "8.8",
+					structuralImpact: "7.1",
+					snackRisk: "2.4",
 					signal: "Glue",
 				},
 			],
@@ -1613,6 +1682,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeContributorsSummary,
 	readReportContributorDetail,
 	readReportTopologySummary,
+	readReportLandscapeTopologySummary,
 	readReportMetricsSummary,
 	readReportDuplicationSummary,
 	readReportDependenciesSummary,
@@ -1664,6 +1734,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeContributorsSummary.mockClear();
 		readReportContributorDetail.mockClear();
 		readReportTopologySummary.mockClear();
+		readReportLandscapeTopologySummary.mockClear();
 		readReportMetricsSummary.mockClear();
 		readReportDuplicationSummary.mockClear();
 		readReportDependenciesSummary.mockClear();
@@ -1929,6 +2000,48 @@ describe("runtime report routes", () => {
 		});
 		expect(readReportTopologySummary).toHaveBeenCalledWith(
 			"/datasets/effect-ts/data",
+		);
+	});
+
+	test("returns topology summary for a connected landscape report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/platform-landscape/topology", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			topology: {
+				availablePeriods: string[];
+				topGlueContributors: Array<{ displayName: string }>;
+			};
+		};
+
+		expect(body.topology.availablePeriods).toEqual(["All Time"]);
+		expect(body.topology.topGlueContributors[0]).toMatchObject({
+			displayName: "Alan Currie",
+		});
+		expect(readReportLandscapeTopologySummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
 		);
 	});
 
@@ -2710,6 +2823,7 @@ describe("runtime report routes", () => {
 				repoKey: string;
 				name: string;
 				linesOfCode: number;
+				contributors: Array<{ displayName: string; glueScore: string }>;
 				topContributors: Array<{ displayName: string; signal: string }>;
 			};
 		};
@@ -2722,6 +2836,10 @@ describe("runtime report routes", () => {
 		expect(body.repository.topContributors[0]).toMatchObject({
 			displayName: "Alan Currie",
 			signal: "Glue",
+		});
+		expect(body.repository.contributors[0]).toMatchObject({
+			displayName: "Alan Currie",
+			glueScore: "8.8",
 		});
 		expect(readReportLandscapeRepositorySummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",

@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { buildReportLandscapeRepositoryViewModel } from "./report-landscape-repository-view-model.js";
 
 describe("report landscape repository view model", () => {
-	test("builds hosted repository dashboard cards and contributor rows", () => {
+	test("builds hosted repository dashboard cards, links, and contributor table rows", () => {
 		const viewModel = buildReportLandscapeRepositoryViewModel({
-			reportName: "Platform Landscape",
+			slug: "platform-landscape",
 			repository: {
 				repoKey: "acme__web-app",
 				name: "web-app",
@@ -17,6 +17,22 @@ describe("report landscape repository view model", () => {
 				linesOfCode: 18450,
 				duplicationPercentage: 2.4,
 				links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+				contributors: [
+					{
+						email: "alan@example.com",
+						displayName: "Alan Currie",
+						commitsCount: 18,
+						commits30d: 6,
+						commits90d: 12,
+						firstCommitDate: "2024-01-03",
+						latestCommitDate: "2026-03-31",
+						type: "Human",
+						glueScore: "8.8",
+						structuralImpact: "7.1",
+						snackRisk: "2.4",
+						signal: "Glue",
+					},
+				],
 				topContributors: [
 					{
 						email: "alan@example.com",
@@ -27,6 +43,9 @@ describe("report landscape repository view model", () => {
 						firstCommitDate: "2024-01-03",
 						latestCommitDate: "2026-03-31",
 						type: "Human",
+						glueScore: "8.8",
+						structuralImpact: "7.1",
+						snackRisk: "2.4",
 						signal: "Glue",
 					},
 				],
@@ -46,10 +65,28 @@ describe("report landscape repository view model", () => {
 			{ label: "Latest Commit", value: "2026-03-31", detail: null },
 			{ label: "Duplication", value: "2.4%", detail: null },
 		]);
+		expect(viewModel.links).toEqual([
+			{
+				label: "Open repository",
+				href: "https://github.com/acme/web-app",
+			},
+		]);
 		expect(viewModel.contributorRows).toEqual([
 			{
-				label: "Alan Currie",
-				value: "18 commits · 6 (30d) · 12 (90d) · Glue · Human",
+				id: "alan@example.com",
+				contributor: "Alan Currie",
+				href: "/reports/platform-landscape/repositories/acme__web-app/contributors/alan$40example.com",
+				email: "alan@example.com",
+				type: "Human",
+				commitsCount: 18,
+				commits30d: 6,
+				commits90d: 12,
+				glueScore: "8.8",
+				structuralImpact: "7.1",
+				snackRisk: "2.4",
+				signal: "Glue",
+				firstCommitDate: "2024-01-03",
+				latestCommitDate: "2026-03-31",
 			},
 		]);
 	});

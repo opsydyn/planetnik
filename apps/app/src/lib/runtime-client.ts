@@ -523,6 +523,20 @@ export type RuntimeReportLandscapeRepository = {
     readonly label: string;
     readonly href: string;
   }>;
+  readonly contributors: ReadonlyArray<{
+    readonly email: string;
+    readonly displayName: string;
+    readonly commitsCount: number;
+    readonly commits30d: number;
+    readonly commits90d: number;
+    readonly firstCommitDate: string;
+    readonly latestCommitDate: string;
+    readonly type: "Human" | "Bot";
+    readonly glueScore: string;
+    readonly structuralImpact: string;
+    readonly snackRisk: string;
+    readonly signal: string;
+  }>;
   readonly topContributors: ReadonlyArray<{
     readonly email: string;
     readonly displayName: string;
@@ -532,6 +546,9 @@ export type RuntimeReportLandscapeRepository = {
     readonly firstCommitDate: string;
     readonly latestCommitDate: string;
     readonly type: "Human" | "Bot";
+    readonly glueScore: string;
+    readonly structuralImpact: string;
+    readonly snackRisk: string;
     readonly signal: string;
   }>;
 };

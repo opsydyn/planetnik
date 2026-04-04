@@ -333,6 +333,20 @@ export type ReportLandscapeRepositorySummary = {
 		readonly label: string;
 		readonly href: string;
 	}>;
+	readonly contributors: ReadonlyArray<{
+		readonly email: string;
+		readonly displayName: string;
+		readonly commitsCount: number;
+		readonly commits30d: number;
+		readonly commits90d: number;
+		readonly firstCommitDate: string;
+		readonly latestCommitDate: string;
+		readonly type: "Human" | "Bot";
+		readonly glueScore: string;
+		readonly structuralImpact: string;
+		readonly snackRisk: string;
+		readonly signal: string;
+	}>;
 	readonly topContributors: ReadonlyArray<{
 		readonly email: string;
 		readonly displayName: string;
@@ -342,6 +356,9 @@ export type ReportLandscapeRepositorySummary = {
 		readonly firstCommitDate: string;
 		readonly latestCommitDate: string;
 		readonly type: "Human" | "Bot";
+		readonly glueScore: string;
+		readonly structuralImpact: string;
+		readonly snackRisk: string;
 		readonly signal: string;
 	}>;
 };
@@ -2338,6 +2355,153 @@ export function readReportTopologySummary(
 	};
 }
 
+export function readReportLandscapeTopologySummary(
+	dataDir: string,
+): ReportTopologySummary | null {
+	const raw = readJsonRecord(dataDir, "landscape_topology.json");
+	const periods = Array.isArray(raw?.periods)
+		? raw.periods.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	if (periods.length === 0) {
+		return null;
+	}
+
+	const availablePeriods = periods
+		.map((period) =>
+			typeof period.periodLabel === "string" ? period.periodLabel : "",
+		)
+		.filter((label) => label.length > 0);
+
+	const strongestConnections = periods
+		.flatMap((period) => {
+			const periodLabel =
+				typeof period.periodLabel === "string" ? period.periodLabel : "";
+			const strongest = Array.isArray(period.strongestConnections)
+				? period.strongestConnections.filter(
+						(item): item is Record<string, unknown> =>
+							typeof item === "object" && item !== null,
+					)
+				: [];
+
+			return strongest.map((connection) => ({
+				periodLabel,
+				from: typeof connection.from === "string" ? connection.from : "",
+				fromDisplayName:
+					typeof connection.from === "string" ? connection.from : "",
+				to: typeof connection.to === "string" ? connection.to : "",
+				toDisplayName: typeof connection.to === "string" ? connection.to : "",
+				sharedCommits:
+					typeof connection.sharedFilesCount === "number"
+						? connection.sharedFilesCount
+						: 0,
+				filesCount: Array.isArray(connection.sharedFiles)
+					? connection.sharedFiles.length
+					: typeof connection.sharedFilesCount === "number"
+						? connection.sharedFilesCount
+						: 0,
+			}));
+		})
+		.filter((connection) => connection.from.length > 0 && connection.to.length > 0)
+		.sort((left, right) => right.sharedCommits - left.sharedCommits)
+		.slice(0, 8);
+
+	const contributorMaxima = new Map<
+		string,
+		{
+			displayName: string;
+			connectionCount: number;
+			sharedFilesCount: number;
+		}
+	>();
+
+	for (const period of periods) {
+		const contributors = Array.isArray(period.contributors)
+			? period.contributors.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+			: [];
+
+		for (const contributor of contributors) {
+			const email =
+				typeof contributor.email === "string" ? contributor.email : "";
+			if (email.length === 0) {
+				continue;
+			}
+
+			const current = contributorMaxima.get(email) ?? {
+				displayName:
+					typeof contributor.displayName === "string"
+						? contributor.displayName
+						: email,
+				connectionCount: 0,
+				sharedFilesCount: 0,
+			};
+
+			contributorMaxima.set(email, {
+				displayName:
+					typeof contributor.displayName === "string"
+						? contributor.displayName
+						: current.displayName,
+				connectionCount: Math.max(
+					current.connectionCount,
+					typeof contributor.connectionCount === "number"
+						? contributor.connectionCount
+						: 0,
+				),
+				sharedFilesCount: Math.max(
+					current.sharedFilesCount,
+					typeof contributor.sharedFilesCount === "number"
+						? contributor.sharedFilesCount
+						: 0,
+				),
+			});
+		}
+	}
+
+	const contributorEntries = [...contributorMaxima.entries()];
+
+	const topGlueContributors = contributorEntries
+		.map(([email, contributor]) => ({
+			email,
+			displayName: contributor.displayName,
+			glueScore: contributor.connectionCount,
+			dominantDimension: "shared_connections",
+		}))
+		.sort((left, right) => right.glueScore - left.glueScore)
+		.slice(0, 5);
+
+	const topSnackingContributors = contributorEntries
+		.map(([email, contributor]) => ({
+			email,
+			displayName: contributor.displayName,
+			snackingScore: contributor.sharedFilesCount,
+			dominantDimension: "shared_files",
+		}))
+		.sort((left, right) => right.snackingScore - left.snackingScore)
+		.slice(0, 5);
+
+	if (
+		availablePeriods.length === 0 &&
+		strongestConnections.length === 0 &&
+		topGlueContributors.length === 0 &&
+		topSnackingContributors.length === 0
+	) {
+		return null;
+	}
+
+	return {
+		availablePeriods,
+		strongestConnections,
+		topGlueContributors,
+		topSnackingContributors,
+	};
+}
+
 export function readReportFilesView(
 	dataDir: string,
 	view: ReportFileViewName,
@@ -3195,7 +3359,7 @@ export function readReportLandscapeRepositorySummary(
 				.filter((item) => item.href.length > 0)
 		: [];
 
-	const topContributors = contributorRows
+	const contributorsSummary = contributorRows
 		.map((item) => {
 			const email = typeof item.email === "string" ? item.email : "";
 			const impact = impactByEmail.get(email);
@@ -3227,6 +3391,18 @@ export function readReportLandscapeRepositorySummary(
 				latestCommitDate:
 					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
 				type: item.isBot === true ? ("Bot" as const) : ("Human" as const),
+				glueScore:
+					typeof impact?.glue_score === "number"
+						? impact.glue_score.toFixed(1)
+						: "—",
+				structuralImpact:
+					typeof impact?.structural_impact_score === "number"
+						? impact.structural_impact_score.toFixed(1)
+						: "—",
+				snackRisk:
+					typeof impact?.snacking_score === "number"
+						? impact.snacking_score.toFixed(1)
+						: "—",
 				signal: isGlue ? "Glue" : isSnacking ? "Snacking" : dominantDimension,
 			};
 		})
@@ -3236,6 +3412,7 @@ export function readReportLandscapeRepositorySummary(
 				right.commitsCount - left.commitsCount ||
 				left.email.localeCompare(right.email),
 		);
+	const topContributors = contributorsSummary.slice(0, 8);
 
 	const name =
 		typeof repositoryEntry.name === "string"
@@ -3271,7 +3448,7 @@ export function readReportLandscapeRepositorySummary(
 		contributorsCount:
 			typeof repositoryEntry.contributorsCount === "number"
 				? repositoryEntry.contributorsCount
-				: topContributors.length,
+				: contributorsSummary.length,
 		filesCount:
 			typeof analysis?.filesCount === "number"
 				? analysis.filesCount
@@ -3287,6 +3464,7 @@ export function readReportLandscapeRepositorySummary(
 		duplicationPercentage:
 			typeof duplication?.percentage === "number" ? duplication.percentage : null,
 		links,
+		contributors: contributorsSummary,
 		topContributors,
 	};
 }

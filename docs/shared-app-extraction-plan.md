@@ -400,10 +400,10 @@ Use this section as the live migration checklist. Mark items off as slices land.
 - [x] `landscape/contributors`
 - [x] `landscape/tags`
 - [x] `landscape/teams`
+- [x] repo dashboard summary surface
 
 ### Todo
 
-- [ ] repo dashboard summary surface
 - [ ] repo metrics
 - [ ] repo commits
 - [ ] repo dependencies
@@ -420,10 +420,10 @@ Use this section as the live migration checklist. Mark items off as slices land.
 
 ### Next recommended slices
 
-1. `landscape/teams`
-2. repo dashboard summary surface
-3. repo metrics
-4. repo commits
+1. repo metrics
+2. repo commits
+3. repo dependencies
+4. repo duplication
 
 That sequence keeps the migration on high-value, lower-risk UI before graph-heavy pages.
 

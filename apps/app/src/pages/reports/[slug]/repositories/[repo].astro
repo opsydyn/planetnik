@@ -3,7 +3,7 @@ import AppShell from "../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../lib/hosted-shell.js";
 import {
 	getHostedReportRepoKeyFromParam,
-	getHostedReportRepositoryPageHref,
+	getHostedReportRepositoriesHref,
 } from "../../../../lib/hosted-routes.js";
 import {
 	shouldRedirectReportDetail,
@@ -13,6 +13,7 @@ import {
 	getRuntimeReport,
 	getRuntimeReportLandscapeRepository,
 } from "../../../../lib/runtime-client.js";
+import LandscapeRepositoryDashboardView from "@planetnik/report-ui/views/LandscapeRepositoryDashboardView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -35,7 +36,7 @@ if (!repository) {
 }
 
 const viewModel = buildReportLandscapeRepositoryViewModel({
-	reportName: reportDetail.report.name,
+	slug,
 	repository,
 });
 ---
@@ -45,100 +46,12 @@ const viewModel = buildReportLandscapeRepositoryViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository</p>
-			<h2>{viewModel.heading}</h2>
-			<p>{repository.description}</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open landscape overview
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/metrics")}>
-					Open metrics
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/commits")}>
-					Open commits
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/dependencies")}>
-					Open dependencies
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/duplication")}>
-					Open duplication
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/files/size")}>
-					Open files
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/units/size")}>
-					Open units
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/contributors")}>
-					Open contributors
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/components")}>
-					Open components
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/coupling")}>
-					Open coupling
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/topology")}>
-					Open topology
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/impact")}>
-					Open impact
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/controls")}>
-					Open controls
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/security`}>
-					Open security
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Contributors</p>
-				<h2>Top contributors</h2>
-				{viewModel.contributorRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.contributorRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No repository contributors were exported.</p>
-				)}
-			</article>
-
-			{repository.links.length > 0 ? (
-				<article class="dashboard-card">
-					<p class="card-kicker">Links</p>
-					<h2>Repository links</h2>
-					<ul class="todo-list">
-						{repository.links.map((link) => (
-							<li>
-								<a href={link.href} target="_blank" rel="noreferrer">
-									{link.label}
-								</a>
-							</li>
-						))}
-					</ul>
-				</article>
-			) : null}
-		</section>
-	</div>
+	<LandscapeRepositoryDashboardView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		backHref={getHostedReportRepositoriesHref(slug)}
+		cards={viewModel.cards}
+		links={viewModel.links}
+		contributorRows={viewModel.contributorRows}
+	/>
 </AppShell>

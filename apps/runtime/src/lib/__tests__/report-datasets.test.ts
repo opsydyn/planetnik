@@ -44,6 +44,7 @@ const {
 	readReportLandscapeRepositoryContributorsSummary,
 	readReportLandscapeRepositoryContributorDetail,
 	readReportLandscapeRepositoryTopologySummary,
+	readReportLandscapeTopologySummary,
 	readReportLandscapeRepositoryImpactSummary,
 	readReportLandscapeRepositoryControlsSummary,
 	readReportLandscapeRepositoryComponentsSummary,
@@ -787,6 +788,22 @@ describe("runtime report dataset helpers", () => {
 			linesOfCode: 18450,
 			duplicationPercentage: 2.4,
 			links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+			contributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					commitsCount: 18,
+					commits30d: 6,
+					commits90d: 12,
+					firstCommitDate: "2024-01-03",
+					latestCommitDate: "2026-03-31",
+					type: "Human",
+					glueScore: "8.8",
+					structuralImpact: "7.1",
+					snackRisk: "2.4",
+					signal: "Glue",
+				},
+			],
 			topContributors: [
 				{
 					email: "alan@example.com",
@@ -797,6 +814,9 @@ describe("runtime report dataset helpers", () => {
 					firstCommitDate: "2024-01-03",
 					latestCommitDate: "2026-03-31",
 					type: "Human",
+					glueScore: "8.8",
+					structuralImpact: "7.1",
+					snackRisk: "2.4",
 					signal: "Glue",
 				},
 			],
@@ -1590,6 +1610,105 @@ describe("runtime report dataset helpers", () => {
 					displayName: "Alan Currie",
 					snackingScore: 2.1,
 					dominantDimension: "coordination_relief",
+				},
+			],
+		});
+	});
+
+	test("reads a landscape topology summary from landscape_topology.json", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_topology.json"), {
+			periods: [
+				{
+					periodKey: "all_time",
+					periodLabel: "All Time",
+					contributorCount: 3,
+					connectionCount: 2,
+					cIndex: 0.4,
+					cMedian: 1,
+					cMean: 1.3,
+					mostConnectedContributor: {
+						email: "alan@example.com",
+						displayName: "Alan Currie",
+						connectionCount: 2,
+					},
+					contributors: [
+						{
+							email: "alan@example.com",
+							displayName: "Alan Currie",
+							isBot: false,
+							commitsCount: 18,
+							repositoryCount: 3,
+							repositories: [],
+							connectionCount: 4,
+							sharedFilesCount: 11,
+						},
+						{
+							email: "sam@example.com",
+							displayName: "Sam Example",
+							isBot: false,
+							commitsCount: 12,
+							repositoryCount: 2,
+							repositories: [],
+							connectionCount: 2,
+							sharedFilesCount: 7,
+						},
+					],
+					strongestConnections: [
+						{
+							from: "alan@example.com",
+							to: "sam@example.com",
+							sharedFilesCount: 11,
+							sharedFiles: ["src/a.ts", "src/b.ts"],
+						},
+					],
+					connections: [],
+				},
+			],
+			periodsByKey: {},
+		});
+
+		expect(readReportLandscapeTopologySummary(dataDir)).toEqual({
+			availablePeriods: ["All Time"],
+			strongestConnections: [
+				{
+					periodLabel: "All Time",
+					from: "alan@example.com",
+					fromDisplayName: "alan@example.com",
+					to: "sam@example.com",
+					toDisplayName: "sam@example.com",
+					sharedCommits: 11,
+					filesCount: 2,
+				},
+			],
+			topGlueContributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					glueScore: 4,
+					dominantDimension: "shared_connections",
+				},
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					glueScore: 2,
+					dominantDimension: "shared_connections",
+				},
+			],
+			topSnackingContributors: [
+				{
+					email: "alan@example.com",
+					displayName: "Alan Currie",
+					snackingScore: 11,
+					dominantDimension: "shared_files",
+				},
+				{
+					email: "sam@example.com",
+					displayName: "Sam Example",
+					snackingScore: 7,
+					dominantDimension: "shared_files",
 				},
 			],
 		});

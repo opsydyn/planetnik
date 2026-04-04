@@ -43,6 +43,7 @@ import {
   readReportImpactSummary,
   readReportMetricsSummary,
   readReportTopologySummary,
+  readReportLandscapeTopologySummary,
   readReportComponentsSummary,
   readReportCouplingSummary,
   readReportUnitsView,
@@ -777,6 +778,22 @@ const ReportLandscapeRepositorySummarySchema = Schema.Struct({
       href: Schema.String,
     }),
   ),
+  contributors: Schema.Array(
+    Schema.Struct({
+      email: Schema.String,
+      displayName: Schema.String,
+      commitsCount: Schema.Number,
+      commits30d: Schema.Number,
+      commits90d: Schema.Number,
+      firstCommitDate: Schema.String,
+      latestCommitDate: Schema.String,
+      type: Schema.Literal("Human", "Bot"),
+      glueScore: Schema.String,
+      structuralImpact: Schema.String,
+      snackRisk: Schema.String,
+      signal: Schema.String,
+    }),
+  ),
   topContributors: Schema.Array(
     Schema.Struct({
       email: Schema.String,
@@ -787,6 +804,9 @@ const ReportLandscapeRepositorySummarySchema = Schema.Struct({
       firstCommitDate: Schema.String,
       latestCommitDate: Schema.String,
       type: Schema.Literal("Human", "Bot"),
+      glueScore: Schema.String,
+      structuralImpact: Schema.String,
+      snackRisk: Schema.String,
       signal: Schema.String,
     }),
   ),
@@ -1397,7 +1417,10 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const topology = readReportTopologySummary(found.analysisRoot)
+    const context = readReportContextSummary(found.analysisRoot)
+    const topology = context?.reportMode === "landscape"
+      ? readReportLandscapeTopologySummary(found.analysisRoot)
+      : readReportTopologySummary(found.analysisRoot)
     if (!topology) {
       return new Response(
         JSON.stringify({
