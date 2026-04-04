@@ -1,0 +1,134 @@
+---
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import type { HorizontalBarItem } from "../charts/HorizontalBarChart";
+import ReportDataGrid from "../tables/ReportDataGrid";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+}
+
+interface Props {
+	heading?: string;
+	subtitle: string;
+	cards: ReadonlyArray<MetricCard>;
+	topRepositoryBars: ReadonlyArray<HorizontalBarItem>;
+	rows: ReadonlyArray<GridRow>;
+	chartHelpText?: string;
+	searchPlaceholder?: string;
+}
+
+const props = Astro.props as Props;
+
+const {
+	heading = "Repositories",
+	subtitle,
+	cards,
+	topRepositoryBars,
+	rows,
+	chartHelpText,
+	searchPlaceholder = "Search repository, tag, or description",
+} = props;
+---
+ 
+<h2>{heading}</h2>
+<p class="subtitle">
+	{subtitle}
+</p>
+
+<div class="cards">
+	{cards.map((card) => (
+		<div class="card">
+			<div class="card-value">{card.value}</div>
+			<div class="card-label">{card.label}</div>
+		</div>
+	))}
+</div>
+
+{
+	topRepositoryBars.length > 0 ? (
+		<section class="section">
+			<h3>Largest Repositories</h3>
+			<HorizontalBarChart
+				client:visible
+				data={topRepositoryBars}
+				valueLabel="LOC"
+				maxItems={12}
+				helpText={chartHelpText}
+			/>
+		</section>
+	) : null
+}
+
+<ReportDataGrid
+	client:visible
+	title="Repository Inventory"
+	description="Search repositories by name, tag, description, or recent activity."
+	searchPlaceholder={searchPlaceholder}
+	rows={rows}
+	columns={[
+		{ field: "name", headerName: "Repository", type: "link", hrefField: "href", minWidth: 180, flex: 1 },
+		{ field: "description", headerName: "Description", type: "multiline", minWidth: 280, flex: 1.4 },
+		{ field: "mainLinesOfCode", headerName: "Main LOC", type: "number", minWidth: 120, sort: "desc" },
+		{ field: "mainFilesCount", headerName: "Files", type: "number", minWidth: 100 },
+		{ field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+		{ field: "commits90d", headerName: "Commits (90d)", type: "number", minWidth: 130 },
+		{ field: "contributorsCount", headerName: "Contributors", type: "number", minWidth: 120 },
+		{ field: "contributors30d", headerName: "Contributors (30d)", type: "number", minWidth: 160 },
+		{ field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+		{ field: "tags", headerName: "Tags", type: "multiline", minWidth: 220, flex: 1 },
+	]}
+/>
+
+<style>
+	.subtitle {
+		color: var(--color-text-muted);
+		margin-bottom: 1.5rem;
+		max-width: 72ch;
+	}
+
+	.cards {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.9rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 16px;
+		padding: 1.1rem 1.2rem;
+	}
+
+	.card-value {
+		font-size: 1.9rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.card-label {
+		margin-top: 0.45rem;
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.section {
+		margin-bottom: 1.75rem;
+	}
+
+	.section h3 {
+		font-size: 1.1rem;
+		font-weight: 700;
+		margin-bottom: 0.8rem;
+	}
+
+	@media (min-width: 720px) {
+		.cards {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+</style>

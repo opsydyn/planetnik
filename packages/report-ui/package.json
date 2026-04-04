@@ -10,15 +10,28 @@
 		"./icons/SystemIcon.react": "./src/icons/SystemIcon.tsx",
 		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro",
 		"./shell/Breadcrumb": "./src/shell/Breadcrumb.astro",
-		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro"
+		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro",
+		"./charts/HorizontalBarChart": "./src/charts/HorizontalBarChart.tsx",
+		"./tables/ReportDataGrid": "./src/tables/ReportDataGrid.tsx",
+		"./tables/ReportDataGrid.types": "./src/tables/ReportDataGrid.types.ts",
+		"./views/LandscapeRepositoriesView": "./src/views/LandscapeRepositoriesView.astro"
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
 		"test": "bun test",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc -p ./tsconfig.json --noEmit"
 	},
 	"dependencies": {
+		"@base-ui/react": "^1.3.0",
+		"@tanstack/react-table": "^8.21.3",
+		"@visx/group": "^3.12.0",
+		"@visx/scale": "^3.12.0",
+		"@visx/tooltip": "^3.12.0",
 		"@phosphor-icons/react": "^2.1.10",
 		"react": "^19.2.4"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3"
 	}
 }

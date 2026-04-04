@@ -56,6 +56,25 @@ describe("report landscape repositories view model", () => {
 			description: "Customer-facing application.",
 			detail: "18,450 LOC · 12 commits (30d) · 4 contributors",
 		});
+		expect(viewModel.topRepositoryBars[0]).toEqual({
+			label: "web-app",
+			value: 18450,
+			href: "/reports/platform-landscape/repositories/acme__web-app",
+		});
+		expect(viewModel.rows[0]).toEqual({
+			id: "acme__web-app",
+			name: "web-app",
+			href: "/reports/platform-landscape/repositories/acme__web-app",
+			description: "Customer-facing application.",
+			mainLinesOfCode: 18450,
+			mainFilesCount: 128,
+			commits30d: 12,
+			commits90d: 34,
+			contributorsCount: 4,
+			contributors30d: 2,
+			latestCommitDate: "2026-03-31",
+			tags: "Web",
+		});
 	});
 
 	test("encodes repository route params so slash-delimited repo keys remain one segment", () => {
@@ -86,6 +105,9 @@ describe("report landscape repositories view model", () => {
 		});
 
 		expect(viewModel.topRepositories[0]?.href).toBe(
+			"/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Ffullstack-graphql",
+		);
+		expect(viewModel.rows[0]?.href).toBe(
 			"/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Ffullstack-graphql",
 		);
 	});

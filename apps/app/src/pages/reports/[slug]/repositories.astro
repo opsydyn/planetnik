@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../layouts/AppShell.astro";
+import LandscapeRepositoriesView from "@planetnik/report-ui/views/LandscapeRepositoriesView";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import {
 	shouldRedirectReportDetail,
@@ -39,29 +40,11 @@ const viewModel = buildReportLandscapeRepositoriesViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-card">
-			<p class="card-kicker">Largest repositories</p>
-			<h2>{viewModel.heading}</h2>
-			<ul class="todo-list">
-				{viewModel.topRepositories.map((repository) => (
-					<li>
-						<a class="report-link" href={repository.href}>
-							<strong>{repository.name}</strong>
-						</a>
-						: {repository.detail}
-					</li>
-				))}
-			</ul>
-		</section>
-	</div>
+	<LandscapeRepositoriesView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		cards={viewModel.cards}
+		topRepositoryBars={viewModel.topRepositoryBars}
+		rows={viewModel.rows}
+	/>
 </AppShell>

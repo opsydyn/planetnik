@@ -1,3 +1,5 @@
+import type { HorizontalBarItem } from "@planetnik/report-ui/charts/HorizontalBarChart";
+import type { GridRow } from "@planetnik/report-ui/tables/ReportDataGrid.types";
 import type { RuntimeReportLandscapeRepositories } from "./runtime-client.js";
 import { getHostedReportRepositoryHref } from "./hosted-routes.js";
 
@@ -19,6 +21,8 @@ export type ReportLandscapeRepositoriesViewModel = {
 	readonly subtitle: string;
 	readonly cards: ReadonlyArray<ReportLandscapeRepositoriesCard>;
 	readonly topRepositories: ReadonlyArray<ReportLandscapeRepositoriesRow>;
+	readonly topRepositoryBars: ReadonlyArray<HorizontalBarItem>;
+	readonly rows: ReadonlyArray<GridRow>;
 };
 
 function formatCount(value: number): string {
@@ -58,6 +62,25 @@ export function buildReportLandscapeRepositoriesViewModel(input: {
 			href: getHostedReportRepositoryHref(input.slug, repository.repoKey),
 			description: repository.description,
 			detail: `${formatCount(repository.mainLinesOfCode)} LOC · ${formatCount(repository.commits30d)} commits (30d) · ${formatCount(repository.contributorsCount)} contributors`,
+		})),
+		topRepositoryBars: input.repositories.repositories.slice(0, 12).map((repository) => ({
+			label: repository.name,
+			value: repository.mainLinesOfCode,
+			href: getHostedReportRepositoryHref(input.slug, repository.repoKey),
+		})),
+		rows: input.repositories.repositories.map((repository) => ({
+			id: repository.repoKey,
+			name: repository.name,
+			href: getHostedReportRepositoryHref(input.slug, repository.repoKey),
+			description: repository.description || "—",
+			mainLinesOfCode: repository.mainLinesOfCode,
+			mainFilesCount: repository.mainFilesCount,
+			commits30d: repository.commits30d,
+			commits90d: repository.commits90d,
+			contributorsCount: repository.contributorsCount,
+			contributors30d: repository.contributors30d,
+			latestCommitDate: repository.latestCommitDate,
+			tags: repository.tags.join(" • ") || "—",
 		})),
 	};
 }
