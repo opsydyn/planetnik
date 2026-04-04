@@ -1,0 +1,254 @@
+---
+import DependencyMatrix, { type DependencyLink } from "../charts/DependencyMatrix";
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import ReportDataGrid from "../tables/ReportDataGrid";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+
+interface ChartItem {
+	readonly label: string;
+	readonly value: number;
+}
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+	readonly detail?: string | null;
+}
+
+interface DependencySection {
+	readonly label: string;
+	readonly detail: string;
+	readonly matrixData: ReadonlyArray<DependencyLink>;
+	readonly inDegreeData: ReadonlyArray<ChartItem>;
+	readonly outDegreeData: ReadonlyArray<ChartItem>;
+	readonly gridRows: ReadonlyArray<GridRow>;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	backLabel?: string;
+	cards: ReadonlyArray<MetricCard>;
+	sections: ReadonlyArray<DependencySection>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	backLabel = "Back to repository",
+	cards,
+	sections,
+} = Astro.props as Props;
+
+const matrixHelpText =
+	"Shows static component dependencies across the selected decomposition. Dense crossing patterns usually point to boundary erosion or hidden coordination costs.";
+const incomingHelpText =
+	"Ranks components others depend on most. Heavily depended-on components need stable interfaces and careful change control.";
+const outgoingHelpText =
+	"Ranks components with the most outward dependencies. High outgoing dependence often signals orchestration components or blurred responsibilities.";
+---
+
+{backHref ? (
+	<a class="back-link" href={backHref}>&larr; {backLabel}</a>
+) : null}
+
+<header class="page-header">
+	<div>
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+</header>
+
+{cards.length > 0 && (
+	<section class="stats-grid">
+		{cards.map((card) => (
+			<article class="stat-card">
+				<div class="stat-value">{card.value}</div>
+				<div class="stat-label">{card.label}</div>
+				{card.detail ? <div class="stat-detail">{card.detail}</div> : null}
+			</article>
+		))}
+	</section>
+)}
+
+{sections.length === 0 ? (
+	<div class="empty">
+		<p>No component dependencies found.</p>
+		<p class="hint">Dependencies are detected when logical components are configured and files reference each other across component boundaries.</p>
+	</div>
+) : (
+	sections.map((section) => (
+		<section class="decomposition">
+			<header class="decomposition-header">
+				<h3>{section.label}</h3>
+				<p>{section.detail}</p>
+			</header>
+
+			{section.matrixData.length > 0 && (
+				<div class="chart-section">
+					<h4>Dependency Matrix</h4>
+					<DependencyMatrix client:visible data={section.matrixData} helpText={matrixHelpText} />
+				</div>
+			)}
+
+			{section.inDegreeData.length > 0 && (
+				<div class="chart-section">
+					<h4>Most Depended-On (Incoming)</h4>
+					<HorizontalBarChart
+						client:visible
+						data={section.inDegreeData}
+						valueLabel="incoming refs"
+						helpText={incomingHelpText}
+					/>
+				</div>
+			)}
+
+			{section.outDegreeData.length > 0 && (
+				<div class="chart-section">
+					<h4>Most Dependent (Outgoing)</h4>
+					<HorizontalBarChart
+						client:visible
+						data={section.outDegreeData}
+						valueLabel="outgoing refs"
+						barColor="#8b5cf6"
+						helpText={outgoingHelpText}
+					/>
+				</div>
+			)}
+
+			{section.gridRows.length > 0 && (
+				<ReportDataGrid
+					client:visible
+					title="Dependency Links"
+					description="Search and paginate component links for this decomposition without losing the matrix view."
+					searchPlaceholder="Search source or target component"
+					rows={section.gridRows}
+					columns={[
+						{ field: "fromComponent", headerName: "From", minWidth: 180, flex: 1 },
+						{ field: "toComponent", headerName: "To", minWidth: 180, flex: 1 },
+						{ field: "count", headerName: "Count", type: "number", minWidth: 110, sort: "desc" },
+						{ field: "evidenceCount", headerName: "Evidence", type: "number", minWidth: 120 },
+						{ field: "locFrom", headerName: "LOC From", type: "number", minWidth: 120 },
+					]}
+				/>
+			)}
+		</section>
+	))
+)}
+
+<style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: 1rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+
+	.back-link:hover {
+		color: var(--color-accent);
+	}
+
+	.page-header {
+		margin-bottom: 1.25rem;
+	}
+
+	.page-header h2 {
+		margin-bottom: 0.25rem;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+		margin-top: 0.35rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.stat-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.stat-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.stat-detail {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+	}
+
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 2rem;
+		text-align: center;
+	}
+
+	.empty p {
+		color: var(--color-text-muted);
+		margin-bottom: 0.5rem;
+	}
+
+	.hint {
+		font-size: 0.85rem;
+	}
+
+	.decomposition {
+		margin-bottom: 2.5rem;
+	}
+
+	.decomposition-header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.decomposition-header h3 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin: 0;
+		text-transform: capitalize;
+	}
+
+	.decomposition-header p {
+		margin: 0;
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+	}
+
+	.chart-section {
+		margin-bottom: 2rem;
+	}
+
+	.chart-section h4 {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+</style>

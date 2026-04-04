@@ -1,9 +1,6 @@
 ---
-import DependencyMatrix from "../../../../components/charts/DependencyMatrix";
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import RepositoryDependenciesView from "@planetnik/report-ui/views/RepositoryDependenciesView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../lib/chartHelp";
 import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
@@ -51,114 +48,56 @@ for (const dep of allDeps) {
 	groupedDependencies.set(dep.decompositionKey, group);
 }
 
-const dependencySections = [...groupedDependencies.entries()]
-	.sort(([left], [right]) => left.localeCompare(right))
+const sections = [...groupedDependencies.entries()]
+	.sort(([a], [b]) => a.localeCompare(b))
 	.map(([decompositionKey, group]) => {
-		const matrixData = group.map((dep) => ({
-			from: dep.fromComponent,
-			to: dep.toComponent,
-			count: dep.count,
-		}));
-
 		const inDegree = new Map<string, number>();
 		const outDegree = new Map<string, number>();
 		for (const dep of group) {
-			inDegree.set(
-				dep.toComponent,
-				(inDegree.get(dep.toComponent) ?? 0) + dep.count,
-			);
-			outDegree.set(
-				dep.fromComponent,
-				(outDegree.get(dep.fromComponent) ?? 0) + dep.count,
-			);
+			inDegree.set(dep.toComponent, (inDegree.get(dep.toComponent) ?? 0) + dep.count);
+			outDegree.set(dep.fromComponent, (outDegree.get(dep.fromComponent) ?? 0) + dep.count);
 		}
 
 		return {
-			decompositionKey,
-			dependencies: group,
-			matrixData,
+			label: decompositionKey,
+			detail: `${group.length} component links`,
+			matrixData: group.map((dep) => ({
+				from: dep.fromComponent,
+				to: dep.toComponent,
+				count: dep.count,
+			})),
 			inDegreeData: [...inDegree.entries()]
-				.sort((left, right) => right[1] - left[1])
+				.sort((a, b) => b[1] - a[1])
 				.map(([label, value]) => ({ label, value })),
 			outDegreeData: [...outDegree.entries()]
-				.sort((left, right) => right[1] - left[1])
+				.sort((a, b) => b[1] - a[1])
 				.map(([label, value]) => ({ label, value })),
+			gridRows: group.map((dep) => ({
+				id: `${decompositionKey}:${dep.fromComponent}:${dep.toComponent}`,
+				fromComponent: dep.fromComponent,
+				toComponent: dep.toComponent,
+				count: dep.count,
+				evidenceCount: dep.evidenceCount,
+				locFrom: dep.locFrom,
+			})),
 		};
 	});
+
+const cards = [
+	{ label: "Decompositions", value: sections.length.toLocaleString(), detail: null },
+	{
+		label: "Component Links",
+		value: allDeps.length.toLocaleString(),
+		detail: null,
+	},
+];
 ---
 
 <Dashboard title={`${repoName} Dependencies`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Static Component Dependencies</h2>
-
-  {dependencySections.length === 0 ? (
-    <div class="empty">
-      <p>No component dependencies found.</p>
-      <p class="hint">Dependencies are detected when logical components are configured and files reference each other across component boundaries.</p>
-    </div>
-  ) : (
-    dependencySections.map((section) => (
-      <section class="decomposition">
-        <header class="decomposition-header">
-          <h3>{section.decompositionKey}</h3>
-          <p>{section.dependencies.length} component links</p>
-        </header>
-        <section class="section">
-          <h4>Dependency Matrix</h4>
-          <DependencyMatrix client:load data={section.matrixData} helpText={chartHelp.dependencies.matrix} />
-        </section>
-        <section class="section">
-          <h4>Most Depended-On (Incoming)</h4>
-          <HorizontalBarChart
-            client:visible
-            data={section.inDegreeData}
-            valueLabel="incoming refs"
-            helpText={chartHelp.dependencies.incoming}
-          />
-        </section>
-        <section class="section">
-          <h4>Most Dependent (Outgoing)</h4>
-          <HorizontalBarChart
-            client:visible
-            data={section.outDegreeData}
-            valueLabel="outgoing refs"
-            barColor="#8b5cf6"
-            helpText={chartHelp.dependencies.outgoing}
-          />
-        </section>
-        <ReportDataGrid
-          client:visible
-          title="Dependency Links"
-          description="Search and paginate component links for this decomposition without losing the matrix view."
-          searchPlaceholder="Search source or target component"
-          rows={section.dependencies.map((dep) => ({
-            id: `${section.decompositionKey}:${dep.fromComponent}:${dep.toComponent}`,
-            fromComponent: dep.fromComponent,
-            toComponent: dep.toComponent,
-            count: dep.count,
-            evidenceCount: dep.evidenceCount,
-            locFrom: dep.locFrom,
-          }))}
-          columns={[
-            { field: "fromComponent", headerName: "From", minWidth: 180, flex: 1 },
-            { field: "toComponent", headerName: "To", minWidth: 180, flex: 1 },
-            { field: "count", headerName: "Count", type: "number", minWidth: 110, sort: "desc" },
-            { field: "evidenceCount", headerName: "Evidence", type: "number", minWidth: 120 },
-            { field: "locFrom", headerName: "LOC From", type: "number", minWidth: 120 },
-          ]}
-        />
-      </section>
-    ))
-  )}
+	<RepositoryDependenciesView
+		heading={repoName}
+		subtitle={`Static component dependencies for ${repoName}.`}
+		cards={cards}
+		sections={sections}
+	/>
 </Dashboard>
-
-<style>
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
-  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
-  .hint { font-size: 0.85rem; }
-  .decomposition { margin-bottom: 2.5rem; }
-  .decomposition-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
-  .decomposition-header h3 { font-size: 1.25rem; font-weight: 700; margin: 0; text-transform: capitalize; }
-  .decomposition-header p { margin: 0; color: var(--color-text-muted); font-size: 0.9rem; }
-  .section { margin-bottom: 2rem; }
-  .section h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-</style>

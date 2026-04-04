@@ -1,10 +1,10 @@
 ---
+import RepositoryDependenciesView from "@planetnik/report-ui/views/RepositoryDependenciesView";
 import AppShell from "../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import {
 	getHostedReportRepoKeyFromParam,
 	getHostedReportRepositoryHref,
-	getHostedReportRepositoryPageHref,
 } from "../../../../../lib/hosted-routes.js";
 import {
 	buildReportDependenciesViewModel,
@@ -58,86 +58,11 @@ const viewModel = buildReportDependenciesViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Dependencies</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route reads the repo-scoped component dependency export from
-				the landscape analysis root and keeps the contract aligned with the static
-				drilldown.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
-					Open repository dashboard
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/metrics")}>
-					Open metrics
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-stack">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Decomposition</p>
-					<h2>{section.label}</h2>
-					<p>{section.detail}</p>
-					<section class="dashboard-grid">
-						<div>
-							<h3>Incoming</h3>
-							<ul class="todo-list">
-								{section.incoming.map((item) => (
-									<li>
-										<strong>{item.label}</strong>: {item.value}
-									</li>
-								))}
-							</ul>
-						</div>
-						<div>
-							<h3>Outgoing</h3>
-							<ul class="todo-list">
-								{section.outgoing.map((item) => (
-									<li>
-										<strong>{item.label}</strong>: {item.value}
-									</li>
-								))}
-							</ul>
-						</div>
-					</section>
-					<div class="contributors-table-wrap">
-						<table class="contributors-table">
-							<thead>
-								<tr>
-									<th>Link</th>
-									<th>Value</th>
-								</tr>
-							</thead>
-							<tbody>
-								{section.links.map((link) => (
-									<tr>
-										<td>
-											<div class="table-primary">{link.label}</div>
-										</td>
-										<td>{link.value}</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryDependenciesView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		backHref={getHostedReportRepositoryHref(slug, repo)}
+		cards={viewModel.cards}
+		sections={viewModel.sections}
+	/>
 </AppShell>

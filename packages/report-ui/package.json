@@ -11,6 +11,7 @@
 		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro",
 		"./shell/Breadcrumb": "./src/shell/Breadcrumb.astro",
 		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro",
+		"./charts/DependencyMatrix": "./src/charts/DependencyMatrix.tsx",
 		"./charts/DistributionChart": "./src/charts/DistributionChart.tsx",
 		"./charts/DonutChart": "./src/charts/DonutChart.tsx",
 		"./charts/HorizontalBarChart": "./src/charts/HorizontalBarChart.tsx",
@@ -25,6 +26,7 @@
 		"./views/LandscapeOverviewView": "./src/views/LandscapeOverviewView.astro",
 		"./views/LandscapeRepositoryDashboardView": "./src/views/LandscapeRepositoryDashboardView.astro",
 		"./views/RepositoryCommitsView": "./src/views/RepositoryCommitsView.astro",
+		"./views/RepositoryDependenciesView": "./src/views/RepositoryDependenciesView.astro",
 		"./views/RepositoryMetricsView": "./src/views/RepositoryMetricsView.astro"
 	},
 	"scripts": {

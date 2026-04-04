@@ -1,3 +1,5 @@
+import type { DependencyLink } from "@planetnik/report-ui/charts/DependencyMatrix";
+import type { GridRow } from "@planetnik/report-ui/tables/ReportDataGrid.types";
 import type { RuntimeReportDependencies } from "./runtime-client.js";
 
 export type ReportDependenciesCard = {
@@ -9,18 +11,10 @@ export type ReportDependenciesCard = {
 export type ReportDependenciesSection = {
 	readonly label: string;
 	readonly detail: string;
-	readonly incoming: ReadonlyArray<{
-		readonly label: string;
-		readonly value: string;
-	}>;
-	readonly outgoing: ReadonlyArray<{
-		readonly label: string;
-		readonly value: string;
-	}>;
-	readonly links: ReadonlyArray<{
-		readonly label: string;
-		readonly value: string;
-	}>;
+	readonly matrixData: ReadonlyArray<DependencyLink>;
+	readonly inDegreeData: ReadonlyArray<{ readonly label: string; readonly value: number }>;
+	readonly outDegreeData: ReadonlyArray<{ readonly label: string; readonly value: number }>;
+	readonly gridRows: ReadonlyArray<GridRow>;
 };
 
 export type ReportDependenciesViewModel = {
@@ -55,17 +49,20 @@ export function buildReportDependenciesViewModel(input: {
 		sections: input.dependencies.sections.map((section) => ({
 			label: section.decompositionKey,
 			detail: `${section.linksCount.toLocaleString("en-GB")} component links`,
-			incoming: section.incoming.map((entry) => ({
-				label: entry.label,
-				value: `${entry.value.toLocaleString("en-GB")} incoming refs`,
+			matrixData: section.links.map((link) => ({
+				from: link.fromComponent,
+				to: link.toComponent,
+				count: link.count,
 			})),
-			outgoing: section.outgoing.map((entry) => ({
-				label: entry.label,
-				value: `${entry.value.toLocaleString("en-GB")} outgoing refs`,
-			})),
-			links: section.links.map((link) => ({
-				label: `${link.fromComponent} → ${link.toComponent}`,
-				value: `${link.count.toLocaleString("en-GB")} refs · ${link.evidenceCount.toLocaleString("en-GB")} evidence · ${link.locFrom.toLocaleString("en-GB")} loc from`,
+			inDegreeData: section.incoming,
+			outDegreeData: section.outgoing,
+			gridRows: section.links.map((link) => ({
+				id: `${section.decompositionKey}:${link.fromComponent}:${link.toComponent}`,
+				fromComponent: link.fromComponent,
+				toComponent: link.toComponent,
+				count: link.count,
+				evidenceCount: link.evidenceCount,
+				locFrom: link.locFrom,
 			})),
 		})),
 	};

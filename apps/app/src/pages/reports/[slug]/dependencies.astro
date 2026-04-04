@@ -1,4 +1,5 @@
 ---
+import RepositoryDependenciesView from "@planetnik/report-ui/views/RepositoryDependenciesView";
 import AppShell from "../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import {
@@ -36,86 +37,10 @@ const viewModel = buildReportDependenciesViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Dependencies</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route reads the same component dependency export as the static
-				report app and keeps the backend contract explicit before the shared UI
-				extraction.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/metrics`}>
-					Open metrics
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-stack">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Decomposition</p>
-					<h2>{section.label}</h2>
-					<p>{section.detail}</p>
-					<section class="dashboard-grid">
-						<div>
-							<h3>Incoming</h3>
-							<ul class="todo-list">
-								{section.incoming.map((item) => (
-									<li>
-										<strong>{item.label}</strong>: {item.value}
-									</li>
-								))}
-							</ul>
-						</div>
-						<div>
-							<h3>Outgoing</h3>
-							<ul class="todo-list">
-								{section.outgoing.map((item) => (
-									<li>
-										<strong>{item.label}</strong>: {item.value}
-									</li>
-								))}
-							</ul>
-						</div>
-					</section>
-					<div class="contributors-table-wrap">
-						<table class="contributors-table">
-							<thead>
-								<tr>
-									<th>Link</th>
-									<th>Value</th>
-								</tr>
-							</thead>
-							<tbody>
-								{section.links.map((link) => (
-									<tr>
-										<td>
-											<div class="table-primary">{link.label}</div>
-										</td>
-										<td>{link.value}</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryDependenciesView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		cards={viewModel.cards}
+		sections={viewModel.sections}
+	/>
 </AppShell>
