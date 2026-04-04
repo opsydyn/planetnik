@@ -17,6 +17,7 @@ const reports = await getRuntimeReports(cookie);
 const datasetLinks = buildDashboardDatasetLinks(datasets, reports);
 const reportCreated = Astro.url.searchParams.get("reportCreated") === "1";
 const reportError = Astro.url.searchParams.get("reportError");
+const isAdminUser = Astro.locals.user?.role === "admin";
 
 const displayName = me?.user.name || me?.user.email || "Signed-in user";
 const sessionExpiry = me
@@ -69,6 +70,7 @@ const sessionExpiry = me
 					with runtime-backed context and user-scoped state.
 				</p>
 				<div class="card-actions">
+					{isAdminUser ? <a class="button-secondary" href="/admin">Admin</a> : null}
 					<a class="button" href="/sign-out">Sign out</a>
 				</div>
 			</article>

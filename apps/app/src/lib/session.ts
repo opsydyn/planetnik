@@ -3,6 +3,7 @@ export type AuthUser = {
 	readonly email: string;
 	readonly name?: string | null;
 	readonly image?: string | null;
+	readonly role?: string | null;
 	readonly [key: string]: unknown;
 };
 

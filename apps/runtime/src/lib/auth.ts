@@ -1,5 +1,6 @@
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin } from "better-auth/plugins";
 import { appConfig } from "../config.js";
 import { db } from "../db/index.js";
 import { account, session, user, verification } from "../db/schema/auth.js";
@@ -21,6 +22,7 @@ export const auth = betterAuth<BetterAuthOptions>({
 		enabled: true,
 		minPasswordLength: 8,
 	},
+	plugins: [admin()],
 	advanced: {
 		defaultCookieAttributes: {
 			sameSite: appConfig.authCookies.sameSite,

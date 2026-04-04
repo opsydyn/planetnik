@@ -1,7 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
+import { resolveRouteAccess } from "./lib/access-control.js";
 import { resolveSession } from "./lib/session.js";
-
-const AUTH_PAGES = new Set(["/sign-in", "/sign-up"]);
 
 function isBypassedPath(pathname: string): boolean {
 	return (
@@ -22,12 +21,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	context.locals.user = user;
 	context.locals.session = session;
 
-	if (!user && !AUTH_PAGES.has(path)) {
-		return context.redirect("/sign-in");
-	}
-
-	if (user && AUTH_PAGES.has(path)) {
-		return context.redirect("/");
+	const access = resolveRouteAccess({ pathname: path, user });
+	if (access.kind === "redirect") {
+		return context.redirect(access.location);
 	}
 
 	return next();

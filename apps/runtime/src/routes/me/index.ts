@@ -9,6 +9,7 @@ const MeResponseSchema = Schema.Struct({
 		name: Schema.NullOr(Schema.String),
 		image: Schema.NullOr(Schema.String),
 		emailVerified: Schema.Boolean,
+		role: Schema.NullOr(Schema.String),
 	}),
 	session: Schema.Struct({
 		id: Schema.String,
@@ -40,6 +41,8 @@ export const meRoutes = new Elysia({ name: "me" }).get(
 			);
 		}
 
+		const userRole = Reflect.get(session.user, "role");
+
 		return decodeMeResponse({
 			user: {
 				id: session.user.id,
@@ -47,6 +50,7 @@ export const meRoutes = new Elysia({ name: "me" }).get(
 				name: session.user.name ?? null,
 				image: session.user.image ?? null,
 				emailVerified: session.user.emailVerified,
+				role: typeof userRole === "string" ? userRole : null,
 			},
 			session: {
 				id: session.session.id,

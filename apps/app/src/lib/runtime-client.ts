@@ -11,6 +11,7 @@ export type RuntimeMe = {
     readonly name: string | null;
     readonly image: string | null;
     readonly emailVerified: boolean;
+    readonly role: string | null;
   };
   readonly session: {
     readonly id: string;

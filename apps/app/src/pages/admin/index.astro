@@ -1,0 +1,36 @@
+---
+import AppShell from "../../layouts/AppShell.astro";
+
+const userRole =
+	typeof Astro.locals.user?.role === "string" ? Astro.locals.user.role : "unknown";
+---
+
+<AppShell
+	title="Admin"
+	subtitle="Admin access confirmed. User-management UI will be added in a later slice."
+	shellContext={{ kind: "dashboard" }}
+>
+	<div class="dashboard-stack">
+		<section class="callout">
+			<strong>Admin route enabled.</strong>
+			<span>
+				This hosted route is protected by middleware and currently available only
+				to users with the <code>admin</code> role.
+			</span>
+		</section>
+
+		<section class="dashboard-grid">
+			<article class="dashboard-card dashboard-card-primary">
+				<p class="card-kicker">Role</p>
+				<h2>{userRole}</h2>
+				<p>
+					The runtime owns auth state and Better Auth role persistence. This page
+					is intentionally minimal until the admin plugin-backed UI is built.
+				</p>
+				<div class="card-actions">
+					<a class="button-secondary" href="/">Return to dashboard</a>
+				</div>
+			</article>
+		</section>
+	</div>
+</AppShell>
