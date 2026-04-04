@@ -1,0 +1,209 @@
+---
+import DonutChart from "../charts/DonutChart";
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import ScatterPlot from "../charts/ScatterPlot";
+import TreemapChart from "../charts/Treemap";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+import ReportDataGrid from "../tables/ReportDataGrid";
+
+interface ComponentCard {
+	label: string;
+	value: string;
+	detail: string | null;
+	accentColor?: string;
+}
+
+interface DonutItem {
+	label: string;
+	value: number;
+}
+
+interface BarItem {
+	label: string;
+	value: number;
+}
+
+interface ScatterItem {
+	x: number;
+	y: number;
+	label: string;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	cards: ReadonlyArray<ComponentCard>;
+	componentCoverageData: ReadonlyArray<DonutItem>;
+	componentCoverageColors: ReadonlyArray<string>;
+	treemapData: ReadonlyArray<BarItem>;
+	compBarData: ReadonlyArray<BarItem>;
+	busFactorData: ReadonlyArray<ScatterItem>;
+	componentRows: ReadonlyArray<GridRow>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	cards,
+	componentCoverageData,
+	componentCoverageColors,
+	treemapData,
+	compBarData,
+	busFactorData,
+	componentRows,
+} = Astro.props;
+
+const hasComponents = componentRows.length > 0;
+const hasCoverage = componentCoverageData.length > 1;
+---
+
+<div class="repo-components">
+	{backHref && (
+		<div class="back-nav">
+			<a href={backHref} class="back-link">← Back to repository</a>
+		</div>
+	)}
+
+	<div class="page-header">
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+
+	{!hasComponents ? (
+		<div class="empty">
+			<p>No logical decomposition configured for this repository.</p>
+			<p class="hint">Add <code>logicalDecompositions</code> to the source configuration to group files into components.</p>
+		</div>
+	) : (
+		<>
+			<div class="cards">
+				{cards.map((card) => (
+					<div class="card">
+						<div
+							class="card-value"
+							style={card.accentColor ? `color: ${card.accentColor}` : undefined}
+						>
+							{card.value}
+						</div>
+						<div class="card-label">{card.label}</div>
+					</div>
+				))}
+			</div>
+
+			{hasCoverage && (
+				<section class="section">
+					<h3>Knowledge Coverage</h3>
+					<DonutChart
+						client:load
+						data={componentCoverageData}
+						colors={componentCoverageColors}
+						valueLabel="components"
+					/>
+				</section>
+			)}
+
+			{treemapData.length > 0 && (
+				<section class="section">
+					<h3>Component Size</h3>
+					<TreemapChart client:load data={treemapData} valueLabel="LOC" />
+				</section>
+			)}
+
+			{compBarData.length > 0 && (
+				<section class="section">
+					<HorizontalBarChart client:visible data={compBarData} valueLabel="LOC" />
+				</section>
+			)}
+
+			{busFactorData.length > 0 && (
+				<section class="section">
+					<h3>Bus Factor Risk (LOC vs Contributors)</h3>
+					<ScatterPlot
+						client:visible
+						data={busFactorData}
+						xLabel="Lines of Code"
+						yLabel="Contributors"
+						thresholds={{ y: 3 }}
+					/>
+				</section>
+			)}
+
+			<ReportDataGrid
+				client:visible
+				title="Component Inventory"
+				description="Search and sort the logical component inventory for this repository."
+				searchPlaceholder="Search component or risk"
+				rows={componentRows}
+				columns={[
+					{ field: "component", headerName: "Component", minWidth: 220, flex: 1.1, sort: "asc" },
+					{ field: "files", headerName: "Files", type: "number", minWidth: 110 },
+					{ field: "loc", headerName: "LOC", type: "number", minWidth: 120, sort: "desc" },
+					{ field: "contributors", headerName: "Contributors", type: "number", minWidth: 140 },
+					{ field: "risk", headerName: "Risk", minWidth: 180 },
+				]}
+			/>
+		</>
+	)}
+</div>
+
+<style>
+	.repo-components {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+	.back-nav { margin-bottom: -0.5rem; }
+	.back-link {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+	}
+	.back-link:hover { color: var(--color-accent); }
+	.page-header h2 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin: 0 0 0.35rem;
+	}
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+		margin: 0;
+	}
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 2rem;
+		text-align: center;
+	}
+	.empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+	.hint { font-size: 0.85rem; }
+	.cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+		gap: 1rem;
+	}
+	.card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+	.card-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+	.card-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	.section { display: flex; flex-direction: column; gap: 0.75rem; }
+	.section h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+</style>

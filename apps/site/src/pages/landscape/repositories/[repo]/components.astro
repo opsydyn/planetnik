@@ -1,9 +1,5 @@
 ---
-import DonutChart from "../../../../components/charts/DonutChart";
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
-import ScatterPlot from "../../../../components/charts/ScatterPlot";
-import TreemapChart from "../../../../components/charts/Treemap";
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import RepositoryComponentsView from "@planetnik/report-ui/views/RepositoryComponentsView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
 import { chartHelp } from "../../../../lib/chartHelp";
 import { readLandscapeRepoJson } from "../../../../lib/landscape";
@@ -78,44 +74,42 @@ const lowBackupComponents = components.filter(
 const distributedComponents = components.filter(
 	([, summary]) => summary.contributors.size >= 3,
 ).length;
+const twoContributors = lowBackupComponents - singleOwnerComponents;
+
+const cards = [
+	{ label: "Components", value: components.length.toLocaleString(), detail: null },
+	{
+		label: "Single Owner",
+		value: singleOwnerComponents.toLocaleString(),
+		detail: null,
+		...(singleOwnerComponents > 0 ? { accentColor: "#dc2626" } : {}),
+	},
+	{
+		label: "Low Backup",
+		value: lowBackupComponents.toLocaleString(),
+		detail: null,
+		...(lowBackupComponents > 0 ? { accentColor: "#d97706" } : {}),
+	},
+	{
+		label: "3+ Contributors",
+		value: distributedComponents.toLocaleString(),
+		detail: null,
+		...(distributedComponents > 0 ? { accentColor: "#16a34a" } : {}),
+	},
+	{ label: "Unassigned Files", value: unassigned.length.toLocaleString(), detail: null },
+];
 
 const componentCoverageData = [
-	...(singleOwnerComponents > 0
-		? [
-				{
-					label: "Single owner",
-					value: singleOwnerComponents,
-					color: "#ef4444",
-				},
-			]
-		: []),
-	...(lowBackupComponents - singleOwnerComponents > 0
-		? [
-				{
-					label: "Two contributors",
-					value: lowBackupComponents - singleOwnerComponents,
-					color: "#f59e0b",
-				},
-			]
-		: []),
-	...(distributedComponents > 0
-		? [
-				{
-					label: "3+ contributors",
-					value: distributedComponents,
-					color: "#22c55e",
-				},
-			]
-		: []),
-	...(unassigned.length > 0
-		? [
-				{
-					label: "Unassigned files",
-					value: unassigned.length,
-					color: "#94a3b8",
-				},
-			]
-		: []),
+	...(singleOwnerComponents > 0 ? [{ label: "Single owner", value: singleOwnerComponents }] : []),
+	...(twoContributors > 0 ? [{ label: "Two contributors", value: twoContributors }] : []),
+	...(distributedComponents > 0 ? [{ label: "3+ contributors", value: distributedComponents }] : []),
+	...(unassigned.length > 0 ? [{ label: "Unassigned files", value: unassigned.length }] : []),
+];
+const componentCoverageColors = [
+	...(singleOwnerComponents > 0 ? ["#ef4444"] : []),
+	...(twoContributors > 0 ? ["#f59e0b"] : []),
+	...(distributedComponents > 0 ? ["#22c55e"] : []),
+	...(unassigned.length > 0 ? ["#94a3b8"] : []),
 ];
 
 const compBarData = components.slice(0, 15).map(([name, summary]) => ({
@@ -136,137 +130,43 @@ const busFactorData = components
 		label: name,
 	}));
 
-const componentRows = components.map(([name, summary]) => ({
-	id: name,
-	component: name,
-	files: summary.files,
-	loc: summary.loc,
-	contributors:
-		summary.contributors.size > 0 ? summary.contributors.size : null,
-	risk:
-		summary.contributors.size > 0 && summary.contributors.size <= 2
-			? "Bus factor risk"
-			: "",
-}));
-
-if (unassigned.length > 0) {
-	componentRows.push({
-		id: "__unassigned__",
-		component: "(unassigned)",
-		files: unassigned.length,
-		loc: unassigned.reduce((sum, file) => sum + file.linesOfCode, 0),
-		contributors: null,
-		risk: "",
-	});
-}
+const componentRows = [
+	...components.map(([name, summary]) => ({
+		id: name,
+		component: name,
+		files: summary.files,
+		loc: summary.loc,
+		contributors: summary.contributors.size > 0 ? summary.contributors.size : null,
+		risk:
+			summary.contributors.size > 0 && summary.contributors.size <= 2
+				? "Bus factor risk"
+				: "",
+	})),
+	...(unassigned.length > 0
+		? [
+				{
+					id: "__unassigned__",
+					component: "(unassigned)",
+					files: unassigned.length,
+					loc: unassigned.reduce((sum, file) => sum + file.linesOfCode, 0),
+					contributors: null,
+					risk: "",
+				},
+			]
+		: []),
+];
 ---
 
 <Dashboard title={`${repoName} Components`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Logical Components</h2>
-
-  {components.length === 0 ? (
-    <div class="empty">
-      <p>No logical decomposition configured for this repository.</p>
-      <p class="hint">Add <code>logicalDecompositions</code> to the source configuration to group files into components.</p>
-    </div>
-  ) : (
-    <>
-      <div class="cards">
-        <div class="card">
-          <div class="card-value">{components.length}</div>
-          <div class="card-label">Components</div>
-        </div>
-        <div class="card card-failed">
-          <div class="card-value">{singleOwnerComponents}</div>
-          <div class="card-label">Single-Owner Components</div>
-        </div>
-        <div class="card card-tolerant">
-          <div class="card-value">{lowBackupComponents}</div>
-          <div class="card-label">Low-Backup Components</div>
-        </div>
-        <div class="card card-ok">
-          <div class="card-value">{distributedComponents}</div>
-          <div class="card-label">3+ Contributors</div>
-        </div>
-      </div>
-
-      {componentCoverageData.length > 1 && (
-        <section class="section">
-          <h3>Knowledge Coverage</h3>
-          <DonutChart client:load data={componentCoverageData} valueLabel="components" helpText={chartHelp.components.knowledgeCoverage} />
-        </section>
-      )}
-
-      <section class="section">
-        <h3>Component Size</h3>
-        <TreemapChart client:load data={treemapData} valueLabel="LOC" helpText={chartHelp.components.sizeTreemap} />
-      </section>
-      <section class="section">
-        <HorizontalBarChart client:visible data={compBarData} valueLabel="LOC" helpText={chartHelp.components.sizeBars} />
-      </section>
-      {busFactorData.length > 0 && (
-        <section class="section">
-          <h3>Bus Factor Risk (LOC vs Contributors)</h3>
-          <ScatterPlot
-            client:visible
-            data={busFactorData}
-            xLabel="Lines of Code"
-            yLabel="Contributors"
-            thresholds={{ y: 3 }}
-            helpText={chartHelp.components.busFactor}
-          />
-        </section>
-      )}
-      <ReportDataGrid
-        client:visible
-        title="Component Inventory"
-        description="Search and sort the logical component inventory for this repository while keeping the structure charts above."
-        searchPlaceholder="Search component or risk"
-        rows={componentRows}
-        columns={[
-          { field: "component", headerName: "Component", minWidth: 220, flex: 1.1, sort: "asc" },
-          { field: "files", headerName: "Files", type: "number", minWidth: 110 },
-          { field: "loc", headerName: "LOC", type: "number", minWidth: 120, sort: "desc" },
-          { field: "contributors", headerName: "Contributors", type: "number", minWidth: 140 },
-          { field: "risk", headerName: "Risk", minWidth: 180 },
-        ]}
-      />
-    </>
-  )}
+	<RepositoryComponentsView
+		heading={repoName}
+		subtitle={`Logical component coverage and bus-factor risk for ${repoName}.`}
+		cards={cards}
+		componentCoverageData={componentCoverageData}
+		componentCoverageColors={componentCoverageColors}
+		treemapData={treemapData}
+		compBarData={compBarData}
+		busFactorData={busFactorData}
+		componentRows={componentRows}
+	/>
 </Dashboard>
-
-<style>
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
-  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
-  .hint { font-size: 0.85rem; }
-  .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  .card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 1.25rem;
-  }
-  .card-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1;
-  }
-  .card-label {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin-top: 0.35rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .card-failed .card-value { color: #dc2626; }
-  .card-tolerant .card-value { color: #d97706; }
-  .card-ok .card-value { color: #16a34a; }
-</style>
