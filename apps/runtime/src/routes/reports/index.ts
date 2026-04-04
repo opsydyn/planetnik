@@ -12,6 +12,7 @@ import {
   readReportArtifactSummary,
   readReportContributorDetail,
   readReportContributorsSummary,
+  readReportLandscapeContributorsSummary,
   readReportContextSummary,
   readReportControlsSummary,
   readReportDependenciesSummary,
@@ -153,6 +154,15 @@ const ReportContributorSchema = Schema.Struct({
   componentsTouched: Schema.NullOr(Schema.Number),
   primaryComponent: Schema.String,
   knowledgeSignal: Schema.String,
+  repositoryCount: Schema.NullOr(Schema.Number),
+  latestCommitDate: Schema.String,
+  isBot: Schema.NullOr(Schema.Boolean),
+  repositories: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      repoKey: Schema.String,
+    }),
+  ),
 })
 
 const ReportContributorsResponseSchema = Schema.Struct({
@@ -1042,8 +1052,20 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
+    if (!found.analysisRoot) {
+      return decodeReportContributorsResponse({
+        contributors: [],
+      })
+    }
+
+    const context = readReportContextSummary(found.analysisRoot)
+    const contributors =
+      context.reportMode === "landscape"
+        ? readReportLandscapeContributorsSummary(found.analysisRoot)?.contributors ?? []
+        : readReportContributorsSummary(found.analysisRoot)
+
     return decodeReportContributorsResponse({
-      contributors: found.analysisRoot ? [...readReportContributorsSummary(found.analysisRoot)] : [],
+      contributors: [...contributors],
     })
   })
   .get("/api/reports/:slug/contributors/:email", async ({ request, params }) => {

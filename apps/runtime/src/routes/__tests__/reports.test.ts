@@ -164,6 +164,10 @@ const readReportContributorsSummary = mock((analysisRoot: string) => {
 			componentsTouched: 3,
 			primaryComponent: "runtime",
 			knowledgeSignal: "",
+			repositoryCount: null,
+			latestCommitDate: "2026-03-31",
+			isBot: null,
+			repositories: [],
 		},
 		{
 			email: "sam@example.com",
@@ -182,8 +186,70 @@ const readReportContributorsSummary = mock((analysisRoot: string) => {
 			componentsTouched: null,
 			primaryComponent: "",
 			knowledgeSignal: "",
+			repositoryCount: null,
+			latestCommitDate: "2026-03-30",
+			isBot: null,
+			repositories: [],
 		},
 	];
+});
+const readReportLandscapeContributorsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/platform-landscape/data") {
+		return null;
+	}
+
+	return {
+		totalContributors: 2,
+		active30d: 1,
+		multiRepoCount: 1,
+		botCount: 0,
+		contributors: [
+			{
+				email: "alan@example.com",
+				userName: "Alan Currie",
+				displayName: "Alan Currie",
+				status: "Active",
+				commitsAllTime: 18,
+				commits30Days: 6,
+				commits90Days: 12,
+				commits180Days: 15,
+				commits365Days: 18,
+				firstCommit: "2024-01-03",
+				lastCommit: "2026-03-31",
+				percentage: "",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: "Cross-context knowledge",
+				repositoryCount: 3,
+				latestCommitDate: "2026-03-31",
+				isBot: false,
+				repositories: [{ name: "web-app", repoKey: "acme__web-app" }],
+			},
+			{
+				email: "new@example.com",
+				userName: "",
+				displayName: "new@example.com",
+				status: "Inactive",
+				commitsAllTime: 8,
+				commits30Days: 0,
+				commits90Days: 2,
+				commits180Days: 4,
+				commits365Days: 8,
+				firstCommit: "2026-02-18",
+				lastCommit: "2026-03-30",
+				percentage: "",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: "",
+				repositoryCount: 1,
+				latestCommitDate: "2026-03-30",
+				isBot: false,
+				repositories: [{ name: "web-app", repoKey: "acme__web-app" }],
+			},
+		],
+	};
 });
 const readReportContributorDetail = mock(
 	(analysisRoot: string, email: string) => {
@@ -1064,6 +1130,10 @@ const readReportLandscapeRepositoryContributorsSummary = mock(
 				componentsTouched: null,
 				primaryComponent: "",
 				knowledgeSignal: "Glue",
+				repositoryCount: null,
+				latestCommitDate: "2026-03-31",
+				isBot: null,
+				repositories: [],
 			},
 			{
 				email: "new@example.com",
@@ -1082,6 +1152,10 @@ const readReportLandscapeRepositoryContributorsSummary = mock(
 				componentsTouched: null,
 				primaryComponent: "",
 				knowledgeSignal: "Snacking",
+				repositoryCount: null,
+				latestCommitDate: "2026-03-30",
+				isBot: null,
+				repositories: [],
 			},
 		];
 	},
@@ -1427,6 +1501,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportContextSummary,
 	readReportArtifactSummary,
 	readReportContributorsSummary,
+	readReportLandscapeContributorsSummary,
 	readReportContributorDetail,
 	readReportTopologySummary,
 	readReportMetricsSummary,

@@ -102,6 +102,13 @@ export type RuntimeReportContributor = {
   readonly componentsTouched: number | null;
   readonly primaryComponent: string;
   readonly knowledgeSignal: string;
+  readonly repositoryCount: number | null;
+  readonly latestCommitDate: string;
+  readonly isBot: boolean | null;
+  readonly repositories: ReadonlyArray<{
+    readonly name: string;
+    readonly repoKey: string;
+  }>;
 };
 
 export type RuntimeReportDetail = {

@@ -73,6 +73,21 @@ export type ReportContributorSummary = {
 	readonly componentsTouched: number | null;
 	readonly primaryComponent: string;
 	readonly knowledgeSignal: string;
+	readonly repositoryCount: number | null;
+	readonly latestCommitDate: string;
+	readonly isBot: boolean | null;
+	readonly repositories: ReadonlyArray<{
+		readonly name: string;
+		readonly repoKey: string;
+	}>;
+};
+
+type LandscapeContributorSummary = {
+	readonly totalContributors: number;
+	readonly active30d: number;
+	readonly multiRepoCount: number;
+	readonly botCount: number;
+	readonly contributors: ReadonlyArray<ReportContributorSummary>;
 };
 
 export type ReportContributorDetail = {
@@ -1564,6 +1579,10 @@ export function readReportContributorsSummary(
 				componentsTouched,
 				primaryComponent: getPrimaryComponent(detail),
 				knowledgeSignal: getKnowledgeSignal(componentsTouched),
+				repositoryCount: null,
+				latestCommitDate: cols[7]?.trim() ?? "",
+				isBot: null,
+				repositories: [],
 			} satisfies ReportContributorSummary;
 		})
 		.filter(
@@ -1572,6 +1591,125 @@ export function readReportContributorsSummary(
 			): contributor is ReportContributorSummary => contributor !== null,
 		)
 		.sort((left, right) => right.commitsAllTime - left.commitsAllTime);
+}
+
+export function readReportLandscapeContributorsSummary(
+	dataDir: string,
+): LandscapeContributorSummary | null {
+	const raw = readJsonFile(dataDir, "landscape_contributors.json");
+	if (!raw || typeof raw !== "object") {
+		return null;
+	}
+
+	const contributors = Array.isArray((raw as Record<string, unknown>).contributors)
+		? (raw as Record<string, unknown>).contributors
+		: [];
+
+	const items = contributors
+		.filter(
+			(item): item is Record<string, unknown> =>
+				typeof item === "object" && item !== null,
+		)
+		.map((item) => {
+			const email = typeof item.email === "string" ? item.email : "";
+			const displayName =
+				typeof item.displayName === "string" && item.displayName.length > 0
+					? item.displayName
+					: typeof item.name === "string" && item.name.length > 0
+						? item.name
+						: email;
+			const repositories = Array.isArray(item.repositories)
+				? item.repositories
+						.filter(
+							(repository): repository is Record<string, unknown> =>
+								typeof repository === "object" && repository !== null,
+						)
+						.map((repository) => ({
+							name: typeof repository.name === "string" ? repository.name : "",
+							repoKey:
+								typeof repository.repoKey === "string" ? repository.repoKey : "",
+						}))
+						.filter((repository) => repository.name.length > 0)
+				: [];
+
+			const commitsAllTime =
+				typeof item.commitsCount === "number" ? item.commitsCount : 0;
+			const commits30Days =
+				typeof item.commitsCount30Days === "number"
+					? item.commitsCount30Days
+					: typeof item.commits30d === "number"
+						? item.commits30d
+						: 0;
+			const commits90Days =
+				typeof item.commitsCount90Days === "number"
+					? item.commitsCount90Days
+					: typeof item.commits90d === "number"
+						? item.commits90d
+						: 0;
+			const commits180Days =
+				typeof item.commitsCount180Days === "number"
+					? item.commitsCount180Days
+					: typeof item.commits180d === "number"
+						? item.commits180d
+						: 0;
+			const commits365Days =
+				typeof item.commitsCount365Days === "number"
+					? item.commitsCount365Days
+					: typeof item.commits365d === "number"
+						? item.commits365d
+						: 0;
+			const repositoryCount =
+				typeof item.repositoryCount === "number"
+					? item.repositoryCount
+					: repositories.length;
+
+			return {
+				email,
+				userName: typeof item.name === "string" ? item.name : "",
+				displayName,
+				status:
+					commits30Days > 0
+						? ("Active" as const)
+						: commitsAllTime > 0
+							? ("Inactive" as const)
+							: ("Rookie" as const),
+				commitsAllTime,
+				commits30Days,
+				commits90Days,
+				commits180Days,
+				commits365Days,
+				firstCommit:
+					typeof item.firstCommitDate === "string" ? item.firstCommitDate : "",
+				lastCommit:
+					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+				percentage: "",
+				filesTouched: null,
+				componentsTouched: null,
+				primaryComponent: "",
+				knowledgeSignal: repositoryCount >= 3 ? "Cross-context knowledge" : "",
+				repositoryCount,
+				latestCommitDate:
+					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+				isBot: item.isBot === true,
+				repositories,
+			} satisfies ReportContributorSummary;
+		})
+		.filter((contributor) => contributor.email.length > 0)
+		.sort((left, right) => right.commitsAllTime - left.commitsAllTime);
+
+	if (items.length === 0) {
+		return null;
+	}
+
+	return {
+		totalContributors: items.length,
+		active30d: items.filter((contributor) => contributor.commits30Days > 0).length,
+		multiRepoCount: items.filter(
+			(contributor) => (contributor.repositoryCount ?? 0) > 1,
+		).length,
+		botCount: items.filter((contributor) => contributor.isBot === true).length,
+		contributors: items,
+	};
 }
 
 export function readReportContributorDetail(

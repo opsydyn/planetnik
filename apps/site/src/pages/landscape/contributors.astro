@@ -1,7 +1,6 @@
 ---
 import { getCollection, getEntry } from "astro:content";
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
-import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import LandscapeContributorsView from "@planetnik/report-ui/views/LandscapeContributorsView";
 import Dashboard from "../../layouts/Dashboard.astro";
 import { chartHelp } from "../../lib/chartHelp";
 import { getLandscapeContributorHref } from "../../lib/landscape";
@@ -29,6 +28,7 @@ const multiRepoCount = people.filter(
 const topBars = people.slice(0, 12).map((contributor) => ({
 	label: contributor.data.displayName,
 	value: contributor.data.repositoryCount,
+	href: getLandscapeContributorHref(contributor.data.email),
 }));
 const rows = people.map((contributor) => ({
 	id: contributor.id,
@@ -48,111 +48,17 @@ const rows = people.map((contributor) => ({
 ---
 
 <Dashboard title="Landscape Contributors" projectName={projectName}>
-  <h2>Contributors</h2>
-  <p class="subtitle">
-    Organisation-wide contributor footprint across repositories, recent activity, and cross-repository reach.
-  </p>
-
-  <div class="cards">
-    <div class="card">
-      <div class="card-value">{totalContributors.toLocaleString()}</div>
-      <div class="card-label">Contributors</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{active30d.toLocaleString()}</div>
-      <div class="card-label">Active (30d)</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{multiRepoCount.toLocaleString()}</div>
-      <div class="card-label">Multi-Repo</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{botCount.toLocaleString()}</div>
-      <div class="card-label">Bots</div>
-    </div>
-  </div>
-
-  {topBars.length > 0 && (
-    <section class="section">
-      <h3>Broadest Repository Reach</h3>
-      <HorizontalBarChart
-        client:visible
-        data={topBars}
-        valueLabel="repositories"
-        maxItems={12}
-        helpText={chartHelp.landscape.contributorActivity}
-      />
-    </section>
-  )}
-
-  <ReportDataGrid
-    client:visible
-    title="Contributor Inventory"
-    description="Search contributors by email, repository, or recent activity."
-    searchPlaceholder="Search contributor or repository"
-    rows={rows}
-    columns={[
-      { field: "displayName", headerName: "Contributor", type: "link", hrefField: "href", minWidth: 220, flex: 1 },
-      { field: "email", headerName: "Email", type: "code", minWidth: 240, flex: 1 },
-      { field: "commitsCount", headerName: "Commits", type: "number", minWidth: 110, sort: "desc" },
-      { field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
-      { field: "commits90d", headerName: "Commits (90d)", type: "number", minWidth: 130 },
-      { field: "repositoryCount", headerName: "Repositories", type: "number", minWidth: 120 },
-      { field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
-      { field: "isBot", headerName: "Type", minWidth: 100 },
-      { field: "repositories", headerName: "Repositories Touched", type: "multiline", minWidth: 320, flex: 1.4 },
+  <LandscapeContributorsView
+    subtitle="Organisation-wide contributor footprint across repositories, recent activity, and cross-repository reach."
+    cards={[
+      { label: "Contributors", value: totalContributors.toLocaleString() },
+      { label: "Active (30d)", value: active30d.toLocaleString() },
+      { label: "Multi-Repo", value: multiRepoCount.toLocaleString() },
+      { label: "Bots", value: botCount.toLocaleString() },
     ]}
+    topContributorBars={topBars}
+    rows={rows}
+    chartHelpText={chartHelp.landscape.contributorActivity}
+    searchPlaceholder="Search contributor or repository"
   />
 </Dashboard>
-
-<style>
-  .subtitle {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
-    max-width: 72ch;
-  }
-
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.9rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
-    padding: 1.1rem 1.2rem;
-  }
-
-  .card-value {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1;
-  }
-
-  .card-label {
-    margin-top: 0.45rem;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .section {
-    margin-bottom: 1.75rem;
-  }
-
-  .section h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 0.8rem;
-  }
-
-  @media (min-width: 720px) {
-    .cards {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-</style>

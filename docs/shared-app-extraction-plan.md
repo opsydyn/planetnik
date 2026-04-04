@@ -2,45 +2,105 @@
 
 ## Goal
 
-Share most of the current `apps/site` implementation across:
+Achieve UI parity between:
 
-- the existing static report app
-- the future authenticated hosted app
+- `apps/site` as the static public report product
+- `apps/app` as the authenticated hosted report and intelligence product
 
 without collapsing both products into one deployment model.
 
-The practical rule is:
+The working rule is:
 
-- share **presentation**, **view-model logic**, and **route helpers**
-- do **not** share **pages**, **filesystem loaders**, **auth middleware**, or **runtime integrations**
+- share **presentation**, **shell primitives**, **charts**, **tables**, and **page-level view components**
+- keep **routes**, **data loading**, **filesystem contracts**, **auth**, and **runtime integration** app-local
 
-## Current Repo Fit
+This is now an active migration plan, not a speculative future extraction.
 
-This repo is already set up for the right extraction approach:
+## Current State
 
-- Bun workspaces already cover `apps/*` and `packages/*`
-- there is already a package pattern under `packages/*`
-- `apps/site` contains most of the reusable code today
-- `apps/copilot-runtime` already exists and can evolve into the hosted runtime app later
+### Platform split is real
 
-This means we do not need a repo reorganization first. We can extract incrementally.
+The repo now has a real hosted/static platform boundary:
 
-## What We Should Share
+- `apps/site`
+  - static Astro
+  - public dataset-backed reports
+- `apps/app`
+  - hosted Astro SSR
+  - authenticated user-facing shell
+- `apps/runtime`
+  - Better Auth
+  - Bun/Effect runtime
+  - Neon-backed hosted state
 
-### Shareable now
+This split is formalized in:
 
-These are good candidates to move into packages with minimal risk:
+- [ADR-0015: Adopt Separate Static Reports and Hosted Runtime for Intelligence](/Users/alan/Projects/planetnik/docs/adr/0015-adopt-separate-static-reports-and-hosted-runtime-for-intelligence.md)
 
-- theme tokens and design primitives
+### Shared package work has started
+
+The first shared design-system/report package already exists:
+
+- `packages/report-ui`
+
+It currently owns shared shell/theme and the first migrated report surface:
+
+- shell theme CSS
+- icons
+- breadcrumb
+- theme switcher
+- chart primitives
+- table primitives
+- `LandscapeRepositoriesView`
+
+This means the extraction strategy has moved past “what package should we create” and into “which surfaces migrate next”.
+
+### Hosted route parity exists before UI parity
+
+The hosted app already has broad route coverage for report and landscape repo drilldown. That matters because it lets us migrate presentation without inventing new route structure at the same time.
+
+The remaining gap is mainly:
+
+- visual parity
+- shared component reuse
+- reducing duplicate page composition between `apps/site` and `apps/app`
+
+## Architectural Rule
+
+Do not share Astro `src/pages` directly.
+
+Instead:
+
+- `apps/site` keeps static route files and filesystem/data-directory loaders
+- `apps/app` keeps hosted route files and Eden/runtime integration
+- `packages/report-ui` owns reusable presentational surfaces
+- future `packages/report-core` owns pure view-model and route/helper logic only when stable duplication proves it is worth extracting
+
+The route file remains the composition and data-boundary layer.
+
+## What We Share
+
+### Share now
+
+These belong in `packages/report-ui`:
+
+- shell primitives
+- sidebar/nav section primitives
+- breadcrumb and topbar elements
+- metric cards
 - charts
-- table components
-- cards
+- data tables
 - help/tooltip UI
-- icons and logo wrappers
-- formatting helpers
-- route helper functions
-- report view-model builders
-- landscape route mapping helpers
+- logos and icon wrappers
+- page-level presentational views that accept plain props
+
+Examples:
+
+- `LandscapeRepositoriesView`
+- chart cards
+- horizontal bar charts
+- report inventory tables
+- shared shell theme and brand elements
 
 ### Keep app-local
 
@@ -48,315 +108,319 @@ These should remain in each app:
 
 - Astro `src/pages`
 - Astro middleware
-- static file-backed loaders
+- static filesystem/data-directory resolution
+- hosted runtime client calls
+- auth/session access
 - env var resolution
-- filesystem reads
-- request-time auth/session logic
-- runtime API clients that are different between public and hosted apps
+- route param decoding tied to app route structure
 
-## Target Package Split
+## Package Strategy
 
-Use three layers.
+## 1. `packages/report-ui`
 
-### 1. `packages/report-ui`
+This is the active extraction package.
 
-Owns reusable presentational UI.
+Responsibilities:
 
-Suggested contents:
+- presentational shell primitives
+- cards
+- charts
+- tables
+- filters/search controls
+- help UI
+- page-level view components
 
-- `charts/`
-- `tables/`
-- `help/`
-- `icons/`
-- `theme/`
-- `shell/` primitives such as nav groups and cards
+This package must stay:
 
-Examples to move here:
+- data-source agnostic
+- auth agnostic
+- runtime agnostic
+- filesystem agnostic
 
-- `apps/site/src/components/charts/*`
-- `apps/site/src/components/help/*`
-- `apps/site/src/components/tables/*`
-- `apps/site/src/components/icons/*`
-- `apps/site/src/components/theme-switcher/ThemeSwitcher.astro`
+It should consume plain props only.
 
-### 2. `packages/report-core`
+### Current direction
 
-Owns report/domain helpers and pure view-model logic.
+Use `packages/report-ui` for:
 
-Suggested contents:
+- shared shell and theme
+- shared report inventory/table/chart views
+- eventually repo summary and dashboard sections
 
-- `routes/`
-- `formatting/`
-- `contributors/`
-- `metrics/`
-- `coupling/`
-- `topology/`
-- `search/` types and config
+### View API rule
 
-Examples to move here:
+Each shared view should accept only plain props such as:
 
-- `apps/site/src/lib/contributors.ts`
-- `apps/site/src/lib/metrics.ts`
-- `apps/site/src/lib/route.ts`
-- `apps/site/src/lib/chartHelp.ts`
-- `apps/site/src/lib/forceGraph.ts`
-- `apps/site/src/lib/coupling/balancedCouplingModel.ts`
-- `apps/site/src/lib/landscapeRoutes.ts`
+- strings
+- numbers
+- booleans
+- readonly arrays
+- hrefs
+- small, explicit item objects
 
-### 3. `packages/report-screens` later, not first
+Do not pass:
 
-Owns page-sized screen components once the app split is real.
+- runtime clients
+- loader functions
+- Astro collections
+- session objects
 
-Examples:
+## 2. `packages/report-core`
 
-- dashboard screen
-- hotspots screen
-- contributor detail screen
-- impact screen
+This is still a later package, not the immediate focus.
 
-Do not start here. This package only becomes useful once `apps/app` exists and there is obvious duplication in page composition.
+Use it only when pure logic duplication becomes stable across both apps.
 
-## Keep These App-Local
+Likely future contents:
 
-These files or categories should **not** move in the first extraction:
-
-- `apps/site/src/pages/**`
-- `apps/site/src/loaders/**`
-- `apps/site/src/lib/landscape.ts`
-  - uses `node:fs`
-- `apps/site/src/lib/search/buildSearchDocuments.ts`
-  - page inventory is app-specific
-- `apps/site/src/layouts/Dashboard.astro`
-  - keep local until we know how different the hosted shell must be
-- `apps/site/src/components/intelligence/**`
-  - these are candidates for the hosted app, not shared package extraction first
-
-## First Extraction Slice
-
-This should be the first concrete move because it has high reuse and low coupling to filesystem/auth concerns.
-
-### Package to create first
-
-- `packages/report-ui`
-
-### Files to move first
-
-1. `apps/site/src/components/help/HelpTooltip.tsx`
-2. `apps/site/src/components/help/HelpTooltip.css`
-3. `apps/site/src/components/charts/ChartCard.tsx`
-4. `apps/site/src/components/charts/theme.ts`
-5. `apps/site/src/components/tables/ReportDataGrid.tsx`
-6. `apps/site/src/components/tables/ReportDataGridInner.tsx`
-7. `apps/site/src/components/tables/ReportDataGrid.types.ts`
-8. `apps/site/src/components/tables/ReportDataGrid.css`
-9. `apps/site/src/components/tables/StaticReportTable.astro`
-10. `apps/site/src/components/tables/StaticReportTable.css`
-
-Why these first:
-
-- they are used across many pages
-- they do not need direct filesystem access
-- they do not need auth/runtime context
-- they create immediate value for both the static and hosted apps
-
-## Second Extraction Slice
-
-After `report-ui` is stable, create:
-
-- `packages/report-core`
-
-### Files to move next
-
-1. `apps/site/src/lib/contributors.ts`
-2. `apps/site/src/lib/metrics.ts`
-3. `apps/site/src/lib/route.ts`
-4. `apps/site/src/lib/chartHelp.ts`
-5. `apps/site/src/lib/contributorHeatmap.ts`
-6. `apps/site/src/lib/forceGraph.ts`
-7. `apps/site/src/lib/landscapeRoutes.ts`
-8. `apps/site/src/lib/coupling/balancedCouplingModel.ts`
-9. `apps/site/src/lib/search/types.ts`
-10. `apps/site/src/lib/search/fuseConfig.ts`
-
-Why these second:
-
-- they are pure or nearly pure
-- they shape the public contract between report data and UI
-- they let both apps render the same concepts consistently
-
-## Third Extraction Slice
-
-Only after the hosted app exists:
-
-- extract repeated screen composition into `packages/report-screens`
-
-Likely candidates:
-
-- contributor detail summary grid
-- hotspot dashboard sections
-- impact page sections
-- topology summary sections
-
-This is where the duplication between `apps/site` and `apps/app` will actually show itself.
-
-## Proposed Package APIs
-
-Keep the APIs boring and stable.
-
-### `@planetnik/report-ui`
-
-Exports:
-
-- `charts/*`
-- `tables/*`
-- `help/*`
-- `icons/*`
-- `theme/*`
-
-This package should not know anything about:
-
-- filesystem paths
-- Astro loaders
-- auth/session
-- environment variables
-
-### `@planetnik/report-core`
-
-Exports:
-
-- route helpers
+- route helper encoding/decoding
 - formatting helpers
-- contributor helpers
-- metric helpers
-- pure graph/coupling builders
-- search config/types
+- chart help text
+- contributor/metrics/coupling pure helpers
+- stable report view-model mappers
 
-This package should not know anything about:
+Do not create this package just because a helper can move. Create it when both apps really need the same pure logic.
 
-- `node:fs`
-- Astro page modules
-- Bun process env loading
-- hosted auth/runtime services
+## 3. No `packages/report-screens` yet
 
-## Import Policy
+Do not introduce a separate screen package yet.
 
-Use this dependency direction:
+Page-sized shared views should continue to live in `packages/report-ui/src/views/*` until there is a clear reason to split them further.
 
-- `apps/site` -> `@planetnik/report-ui`, `@planetnik/report-core`
-- `apps/app` -> `@planetnik/report-ui`, `@planetnik/report-core`
-- `@planetnik/report-ui` -> `@planetnik/report-core` only if truly needed
-- `@planetnik/report-core` -> no dependency on app code
+## Migration Rules
 
-Forbidden direction:
+### Rule 1: Migrate by surface, not by folder
 
-- packages importing from `apps/site`
-- packages importing from `apps/app`
+Each migration slice should take one real user-facing surface from:
 
-## CSS and Assets Strategy
+- static-only implementation
+- hosted-only implementation or placeholder
 
-### CSS
+to:
 
-Keep CSS colocated with the component inside the package.
+- shared view in `packages/report-ui`
+- app-local data mapping in `apps/site` and `apps/app`
 
-That means:
+### Rule 2: Prefer inventory and dashboard surfaces before graph-heavy pages
 
-- `packages/report-ui/src/tables/ReportDataGrid.css`
-- `packages/report-ui/src/help/HelpTooltip.css`
+Good early targets:
 
-### Assets
+- repositories
+- contributors
+- tags
+- metrics
+- commits
 
-For now:
+Harder targets to leave later:
 
-- keep static images in each app’s `public/`
-- share only wrapper components and icon mapping logic
+- topology
+- coupling
+- components
 
-Later:
+### Rule 3: Route/data stay local
 
-- extract common branding assets into a small `packages/brand-assets` package only if duplication is real
+The static and hosted pages should both:
 
-Do not start by moving every image.
+- fetch/load their own data
+- build their own props
+- render the same shared view
 
-## What We Should Not Extract Yet
+### Rule 4: Public package boundaries should be readonly-friendly
 
-Do not extract these in the first pass:
+Shared props should prefer:
 
-- `TopologyGraph.tsx`
-- `ForceGraph.tsx`
-- `ForceGraphClient.tsx`
-- `LandscapeTopologyExplorer.tsx`
-- `GlobalSearch.tsx`
-- `Dashboard.astro`
-- intelligence components
+- `ReadonlyArray<T>`
+- explicit object shapes
+- narrow optional props
 
-These are still too entangled with:
+That reduces friction at app boundaries and prevents the package from assuming ownership of caller data.
 
-- route behavior
-- app shell assumptions
-- landscape/static mode handling
-- hydration and reload policy
+## Migration Order
 
-They can be revisited later.
+## Phase 1: Shell Parity
 
-## Hosted App Reuse Strategy
+Goal:
 
-When `apps/app` is created:
+- make the hosted shell match the static shell structure closely enough that page-level parity work is not fighting layout drift
 
-- do not copy `apps/site`
-- create thin Astro pages that compose:
-  - shared UI from `@planetnik/report-ui`
-  - shared view-models from `@planetnik/report-core`
-  - hosted-only wrappers for auth and runtime calls
+Shared targets:
 
-That keeps the hosted app small and intentional.
+- shell theme CSS
+- breadcrumb
+- icons
+- logo wrapper
+- topbar utilities
+- nav section/list primitives
+- content region wrappers
+- summary cards
 
-## Concrete Delivery Plan
+Status:
 
-### Phase 1
+- partially complete
 
-- create `packages/report-ui`
-- move help, chart card, and table components
-- switch `apps/site` imports to package imports
-- no behavior changes
+Next work:
 
-### Phase 2
+- extract shared sidebar/nav section primitives
+- reduce remaining shell markup drift between `apps/site` and `apps/app`
 
-- create `packages/report-core`
-- move route/formatting/view-model helpers
-- switch `apps/site` imports
-- no behavior changes
+## Phase 2: Inventory Surfaces
 
-### Phase 3
+Goal:
 
-- create `apps/app`
-- build the hosted Astro shell
-- reuse `report-ui` and `report-core`
+- migrate high-value, low-risk chart/table pages first
 
-### Phase 4
+Order:
 
-- identify duplicated page composition between `site` and `app`
-- extract only the repeated screens
+1. `landscape/repositories`
+2. `landscape/contributors`
+3. `landscape/tags`
 
-## Success Criteria
+Status:
 
-The extraction is working when:
+1. `landscape/repositories`
+   - in progress / first migration completed
+   - shared view exists in `packages/report-ui`
 
-- `apps/site` still builds and deploys statically
-- `apps/app` can reuse the same charts, tables, and card system
-- shared packages contain no filesystem/env/auth leakage
-- no package imports back into app code
-- the hosted app can grow without cloning the entire site codebase
+Expected shared components:
 
-## Recommended First PR
+- metric cards
+- horizontal ranking chart
+- searchable inventory table
 
-The first extraction PR should do only this:
+## Phase 3: Repo Summary Surfaces
 
-- add `packages/report-ui`
-- move:
-  - `HelpTooltip`
-  - `ChartCard`
-  - `ReportDataGrid`
-  - `StaticReportTable`
-- update imports in `apps/site`
-- keep CSS and behavior identical
+Goal:
 
-That is the smallest high-leverage move.
+- migrate the repeated repo-level read-only report pages
+
+Suggested order:
+
+1. repo dashboard summary
+2. metrics
+3. commits
+4. dependencies
+5. duplication
+6. controls
+7. impact
+8. hotspots
+
+These are strong candidates because they are mostly:
+
+- stat cards
+- lists
+- summary charts
+- small tables
+
+## Phase 4: Shared Table System
+
+Goal:
+
+- make `packages/report-ui` the single home for report table behavior
+
+Includes:
+
+- sorting
+- filtering
+- pagination
+- loading states
+- empty states
+- column config conventions
+
+This phase is effectively started already with the shared report data grid.
+
+## Phase 5: Shared Chart System
+
+Goal:
+
+- consolidate the recurring chart vocabulary used across both apps
+
+Includes:
+
+- horizontal bars
+- donut/ring charts
+- stat summaries
+- tooltip/help patterns
+- chart cards and loading states
+
+## Phase 6: Graph-heavy Surfaces
+
+Goal:
+
+- migrate the fragile graph and topology pages after the simpler surfaces are stable
+
+Targets:
+
+- topology
+- coupling
+- components
+
+These should be last because they have the highest risk of:
+
+- hydration issues
+- reload-route edge cases
+- data-shape instability
+- layout regressions
+
+## Definition of Done
+
+A page or surface is considered migrated when:
+
+1. both `apps/site` and `apps/app` render the same shared view from `packages/report-ui`
+2. the remaining differences are only:
+   - route composition
+   - data loading
+   - prop mapping
+3. the visual hierarchy matches the static product closely enough for parity work
+4. the shared component is typechecked at package level
+5. both app consumers typecheck and build successfully
+
+## Testing and Verification
+
+For each migration slice:
+
+1. package-level checks
+   - `bun run --cwd packages/report-ui typecheck`
+2. hosted app checks
+   - `bun run --cwd apps/app typecheck`
+   - `bun run --cwd apps/app build`
+3. static app checks
+   - `bun run --cwd apps/site typecheck`
+   - `bun run --cwd apps/site build`
+4. app-local view-model tests remain in the consuming app unless the mapper is later extracted as a pure shared helper
+
+## Near-Term Plan
+
+### Already done
+
+- shared shell/theme foundation
+- shared breadcrumb/icon/logo primitives
+- first shared report surface:
+  - `LandscapeRepositoriesView`
+
+### Next recommended slices
+
+1. `landscape/contributors`
+2. `landscape/tags`
+3. repo dashboard summary surface
+4. repo metrics
+5. repo commits
+
+That sequence keeps the migration on high-value, lower-risk UI before graph-heavy pages.
+
+## Anti-Goals
+
+Do not:
+
+- share Astro `src/pages`
+- move static filesystem loaders into a package
+- move hosted runtime clients into a package
+- force `apps/site` and `apps/app` into identical routing trees
+- introduce a second shared logic package before duplication is proven
+
+## Practical Summary
+
+- `packages/report-ui` is the active shared parity package.
+- Migrate one user-facing surface at a time.
+- Keep routes and data loading app-local.
+- Prefer inventory and dashboard pages before graph-heavy pages.
+- Only extract pure logic to `report-core` when both apps demonstrably need it.

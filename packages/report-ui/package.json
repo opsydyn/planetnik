@@ -14,7 +14,8 @@
 		"./charts/HorizontalBarChart": "./src/charts/HorizontalBarChart.tsx",
 		"./tables/ReportDataGrid": "./src/tables/ReportDataGrid.tsx",
 		"./tables/ReportDataGrid.types": "./src/tables/ReportDataGrid.types.ts",
-		"./views/LandscapeRepositoriesView": "./src/views/LandscapeRepositoriesView.astro"
+		"./views/LandscapeRepositoriesView": "./src/views/LandscapeRepositoriesView.astro",
+		"./views/LandscapeContributorsView": "./src/views/LandscapeContributorsView.astro"
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
