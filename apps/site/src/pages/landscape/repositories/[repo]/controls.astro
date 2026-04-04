@@ -1,17 +1,12 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart";
-import DonutChart from "../../../../components/charts/DonutChart";
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import RepositoryControlsView from "@planetnik/report-ui/views/RepositoryControlsView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../lib/chartHelp";
 import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { route } from "../../../../lib/route";
-
 interface RepoControl {
 	metricId: string;
 	metricValue: number | null;
@@ -38,7 +33,7 @@ const { reportContext, projectName, repoName } =
 	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-	return Astro.redirect(route("/"));
+	return Astro.redirect("/");
 }
 
 const controlsExport = readLandscapeRepoJson<RepoControlsExport>(
@@ -50,97 +45,67 @@ const controls =
 		(goal.controls ?? []).map((control, index) => ({
 			id: `${goal.goal ?? "Controls"}::${control.metricId || `control-${index}`}`,
 			goal: goal.goal ?? "Controls",
-			goalDescription: goal.description ?? "",
 			metricId: control.metricId,
 			metricValue: control.metricValue,
-			metricDescription: control.metricDescription ?? "",
 			desiredRangeText: control.desiredRangeText,
 			status: control.status,
-			controlDescription: control.controlDescription ?? "",
+			description: control.controlDescription ?? control.metricDescription ?? "",
 		})),
 	) ?? [];
 
-const statusOrder = new Map([
-	["FAILED", 0],
-	["TOLERANT", 1],
-	["OK", 2],
-	["IGNORED: the metric not found", 3],
-]);
+const statusOrder = new Map([["FAILED", 0], ["TOLERANT", 1], ["OK", 2]]);
 
 const statusCounts = {
-	failed: controls.filter((control) => control.status === "FAILED").length,
-	tolerant: controls.filter((control) => control.status === "TOLERANT").length,
-	ok: controls.filter((control) => control.status === "OK").length,
-	ignored: controls.filter((control) => control.status.startsWith("IGNORED"))
-		.length,
+	failed: controls.filter((c) => c.status === "FAILED").length,
+	tolerant: controls.filter((c) => c.status === "TOLERANT").length,
+	ok: controls.filter((c) => c.status === "OK").length,
+	ignored: controls.filter((c) => c.status.startsWith("IGNORED")).length,
 };
 
 const statusChartData = [
-	...(statusCounts.failed > 0
-		? [{ label: "Failed", value: statusCounts.failed, color: "#ef4444" }]
-		: []),
-	...(statusCounts.tolerant > 0
-		? [{ label: "Tolerant", value: statusCounts.tolerant, color: "#f59e0b" }]
-		: []),
-	...(statusCounts.ok > 0
-		? [{ label: "OK", value: statusCounts.ok, color: "#22c55e" }]
-		: []),
-	...(statusCounts.ignored > 0
-		? [{ label: "Ignored", value: statusCounts.ignored, color: "#94a3b8" }]
-		: []),
+	...(statusCounts.failed > 0 ? [{ label: "Failed", value: statusCounts.failed }] : []),
+	...(statusCounts.tolerant > 0 ? [{ label: "Tolerant", value: statusCounts.tolerant }] : []),
+	...(statusCounts.ok > 0 ? [{ label: "OK", value: statusCounts.ok }] : []),
+	...(statusCounts.ignored > 0 ? [{ label: "Ignored", value: statusCounts.ignored }] : []),
+];
+const statusChartColors = [
+	...(statusCounts.failed > 0 ? ["#ef4444"] : []),
+	...(statusCounts.tolerant > 0 ? ["#f59e0b"] : []),
+	...(statusCounts.ok > 0 ? ["#22c55e"] : []),
+	...(statusCounts.ignored > 0 ? ["#94a3b8"] : []),
 ];
 
-const goalMap = new Map<
-	string,
-	{
-		total: number;
-		failed: number;
-		tolerant: number;
-		ok: number;
-		ignored: number;
-	}
->();
+const goalMap = new Map<string, { total: number; failed: number; tolerant: number; ok: number; ignored: number }>();
 for (const control of controls) {
-	const entry = goalMap.get(control.goal) ?? {
-		total: 0,
-		failed: 0,
-		tolerant: 0,
-		ok: 0,
-		ignored: 0,
-	};
+	const entry = goalMap.get(control.goal) ?? { total: 0, failed: 0, tolerant: 0, ok: 0, ignored: 0 };
 	entry.total++;
-
 	if (control.status === "FAILED") entry.failed++;
 	else if (control.status === "TOLERANT") entry.tolerant++;
 	else if (control.status === "OK") entry.ok++;
 	else if (control.status.startsWith("IGNORED")) entry.ignored++;
-
 	goalMap.set(control.goal, entry);
 }
 
 const goalRows = [...goalMap.entries()]
-	.sort((left, right) => {
-		if (right[1].failed !== left[1].failed)
-			return right[1].failed - left[1].failed;
-		if (right[1].tolerant !== left[1].tolerant)
-			return right[1].tolerant - left[1].tolerant;
-		return right[1].total - left[1].total;
+	.sort((l, r) => {
+		if (r[1].failed !== l[1].failed) return r[1].failed - l[1].failed;
+		if (r[1].tolerant !== l[1].tolerant) return r[1].tolerant - l[1].tolerant;
+		return r[1].total - l[1].total;
 	})
 	.map(([goal, stats]) => ({
 		label: goal,
 		value: stats.total,
 		detail: `${stats.failed} failed`,
 		detailSecondary: `${stats.tolerant} tolerant`,
-		color:
-			stats.failed > 0 ? "#ef4444" : stats.tolerant > 0 ? "#f59e0b" : "#22c55e",
+		color: stats.failed > 0 ? "#ef4444" : stats.tolerant > 0 ? "#f59e0b" : "#22c55e",
 	}));
 
 const controlRows = [...controls]
-	.sort((left, right) => {
-		const rankLeft = statusOrder.get(left.status) ?? 99;
-		const rankRight = statusOrder.get(right.status) ?? 99;
-		if (rankLeft !== rankRight) return rankLeft - rankRight;
-		return left.metricId.localeCompare(right.metricId);
+	.sort((a, b) => {
+		const rankA = statusOrder.get(a.status) ?? 99;
+		const rankB = statusOrder.get(b.status) ?? 99;
+		if (rankA !== rankB) return rankA - rankB;
+		return a.metricId.localeCompare(b.metricId);
 	})
 	.map((control) => ({
 		id: control.id,
@@ -149,111 +114,26 @@ const controlRows = [...controls]
 		value: control.metricValue,
 		desiredRange: control.desiredRangeText,
 		status: control.status,
-		description: control.controlDescription || control.metricDescription,
+		description: control.description,
 	}));
+
+const cards = [
+	{ label: "Controls", value: controls.length.toLocaleString(), detail: null },
+	{ label: "Failed", value: statusCounts.failed.toLocaleString(), detail: null, color: "#dc2626" },
+	{ label: "Tolerant", value: statusCounts.tolerant.toLocaleString(), detail: null, color: "#d97706" },
+	{ label: "OK", value: statusCounts.ok.toLocaleString(), detail: null, color: "#16a34a" },
+	...(statusCounts.ignored > 0 ? [{ label: "Ignored", value: statusCounts.ignored.toLocaleString(), detail: null }] : []),
+];
 ---
 
 <Dashboard title={`${repoName} Goals & Controls`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Goals &amp; Controls</h2>
-
-  {controls.length === 0 ? (
-    <div class="empty">
-      <p>No goals and controls data exported for this repository yet.</p>
-      <p class="hint">Add <code>goalsAndControls</code> to the source configuration to define quality gates and metric thresholds.</p>
-    </div>
-  ) : (
-    <>
-      <div class="cards">
-        <div class="card">
-          <div class="card-value">{controls.length}</div>
-          <div class="card-label">Controls</div>
-        </div>
-        <div class="card card-failed">
-          <div class="card-value">{statusCounts.failed}</div>
-          <div class="card-label">Failed</div>
-        </div>
-        <div class="card card-tolerant">
-          <div class="card-value">{statusCounts.tolerant}</div>
-          <div class="card-label">Tolerant</div>
-        </div>
-        <div class="card card-ok">
-          <div class="card-value">{statusCounts.ok}</div>
-          <div class="card-label">OK</div>
-        </div>
-        {statusCounts.ignored > 0 && (
-          <div class="card">
-            <div class="card-value">{statusCounts.ignored}</div>
-            <div class="card-label">Ignored</div>
-          </div>
-        )}
-      </div>
-
-      {statusChartData.length > 1 && (
-        <section class="section">
-          <h3>Control Status</h3>
-          <DonutChart client:load data={statusChartData} valueLabel="controls" helpText={chartHelp.controls.status} />
-        </section>
-      )}
-
-      {goalRows.length > 0 && (
-        <section class="section">
-          <h3>Goal Coverage</h3>
-          <DistributionChart client:visible data={goalRows} helpText={chartHelp.controls.goals} />
-        </section>
-      )}
-
-      <ReportDataGrid
-        client:visible
-        title="Control Inventory"
-        description="Search controls by goal, metric, status, or description while keeping the status summary above."
-        searchPlaceholder="Search goal, metric, or status"
-        rows={controlRows}
-        columns={[
-          { field: "goal", headerName: "Goal", minWidth: 220, flex: 1.1 },
-          { field: "metric", headerName: "Metric", type: "code", minWidth: 220, flex: 1 },
-          { field: "value", headerName: "Value", type: "number", minWidth: 110 },
-          { field: "desiredRange", headerName: "Desired Range", type: "code", minWidth: 150 },
-          { field: "status", headerName: "Status", minWidth: 130, sort: "asc" },
-          { field: "description", headerName: "Description", type: "multiline", minWidth: 260, flex: 1.3 },
-        ]}
-      />
-    </>
-  )}
+	<RepositoryControlsView
+		heading={repoName}
+		subtitle={`Goals and controls analysis for ${repoName}.`}
+		cards={cards}
+		statusChartData={statusChartData}
+		statusChartColors={statusChartColors}
+		goalRows={goalRows}
+		controlRows={controlRows}
+	/>
 </Dashboard>
-
-<style>
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
-  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
-  .hint { font-size: 0.85rem; }
-  .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: var(--color-surface-muted, #f1f5f9); color: var(--color-text, inherit); padding: 0.15em 0.4em; border-radius: 3px; }
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  .card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 1.25rem;
-  }
-  .card-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1;
-  }
-  .card-label {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin-top: 0.35rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .card-failed .card-value { color: #dc2626; }
-  .card-tolerant .card-value { color: #d97706; }
-  .card-ok .card-value { color: #16a34a; }
-</style>
