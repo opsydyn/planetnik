@@ -14,10 +14,17 @@ export type ReportMetricsGroup = {
 	}>;
 };
 
+export type ReportMetricsChartItem = {
+	readonly label: string;
+	readonly value: number;
+};
+
 export type ReportMetricsViewModel = {
 	readonly heading: string;
 	readonly subtitle: string;
 	readonly cards: ReadonlyArray<ReportMetricsCard>;
+	readonly locBreakdown: ReadonlyArray<ReportMetricsChartItem>;
+	readonly mainLocByExtension: ReadonlyArray<ReportMetricsChartItem>;
 	readonly groups: ReadonlyArray<ReportMetricsGroup>;
 };
 
@@ -63,6 +70,8 @@ export function buildReportMetricsViewModel(input: {
 				detail: `${input.metrics.totalMetrics.toLocaleString("en-GB")} metrics`,
 			},
 		],
+		locBreakdown: input.metrics.locBreakdown,
+		mainLocByExtension: input.metrics.mainLocByExtension,
 		groups: input.metrics.groupSummaries.map((group) => ({
 			label: group.label,
 			rows: group.metrics.map((metric) => ({

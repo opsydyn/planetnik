@@ -1,0 +1,235 @@
+---
+import DonutChart from "../charts/DonutChart";
+import StaticReportTable from "../tables/StaticReportTable.astro";
+
+interface ChartItem {
+	readonly label: string;
+	readonly value: number;
+}
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+	readonly detail?: string | null;
+}
+
+interface MetricGroup {
+	readonly label: string;
+	readonly rows: ReadonlyArray<{
+		readonly metric: string;
+		readonly value: string;
+	}>;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	backLabel?: string;
+	cards: ReadonlyArray<MetricCard>;
+	locBreakdown: ReadonlyArray<ChartItem>;
+	mainLocByExtension: ReadonlyArray<ChartItem>;
+	groups: ReadonlyArray<MetricGroup>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	backLabel = "Back to repository",
+	cards,
+	locBreakdown,
+	mainLocByExtension,
+	groups,
+} = Astro.props as Props;
+
+const showCharts = locBreakdown.length > 0 || mainLocByExtension.length > 0;
+
+const locMixHelpText =
+	"Shows how total LOC splits across main, test, generated, deployment, and support code. Use it to see whether maintenance effort is being carried by the right kinds of code.";
+const mainLocByExtensionHelpText =
+	"Shows which extensions dominate production code. Large slices identify the languages where quality rules and refactoring effort matter most.";
+---
+
+{backHref ? (
+	<a class="back-link" href={backHref}>&larr; {backLabel}</a>
+) : null}
+
+<header class="page-header">
+	<div>
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+</header>
+
+<section class="stats-grid">
+	{cards.map((card) => (
+		<article class="stat-card">
+			<div class="stat-value">{card.value}</div>
+			<div class="stat-label">{card.label}</div>
+			{card.detail ? <div class="stat-detail">{card.detail}</div> : null}
+		</article>
+	))}
+</section>
+
+{showCharts && (
+	<section class="visual-summary">
+		<h3>Visual Summary</h3>
+		<div class="visual-grid">
+			{locBreakdown.length > 0 && (
+				<div class="visual-item">
+					<div class="visual-copy">
+						<h4>Lines of Code Mix</h4>
+						<p>Main, test, generated, deployment, and supporting code split.</p>
+					</div>
+					<DonutChart client:visible data={locBreakdown} valueLabel="LOC" helpText={locMixHelpText} />
+				</div>
+			)}
+			{mainLocByExtension.length > 0 && (
+				<div class="visual-item">
+					<div class="visual-copy">
+						<h4>Main LOC by Extension</h4>
+						<p>Primary codebase composition by file extension.</p>
+					</div>
+					<DonutChart client:visible data={mainLocByExtension} valueLabel="LOC" helpText={mainLocByExtensionHelpText} />
+				</div>
+			)}
+		</div>
+	</section>
+)}
+
+{groups.map((group) => (
+	<section class="group-section">
+		<h3>{group.label}</h3>
+		<StaticReportTable ariaLabel={`${group.label} metrics`}>
+			<thead>
+				<tr>
+					<th><span>Metric</span></th>
+					<th><span>Value</span></th>
+				</tr>
+			</thead>
+			<tbody>
+				{group.rows.map((row) => (
+					<tr>
+						<td class="metric-id">{row.metric}</td>
+						<td class="metric-value report-static-table__num">{row.value}</td>
+					</tr>
+				))}
+			</tbody>
+		</StaticReportTable>
+	</section>
+))}
+
+<style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: 1rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+
+	.back-link:hover {
+		color: var(--color-accent);
+	}
+
+	.page-header {
+		margin-bottom: 1.25rem;
+	}
+
+	.page-header h2 {
+		margin-bottom: 0.25rem;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+		margin-top: 0.35rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.stat-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.stat-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.stat-detail {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+	}
+
+	.visual-summary {
+		margin-bottom: 2rem;
+	}
+
+	.visual-summary > h3 {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 0.9rem;
+	}
+
+	.visual-grid {
+		display: grid;
+		gap: 1.5rem;
+	}
+
+	@media (min-width: 960px) {
+		.visual-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	.visual-item {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.visual-copy h4 {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 0.35rem;
+	}
+
+	.visual-copy p {
+		color: var(--color-text-muted);
+		line-height: 1.55;
+	}
+
+	.group-section {
+		margin-bottom: 2rem;
+	}
+
+	.group-section h3 {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+
+	.metric-id {
+		word-break: break-word;
+	}
+</style>

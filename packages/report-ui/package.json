@@ -21,7 +21,8 @@
 		"./views/LandscapeTeamsView": "./src/views/LandscapeTeamsView.astro",
 		"./views/LandscapeTagsView": "./src/views/LandscapeTagsView.astro",
 		"./views/LandscapeOverviewView": "./src/views/LandscapeOverviewView.astro",
-		"./views/LandscapeRepositoryDashboardView": "./src/views/LandscapeRepositoryDashboardView.astro"
+		"./views/LandscapeRepositoryDashboardView": "./src/views/LandscapeRepositoryDashboardView.astro",
+		"./views/RepositoryMetricsView": "./src/views/RepositoryMetricsView.astro"
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",

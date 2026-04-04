@@ -401,6 +401,14 @@ const readReportMetricsSummary = mock((analysisRoot: string) => {
 			testVsMainPercentage: 26.9,
 			totalAnalysisTimeInMillis: 1840,
 		},
+		locBreakdown: [
+			{ label: "Main", value: 52000 },
+			{ label: "Test", value: 14000 },
+		],
+		mainLocByExtension: [
+			{ label: ".ts", value: 48000 },
+			{ label: ".js", value: 4000 },
+		],
 		groupSummaries: [
 			{
 				groupId: "LINES_OF_CODE",
@@ -1063,6 +1071,11 @@ const readReportLandscapeRepositoryMetricsSummary = mock(
 				testVsMainPercentage: 22.8,
 				totalAnalysisTimeInMillis: 960,
 			},
+			locBreakdown: [
+				{ label: "Main", value: 18450 },
+				{ label: "Test", value: 4200 },
+			],
+			mainLocByExtension: [{ label: ".ts", value: 18450 }],
 			groupSummaries: [
 				{
 					groupId: "LINES_OF_CODE",

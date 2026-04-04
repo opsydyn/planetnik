@@ -343,6 +343,8 @@ const ReportTopologyResponseSchema = Schema.Struct({
   topology: ReportTopologySummarySchema,
 })
 
+const ChartItemSchema = Schema.Struct({ label: Schema.String, value: Schema.Number })
+
 const ReportMetricsSummarySchema = Schema.Struct({
   totalMetrics: Schema.Number,
   headlineMetrics: Schema.Struct({
@@ -352,6 +354,8 @@ const ReportMetricsSummarySchema = Schema.Struct({
     testVsMainPercentage: Schema.Number,
     totalAnalysisTimeInMillis: Schema.Number,
   }),
+  locBreakdown: Schema.Array(ChartItemSchema),
+  mainLocByExtension: Schema.Array(ChartItemSchema),
   groupSummaries: Schema.Array(
     Schema.Struct({
       groupId: Schema.String,

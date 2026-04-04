@@ -1,8 +1,6 @@
 ---
-import DonutChart from "../../../../components/charts/DonutChart";
-import StaticReportTable from "../../../../components/tables/StaticReportTable.astro";
+import RepositoryMetricsView from "@planetnik/report-ui/views/RepositoryMetricsView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../lib/chartHelp";
 import { readLandscapeRepoText } from "../../../../lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
@@ -137,7 +135,37 @@ const sortedGroups = [...groups.entries()]
 	)
 	.sort((a, b) => sortGroups(a[0], b[0]));
 
-const locBreakdownData = [
+const totalAnalysisTime =
+	getMetric(metrics, "TOTAL_ANALYSIS_TIME_IN_MILLIS") ?? 0;
+const duplicatedLines =
+	getMetric(metrics, "DUPLICATION_NUMBER_OF_DUPLICATED_LINES") ?? 0;
+const testVsMainPercentage =
+	getMetric(metrics, "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE") ?? 0;
+
+const cards = [
+	{
+		label: "Main LOC",
+		value: getMetricStrict("LINES_OF_CODE_MAIN").toLocaleString(),
+		detail: null,
+	},
+	{
+		label: "Test LOC",
+		value: getMetricStrict("LINES_OF_CODE_TEST").toLocaleString(),
+		detail: `${testVsMainPercentage.toFixed(1)}% of main`,
+	},
+	{
+		label: "Duplicated Lines",
+		value: duplicatedLines.toLocaleString(),
+		detail: null,
+	},
+	{
+		label: "Analysis Time",
+		value: formatMilliseconds(totalAnalysisTime),
+		detail: `${metrics.length.toLocaleString()} metrics`,
+	},
+];
+
+const locBreakdown = [
 	{ label: "Main", value: getMetricStrict("LINES_OF_CODE_MAIN") },
 	{ label: "Test", value: getMetricStrict("LINES_OF_CODE_TEST") },
 	{ label: "Generated", value: getMetricStrict("LINES_OF_CODE_GENERATED") },
@@ -148,7 +176,7 @@ const locBreakdownData = [
 	{ label: "Other", value: getMetricStrict("LINES_OF_CODE_OTHER") },
 ].filter((item) => item.value > 0);
 
-const mainLocByExtensionData = metrics
+const mainLocByExtension = metrics
 	.filter(
 		(metric) =>
 			metric.id.startsWith("LINES_OF_CODE_MAIN_EXT_") && metric.value > 0,
@@ -159,178 +187,22 @@ const mainLocByExtensionData = metrics
 	}))
 	.sort((a, b) => b.value - a.value);
 
-const totalAnalysisTime =
-	getMetric(metrics, "TOTAL_ANALYSIS_TIME_IN_MILLIS") ?? 0;
-const duplicatedLines =
-	getMetric(metrics, "DUPLICATION_NUMBER_OF_DUPLICATED_LINES") ?? 0;
-const testVsMainPercentage =
-	getMetric(metrics, "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE") ?? 0;
+const viewGroups = sortedGroups.map(([group, items]) => ({
+	label: formatGroupLabel(group),
+	rows: items.map((item) => ({
+		metric: item.id,
+		value: item.value.toLocaleString(),
+	})),
+}));
 ---
 
 <Dashboard title={`${repoName} Metrics`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Metrics</h2>
-  <p class="subtitle">{metrics.length} metrics for {repoName}</p>
-
-  <div class="cards">
-    <div class="card">
-      <div class="card-value">{getMetricStrict("LINES_OF_CODE_MAIN").toLocaleString()}</div>
-      <div class="card-label">Main LOC</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{getMetricStrict("LINES_OF_CODE_TEST").toLocaleString()}</div>
-      <div class="card-label">Test LOC</div>
-      <div class="card-detail">{testVsMainPercentage.toFixed(1)}% of main</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{duplicatedLines.toLocaleString()}</div>
-      <div class="card-label">Duplicated Lines</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{formatMilliseconds(totalAnalysisTime)}</div>
-      <div class="card-label">Analysis Time</div>
-    </div>
-  </div>
-
-  {(locBreakdownData.length > 0 || mainLocByExtensionData.length > 0) && (
-    <section class="visual-summary">
-      <h3>Visual Summary</h3>
-      <div class="visual-grid">
-        {locBreakdownData.length > 0 && (
-          <div class="visual-item">
-            <div class="visual-copy">
-              <h4>Lines of Code Mix</h4>
-              <p>Main, test, generated, deployment, and supporting code split.</p>
-            </div>
-            <DonutChart client:load data={locBreakdownData} valueLabel="LOC" helpText={chartHelp.metrics.locMix} />
-          </div>
-        )}
-
-        {mainLocByExtensionData.length > 0 && (
-          <div class="visual-item">
-            <div class="visual-copy">
-              <h4>Main LOC by Extension</h4>
-              <p>Primary codebase composition by file extension.</p>
-            </div>
-            <DonutChart client:load data={mainLocByExtensionData} valueLabel="LOC" helpText={chartHelp.metrics.mainLocByExtension} />
-          </div>
-        )}
-      </div>
-    </section>
-  )}
-
-  {sortedGroups.map(([group, items]) => (
-    <section class="section">
-      <h3>{formatGroupLabel(group)}</h3>
-      <StaticReportTable ariaLabel={`${formatGroupLabel(group)} metrics`}>
-        <thead>
-          <tr>
-            <th><span>Metric</span></th>
-            <th><span>Value</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((metric) => (
-            <tr>
-              <td class="metric-id">{metric.id}</td>
-              <td class="metric-value report-static-table__num">{metric.value.toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </StaticReportTable>
-    </section>
-  ))}
+	<RepositoryMetricsView
+		heading={repoName}
+		subtitle={`${metrics.length} metrics for ${repoName}`}
+		cards={cards}
+		locBreakdown={locBreakdown}
+		mainLocByExtension={mainLocByExtension}
+		groups={viewGroups}
+	/>
 </Dashboard>
-
-<style>
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 1.25rem;
-  }
-
-  .card-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1;
-  }
-
-  .card-label {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin-top: 0.35rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .card-detail {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-top: 0.35rem;
-  }
-
-  .subtitle {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
-  }
-
-  .visual-summary {
-    margin-bottom: 2rem;
-  }
-
-  .visual-summary > h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 0.9rem;
-  }
-
-  .visual-grid {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  @media (min-width: 960px) {
-    .visual-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  .visual-item {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .visual-copy h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 0.35rem;
-  }
-
-  .visual-copy p {
-    color: var(--color-text-muted);
-    line-height: 1.55;
-  }
-
-  .section {
-    margin-bottom: 2rem;
-  }
-
-  .section h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-  }
-
-  .metric-id {
-    word-break: break-word;
-  }
-</style>

@@ -168,6 +168,8 @@ export type ReportMetricsSummary = {
 		readonly testVsMainPercentage: number;
 		readonly totalAnalysisTimeInMillis: number;
 	};
+	readonly locBreakdown: ReadonlyArray<{ readonly label: string; readonly value: number }>;
+	readonly mainLocByExtension: ReadonlyArray<{ readonly label: string; readonly value: number }>;
 	readonly groupSummaries: ReadonlyArray<{
 		readonly groupId: string;
 		readonly label: string;
@@ -4399,6 +4401,22 @@ export function readReportMetricsSummary(
 		groups.set(groupId, list);
 	}
 
+	const locBreakdown = [
+		{ label: "Main", value: metricById.get("LINES_OF_CODE_MAIN") ?? 0 },
+		{ label: "Test", value: metricById.get("LINES_OF_CODE_TEST") ?? 0 },
+		{ label: "Generated", value: metricById.get("LINES_OF_CODE_GENERATED") ?? 0 },
+		{ label: "Build & Deploy", value: metricById.get("LINES_OF_CODE_BUILDANDDEPLOYMENT") ?? 0 },
+		{ label: "Other", value: metricById.get("LINES_OF_CODE_OTHER") ?? 0 },
+	].filter((item) => item.value > 0);
+
+	const mainLocByExtension = metrics
+		.filter((m) => m.id.startsWith("LINES_OF_CODE_MAIN_EXT_") && m.value > 0)
+		.map((m) => ({
+			label: `.${m.id.slice("LINES_OF_CODE_MAIN_EXT_".length).toLowerCase()}`,
+			value: m.value,
+		}))
+		.sort((a, b) => b.value - a.value);
+
 	return {
 		totalMetrics: metrics.length,
 		headlineMetrics: {
@@ -4411,6 +4429,8 @@ export function readReportMetricsSummary(
 			totalAnalysisTimeInMillis:
 				metricById.get("TOTAL_ANALYSIS_TIME_IN_MILLIS") ?? 0,
 		},
+		locBreakdown,
+		mainLocByExtension,
 		groupSummaries: [...groups.entries()]
 			.map(([groupId, groupMetrics]) => ({
 				groupId,

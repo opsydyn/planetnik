@@ -401,10 +401,11 @@ Use this section as the live migration checklist. Mark items off as slices land.
 - [x] `landscape/tags`
 - [x] `landscape/teams`
 - [x] repo dashboard summary surface
+- [x] repo metrics
 
 ### Todo
 
-- [ ] repo metrics
+- [ ] repo commits
 - [ ] repo commits
 - [ ] repo dependencies
 - [ ] repo duplication
@@ -444,3 +445,155 @@ Do not:
 - Keep routes and data loading app-local.
 - Prefer inventory and dashboard pages before graph-heavy pages.
 - Only extract pure logic to `report-core` when both apps demonstrably need it.
+
+## Handoff
+
+Use this section to resume the UI parity migration in a new agent session.
+
+### Current State
+
+We are migrating static/site and hosted/app report UI toward parity through
+shared presentation components in `packages/report-ui`.
+
+Active plan:
+
+- `docs/shared-app-extraction-plan.md`
+
+Current shared parity package:
+
+- `packages/report-ui`
+
+Route/data boundary rule:
+
+- `apps/site` keeps static Astro pages and filesystem/content loaders
+- `apps/app` keeps hosted Astro pages and runtime/Eden integration
+- `packages/report-ui` owns shared views, charts, tables, shell primitives
+- do not share `src/pages` directly
+
+### Checklist Status
+
+#### Done
+
+- [x] shared shell/theme foundation
+- [x] shared breadcrumb/icon/logo primitives
+- [x] `landscape/repositories`
+- [x] `landscape/contributors`
+- [x] `landscape/tags`
+- [x] `landscape/teams`
+- [x] repo dashboard summary surface
+- [x] repo metrics
+
+#### Todo
+
+- [ ] repo commits
+- [ ] repo dependencies
+- [ ] repo duplication
+- [ ] repo controls
+- [ ] repo impact
+- [ ] repo hotspots
+- [ ] graph-heavy surfaces:
+  - topology
+  - coupling
+  - components
+
+### Most Recent Completed Slice
+
+Completed:
+
+- repo metrics
+
+Shared view:
+
+- `packages/report-ui/src/views/RepositoryMetricsView.astro`
+
+Consumers:
+
+- `apps/site/src/pages/landscape/repositories/[repo]/metrics.astro`
+- `apps/app/src/pages/reports/[slug]/repositories/[repo]/metrics.astro`
+
+Important contract change:
+
+- `ReportMetricsSummary` widened with `locBreakdown` and `mainLocByExtension`
+  chart arrays, computed in `readReportMetricsSummary` from raw metric IDs
+- `RuntimeReportMetrics` in `runtime-client.ts` mirrors those new fields
+- `buildReportMetricsViewModel` passes chart arrays straight through to the view
+
+Files touched:
+
+- `apps/runtime/src/lib/report-datasets.ts`
+- `apps/runtime/src/routes/reports/index.ts`
+- `apps/runtime/src/lib/__tests__/report-datasets.test.ts`
+- `apps/runtime/src/routes/__tests__/reports.test.ts`
+- `apps/app/src/lib/runtime-client.ts`
+- `apps/app/src/lib/report-metrics-view-model.ts`
+- `apps/app/src/lib/report-metrics-view-model.test.ts`
+- `packages/report-ui/package.json`
+- `packages/report-ui/src/views/RepositoryMetricsView.astro`
+
+### Recent Defect Fix
+
+Fixed:
+
+- hosted landscape root topology route was `302` redirecting to overview
+
+Cause:
+
+- `/api/reports/:slug/topology` always used the single-repo topology reader
+
+Fix:
+
+- runtime now dispatches by `reportMode`
+- landscape reports use `landscape_topology.json` via
+  `readReportLandscapeTopologySummary`
+
+Files:
+
+- `apps/runtime/src/lib/report-datasets.ts`
+- `apps/runtime/src/routes/reports/index.ts`
+- `apps/runtime/src/lib/__tests__/report-datasets.test.ts`
+- `apps/runtime/src/routes/__tests__/reports.test.ts`
+
+This was a defect fix only, not a new checklist item.
+
+### Verification Status
+
+Last verified green:
+
+- `bun test apps/runtime/src/lib/__tests__/report-datasets.test.ts apps/runtime/src/routes/__tests__/reports.test.ts`
+- `bun test apps/app/src/lib/report-metrics-view-model.test.ts`
+- `bun run --cwd packages/report-ui typecheck`
+- `bun run --cwd apps/runtime typecheck`
+- `bun run --cwd apps/app typecheck`
+- `bun run --cwd apps/app build`
+- `bun run --cwd apps/site typecheck`
+- `bun run --cwd apps/site build`
+
+Known pre-existing `apps/site` noise:
+
+- unused `route` import hints
+- empty-collection warnings for datasets that do not provide every export
+- Vite/browser externalization warnings during build
+
+### Next Recommended Slice
+
+Next slice:
+
+- `repo commits`
+
+Suggested approach:
+
+1. inspect `apps/site` and `apps/app` commits pages to understand current shape
+2. check what the runtime commits endpoint returns (`getRuntimeReportLandscapeRepositoryCommits`)
+3. write or extend the hosted view-model test for commits
+4. extract a shared `RepositoryCommitsView.astro` into `packages/report-ui`
+5. wire both site and app routes to that shared view
+6. mark `repo commits` done in `docs/shared-app-extraction-plan.md`
+7. run full verification again
+
+### Working Rules
+
+- Use Bun everywhere
+- Keep TDD vertical: one failing test, one implementation slice, then verify
+- Prefer shared views with plain props only
+- Keep route composition and data loading app-local
+- Do not start graph-heavy surfaces yet

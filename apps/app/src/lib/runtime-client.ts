@@ -197,6 +197,8 @@ export type RuntimeReportMetrics = {
     readonly testVsMainPercentage: number;
     readonly totalAnalysisTimeInMillis: number;
   };
+  readonly locBreakdown: ReadonlyArray<{ readonly label: string; readonly value: number }>;
+  readonly mainLocByExtension: ReadonlyArray<{ readonly label: string; readonly value: number }>;
   readonly groupSummaries: ReadonlyArray<{
     readonly groupId: string;
     readonly label: string;

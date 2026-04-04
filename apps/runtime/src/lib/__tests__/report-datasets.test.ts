@@ -852,6 +852,11 @@ describe("runtime report dataset helpers", () => {
 				testVsMainPercentage: 22.8,
 				totalAnalysisTimeInMillis: 960,
 			},
+			locBreakdown: [
+				{ label: "Main", value: 18450 },
+				{ label: "Test", value: 4200 },
+			],
+			mainLocByExtension: [],
 			groupSummaries: [
 				{
 					groupId: "LINES_OF_CODE",
@@ -2076,6 +2081,11 @@ describe("runtime report dataset helpers", () => {
 				testVsMainPercentage: 26.9,
 				totalAnalysisTimeInMillis: 1840,
 			},
+			locBreakdown: [
+				{ label: "Main", value: 52000 },
+				{ label: "Test", value: 14000 },
+			],
+			mainLocByExtension: [],
 			groupSummaries: [
 				{
 					groupId: "LINES_OF_CODE",

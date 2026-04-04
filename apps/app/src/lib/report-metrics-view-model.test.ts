@@ -14,6 +14,14 @@ describe("report metrics view model", () => {
 					testVsMainPercentage: 26.9,
 					totalAnalysisTimeInMillis: 1840,
 				},
+				locBreakdown: [
+					{ label: "Main", value: 52000 },
+					{ label: "Test", value: 14000 },
+				],
+				mainLocByExtension: [
+					{ label: ".ts", value: 48000 },
+					{ label: ".js", value: 4000 },
+				],
 				groupSummaries: [
 					{
 						groupId: "LINES_OF_CODE",
@@ -41,6 +49,14 @@ describe("report metrics view model", () => {
 			{ label: "Test LOC", value: "14,000", detail: "26.9% of main" },
 			{ label: "Duplicated Lines", value: "910", detail: null },
 			{ label: "Analysis Time", value: "1.8s", detail: "6 metrics" },
+		]);
+		expect(viewModel.locBreakdown).toEqual([
+			{ label: "Main", value: 52000 },
+			{ label: "Test", value: 14000 },
+		]);
+		expect(viewModel.mainLocByExtension).toEqual([
+			{ label: ".ts", value: 48000 },
+			{ label: ".js", value: 4000 },
 		]);
 		expect(viewModel.groups).toEqual([
 			{
