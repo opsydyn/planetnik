@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { Elysia } from "elysia";
 import { auth } from "../../lib/auth.js";
 
@@ -18,27 +18,25 @@ const MeResponseSchema = Schema.Struct({
 	}),
 });
 
+const UnauthorizedResponseSchema = Schema.Struct({
+	error: Schema.Literal("unauthorized"),
+});
+
 const decodeMeResponse = Schema.decodeUnknownSync(MeResponseSchema);
 
 export const meRoutes = new Elysia({ name: "me" }).get(
 	"/api/me",
-	async ({ request }) => {
+	async ({ request, set }) => {
 		const session = await auth.api.getSession({
 			headers: request.headers,
 		});
 
 		if (!session?.session || !session.user) {
-			return new Response(
-				JSON.stringify({
-					error: "unauthorized",
-				}),
-				{
-					status: 401,
-					headers: {
-						"content-type": "application/json",
-					},
-				},
-			);
+			set.status = 401;
+
+			return {
+				error: "unauthorized" as const,
+			};
 		}
 
 		const userRole = Reflect.get(session.user, "role");
@@ -58,5 +56,15 @@ export const meRoutes = new Elysia({ name: "me" }).get(
 				expiresAt: session.session.expiresAt.toISOString(),
 			},
 		});
+	},
+	{
+		response: {
+			200: Schema.standardSchemaV1(MeResponseSchema),
+			401: Schema.standardSchemaV1(UnauthorizedResponseSchema),
+		},
+		detail: {
+			summary: "Authenticated user and session summary",
+			tags: ["Auth", "Users"],
+		},
 	},
 );

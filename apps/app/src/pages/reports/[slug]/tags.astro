@@ -1,0 +1,49 @@
+---
+import LandscapeTagsView from "@planetnik/report-ui/views/LandscapeTagsView";
+import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
+import { buildReportLandscapeTagsViewModel } from "../../../lib/report-landscape-tags-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeTags,
+} from "../../../lib/runtime-client.js";
+import { shouldRedirectReportDetail } from "../../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.mode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const tags = await getRuntimeReportLandscapeTags(cookie, slug);
+const viewModel = buildReportLandscapeTagsViewModel({
+	tags: tags ?? {
+		groupCount: 0,
+		tagCount: 0,
+		untaggedRepositoryCount: 0,
+		tags: [],
+		untaggedRepositories: [],
+	},
+});
+---
+
+<AppShell
+	title="Landscape Tags"
+	subtitle=""
+	shellContext={buildHostedReportShellContext(reportDetail)}
+	headerMode="breadcrumbs"
+>
+	<LandscapeTagsView
+		subtitle={viewModel.subtitle}
+		cards={viewModel.cards}
+		topTagBars={viewModel.topTagBars}
+		rows={viewModel.rows}
+		untaggedRepositories={viewModel.untaggedRepositories}
+	/>
+</AppShell>

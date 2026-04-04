@@ -21,6 +21,7 @@ import {
   readReportCommitsSummary,
   readReportLandscapeRepositoriesSummary,
   readReportLandscapeOverviewSummary,
+  readReportLandscapeTagsSummary,
   readReportLandscapeRepositorySummary,
   readReportLandscapeRepositoryMetricsSummary,
   readReportLandscapeRepositoryCommitsSummary,
@@ -200,6 +201,27 @@ const ReportLandscapeOverviewSummarySchema = Schema.Struct({
 
 const ReportLandscapeOverviewResponseSchema = Schema.Struct({
   overview: ReportLandscapeOverviewSummarySchema,
+})
+
+const ReportLandscapeTagsSummarySchema = Schema.Struct({
+  groupCount: Schema.Number,
+  tagCount: Schema.Number,
+  untaggedRepositoryCount: Schema.Number,
+  tags: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      group: Schema.String,
+      tag: Schema.String,
+      repositoryCount: Schema.Number,
+      totalMainLinesOfCode: Schema.Number,
+      repositories: Schema.Array(Schema.String),
+    }),
+  ),
+  untaggedRepositories: Schema.Array(Schema.String),
+})
+
+const ReportLandscapeTagsResponseSchema = Schema.Struct({
+  tags: ReportLandscapeTagsSummarySchema,
 })
 
 const ReportContributorsResponseSchema = Schema.Struct({
@@ -1109,6 +1131,48 @@ export const reportRoutes = new Elysia({ name: "reports" })
       overview,
     })
   })
+  .get("/api/reports/:slug/tags", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found || !found.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const tags = readReportLandscapeTagsSummary(found.analysisRoot)
+
+    return Schema.decodeUnknownSync(ReportLandscapeTagsResponseSchema)({
+      tags,
+    })
+  })
   .get("/api/reports/:slug/contributors", async ({ request, params }) => {
     const session = await auth.api.getSession({
       headers: request.headers,
@@ -1153,7 +1217,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     const context = readReportContextSummary(found.analysisRoot)
     const contributors =
-      context.reportMode === "landscape"
+      context?.reportMode === "landscape"
         ? readReportLandscapeContributorsSummary(found.analysisRoot)?.contributors ?? []
         : readReportContributorsSummary(found.analysisRoot)
 

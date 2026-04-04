@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { Elysia } from "elysia";
 import { appConfig } from "../../config.js";
 
@@ -17,12 +17,24 @@ type HealthResponse = typeof HealthResponseSchema.Type;
 
 const decodeHealthResponse = Schema.decodeUnknownSync(HealthResponseSchema);
 
-export const healthRoutes = new Elysia({ name: "health" }).get("/health", () => {
-	const response: HealthResponse = {
-		status: "ok",
-		service: "planetnik-runtime",
-		nodeEnv: appConfig.nodeEnv,
-	};
+export const healthRoutes = new Elysia({ name: "health" }).get(
+	"/health",
+	() => {
+		const response: HealthResponse = {
+			status: "ok",
+			service: "planetnik-runtime",
+			nodeEnv: appConfig.nodeEnv,
+		};
 
-	return decodeHealthResponse(response);
-});
+		return decodeHealthResponse(response);
+	},
+	{
+		response: {
+			200: Schema.standardSchemaV1(HealthResponseSchema),
+		},
+		detail: {
+			summary: "Runtime health check",
+			tags: ["Health"],
+		},
+	},
+);

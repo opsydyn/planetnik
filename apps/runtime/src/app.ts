@@ -1,4 +1,6 @@
 import { cors } from "@elysiajs/cors";
+import { openapi } from "@elysiajs/openapi";
+import { JSONSchema } from "effect";
 import { Elysia } from "elysia";
 import { appConfig } from "./config.js";
 import { authRoutes } from "./routes/auth/index.js";
@@ -19,7 +21,24 @@ export function createApp() {
 		.use(meRoutes)
 		.use(workspaceRoutes)
 		.use(reportRoutes)
-		.use(authRoutes);
+		.use(authRoutes)
+		.use(
+			openapi({
+				path: "/openapi",
+				specPath: "/openapi/json",
+				documentation: {
+					info: {
+						title: "Planetnik Runtime API",
+						version: "0.1.0",
+						description:
+							"Authenticated runtime APIs for the hosted Planetnik application.",
+					},
+				},
+				mapJsonSchema: {
+					effect: JSONSchema.make,
+				},
+			}),
+		);
 }
 
 export type PlanetnikRuntimeApp = ReturnType<typeof createApp>;

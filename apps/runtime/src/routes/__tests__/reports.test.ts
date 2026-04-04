@@ -872,6 +872,36 @@ const readReportLandscapeOverviewSummary = mock((analysisRoot: string) => {
 		],
 	};
 });
+const readReportLandscapeTagsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/platform-landscape/data") {
+		return null;
+	}
+
+	return {
+		groupCount: 2,
+		tagCount: 3,
+		untaggedRepositoryCount: 1,
+		tags: [
+			{
+				id: "team:team:web",
+				group: "team",
+				tag: "Web",
+				repositoryCount: 2,
+				totalMainLinesOfCode: 18450,
+				repositories: ["web-app", "marketing-site"],
+			},
+			{
+				id: "domain:domain:payments",
+				group: "domain",
+				tag: "Payments",
+				repositoryCount: 1,
+				totalMainLinesOfCode: 9200,
+				repositories: ["api"],
+			},
+		],
+		untaggedRepositories: ["legacy-tool"],
+	};
+});
 const readReportLandscapeRepositorySummary = mock(
 	(analysisRoot: string, repoKey: string) => {
 		if (
@@ -1558,6 +1588,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportTrendsSummary,
 	readReportSecuritySummary,
 	readReportLandscapeOverviewSummary,
+	readReportLandscapeTagsSummary,
 	readReportLandscapeRepositoriesSummary,
 	readReportLandscapeRepositorySummary,
 	readReportLandscapeRepositoryMetricsSummary,
@@ -1607,6 +1638,7 @@ describe("runtime report routes", () => {
 		readReportTrendsSummary.mockClear();
 		readReportSecuritySummary.mockClear();
 		readReportLandscapeOverviewSummary.mockClear();
+		readReportLandscapeTagsSummary.mockClear();
 		readReportLandscapeRepositoriesSummary.mockClear();
 		readReportLandscapeRepositorySummary.mockClear();
 		readReportLandscapeRepositoryMetricsSummary.mockClear();
@@ -2454,6 +2486,56 @@ describe("runtime report routes", () => {
 			name: "web-app",
 		});
 		expect(readReportLandscapeOverviewSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+		);
+	});
+
+	test("returns a landscape tags summary for a connected landscape report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/platform-landscape/tags", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			tags: {
+				groupCount: number;
+				tagCount: number;
+				untaggedRepositoryCount: number;
+				tags: Array<{ group: string; tag: string; repositoryCount: number }>;
+				untaggedRepositories: Array<string>;
+			};
+		};
+
+		expect(body.tags.groupCount).toBe(2);
+		expect(body.tags.tagCount).toBe(3);
+		expect(body.tags.untaggedRepositoryCount).toBe(1);
+		expect(body.tags.tags[0]).toMatchObject({
+			group: "team",
+			tag: "Web",
+			repositoryCount: 2,
+		});
+		expect(body.tags.untaggedRepositories).toEqual(["legacy-tool"]);
+		expect(readReportLandscapeTagsSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 		);
 	});

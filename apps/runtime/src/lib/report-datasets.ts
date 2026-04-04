@@ -394,6 +394,21 @@ export type ReportLandscapeOverviewSummary = {
 	}>;
 };
 
+export type ReportLandscapeTagsSummary = {
+	readonly groupCount: number;
+	readonly tagCount: number;
+	readonly untaggedRepositoryCount: number;
+	readonly tags: ReadonlyArray<{
+		readonly id: string;
+		readonly group: string;
+		readonly tag: string;
+		readonly repositoryCount: number;
+		readonly totalMainLinesOfCode: number;
+		readonly repositories: ReadonlyArray<string>;
+	}>;
+	readonly untaggedRepositories: ReadonlyArray<string>;
+};
+
 export type ReportComponentsSummary = {
 	readonly totalComponents: number;
 	readonly singleOwnerComponents: number;
@@ -1694,6 +1709,82 @@ export function readReportLandscapeOverviewSummary(
 	};
 }
 
+export function readReportLandscapeTagsSummary(
+	dataDir: string,
+): ReportLandscapeTagsSummary {
+	const tags = readJsonRecord(dataDir, "landscape_tags.json");
+	const tagMatrix = readJsonRecord(dataDir, "landscape_tag_matrix.json");
+
+	const groups = Array.isArray(tags?.groups)
+		? tags.groups.filter(
+				(item): item is Record<string, unknown> =>
+					typeof item === "object" && item !== null,
+			)
+		: [];
+
+	const rows = groups.flatMap((group) => {
+		const groupName = typeof group.name === "string" ? group.name : "Unknown";
+		const groupTags = Array.isArray(group.tags)
+			? group.tags.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+			: [];
+
+		return groupTags.map((tag) => {
+			const tagKey = typeof tag.key === "string" ? tag.key : "";
+			const repositories = Array.isArray(tag.repositories)
+				? tag.repositories
+						.filter(
+							(item): item is Record<string, unknown> =>
+								typeof item === "object" && item !== null,
+						)
+						.map((repository) =>
+							typeof repository.name === "string" ? repository.name : null,
+						)
+						.filter((name): name is string => name !== null)
+				: [];
+
+			return {
+				id: `${groupName}:${tagKey}`,
+				group: groupName,
+				tag: typeof tag.name === "string" ? tag.name : "Unknown",
+				repositoryCount:
+					typeof tag.repositoryCount === "number" ? tag.repositoryCount : 0,
+				totalMainLinesOfCode:
+					typeof tag.totalMainLinesOfCode === "number"
+						? tag.totalMainLinesOfCode
+						: 0,
+				repositories,
+			};
+		});
+	});
+
+	const untaggedRepositories = Array.isArray(tagMatrix?.repositories)
+		? tagMatrix.repositories
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.filter((repository) => repository.isUntagged === true)
+				.map((repository) =>
+					typeof repository.name === "string" ? repository.name : null,
+				)
+				.filter((name): name is string => name !== null)
+		: [];
+
+	return {
+		groupCount: typeof tags?.groupCount === "number" ? tags.groupCount : groups.length,
+		tagCount: typeof tags?.tagCount === "number" ? tags.tagCount : rows.length,
+		untaggedRepositoryCount:
+			typeof tags?.untaggedRepositoryCount === "number"
+				? tags.untaggedRepositoryCount
+				: untaggedRepositories.length,
+		tags: rows,
+		untaggedRepositories,
+	};
+}
+
 export function readReportContributorsSummary(
 	dataDir: string,
 ): ReadonlyArray<ReportContributorSummary> {
@@ -1714,7 +1805,7 @@ export function readReportContributorsSummary(
 
 	return lines
 		.slice(1)
-		.map((line) => {
+		.map((line): ReportContributorSummary | null => {
 			const cols = line.split("\t");
 			if (cols.length < 8) {
 				return null;
@@ -1757,7 +1848,7 @@ export function readReportContributorsSummary(
 				latestCommitDate: cols[7]?.trim() ?? "",
 				isBot: null,
 				repositories: [],
-			} satisfies ReportContributorSummary;
+			};
 		})
 		.filter(
 			(
@@ -1775,8 +1866,9 @@ export function readReportLandscapeContributorsSummary(
 		return null;
 	}
 
-	const contributors = Array.isArray((raw as Record<string, unknown>).contributors)
-		? (raw as Record<string, unknown>).contributors
+	const rawRecord = raw as Record<string, unknown>;
+	const contributors: ReadonlyArray<unknown> = Array.isArray(rawRecord.contributors)
+		? rawRecord.contributors
 		: [];
 
 	const items = contributors
@@ -1784,7 +1876,7 @@ export function readReportLandscapeContributorsSummary(
 			(item): item is Record<string, unknown> =>
 				typeof item === "object" && item !== null,
 		)
-		.map((item) => {
+		.map((item): ReportContributorSummary => {
 			const email = typeof item.email === "string" ? item.email : "";
 			const displayName =
 				typeof item.displayName === "string" && item.displayName.length > 0
@@ -1792,7 +1884,8 @@ export function readReportLandscapeContributorsSummary(
 					: typeof item.name === "string" && item.name.length > 0
 						? item.name
 						: email;
-			const repositories = Array.isArray(item.repositories)
+			const repositories: ReadonlyArray<ReportContributorSummary["repositories"][number]> =
+				Array.isArray(item.repositories)
 				? item.repositories
 						.filter(
 							(repository): repository is Record<string, unknown> =>
@@ -1866,7 +1959,7 @@ export function readReportLandscapeContributorsSummary(
 					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
 				isBot: item.isBot === true,
 				repositories,
-			} satisfies ReportContributorSummary;
+			};
 		})
 		.filter((contributor) => contributor.email.length > 0)
 		.sort((left, right) => right.commitsAllTime - left.commitsAllTime);
@@ -3378,7 +3471,7 @@ export function readReportLandscapeRepositoryContributorsSummary(
 		: [];
 
 	return rows
-		.flatMap((item) => {
+		.flatMap((item): ReadonlyArray<ReportContributorSummary> => {
 			const email = typeof item.email === "string" ? item.email : "";
 			if (email.length === 0) {
 				return [];
@@ -3431,7 +3524,12 @@ export function readReportLandscapeRepositoryContributorsSummary(
 				componentsTouched: null,
 				primaryComponent: "",
 				knowledgeSignal,
-			} satisfies ReportContributorSummary];
+				repositoryCount: null,
+				latestCommitDate:
+					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+				isBot: null,
+				repositories: [],
+			}];
 		})
 		.sort((left, right) => right.commitsAllTime - left.commitsAllTime);
 }

@@ -1,7 +1,6 @@
 ---
 import { getEntry } from "astro:content";
-import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
-import ReportDataGrid from "../../components/tables/ReportDataGrid";
+import LandscapeTagsView from "@planetnik/report-ui/views/LandscapeTagsView";
 import Dashboard from "../../layouts/Dashboard.astro";
 import { chartHelp } from "../../lib/chartHelp";
 import { route } from "../../lib/route";
@@ -43,121 +42,19 @@ const untaggedRows =
 ---
 
 <Dashboard title="Landscape Tags" projectName={projectName}>
-  <h2>Tags</h2>
-  <p class="subtitle">
-    Repository tags and grouping overlays across the landscape.
-  </p>
-
-  <div class="cards">
-    <div class="card">
-      <div class="card-value">{tags?.data.groupCount.toLocaleString() ?? "0"}</div>
-      <div class="card-label">Tag Groups</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{tags?.data.tagCount.toLocaleString() ?? "0"}</div>
-      <div class="card-label">Tags</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{tags?.data.untaggedRepositoryCount.toLocaleString() ?? "0"}</div>
-      <div class="card-label">Untagged Repos</div>
-    </div>
-  </div>
-
-  {topTagBars.length > 0 ? (
-    <>
-      <section class="section">
-        <h3>Most Used Tags</h3>
-        <HorizontalBarChart
-          client:visible
-          data={topTagBars}
-          valueLabel="repositories"
-          maxItems={12}
-          helpText={chartHelp.landscape.tags}
-        />
-      </section>
-
-      <ReportDataGrid
-        client:visible
-        title="Tag Inventory"
-        description="Search tags by group, tag name, or repository."
-        searchPlaceholder="Search tag, group, or repository"
-        rows={flatTags}
-        columns={[
-          { field: "group", headerName: "Group", minWidth: 150 },
-          { field: "tag", headerName: "Tag", minWidth: 160 },
-          { field: "repositoryCount", headerName: "Repositories", type: "number", minWidth: 120, sort: "desc" },
-          { field: "totalMainLinesOfCode", headerName: "Main LOC", type: "number", minWidth: 120 },
-          { field: "repositories", headerName: "Repositories", type: "multiline", minWidth: 360, flex: 1.5 },
-        ]}
-      />
-    </>
-  ) : (
-    <div class="empty">
-      <p>No landscape tags were exported for this dataset.</p>
-      <p class="hint">Add `tagGroups` to the landscape configuration to populate this page.</p>
-    </div>
-  )}
-
-  <section class="section section-muted">
-    <h3>Untagged Repositories</h3>
-    <p>{untaggedRows}</p>
-  </section>
+	<LandscapeTagsView
+		subtitle="Repository tags and grouping overlays across the landscape."
+		cards={[
+			{ label: "Tag Groups", value: tags?.data.groupCount.toLocaleString() ?? "0" },
+			{ label: "Tags", value: tags?.data.tagCount.toLocaleString() ?? "0" },
+			{
+				label: "Untagged Repos",
+				value: tags?.data.untaggedRepositoryCount.toLocaleString() ?? "0",
+			},
+		]}
+		topTagBars={topTagBars}
+		rows={flatTags}
+		untaggedRepositories={untaggedRows}
+		chartHelpText={chartHelp.landscape.tags}
+	/>
 </Dashboard>
-
-<style>
-  .subtitle {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
-    max-width: 72ch;
-  }
-
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.9rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .card,
-  .empty {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
-    padding: 1.1rem 1.2rem;
-  }
-
-  .card-value {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1;
-  }
-
-  .card-label {
-    margin-top: 0.45rem;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .section {
-    margin-bottom: 1.75rem;
-  }
-
-  .section h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 0.8rem;
-  }
-
-  .section-muted p,
-  .hint {
-    color: var(--color-text-muted);
-  }
-
-  @media (max-width: 720px) {
-    .cards {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>

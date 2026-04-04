@@ -27,6 +27,7 @@ const {
 	readReportHotspotsSummary,
 	readReportImpactSummary,
 	readReportLandscapeOverviewSummary,
+	readReportLandscapeTagsSummary,
 	readReportMetricsSummary,
 	readReportCommitsSummary,
 	readReportSecuritySummary,
@@ -261,6 +262,75 @@ describe("runtime report dataset helpers", () => {
 					latestCommitDate: "2026-03-31",
 				},
 			],
+		});
+	});
+
+	test("reads a landscape tags summary with grouped tags and untagged repositories", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_tags.json"), {
+			groupCount: 2,
+			tagCount: 3,
+			untaggedRepositoryCount: 1,
+			groups: [
+				{
+					name: "team",
+					tags: [
+						{
+							key: "team:web",
+							name: "Web",
+							repositoryCount: 2,
+							totalMainLinesOfCode: 18450,
+							repositories: [{ name: "web-app" }, { name: "marketing-site" }],
+						},
+					],
+				},
+				{
+					name: "domain",
+					tags: [
+						{
+							key: "domain:payments",
+							name: "Payments",
+							repositoryCount: 1,
+							totalMainLinesOfCode: 9200,
+							repositories: [{ name: "api" }],
+						},
+					],
+				},
+			],
+		});
+		writeJson(join(dataDir, "landscape_tag_matrix.json"), {
+			repositories: [
+				{ name: "web-app", isUntagged: false },
+				{ name: "api", isUntagged: false },
+				{ name: "legacy-tool", isUntagged: true },
+			],
+		});
+
+		expect(readReportLandscapeTagsSummary(dataDir)).toEqual({
+			groupCount: 2,
+			tagCount: 3,
+			untaggedRepositoryCount: 1,
+			tags: [
+				{
+					id: "team:team:web",
+					group: "team",
+					tag: "Web",
+					repositoryCount: 2,
+					totalMainLinesOfCode: 18450,
+					repositories: ["web-app", "marketing-site"],
+				},
+				{
+					id: "domain:domain:payments",
+					group: "domain",
+					tag: "Payments",
+					repositoryCount: 1,
+					totalMainLinesOfCode: 9200,
+					repositories: ["api"],
+				},
+			],
+			untaggedRepositories: ["legacy-tool"],
 		});
 	});
 
@@ -1218,6 +1288,10 @@ describe("runtime report dataset helpers", () => {
 				componentsTouched: null,
 				primaryComponent: "",
 				knowledgeSignal: "Glue",
+				repositoryCount: null,
+				latestCommitDate: "2026-03-31",
+				isBot: null,
+				repositories: [],
 			},
 			{
 				email: "new@example.com",
@@ -1236,6 +1310,10 @@ describe("runtime report dataset helpers", () => {
 				componentsTouched: null,
 				primaryComponent: "",
 				knowledgeSignal: "Snacking",
+				repositoryCount: null,
+				latestCommitDate: "2026-03-30",
+				isBot: null,
+				repositories: [],
 			},
 		]);
 	});

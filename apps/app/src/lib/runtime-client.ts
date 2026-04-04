@@ -584,6 +584,21 @@ export type RuntimeReportLandscapeOverview = {
   }>;
 };
 
+export type RuntimeReportLandscapeTags = {
+  readonly groupCount: number;
+  readonly tagCount: number;
+  readonly untaggedRepositoryCount: number;
+  readonly tags: ReadonlyArray<{
+    readonly id: string;
+    readonly group: string;
+    readonly tag: string;
+    readonly repositoryCount: number;
+    readonly totalMainLinesOfCode: number;
+    readonly repositories: ReadonlyArray<string>;
+  }>;
+  readonly untaggedRepositories: ReadonlyArray<string>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -1017,6 +1032,20 @@ export async function getRuntimeReportLandscapeOverview(
   }
 
   return data.overview;
+}
+
+export async function getRuntimeReportLandscapeTags(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportLandscapeTags | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).tags.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.tags;
 }
 
 export async function getRuntimeReportLandscapeRepositoryMetrics(

@@ -163,6 +163,10 @@ describe("hosted shell", () => {
 						label: "Team Topology",
 					},
 					{
+						href: "/reports/platform-landscape/tags",
+						label: "Tags",
+					},
+					{
 						href: "/reports/platform-landscape/security",
 						label: "Dependency Security",
 					},

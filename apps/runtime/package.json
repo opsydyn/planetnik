@@ -18,10 +18,11 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
-		"@sinclair/typebox": "^0.34.49",
 		"@effect/schema": "catalog:",
 		"@elysiajs/cors": "^1.4.0",
+		"@elysiajs/openapi": "^1.4.14",
 		"@neondatabase/serverless": "^1.0.1",
+		"@sinclair/typebox": "^0.34.49",
 		"better-auth": "^1.4.19",
 		"drizzle-orm": "^0.44.5",
 		"effect": "catalog:",

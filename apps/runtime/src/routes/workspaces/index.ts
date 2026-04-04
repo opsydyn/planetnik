@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { Elysia } from "elysia";
 import { auth } from "../../lib/auth.js";
 import { ensurePersonalWorkspace } from "../../lib/personal-workspace.js";
@@ -16,29 +16,27 @@ const WorkspacesResponseSchema = Schema.Struct({
 	workspaces: Schema.Array(WorkspaceSchema),
 });
 
+const UnauthorizedResponseSchema = Schema.Struct({
+	error: Schema.Literal("unauthorized"),
+});
+
 const decodeWorkspacesResponse = Schema.decodeUnknownSync(
 	WorkspacesResponseSchema,
 );
 
 export const workspaceRoutes = new Elysia({ name: "workspaces" }).get(
 	"/api/workspaces",
-	async ({ request }) => {
+	async ({ request, set }) => {
 		const session = await auth.api.getSession({
 			headers: request.headers,
 		});
 
 		if (!session?.session || !session.user) {
-			return new Response(
-				JSON.stringify({
-					error: "unauthorized",
-				}),
-				{
-					status: 401,
-					headers: {
-						"content-type": "application/json",
-					},
-				},
-			);
+			set.status = 401;
+
+			return {
+				error: "unauthorized" as const,
+			};
 		}
 
 		const personalWorkspace = await ensurePersonalWorkspace(session);
@@ -55,5 +53,15 @@ export const workspaceRoutes = new Elysia({ name: "workspaces" }).get(
 				},
 			],
 		});
+	},
+	{
+		response: {
+			200: Schema.standardSchemaV1(WorkspacesResponseSchema),
+			401: Schema.standardSchemaV1(UnauthorizedResponseSchema),
+		},
+		detail: {
+			summary: "List workspaces for the authenticated user",
+			tags: ["Workspaces"],
+		},
 	},
 );
