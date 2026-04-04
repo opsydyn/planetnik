@@ -1,0 +1,17 @@
+---
+import "./StaticReportTable.css";
+
+interface Props {
+	ariaLabel: string;
+}
+
+const { ariaLabel } = Astro.props as Props;
+---
+
+<div class="report-static-table__surface">
+	<div class="report-static-table__wrap">
+		<table class="report-static-table" aria-label={ariaLabel}>
+			<slot />
+		</table>
+	</div>
+</div>

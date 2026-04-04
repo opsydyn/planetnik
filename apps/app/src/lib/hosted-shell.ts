@@ -173,6 +173,7 @@ export function buildHostedShellModel(
 	}
 
 	if (context.kind === "report") {
+		const isLandscapeReport = context.reportMode === "landscape";
 		return {
 			chrome: "application",
 			brand: buildHostedBrandModel({
@@ -180,18 +181,25 @@ export function buildHostedShellModel(
 				variant: "sidebar",
 			}),
 			navSections: buildReportNavSections(context),
-			breadcrumbs: [
-				{ label: "Home", href: "/" },
-				{
-					label: context.reportTitle,
-					href: `/reports/${context.reportSlug}/overview`,
-				},
-				{ label: input.title },
-			],
-			scopeLabel:
-				context.reportMode === "landscape"
-					? `Landscape for ${context.reportTitle}`
-					: `Report for ${context.reportTitle}`,
+			breadcrumbs: isLandscapeReport
+				? [
+						{
+							label: "Landscape",
+							href: `/reports/${context.reportSlug}/overview`,
+						},
+						{ label: input.title },
+					]
+				: [
+						{ label: "Home", href: "/" },
+						{
+							label: context.reportTitle,
+							href: `/reports/${context.reportSlug}/overview`,
+						},
+						{ label: input.title },
+					],
+			scopeLabel: isLandscapeReport
+				? `Landscape for ${context.reportTitle}`
+				: `Report for ${context.reportTitle}`,
 			sessionLabel,
 			pageTitle: input.title,
 			subtitle: input.subtitle,
@@ -206,9 +214,8 @@ export function buildHostedShellModel(
 		}),
 		navSections: buildRepositoryNavSections(context),
 		breadcrumbs: [
-			{ label: "Home", href: "/" },
 			{
-				label: context.reportTitle,
+				label: "Landscape",
 				href: `/reports/${context.reportSlug}/overview`,
 			},
 			{

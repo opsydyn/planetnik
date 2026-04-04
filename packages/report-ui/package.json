@@ -12,10 +12,13 @@
 		"./shell/Breadcrumb": "./src/shell/Breadcrumb.astro",
 		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro",
 		"./charts/HorizontalBarChart": "./src/charts/HorizontalBarChart.tsx",
+		"./charts/DonutChart": "./src/charts/DonutChart.tsx",
 		"./tables/ReportDataGrid": "./src/tables/ReportDataGrid.tsx",
 		"./tables/ReportDataGrid.types": "./src/tables/ReportDataGrid.types.ts",
+		"./tables/StaticReportTable": "./src/tables/StaticReportTable.astro",
 		"./views/LandscapeRepositoriesView": "./src/views/LandscapeRepositoriesView.astro",
-		"./views/LandscapeContributorsView": "./src/views/LandscapeContributorsView.astro"
+		"./views/LandscapeContributorsView": "./src/views/LandscapeContributorsView.astro",
+		"./views/LandscapeOverviewView": "./src/views/LandscapeOverviewView.astro"
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
@@ -27,6 +30,7 @@
 		"@tanstack/react-table": "^8.21.3",
 		"@visx/group": "^3.12.0",
 		"@visx/scale": "^3.12.0",
+		"@visx/shape": "^3.12.0",
 		"@visx/tooltip": "^3.12.0",
 		"@phosphor-icons/react": "^2.1.10",
 		"react": "^19.2.4"

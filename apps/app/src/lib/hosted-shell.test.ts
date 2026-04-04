@@ -169,6 +169,13 @@ describe("hosted shell", () => {
 				],
 			},
 		]);
+		expect(shell.breadcrumbs).toEqual([
+			{
+				label: "Landscape",
+				href: "/reports/platform-landscape/overview",
+			},
+			{ label: "Security" },
+		]);
 	});
 
 	test("keeps repo drilldown navigation anchored in the landscape inventory", () => {
@@ -236,6 +243,21 @@ describe("hosted shell", () => {
 				},
 			],
 		});
+		expect(shell.breadcrumbs).toEqual([
+			{
+				label: "Landscape",
+				href: "/reports/platform-landscape/overview",
+			},
+			{
+				label: "Repositories",
+				href: "/reports/platform-landscape/repositories",
+			},
+			{
+				label: "Catalog API",
+				href: "/reports/platform-landscape/repositories/catalog-api",
+			},
+			{ label: "Metrics" },
+		]);
 	});
 
 	test("encodes repo route params in repository breadcrumbs and drilldown links", () => {
@@ -282,7 +304,7 @@ describe("hosted shell", () => {
 		expect(shell.navSections[1]?.items[0]?.href).toBe(
 			"/reports/platform-landscape/repositories/acme$2Fcatalog-api",
 		);
-		expect(shell.breadcrumbs[3]).toEqual({
+		expect(shell.breadcrumbs[2]).toEqual({
 			label: "Catalog API",
 			href: "/reports/platform-landscape/repositories/acme$2Fcatalog-api",
 		});
@@ -353,8 +375,7 @@ describe("hosted shell", () => {
 			},
 		]);
 		expect(shell.breadcrumbs).toEqual([
-			{ label: "Home", href: "/" },
-			{ label: "Platform Landscape", href: "/reports/platform-landscape/overview" },
+			{ label: "Landscape", href: "/reports/platform-landscape/overview" },
 			{
 				label: "Repositories",
 				href: "/reports/platform-landscape/repositories",

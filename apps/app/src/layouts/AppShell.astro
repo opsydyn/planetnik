@@ -15,9 +15,10 @@ interface Props {
 	title: string;
 	subtitle: string;
 	shellContext?: HostedShellContext;
+	headerMode?: "full" | "breadcrumbs";
 }
 
-const { title, subtitle, shellContext } = Astro.props;
+const { title, subtitle, shellContext, headerMode = "full" } = Astro.props;
 const userEmail =
 	typeof Astro.locals.user?.email === "string" ? Astro.locals.user.email : null;
 const shell = buildHostedShellModel({
@@ -167,24 +168,30 @@ const shell = buildHostedShellModel({
 				</button>
 
 				<main>
-					<div class="app-main-header">
-						<div class="app-main-copy">
-							{shell.breadcrumbs.length > 0 ? (
-								<Breadcrumb items={shell.breadcrumbs} />
-							) : null}
-							<p class="eyebrow">Hosted report shell</p>
-							<h1 class="app-page-title">{shell.pageTitle}</h1>
-							<p class="app-page-subtitle">{shell.subtitle}</p>
-						</div>
+					{headerMode === "full" ? (
+						<div class="app-main-header">
+							<div class="app-main-copy">
+								{shell.breadcrumbs.length > 0 ? (
+									<Breadcrumb items={shell.breadcrumbs} />
+								) : null}
+								<p class="eyebrow">Hosted report shell</p>
+								<h1 class="app-page-title">{shell.pageTitle}</h1>
+								<p class="app-page-subtitle">{shell.subtitle}</p>
+							</div>
 
-						<div class="app-topbar-meta">
-							<span class="status-pill">
-								<span class="status-dot"></span>
-								{shell.sessionLabel}
-							</span>
-							<a class="button-secondary" href="/sign-out">Sign out</a>
+							<div class="app-topbar-meta">
+								<span class="status-pill">
+									<span class="status-dot"></span>
+									{shell.sessionLabel}
+								</span>
+								<a class="button-secondary" href="/sign-out">Sign out</a>
+							</div>
 						</div>
-					</div>
+					) : shell.breadcrumbs.length > 0 ? (
+						<div class="app-breadcrumbs-only">
+							<Breadcrumb items={shell.breadcrumbs} />
+						</div>
+					) : null}
 
 					<section class="app-surface-panel">
 						<slot />

@@ -26,6 +26,7 @@ const {
 	readReportFilesView,
 	readReportHotspotsSummary,
 	readReportImpactSummary,
+	readReportLandscapeOverviewSummary,
 	readReportMetricsSummary,
 	readReportCommitsSummary,
 	readReportSecuritySummary,
@@ -186,6 +187,80 @@ describe("runtime report dataset helpers", () => {
 			totalLinesOfCode: 91234,
 			commits30d: 87,
 			commits90d: 241,
+		});
+	});
+
+	test("reads a landscape overview summary with cards, languages, and top repositories", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_overview.json"), {
+			title: "Landscape Overview",
+			landscapeName: "Platform Landscape",
+			repositoryCount: 12,
+			contributorCount: 34,
+			totals: {
+				mainLinesOfCode: 80456,
+				totalLinesOfCode: 91234,
+				contributorCount30Days: 7,
+				commits30d: 87,
+				commits90d: 241,
+			},
+			languages: [
+				{
+					extension: "*.ts",
+					linesOfCode: 50231,
+					repositories: 8,
+				},
+			],
+			topRepositories: [
+				{
+					name: "web-app",
+					repoKey: "acme/web-app",
+					mainLinesOfCode: 18450,
+					contributors: 4,
+					latestCommitDate: "2026-03-31",
+				},
+			],
+		});
+		writeJson(join(dataDir, "landscape_tags.json"), {
+			tagCount: 9,
+		});
+		writeJson(join(dataDir, "landscape_teams.json"), {
+			teamCount: 3,
+			teams: [],
+		});
+
+		expect(readReportLandscapeOverviewSummary(dataDir)).toEqual({
+			title: "Landscape Overview",
+			landscapeName: "Platform Landscape",
+			repositoryCount: 12,
+			contributorCount: 34,
+			teamCount: 3,
+			tagCount: 9,
+			totals: {
+				mainLinesOfCode: 80456,
+				totalLinesOfCode: 91234,
+				contributorCount30Days: 7,
+				commits30d: 87,
+				commits90d: 241,
+			},
+			languages: [
+				{
+					extension: "*.ts",
+					linesOfCode: 50231,
+					repositories: 8,
+				},
+			],
+			topRepositories: [
+				{
+					name: "web-app",
+					repoKey: "acme/web-app",
+					mainLinesOfCode: 18450,
+					contributors: 4,
+					latestCommitDate: "2026-03-31",
+				},
+			],
 		});
 	});
 

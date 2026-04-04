@@ -181,6 +181,10 @@ input {
 	margin-bottom: 1.25rem;
 }
 
+.app-breadcrumbs-only {
+	margin-bottom: 1.25rem;
+}
+
 .app-main-copy {
 	display: grid;
 	gap: 0.7rem;

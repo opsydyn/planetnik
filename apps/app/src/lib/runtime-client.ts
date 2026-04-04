@@ -556,6 +556,34 @@ export type RuntimeReportLandscapeRepositories = {
   }>;
 };
 
+export type RuntimeReportLandscapeOverview = {
+  readonly title: string;
+  readonly landscapeName: string;
+  readonly repositoryCount: number;
+  readonly contributorCount: number;
+  readonly teamCount: number;
+  readonly tagCount: number;
+  readonly totals: {
+    readonly mainLinesOfCode: number;
+    readonly totalLinesOfCode: number;
+    readonly contributorCount30Days: number;
+    readonly commits30d: number;
+    readonly commits90d: number;
+  };
+  readonly languages: ReadonlyArray<{
+    readonly extension: string;
+    readonly linesOfCode: number;
+    readonly repositories: number;
+  }>;
+  readonly topRepositories: ReadonlyArray<{
+    readonly name: string;
+    readonly repoKey: string;
+    readonly mainLinesOfCode: number;
+    readonly contributors: number;
+    readonly latestCommitDate: string;
+  }>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -975,6 +1003,20 @@ export async function getRuntimeReportLandscapeRepositories(
   }
 
   return data.repositories;
+}
+
+export async function getRuntimeReportLandscapeOverview(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportLandscapeOverview | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    ["landscape-overview"].get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.overview;
 }
 
 export async function getRuntimeReportLandscapeRepositoryMetrics(

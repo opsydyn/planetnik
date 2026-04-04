@@ -366,6 +366,34 @@ export type ReportLandscapeRepositoriesSummary = {
 	}>;
 };
 
+export type ReportLandscapeOverviewSummary = {
+	readonly title: string;
+	readonly landscapeName: string;
+	readonly repositoryCount: number;
+	readonly contributorCount: number;
+	readonly teamCount: number;
+	readonly tagCount: number;
+	readonly totals: {
+		readonly mainLinesOfCode: number;
+		readonly totalLinesOfCode: number;
+		readonly contributorCount30Days: number;
+		readonly commits30d: number;
+		readonly commits90d: number;
+	};
+	readonly languages: ReadonlyArray<{
+		readonly extension: string;
+		readonly linesOfCode: number;
+		readonly repositories: number;
+	}>;
+	readonly topRepositories: ReadonlyArray<{
+		readonly name: string;
+		readonly repoKey: string;
+		readonly mainLinesOfCode: number;
+		readonly contributors: number;
+		readonly latestCommitDate: string;
+	}>;
+};
+
 export type ReportComponentsSummary = {
 	readonly totalComponents: number;
 	readonly singleOwnerComponents: number;
@@ -1517,6 +1545,152 @@ export function readReportArtifactSummary(
 		linesOfCode,
 		duplicatedLines,
 		duplicationPercentage,
+	};
+}
+
+export function readReportLandscapeOverviewSummary(
+	dataDir: string,
+): ReportLandscapeOverviewSummary | null {
+	const overview = readJsonRecord(dataDir, "landscape_overview.json");
+	if (!overview) {
+		return null;
+	}
+
+	const title = typeof overview.title === "string" ? overview.title : null;
+	const landscapeName =
+		typeof overview.landscapeName === "string" ? overview.landscapeName : null;
+	const repositoryCount =
+		typeof overview.repositoryCount === "number" ? overview.repositoryCount : null;
+	const contributorCount =
+		typeof overview.contributorCount === "number" ? overview.contributorCount : null;
+	const totals =
+		overview.totals && typeof overview.totals === "object"
+			? (overview.totals as Record<string, unknown>)
+			: null;
+
+	if (!title || !landscapeName || repositoryCount === null || contributorCount === null || !totals) {
+		return null;
+	}
+
+	const mainLinesOfCode =
+		typeof totals.mainLinesOfCode === "number" ? totals.mainLinesOfCode : null;
+	const totalLinesOfCode =
+		typeof totals.totalLinesOfCode === "number" ? totals.totalLinesOfCode : null;
+	const contributorCount30Days =
+		typeof totals.contributorCount30Days === "number"
+			? totals.contributorCount30Days
+			: null;
+	const commits30d =
+		typeof totals.commits30d === "number" ? totals.commits30d : null;
+	const commits90d =
+		typeof totals.commits90d === "number" ? totals.commits90d : null;
+
+	if (
+		mainLinesOfCode === null ||
+		totalLinesOfCode === null ||
+		contributorCount30Days === null ||
+		commits30d === null ||
+		commits90d === null
+	) {
+		return null;
+	}
+
+	const languages = Array.isArray(overview.languages)
+		? overview.languages
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => {
+					const extension =
+						typeof item.extension === "string" ? item.extension : null;
+					const linesOfCode =
+						typeof item.linesOfCode === "number" ? item.linesOfCode : null;
+					const repositories =
+						typeof item.repositories === "number" ? item.repositories : null;
+
+					if (!extension || linesOfCode === null || repositories === null) {
+						return null;
+					}
+
+					return {
+						extension,
+						linesOfCode,
+						repositories,
+					};
+				})
+				.filter((item): item is NonNullable<typeof item> => item !== null)
+		: [];
+
+	const topRepositories = Array.isArray(overview.topRepositories)
+		? overview.topRepositories
+				.filter(
+					(item): item is Record<string, unknown> =>
+						typeof item === "object" && item !== null,
+				)
+				.map((item) => {
+					const name = typeof item.name === "string" ? item.name : null;
+					const repoKey =
+						typeof item.repoKey === "string" ? item.repoKey : null;
+					const mainLinesOfCode =
+						typeof item.mainLinesOfCode === "number"
+							? item.mainLinesOfCode
+							: null;
+					const contributors =
+						typeof item.contributors === "number" ? item.contributors : null;
+					const latestCommitDate =
+						typeof item.latestCommitDate === "string"
+							? item.latestCommitDate
+							: null;
+
+					if (
+						!name ||
+						!repoKey ||
+						mainLinesOfCode === null ||
+						contributors === null ||
+						latestCommitDate === null
+					) {
+						return null;
+					}
+
+					return {
+						name,
+						repoKey,
+						mainLinesOfCode,
+						contributors,
+						latestCommitDate,
+					};
+				})
+				.filter((item): item is NonNullable<typeof item> => item !== null)
+		: [];
+
+	const tags = readJsonRecord(dataDir, "landscape_tags.json");
+	const tagCount = typeof tags?.tagCount === "number" ? tags.tagCount : 0;
+
+	const teams = readJsonRecord(dataDir, "landscape_teams.json");
+	const teamCount =
+		typeof teams?.teamCount === "number"
+			? teams.teamCount
+			: Array.isArray(teams?.teams)
+				? teams.teams.length
+				: 0;
+
+	return {
+		title,
+		landscapeName,
+		repositoryCount,
+		contributorCount,
+		teamCount,
+		tagCount,
+		totals: {
+			mainLinesOfCode,
+			totalLinesOfCode,
+			contributorCount30Days,
+			commits30d,
+			commits90d,
+		},
+		languages,
+		topRepositories,
 	};
 }
 

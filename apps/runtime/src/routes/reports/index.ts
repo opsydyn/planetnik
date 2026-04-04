@@ -20,6 +20,7 @@ import {
   readReportHotspotsSummary,
   readReportCommitsSummary,
   readReportLandscapeRepositoriesSummary,
+  readReportLandscapeOverviewSummary,
   readReportLandscapeRepositorySummary,
   readReportLandscapeRepositoryMetricsSummary,
   readReportLandscapeRepositoryCommitsSummary,
@@ -163,6 +164,42 @@ const ReportContributorSchema = Schema.Struct({
       repoKey: Schema.String,
     }),
   ),
+})
+
+const ReportLandscapeOverviewSummarySchema = Schema.Struct({
+  title: Schema.String,
+  landscapeName: Schema.String,
+  repositoryCount: Schema.Number,
+  contributorCount: Schema.Number,
+  teamCount: Schema.Number,
+  tagCount: Schema.Number,
+  totals: Schema.Struct({
+    mainLinesOfCode: Schema.Number,
+    totalLinesOfCode: Schema.Number,
+    contributorCount30Days: Schema.Number,
+    commits30d: Schema.Number,
+    commits90d: Schema.Number,
+  }),
+  languages: Schema.Array(
+    Schema.Struct({
+      extension: Schema.String,
+      linesOfCode: Schema.Number,
+      repositories: Schema.Number,
+    }),
+  ),
+  topRepositories: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      repoKey: Schema.String,
+      mainLinesOfCode: Schema.Number,
+      contributors: Schema.Number,
+      latestCommitDate: Schema.String,
+    }),
+  ),
+})
+
+const ReportLandscapeOverviewResponseSchema = Schema.Struct({
+  overview: ReportLandscapeOverviewSummarySchema,
 })
 
 const ReportContributorsResponseSchema = Schema.Struct({
@@ -1014,6 +1051,62 @@ export const reportRoutes = new Elysia({ name: "reports" })
       },
       context,
       artifact,
+    })
+  })
+  .get("/api/reports/:slug/landscape-overview", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found || !found.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const overview = readReportLandscapeOverviewSummary(found.analysisRoot)
+
+    if (!overview) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return Schema.decodeUnknownSync(ReportLandscapeOverviewResponseSchema)({
+      overview,
     })
   })
   .get("/api/reports/:slug/contributors", async ({ request, params }) => {
