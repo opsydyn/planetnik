@@ -11,8 +11,10 @@
 		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro",
 		"./shell/Breadcrumb": "./src/shell/Breadcrumb.astro",
 		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro",
-		"./charts/HorizontalBarChart": "./src/charts/HorizontalBarChart.tsx",
+		"./charts/DistributionChart": "./src/charts/DistributionChart.tsx",
 		"./charts/DonutChart": "./src/charts/DonutChart.tsx",
+		"./charts/HorizontalBarChart": "./src/charts/HorizontalBarChart.tsx",
+		"./charts/LineChart": "./src/charts/LineChart.tsx",
 		"./tables/ReportDataGrid": "./src/tables/ReportDataGrid.tsx",
 		"./tables/ReportDataGrid.types": "./src/tables/ReportDataGrid.types.ts",
 		"./tables/StaticReportTable": "./src/tables/StaticReportTable.astro",
@@ -22,6 +24,7 @@
 		"./views/LandscapeTagsView": "./src/views/LandscapeTagsView.astro",
 		"./views/LandscapeOverviewView": "./src/views/LandscapeOverviewView.astro",
 		"./views/LandscapeRepositoryDashboardView": "./src/views/LandscapeRepositoryDashboardView.astro",
+		"./views/RepositoryCommitsView": "./src/views/RepositoryCommitsView.astro",
 		"./views/RepositoryMetricsView": "./src/views/RepositoryMetricsView.astro"
 	},
 	"scripts": {
@@ -32,6 +35,8 @@
 	"dependencies": {
 		"@base-ui/react": "^1.3.0",
 		"@tanstack/react-table": "^8.21.3",
+		"@visx/axis": "^3.12.0",
+		"@visx/grid": "^3.12.0",
 		"@visx/group": "^3.12.0",
 		"@visx/scale": "^3.12.0",
 		"@visx/shape": "^3.12.0",

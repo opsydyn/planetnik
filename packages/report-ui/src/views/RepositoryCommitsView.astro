@@ -1,0 +1,221 @@
+---
+import DistributionChart from "../charts/DistributionChart";
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import LineChart, { type LineSeries } from "../charts/LineChart";
+import StaticReportTable from "../tables/StaticReportTable.astro";
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+	readonly detail?: string | null;
+}
+
+interface ActivityItem {
+	readonly label: string;
+	readonly value: number;
+	readonly detail: string;
+}
+
+interface ChartItem {
+	readonly label: string;
+	readonly value: number;
+}
+
+interface ExtensionRow {
+	readonly extension: string;
+	readonly commitsCount: string;
+	readonly committersCount: string;
+	readonly filesCount: string;
+	readonly commitsCount30Days: string;
+	readonly commitsCount90Days: string;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	backLabel?: string;
+	cards: ReadonlyArray<MetricCard>;
+	timelineSeries: ReadonlyArray<LineSeries>;
+	activityData: ReadonlyArray<ActivityItem>;
+	extensionBarData: ReadonlyArray<ChartItem>;
+	extensionRows: ReadonlyArray<ExtensionRow>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	backLabel = "Back to repository",
+	cards,
+	timelineSeries,
+	activityData,
+	extensionBarData,
+	extensionRows,
+} = Astro.props as Props;
+
+const yearlyTrendsHelpText =
+	"Tracks commits and contributors over time so you can separate growth, slowdown, and staffing shifts. Investigate years where change volume rises faster than contributor coverage.";
+const activeContributorsHelpText =
+	"Shows how many contributors stayed active across the timeline. Use drops here to spot knowledge concentration and rising delivery risk.";
+const byExtensionHelpText =
+	"Highlights which file types absorb the most change. High-commit extensions usually deserve stronger tests, clearer ownership, and closer hotspot review.";
+---
+
+{backHref ? (
+	<a class="back-link" href={backHref}>&larr; {backLabel}</a>
+) : null}
+
+<header class="page-header">
+	<div>
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+</header>
+
+<section class="stats-grid">
+	{cards.map((card) => (
+		<article class="stat-card">
+			<div class="stat-value">{card.value}</div>
+			<div class="stat-label">{card.label}</div>
+			{card.detail ? <div class="stat-detail">{card.detail}</div> : null}
+		</article>
+	))}
+</section>
+
+{timelineSeries.length > 0 && (
+	<section class="chart-section">
+		<h3>Commits &amp; Contributors Per Year</h3>
+		<LineChart client:visible series={timelineSeries} xLabel="Year" yLabel="Count" helpText={yearlyTrendsHelpText} />
+	</section>
+)}
+
+{activityData.length > 0 && (
+	<section class="chart-section">
+		<h3>Active Contributors Over Time</h3>
+		<DistributionChart client:visible data={activityData} helpText={activeContributorsHelpText} />
+	</section>
+)}
+
+{extensionBarData.length > 0 && (
+	<section class="chart-section">
+		<h3>Commits by File Extension</h3>
+		<HorizontalBarChart client:visible data={extensionBarData} valueLabel="commits" helpText={byExtensionHelpText} />
+	</section>
+)}
+
+{extensionRows.length > 0 && (
+	<section class="table-section">
+		<StaticReportTable ariaLabel="Commits by file extension">
+			<thead>
+				<tr>
+					<th><span>Extension</span></th>
+					<th><span>Commits</span></th>
+					<th><span>Committers</span></th>
+					<th><span>Files</span></th>
+					<th><span>30d Commits</span></th>
+					<th><span>90d Commits</span></th>
+				</tr>
+			</thead>
+			<tbody>
+				{extensionRows.map((row) => (
+					<tr>
+						<td class="ext"><span class="report-static-table__code">.{row.extension}</span></td>
+						<td class="num report-static-table__num">{row.commitsCount}</td>
+						<td class="num report-static-table__num">{row.committersCount}</td>
+						<td class="num report-static-table__num">{row.filesCount}</td>
+						<td class="num report-static-table__num">{row.commitsCount30Days}</td>
+						<td class="num report-static-table__num">{row.commitsCount90Days}</td>
+					</tr>
+				))}
+			</tbody>
+		</StaticReportTable>
+	</section>
+)}
+
+<style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: 1rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+
+	.back-link:hover {
+		color: var(--color-accent);
+	}
+
+	.page-header {
+		margin-bottom: 1.25rem;
+	}
+
+	.page-header h2 {
+		margin-bottom: 0.25rem;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+		margin-top: 0.35rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.stat-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.stat-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.stat-detail {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+	}
+
+	.chart-section {
+		margin-bottom: 2rem;
+	}
+
+	.chart-section h3 {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+
+	.table-section {
+		margin-bottom: 2rem;
+	}
+
+	.ext {
+		font-family: "SF Mono", "Fira Code", monospace;
+		font-weight: 500;
+	}
+
+	.num {
+		text-align: right;
+		font-family: "SF Mono", "Fira Code", monospace;
+	}
+</style>
