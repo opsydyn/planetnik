@@ -1,9 +1,6 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart";
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import RepositoryDuplicationView from "@planetnik/report-ui/views/RepositoryDuplicationView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../lib/chartHelp";
 import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
@@ -13,9 +10,7 @@ import {
 import { route } from "../../../../lib/route";
 
 interface DuplicateFileBlock {
-	file: {
-		relativePath: string;
-	};
+	file: { relativePath: string };
 	startLine: number;
 	endLine: number;
 }
@@ -47,9 +42,7 @@ const duplicates =
 const dupLines = repoSummary?.duplication?.duplicatedLines ?? 0;
 const dupPct = repoSummary?.duplication?.percentage ?? 0;
 
-const sorted = [...duplicates].sort(
-	(left, right) => right.blockSize - left.blockSize,
-);
+const sorted = [...duplicates].sort((a, b) => b.blockSize - a.blockSize);
 
 const buckets = [
 	{ label: "6-10 lines", min: 6, max: 10, count: 0 },
@@ -60,21 +53,16 @@ const buckets = [
 ];
 for (const duplicate of sorted) {
 	for (const bucket of buckets) {
-		if (
-			duplicate.blockSize >= bucket.min &&
-			duplicate.blockSize <= bucket.max
-		) {
+		if (duplicate.blockSize >= bucket.min && duplicate.blockSize <= bucket.max) {
 			bucket.count++;
 			break;
 		}
 	}
 }
 
-const distData = buckets.map((bucket) => ({
-	label: bucket.label,
-	value: bucket.count,
-	detail: `${bucket.count} blocks`,
-}));
+const blockSizeDistribution = buckets
+	.filter((b) => b.count > 0)
+	.map((b) => ({ label: b.label, value: b.count, detail: `${b.count} blocks` }));
 
 const fileDupCount = new Map<string, number>();
 for (const duplicate of sorted) {
@@ -85,89 +73,33 @@ for (const duplicate of sorted) {
 }
 
 const mostDuplicatedFiles = [...fileDupCount.entries()]
-	.sort((left, right) => right[1] - left[1])
+	.sort((a, b) => b[1] - a[1])
 	.slice(0, 15)
-	.map(([path, count]) => ({
-		label: path.split("/").pop() ?? path,
-		value: count,
-	}));
+	.map(([path, count]) => ({ label: path.split("/").pop() ?? path, value: count }));
 
-const duplicationRows = sorted.map((duplicate, index) => ({
+const blockGridRows = sorted.map((duplicate, index) => ({
 	id: `dup-${index}-${duplicate.blockSize}`,
 	blockSize: duplicate.blockSize,
 	files: duplicate.duplicatedFileBlocks.length,
 	locations: duplicate.duplicatedFileBlocks
-		.map(
-			(block) =>
-				`${block.file.relativePath}:${block.startLine}-${block.endLine}`,
-		)
+		.map((block) => `${block.file.relativePath}:${block.startLine}-${block.endLine}`)
 		.join("\n"),
 }));
+
+const cards = [
+	{ label: "Duplication", value: `${dupPct.toFixed(1)}%`, detail: null },
+	{ label: "Duplicated Lines", value: dupLines.toLocaleString(), detail: null },
+	{ label: "Duplicate Blocks", value: sorted.length.toLocaleString(), detail: null },
+];
 ---
 
 <Dashboard title={`${repoName} Duplication`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Duplication</h2>
-
-  <div class="cards">
-    <div class="card">
-      <div class="card-value">{dupPct.toFixed(1)}%</div>
-      <div class="card-label">Duplication</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{dupLines.toLocaleString()}</div>
-      <div class="card-label">Duplicated Lines</div>
-    </div>
-    <div class="card">
-      <div class="card-value">{sorted.length.toLocaleString()}</div>
-      <div class="card-label">Duplicate Blocks</div>
-    </div>
-  </div>
-
-  <section class="section">
-    <h3>Block Size Distribution</h3>
-    <DistributionChart client:load data={distData} helpText={chartHelp.duplication.blockDistribution} />
-  </section>
-
-  {mostDuplicatedFiles.length > 0 && (
-    <section class="section">
-      <h3>Most Duplicated Files</h3>
-      <HorizontalBarChart
-        client:load
-        data={mostDuplicatedFiles}
-        valueLabel="duplicate blocks"
-        helpText={chartHelp.duplication.mostDuplicatedFiles}
-      />
-    </section>
-  )}
-
-  <section class="section">
-    <h3>Largest Duplicate Blocks</h3>
-    <ReportDataGrid
-      client:visible
-      title="Duplicate Block Table"
-      description="Search exact files and line ranges while paging through duplicate blocks in this repository."
-      searchPlaceholder="Search duplicated file path or line range"
-      rows={duplicationRows}
-      columns={[
-        { field: "blockSize", headerName: "Block Size", type: "number", minWidth: 130, sort: "desc" },
-        { field: "files", headerName: "Files", type: "number", minWidth: 110 },
-        { field: "locations", headerName: "Locations", type: "multiline", minWidth: 460, flex: 1.5, tooltipField: "locations" },
-      ]}
-      paginationPageSize={15}
-    />
-  </section>
+	<RepositoryDuplicationView
+		heading={repoName}
+		subtitle={`Duplicate block analysis for ${repoName}.`}
+		cards={cards}
+		blockSizeDistribution={blockSizeDistribution}
+		mostDuplicatedFiles={mostDuplicatedFiles}
+		blockGridRows={blockGridRows}
+	/>
 </Dashboard>
-
-<style>
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
-  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
-  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
-  .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  @media (max-width: 640px) {
-    .cards { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-    .card { padding: 1rem; }
-    .card-value { font-size: 1.35rem; }
-  }
-</style>

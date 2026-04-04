@@ -1,0 +1,197 @@
+---
+import DistributionChart from "../charts/DistributionChart";
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import ReportDataGrid from "../tables/ReportDataGrid";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+	readonly detail?: string | null;
+}
+
+interface DistributionItem {
+	readonly label: string;
+	readonly value: number;
+	readonly detail: string;
+}
+
+interface ChartItem {
+	readonly label: string;
+	readonly value: number;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	backLabel?: string;
+	cards: ReadonlyArray<MetricCard>;
+	blockSizeDistribution: ReadonlyArray<DistributionItem>;
+	mostDuplicatedFiles: ReadonlyArray<ChartItem>;
+	blockGridRows: ReadonlyArray<GridRow>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	backLabel = "Back to repository",
+	cards,
+	blockSizeDistribution,
+	mostDuplicatedFiles,
+	blockGridRows,
+} = Astro.props as Props;
+
+const blockDistributionHelpText =
+	"Shows how duplicate blocks are distributed by size. Large or numerous blocks are good candidates for extraction before change spreads more copy-paste risk.";
+const mostDuplicatedFilesHelpText =
+	"Ranks files by duplicate-block count. Start with files that are both highly duplicated and actively changed, because they compound future maintenance cost.";
+---
+
+{backHref ? (
+	<a class="back-link" href={backHref}>&larr; {backLabel}</a>
+) : null}
+
+<header class="page-header">
+	<div>
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+</header>
+
+<section class="stats-grid">
+	{cards.map((card) => (
+		<article class="stat-card">
+			<div class="stat-value">{card.value}</div>
+			<div class="stat-label">{card.label}</div>
+			{card.detail ? <div class="stat-detail">{card.detail}</div> : null}
+		</article>
+	))}
+</section>
+
+{blockSizeDistribution.length > 0 && (
+	<section class="chart-section">
+		<h3>Block Size Distribution</h3>
+		<DistributionChart client:visible data={blockSizeDistribution} helpText={blockDistributionHelpText} />
+	</section>
+)}
+
+{mostDuplicatedFiles.length > 0 && (
+	<section class="chart-section">
+		<h3>Most Duplicated Files</h3>
+		<HorizontalBarChart
+			client:visible
+			data={mostDuplicatedFiles}
+			valueLabel="duplicate blocks"
+			helpText={mostDuplicatedFilesHelpText}
+		/>
+	</section>
+)}
+
+{blockGridRows.length > 0 && (
+	<section class="chart-section">
+		<h3>Largest Duplicate Blocks</h3>
+		<ReportDataGrid
+			client:visible
+			title="Duplicate Block Table"
+			description="Search exact files and line ranges while paging through duplicate blocks in this repository."
+			searchPlaceholder="Search duplicated file path or line range"
+			rows={blockGridRows}
+			columns={[
+				{ field: "blockSize", headerName: "Block Size", type: "number", minWidth: 130, sort: "desc" },
+				{ field: "files", headerName: "Files", type: "number", minWidth: 110 },
+				{ field: "locations", headerName: "Locations", type: "multiline", minWidth: 460, flex: 1.5, tooltipField: "locations" },
+			]}
+			paginationPageSize={15}
+		/>
+	</section>
+)}
+
+<style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: 1rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+
+	.back-link:hover {
+		color: var(--color-accent);
+	}
+
+	.page-header {
+		margin-bottom: 1.25rem;
+	}
+
+	.page-header h2 {
+		margin-bottom: 0.25rem;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.9rem;
+		margin-top: 0.35rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.stat-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.stat-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.stat-detail {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+	}
+
+	.chart-section {
+		margin-bottom: 2rem;
+	}
+
+	.chart-section h3 {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+
+	@media (max-width: 640px) {
+		.stats-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 0.75rem;
+		}
+
+		.stat-card {
+			padding: 1rem;
+		}
+
+		.stat-value {
+			font-size: 1.35rem;
+		}
+	}
+</style>

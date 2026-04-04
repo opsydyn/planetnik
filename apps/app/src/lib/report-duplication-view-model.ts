@@ -1,3 +1,4 @@
+import type { GridRow } from "@planetnik/report-ui/tables/ReportDataGrid.types";
 import type { RuntimeReportDuplication } from "./runtime-client.js";
 
 export type ReportDuplicationCard = {
@@ -6,50 +7,48 @@ export type ReportDuplicationCard = {
 	readonly detail: string | null;
 };
 
-export type ReportDuplicationListItem = {
-	readonly label: string;
-	readonly value: string;
-};
-
 export type ReportDuplicationViewModel = {
 	readonly heading: string;
 	readonly subtitle: string;
 	readonly cards: ReadonlyArray<ReportDuplicationCard>;
-	readonly fileRows: ReadonlyArray<ReportDuplicationListItem>;
-	readonly blockRows: ReadonlyArray<ReportDuplicationListItem>;
+	readonly blockSizeDistribution: ReadonlyArray<{ readonly label: string; readonly value: number; readonly detail: string }>;
+	readonly mostDuplicatedFiles: ReadonlyArray<{ readonly label: string; readonly value: number }>;
+	readonly blockGridRows: ReadonlyArray<GridRow>;
 };
 
 export function buildReportDuplicationViewModel(input: {
 	readonly reportName: string;
 	readonly duplication: RuntimeReportDuplication;
 }): ReportDuplicationViewModel {
+	const { duplication } = input;
+
 	return {
 		heading: input.reportName,
 		subtitle: "Duplicate block summary from the linked Planetnik dataset.",
 		cards: [
 			{
 				label: "Duplication",
-				value: `${input.duplication.duplicationPercentage.toFixed(1)}%`,
+				value: `${duplication.duplicationPercentage.toFixed(1)}%`,
 				detail: null,
 			},
 			{
 				label: "Duplicated Lines",
-				value: input.duplication.duplicatedLines.toLocaleString("en-GB"),
+				value: duplication.duplicatedLines.toLocaleString("en-GB"),
 				detail: null,
 			},
 			{
 				label: "Duplicate Blocks",
-				value: input.duplication.duplicateBlocksCount.toLocaleString("en-GB"),
+				value: duplication.duplicateBlocksCount.toLocaleString("en-GB"),
 				detail: null,
 			},
 		],
-		fileRows: input.duplication.mostDuplicatedFiles.map((file) => ({
-			label: file.label,
-			value: `${file.value.toLocaleString("en-GB")} duplicate blocks`,
-		})),
-		blockRows: input.duplication.largestDuplicateBlocks.map((block) => ({
-			label: `${block.blockSize.toLocaleString("en-GB")} lines across ${block.files.toLocaleString("en-GB")} files`,
-			value: block.locations.join(" | "),
+		blockSizeDistribution: duplication.blockSizeDistribution,
+		mostDuplicatedFiles: duplication.mostDuplicatedFiles,
+		blockGridRows: duplication.largestDuplicateBlocks.map((block, index) => ({
+			id: `dup-${index}-${block.blockSize}`,
+			blockSize: block.blockSize,
+			files: block.files,
+			locations: block.locations.join("\n"),
 		})),
 	};
 }

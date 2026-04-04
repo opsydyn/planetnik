@@ -27,6 +27,7 @@
 		"./views/LandscapeRepositoryDashboardView": "./src/views/LandscapeRepositoryDashboardView.astro",
 		"./views/RepositoryCommitsView": "./src/views/RepositoryCommitsView.astro",
 		"./views/RepositoryDependenciesView": "./src/views/RepositoryDependenciesView.astro",
+		"./views/RepositoryDuplicationView": "./src/views/RepositoryDuplicationView.astro",
 		"./views/RepositoryMetricsView": "./src/views/RepositoryMetricsView.astro"
 	},
 	"scripts": {
