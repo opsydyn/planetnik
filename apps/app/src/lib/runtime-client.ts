@@ -1278,6 +1278,22 @@ export async function getRuntimeReportLandscapeRepositoryImpact(
   return data.impact;
 }
 
+export async function getRuntimeReportLandscapeRepositoryHotspots(
+  cookie: string,
+  slug: string,
+  repo: string,
+): Promise<RuntimeReportHotspots | null> {
+  const { data } = await runtimeClient.api
+    .reports({ slug })
+    .repositories({ repo: encodeRuntimePathParam(repo) })
+    .hotspots.get(withRuntimeCookie(cookie));
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.hotspots;
+}
+
 export async function getRuntimeReportLandscapeRepositoryControls(
   cookie: string,
   slug: string,

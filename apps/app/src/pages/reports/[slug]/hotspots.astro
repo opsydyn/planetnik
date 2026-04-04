@@ -1,4 +1,5 @@
 ---
+import RepositoryHotspotsView from "@planetnik/report-ui/views/RepositoryHotspotsView";
 import AppShell from "../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import { buildReportHotspotsViewModel } from "../../../lib/report-hotspots-view-model.js";
@@ -34,54 +35,15 @@ const viewModel = buildReportHotspotsViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Hotspots</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route reads the same hotspot ranking export as the static
-				report app and keeps the backend contract explicit before the shared UI
-				pass.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/impact`}>
-					Open impact
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Hotspots</p>
-					<h2>{section.title}</h2>
-					{section.rows.length > 0 ? (
-						<ul class="todo-list">
-							{section.rows.map((row) => (
-								<li>
-									<strong>{row.label}</strong>: {row.value}
-								</li>
-							))}
-						</ul>
-					) : (
-						<p class="muted-copy">No exported hotspot rows are available.</p>
-					)}
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryHotspotsView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		cards={viewModel.cards}
+		severityData={viewModel.severityData}
+		severityColors={viewModel.severityColors}
+		kindData={viewModel.kindData}
+		dominantDimensionData={viewModel.dominantDimensionData}
+		topHotspotData={viewModel.topHotspotData}
+		hotspotRows={viewModel.hotspotRows}
+	/>
 </AppShell>

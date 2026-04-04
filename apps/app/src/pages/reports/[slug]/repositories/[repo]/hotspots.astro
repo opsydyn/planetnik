@@ -1,0 +1,69 @@
+---
+import RepositoryHotspotsView from "@planetnik/report-ui/views/RepositoryHotspotsView";
+import AppShell from "../../../../../layouts/AppShell.astro";
+import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
+import {
+	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryHref,
+} from "../../../../../lib/hosted-routes.js";
+import {
+	buildReportHotspotsViewModel,
+} from "../../../../../lib/report-hotspots-view-model.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeRepository,
+	getRuntimeReportLandscapeRepositoryHotspots,
+} from "../../../../../lib/runtime-client.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const repo = getHostedReportRepoKeyFromParam(Astro.params.repo ?? "");
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.reportMode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repository = repo
+	? await getRuntimeReportLandscapeRepository(cookie, slug, repo)
+	: null;
+if (!repository) {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const hotspots = await getRuntimeReportLandscapeRepositoryHotspots(cookie, slug, repo);
+if (!hotspots) {
+	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
+}
+
+const viewModel = buildReportHotspotsViewModel({
+	reportName: repository.name,
+	hotspots,
+});
+---
+
+<AppShell
+	title={`${viewModel.heading} Hotspots`}
+	subtitle={viewModel.subtitle}
+	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
+>
+	<RepositoryHotspotsView
+		heading={viewModel.heading}
+		subtitle={viewModel.subtitle}
+		backHref={getHostedReportRepositoryHref(slug, repo)}
+		cards={viewModel.cards}
+		severityData={viewModel.severityData}
+		severityColors={viewModel.severityColors}
+		kindData={viewModel.kindData}
+		dominantDimensionData={viewModel.dominantDimensionData}
+		topHotspotData={viewModel.topHotspotData}
+		hotspotRows={viewModel.hotspotRows}
+	/>
+</AppShell>

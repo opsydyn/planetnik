@@ -3695,6 +3695,13 @@ export function readReportLandscapeRepositoryDuplicationSummary(
 	return readReportDuplicationSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
 }
 
+export function readReportLandscapeRepositoryHotspotsSummary(
+	dataDir: string,
+	repoKey: string,
+): ReportHotspotsSummary | null {
+	return readReportHotspotsSummary(resolveLandscapeRepoDataDir(dataDir, repoKey));
+}
+
 export function readReportLandscapeRepositoryFilesView(
 	dataDir: string,
 	repoKey: string,

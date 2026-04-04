@@ -1,5 +1,5 @@
-import { Schema } from "@effect/schema"
 import { Elysia, t } from "elysia"
+import { Schema } from "@effect/schema"
 import { auth } from "../../lib/auth.js"
 import {
   createWorkspaceReport,
@@ -28,6 +28,7 @@ import {
   readReportLandscapeRepositoryCommitsSummary,
   readReportLandscapeRepositoryDependenciesSummary,
   readReportLandscapeRepositoryDuplicationSummary,
+  readReportLandscapeRepositoryHotspotsSummary,
   readReportLandscapeRepositoryFilesView,
   readReportLandscapeRepositoryUnitsView,
   readReportLandscapeRepositoryContributorsSummary,
@@ -44,8 +45,6 @@ import {
   readReportMetricsSummary,
   readReportTopologySummary,
   readReportLandscapeTopologySummary,
-  readReportComponentsSummary,
-  readReportCouplingSummary,
   readReportUnitsView,
   resolveReportDataSource,
 } from "../../lib/report-datasets.js"
@@ -1161,7 +1160,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
     const personalWorkspace = await ensurePersonalWorkspace(session)
     const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
 
-    if (!found || !found.analysisRoot) {
+    if (!found?.analysisRoot) {
       return new Response(
         JSON.stringify({
           error: "not_found",
@@ -1217,7 +1216,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
     const personalWorkspace = await ensurePersonalWorkspace(session)
     const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
 
-    if (!found || !found.analysisRoot) {
+    if (!found?.analysisRoot) {
       return new Response(
         JSON.stringify({
           error: "not_found",
@@ -1259,7 +1258,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
     const personalWorkspace = await ensurePersonalWorkspace(session)
     const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
 
-    if (!found || !found.analysisRoot) {
+    if (!found?.analysisRoot) {
       return new Response(
         JSON.stringify({
           error: "not_found",
@@ -1324,7 +1323,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
     const context = readReportContextSummary(found.analysisRoot)
     const contributors =
       context?.reportMode === "landscape"
-        ? readReportLandscapeContributorsSummary(found.analysisRoot)?.contributors ?? []
+        ? (readReportLandscapeContributorsSummary(found.analysisRoot)?.contributors ?? [])
         : readReportContributorsSummary(found.analysisRoot)
 
     return decodeReportContributorsResponse({
@@ -1437,9 +1436,10 @@ export const reportRoutes = new Elysia({ name: "reports" })
     }
 
     const context = readReportContextSummary(found.analysisRoot)
-    const topology = context?.reportMode === "landscape"
-      ? readReportLandscapeTopologySummary(found.analysisRoot)
-      : readReportTopologySummary(found.analysisRoot)
+    const topology =
+      context?.reportMode === "landscape"
+        ? readReportLandscapeTopologySummary(found.analysisRoot)
+        : readReportTopologySummary(found.analysisRoot)
     if (!topology) {
       return new Response(
         JSON.stringify({
@@ -2084,10 +2084,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const metrics = readReportLandscapeRepositoryMetricsSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const metrics = readReportLandscapeRepositoryMetricsSummary(found.analysisRoot, params.repo)
     if (!metrics) {
       return new Response(
         JSON.stringify({
@@ -2142,10 +2139,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const commits = readReportLandscapeRepositoryCommitsSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const commits = readReportLandscapeRepositoryCommitsSummary(found.analysisRoot, params.repo)
     if (!commits) {
       return new Response(
         JSON.stringify({
@@ -2200,10 +2194,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const dependencies = readReportLandscapeRepositoryDependenciesSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const dependencies = readReportLandscapeRepositoryDependenciesSummary(found.analysisRoot, params.repo)
     if (!dependencies) {
       return new Response(
         JSON.stringify({
@@ -2258,10 +2249,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const duplication = readReportLandscapeRepositoryDuplicationSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const duplication = readReportLandscapeRepositoryDuplicationSummary(found.analysisRoot, params.repo)
     if (!duplication) {
       return new Response(
         JSON.stringify({
@@ -2278,6 +2266,61 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return decodeReportDuplicationResponse({
       duplication,
+    })
+  })
+  .get("/api/reports/:slug/repositories/:repo/hotspots", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found?.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const hotspots = readReportLandscapeRepositoryHotspotsSummary(found.analysisRoot, params.repo)
+    if (!hotspots) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    return decodeReportHotspotsResponse({
+      hotspots,
     })
   })
   .get("/api/reports/:slug/repositories/:repo/files/:view", async ({ request, params }) => {
@@ -2330,11 +2373,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const files = readReportLandscapeRepositoryFilesView(
-      found.analysisRoot,
-      params.repo,
-      params.view,
-    )
+    const files = readReportLandscapeRepositoryFilesView(found.analysisRoot, params.repo, params.view)
     if (!files) {
       return new Response(
         JSON.stringify({
@@ -2403,11 +2442,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const units = readReportLandscapeRepositoryUnitsView(
-      found.analysisRoot,
-      params.repo,
-      params.view,
-    )
+    const units = readReportLandscapeRepositoryUnitsView(found.analysisRoot, params.repo, params.view)
     if (!units) {
       return new Response(
         JSON.stringify({
@@ -2462,10 +2497,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const contributors = readReportLandscapeRepositoryContributorsSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const contributors = readReportLandscapeRepositoryContributorsSummary(found.analysisRoot, params.repo)
 
     return decodeReportContributorsResponse({
       contributors,
@@ -2507,11 +2539,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const contributor = readReportLandscapeRepositoryContributorDetail(
-      found.analysisRoot,
-      params.repo,
-      params.email,
-    )
+    const contributor = readReportLandscapeRepositoryContributorDetail(found.analysisRoot, params.repo, params.email)
     if (!contributor) {
       return new Response(
         JSON.stringify({
@@ -2566,10 +2594,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const topology = readReportLandscapeRepositoryTopologySummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const topology = readReportLandscapeRepositoryTopologySummary(found.analysisRoot, params.repo)
     if (!topology) {
       return new Response(
         JSON.stringify({
@@ -2624,10 +2649,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const impact = readReportLandscapeRepositoryImpactSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const impact = readReportLandscapeRepositoryImpactSummary(found.analysisRoot, params.repo)
     if (!impact) {
       return new Response(
         JSON.stringify({
@@ -2682,10 +2704,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const controls = readReportLandscapeRepositoryControlsSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const controls = readReportLandscapeRepositoryControlsSummary(found.analysisRoot, params.repo)
     if (!controls) {
       return new Response(
         JSON.stringify({
@@ -2740,10 +2759,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const components = readReportLandscapeRepositoryComponentsSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const components = readReportLandscapeRepositoryComponentsSummary(found.analysisRoot, params.repo)
     if (!components) {
       return new Response(
         JSON.stringify({
@@ -2798,10 +2814,7 @@ export const reportRoutes = new Elysia({ name: "reports" })
       )
     }
 
-    const coupling = readReportLandscapeRepositoryCouplingSummary(
-      found.analysisRoot,
-      params.repo,
-    )
+    const coupling = readReportLandscapeRepositoryCouplingSummary(found.analysisRoot, params.repo)
     if (!coupling) {
       return new Response(
         JSON.stringify({

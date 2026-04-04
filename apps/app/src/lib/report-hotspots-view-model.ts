@@ -1,122 +1,124 @@
+import type { GridRow } from "@planetnik/report-ui/tables/ReportDataGrid.types";
 import type { RuntimeReportHotspots } from "./runtime-client.js";
 
 export type ReportHotspotsCard = {
 	readonly label: string;
 	readonly value: string;
 	readonly detail: string | null;
-};
-
-export type ReportHotspotsRow = {
-	readonly label: string;
-	readonly value: string;
-};
-
-export type ReportHotspotsSection = {
-	readonly title: string;
-	readonly rows: ReadonlyArray<ReportHotspotsRow>;
+	readonly accentColor?: string;
 };
 
 export type ReportHotspotsViewModel = {
 	readonly heading: string;
 	readonly subtitle: string;
 	readonly cards: ReadonlyArray<ReportHotspotsCard>;
-	readonly sections: ReadonlyArray<ReportHotspotsSection>;
+	readonly severityData: ReadonlyArray<{ readonly label: string; readonly value: number; readonly color?: string }>;
+	readonly severityColors: ReadonlyArray<string>;
+	readonly kindData: ReadonlyArray<{ readonly label: string; readonly value: number; readonly detail: string }>;
+	readonly dominantDimensionData: ReadonlyArray<{ readonly label: string; readonly value: number; readonly detail: string }>;
+	readonly topHotspotData: ReadonlyArray<{ readonly label: string; readonly value: number }>;
+	readonly hotspotRows: ReadonlyArray<GridRow>;
 };
 
-function formatCount(value: number): string {
-	return value.toLocaleString("en-GB");
-}
+const DIMENSION_LABELS: Record<string, string> = {
+	structuralRisk: "Structural Risk",
+	changePressure: "Change Pressure",
+	coordinationCost: "Coordination Cost",
+	knowledgeRisk: "Knowledge Risk",
+};
 
-function formatDominantDimension(value: string): string {
-	return value
-		.replace(/([a-z])([A-Z])/g, "$1 $2")
-		.toLowerCase();
+function normalizeDimension(value: string): string {
+	return DIMENSION_LABELS[value] ?? value.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 export function buildReportHotspotsViewModel(input: {
 	readonly reportName: string;
 	readonly hotspots: RuntimeReportHotspots;
+	readonly hotspotHrefs?: ReadonlyArray<string | undefined>;
 }): ReportHotspotsViewModel {
+	const { hotspots } = input;
+
+	const severityData: Array<{ label: string; value: number }> = [];
+	const severityColors: Array<string> = [];
+	if (hotspots.severityCounts.critical > 0) {
+		severityData.push({ label: "Critical", value: hotspots.severityCounts.critical });
+		severityColors.push("#dc2626");
+	}
+	if (hotspots.severityCounts.high > 0) {
+		severityData.push({ label: "High", value: hotspots.severityCounts.high });
+		severityColors.push("#ea580c");
+	}
+	if (hotspots.severityCounts.medium > 0) {
+		severityData.push({ label: "Medium", value: hotspots.severityCounts.medium });
+		severityColors.push("#d97706");
+	}
+	if (hotspots.severityCounts.low > 0) {
+		severityData.push({ label: "Low", value: hotspots.severityCounts.low });
+		severityColors.push("#16a34a");
+	}
+
+	const kindData: Array<{ label: string; value: number; detail: string }> = [];
+	if (hotspots.kindCounts.files > 0)
+		kindData.push({ label: "Files", value: hotspots.kindCounts.files, detail: `${hotspots.kindCounts.files} hotspots` });
+	if (hotspots.kindCounts.units > 0)
+		kindData.push({ label: "Units", value: hotspots.kindCounts.units, detail: `${hotspots.kindCounts.units} hotspots` });
+	if (hotspots.kindCounts.components > 0)
+		kindData.push({ label: "Components", value: hotspots.kindCounts.components, detail: `${hotspots.kindCounts.components} hotspots` });
+
+	const dominantDimensionData: Array<{ label: string; value: number; detail: string }> = [];
+	for (const [key, label] of [
+		["structuralRisk", "Structural Risk"],
+		["changePressure", "Change Pressure"],
+		["coordinationCost", "Coordination Cost"],
+		["knowledgeRisk", "Knowledge Risk"],
+	] as const) {
+		const count = hotspots.dominantCounts[key];
+		if (count > 0)
+			dominantDimensionData.push({ label, value: count, detail: `${count} hotspots` });
+	}
+
+	const topHotspotData = hotspots.topHotspots.map((item) => ({
+		label: item.name.length > 56 ? `...${item.name.slice(-53)}` : item.name,
+		value: item.score,
+	}));
+
+	const hotspotRows: GridRow[] = hotspots.rows.map((item, index) => ({
+		id: `hotspot-${index}`,
+		name: item.name,
+		href: input.hotspotHrefs?.[index],
+		kind: item.kind.charAt(0).toUpperCase() + item.kind.slice(1),
+		parent: item.parent || "—",
+		score: item.score,
+		severity: item.severity,
+		dominantDimension: normalizeDimension(item.dominantDimension),
+		size: item.size,
+		commits: item.commitsCount,
+		contributors: item.contributorsCount,
+		temporalLinks: item.temporalLinks,
+		complexity: item.complexity,
+		structuralRisk: item.structuralRisk,
+		changePressure: item.changePressure,
+		coordinationCost: item.coordinationCost,
+		knowledgeRisk: item.knowledgeRisk,
+		suggestedAction: item.suggestedAction,
+		reasons: item.reasons.join(" • "),
+	}));
+
 	return {
 		heading: input.reportName,
 		subtitle: "Ranked structural hotspots from the linked Planetnik dataset.",
 		cards: [
-			{
-				label: "Hotspots",
-				value: formatCount(input.hotspots.totalHotspots),
-				detail: null,
-			},
-			{
-				label: "Critical",
-				value: formatCount(input.hotspots.severityCounts.critical),
-				detail: null,
-			},
-			{
-				label: "High",
-				value: formatCount(input.hotspots.severityCounts.high),
-				detail: null,
-			},
-			{
-				label: "Coordination-Led",
-				value: formatCount(input.hotspots.dominantCounts.coordinationCost),
-				detail: null,
-			},
+			{ label: "Hotspots", value: hotspots.totalHotspots.toLocaleString("en-GB"), detail: null },
+			{ label: "Critical", value: hotspots.severityCounts.critical.toLocaleString("en-GB"), detail: null, accentColor: "#dc2626" },
+			{ label: "High", value: hotspots.severityCounts.high.toLocaleString("en-GB"), detail: null, accentColor: "#ea580c" },
+			{ label: "Knowledge-Led", value: hotspots.dominantCounts.knowledgeRisk.toLocaleString("en-GB"), detail: null },
+			{ label: "Coordination-Led", value: hotspots.dominantCounts.coordinationCost.toLocaleString("en-GB"), detail: null },
 		],
-		sections: [
-			{
-				title: "Severity mix",
-				rows: [
-					{
-						label: "Critical",
-						value: `${formatCount(input.hotspots.severityCounts.critical)} hotspots`,
-					},
-					{
-						label: "High",
-						value: `${formatCount(input.hotspots.severityCounts.high)} hotspots`,
-					},
-					{
-						label: "Medium",
-						value: `${formatCount(input.hotspots.severityCounts.medium)} hotspots`,
-					},
-				].filter((row) => row.value !== "0 hotspots"),
-			},
-			{
-				title: "Hotspots by kind",
-				rows: [
-					{
-						label: "Files",
-						value: `${formatCount(input.hotspots.kindCounts.files)} hotspots`,
-					},
-					{
-						label: "Units",
-						value: `${formatCount(input.hotspots.kindCounts.units)} hotspots`,
-					},
-					{
-						label: "Components",
-						value: `${formatCount(input.hotspots.kindCounts.components)} hotspots`,
-					},
-				].filter((row) => row.value !== "0 hotspots"),
-			},
-			{
-				title: "Top hotspots",
-				rows: input.hotspots.topHotspots.map((item) => ({
-					label: item.name,
-					value: `${item.score.toLocaleString("en-GB", {
-						minimumFractionDigits: 1,
-						maximumFractionDigits: 1,
-					})} · ${item.severity} · ${formatDominantDimension(item.dominantDimension)} · ${item.suggestedAction}`,
-				})),
-			},
-			{
-				title: "Hotspot queue",
-				rows: input.hotspots.rows.map((item) => ({
-					label: item.name,
-					value: `${item.kind} · ${item.parent || "—"} · score ${item.score.toLocaleString("en-GB", {
-						minimumFractionDigits: 1,
-						maximumFractionDigits: 1,
-					})} · ${item.severity} · ${formatCount(item.commitsCount)} commits · ${formatCount(item.contributorsCount)} contributors`,
-				})),
-			},
-		],
+		severityData,
+		severityColors,
+		kindData,
+		dominantDimensionData,
+		topHotspotData,
+		hotspotRows,
 	};
 }

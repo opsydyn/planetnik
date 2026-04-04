@@ -28,6 +28,7 @@
 		"./views/RepositoryControlsView": "./src/views/RepositoryControlsView.astro",
 		"./impact/ImpactMatrix": "./src/impact/ImpactMatrix.astro",
 		"./views/RepositoryImpactView": "./src/views/RepositoryImpactView.astro",
+		"./views/RepositoryHotspotsView": "./src/views/RepositoryHotspotsView.astro",
 		"./views/RepositoryCommitsView": "./src/views/RepositoryCommitsView.astro",
 		"./views/RepositoryDependenciesView": "./src/views/RepositoryDependenciesView.astro",
 		"./views/RepositoryDuplicationView": "./src/views/RepositoryDuplicationView.astro",

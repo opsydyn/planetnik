@@ -1,10 +1,6 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart";
-import DonutChart from "../../../../components/charts/DonutChart";
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import RepositoryHotspotsView from "@planetnik/report-ui/views/RepositoryHotspotsView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../lib/chartHelp";
 import {
 	mapLandscapeRepositoryRoute,
 	readLandscapeRepoJson,
@@ -14,7 +10,6 @@ import {
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { route } from "../../../../lib/route";
 
 type DominantDimension =
 	| "structuralRisk"
@@ -58,25 +53,22 @@ const { reportContext, projectName, repoName } =
 	await getLandscapeRepositoryPageContext(props);
 
 if (reportContext?.data.reportMode !== "landscape") {
-	return Astro.redirect(route("/"));
+	return Astro.redirect("/");
 }
 
-const hotspotsExport = readLandscapeRepoJson<RepoHotspotsExport>(
-	props.repoKey,
-	"hotspots.json",
-);
+const hotspotsExport = readLandscapeRepoJson<RepoHotspotsExport>(props.repoKey, "hotspots.json");
 const sorted = [
 	...(hotspotsExport?.fileHotspots ?? []),
 	...(hotspotsExport?.unitHotspots ?? []),
 	...(hotspotsExport?.componentHotspots ?? []),
-].sort((left, right) => right.score - left.score);
+].sort((a, b) => b.score - a.score);
 
-const dimensionLabels = {
+const dimensionLabels: Record<DominantDimension, string> = {
 	structuralRisk: "Structural Risk",
 	changePressure: "Change Pressure",
 	coordinationCost: "Coordination Cost",
 	knowledgeRisk: "Knowledge Risk",
-} as const;
+};
 
 const severityCounts = {
 	critical: sorted.filter((item) => item.severity === "Critical").length,
@@ -92,102 +84,36 @@ const kindCounts = {
 };
 
 const dominantCounts = {
-	structuralRisk: sorted.filter(
-		(item) => item.dominantDimension === "structuralRisk",
-	).length,
-	changePressure: sorted.filter(
-		(item) => item.dominantDimension === "changePressure",
-	).length,
-	coordinationCost: sorted.filter(
-		(item) => item.dominantDimension === "coordinationCost",
-	).length,
-	knowledgeRisk: sorted.filter(
-		(item) => item.dominantDimension === "knowledgeRisk",
-	).length,
+	structuralRisk: sorted.filter((item) => item.dominantDimension === "structuralRisk").length,
+	changePressure: sorted.filter((item) => item.dominantDimension === "changePressure").length,
+	coordinationCost: sorted.filter((item) => item.dominantDimension === "coordinationCost").length,
+	knowledgeRisk: sorted.filter((item) => item.dominantDimension === "knowledgeRisk").length,
 };
 
 const severityData = [
-	...(severityCounts.critical > 0
-		? [{ label: "Critical", value: severityCounts.critical, color: "#dc2626" }]
-		: []),
-	...(severityCounts.high > 0
-		? [{ label: "High", value: severityCounts.high, color: "#ea580c" }]
-		: []),
-	...(severityCounts.medium > 0
-		? [{ label: "Medium", value: severityCounts.medium, color: "#d97706" }]
-		: []),
-	...(severityCounts.low > 0
-		? [{ label: "Low", value: severityCounts.low, color: "#16a34a" }]
-		: []),
+	...(severityCounts.critical > 0 ? [{ label: "Critical", value: severityCounts.critical }] : []),
+	...(severityCounts.high > 0 ? [{ label: "High", value: severityCounts.high }] : []),
+	...(severityCounts.medium > 0 ? [{ label: "Medium", value: severityCounts.medium }] : []),
+	...(severityCounts.low > 0 ? [{ label: "Low", value: severityCounts.low }] : []),
+];
+const severityColors = [
+	...(severityCounts.critical > 0 ? ["#dc2626"] : []),
+	...(severityCounts.high > 0 ? ["#ea580c"] : []),
+	...(severityCounts.medium > 0 ? ["#d97706"] : []),
+	...(severityCounts.low > 0 ? ["#16a34a"] : []),
 ];
 
 const kindData = [
-	...(kindCounts.files > 0
-		? [
-				{
-					label: "Files",
-					value: kindCounts.files,
-					detail: `${kindCounts.files} hotspots`,
-				},
-			]
-		: []),
-	...(kindCounts.units > 0
-		? [
-				{
-					label: "Units",
-					value: kindCounts.units,
-					detail: `${kindCounts.units} hotspots`,
-				},
-			]
-		: []),
-	...(kindCounts.components > 0
-		? [
-				{
-					label: "Components",
-					value: kindCounts.components,
-					detail: `${kindCounts.components} hotspots`,
-				},
-			]
-		: []),
+	...(kindCounts.files > 0 ? [{ label: "Files", value: kindCounts.files, detail: `${kindCounts.files} hotspots` }] : []),
+	...(kindCounts.units > 0 ? [{ label: "Units", value: kindCounts.units, detail: `${kindCounts.units} hotspots` }] : []),
+	...(kindCounts.components > 0 ? [{ label: "Components", value: kindCounts.components, detail: `${kindCounts.components} hotspots` }] : []),
 ];
 
 const dominantDimensionData = [
-	...(dominantCounts.structuralRisk > 0
-		? [
-				{
-					label: "Structural Risk",
-					value: dominantCounts.structuralRisk,
-					detail: `${dominantCounts.structuralRisk} hotspots`,
-				},
-			]
-		: []),
-	...(dominantCounts.changePressure > 0
-		? [
-				{
-					label: "Change Pressure",
-					value: dominantCounts.changePressure,
-					detail: `${dominantCounts.changePressure} hotspots`,
-				},
-			]
-		: []),
-	...(dominantCounts.coordinationCost > 0
-		? [
-				{
-					label: "Coordination Cost",
-					value: dominantCounts.coordinationCost,
-					detail: `${dominantCounts.coordinationCost} hotspots`,
-				},
-			]
-		: []),
-	...(dominantCounts.knowledgeRisk > 0
-		? [
-				{
-					label: "Knowledge Risk",
-					value: dominantCounts.knowledgeRisk,
-					detail: `${dominantCounts.knowledgeRisk} hotspots`,
-				},
-			]
-		: []),
+	...(dominantCounts.structuralRisk > 0 ? [{ label: "Structural Risk", value: dominantCounts.structuralRisk, detail: `${dominantCounts.structuralRisk} hotspots` }] : []),
+	...(dominantCounts.changePressure > 0 ? [{ label: "Change Pressure", value: dominantCounts.changePressure, detail: `${dominantCounts.changePressure} hotspots` }] : []),
+	...(dominantCounts.coordinationCost > 0 ? [{ label: "Coordination Cost", value: dominantCounts.coordinationCost, detail: `${dominantCounts.coordinationCost} hotspots` }] : []),
+	...(dominantCounts.knowledgeRisk > 0 ? [{ label: "Knowledge Risk", value: dominantCounts.knowledgeRisk, detail: `${dominantCounts.knowledgeRisk} hotspots` }] : []),
 ];
 
 const topHotspotData = sorted.slice(0, 15).map((item) => ({
@@ -195,11 +121,11 @@ const topHotspotData = sorted.slice(0, 15).map((item) => ({
 	value: item.score,
 }));
 
-const hotspotRows = sorted.map((item) => ({
-	id: item.id,
+const hotspotRows = sorted.map((item, index) => ({
+	id: `hotspot-${index}`,
 	name: item.name,
 	href: mapLandscapeRepositoryRoute(props.repoKey, item.route),
-	kind: item.kind[0].toUpperCase() + item.kind.slice(1),
+	kind: item.kind.charAt(0).toUpperCase() + item.kind.slice(1),
 	parent: item.parent || "—",
 	score: item.score,
 	severity: item.severity,
@@ -216,110 +142,26 @@ const hotspotRows = sorted.map((item) => ({
 	suggestedAction: item.suggestedAction,
 	reasons: item.reasons.join(" • "),
 }));
+
+const cards = [
+	{ label: "Hotspots", value: sorted.length.toLocaleString(), detail: null },
+	{ label: "Critical", value: severityCounts.critical.toLocaleString(), detail: null, accentColor: "#dc2626" },
+	{ label: "High", value: severityCounts.high.toLocaleString(), detail: null, accentColor: "#ea580c" },
+	{ label: "Knowledge-Led", value: dominantCounts.knowledgeRisk.toLocaleString(), detail: null },
+	{ label: "Coordination-Led", value: dominantCounts.coordinationCost.toLocaleString(), detail: null },
+];
 ---
 
 <Dashboard title={`${repoName} Hotspots`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Hotspots</h2>
-  <p class="subtitle">
-    Ranked files, units, and components for {repoName} using explicit structural, change, coordination, and knowledge risk signals.
-  </p>
-
-  {sorted.length === 0 ? (
-    <div class="empty">
-      <p>No hotspot data exported for this repository yet.</p>
-      <p class="hint">Generate reports with the latest Planetnik CLI to produce <code>hotspots.json</code>.</p>
-    </div>
-  ) : (
-    <>
-      <div class="cards">
-        <div class="card">
-          <div class="card-value">{sorted.length}</div>
-          <div class="card-label">Ranked Hotspots</div>
-        </div>
-        <div class="card card-critical">
-          <div class="card-value">{severityCounts.critical}</div>
-          <div class="card-label">Critical</div>
-        </div>
-        <div class="card card-high">
-          <div class="card-value">{severityCounts.high}</div>
-          <div class="card-label">High</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{dominantCounts.knowledgeRisk}</div>
-          <div class="card-label">Knowledge-Led</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{dominantCounts.coordinationCost}</div>
-          <div class="card-label">Coordination-Led</div>
-        </div>
-      </div>
-
-      {severityData.length > 1 && (
-        <section class="section">
-          <h3>Severity Mix</h3>
-          <DonutChart client:load data={severityData} valueLabel="hotspots" helpText={chartHelp.hotspots.severity} />
-        </section>
-      )}
-
-      {kindData.length > 0 && (
-        <section class="section">
-          <h3>Hotspots by Kind</h3>
-          <DistributionChart client:visible data={kindData} helpText={chartHelp.hotspots.byKind} />
-        </section>
-      )}
-
-      {dominantDimensionData.length > 0 && (
-        <section class="section">
-          <h3>Dominant Risk Type</h3>
-          <DistributionChart client:visible data={dominantDimensionData} helpText={chartHelp.hotspots.dominantRisk} />
-        </section>
-      )}
-
-      <section class="section">
-        <h3>Top Hotspots</h3>
-        <HorizontalBarChart client:visible data={topHotspotData} valueLabel="score" helpText={chartHelp.hotspots.topItems} />
-      </section>
-
-      <ReportDataGrid
-        client:visible
-        title="Hotspot Queue"
-        description="Search by kind, score, path, component, or reason while keeping the ranked queue above."
-        searchPlaceholder="Search hotspot, component, or reason"
-        rows={hotspotRows}
-        columns={[
-          { field: "name", headerName: "Item", type: "link", hrefField: "href", secondaryField: "parent", minWidth: 320, flex: 1.5, sort: "asc" },
-          { field: "kind", headerName: "Kind", minWidth: 110 },
-          { field: "severity", headerName: "Severity", minWidth: 120 },
-          { field: "score", headerName: "Score", type: "number", minWidth: 100, sort: "desc" },
-          { field: "dominantDimension", headerName: "Primary Risk", minWidth: 170 },
-          { field: "size", headerName: "Size", type: "number", minWidth: 100 },
-          { field: "commits", headerName: "Commits", type: "number", minWidth: 100 },
-          { field: "contributors", headerName: "Contributors", type: "number", minWidth: 120 },
-          { field: "temporalLinks", headerName: "Temporal Links", type: "number", minWidth: 140 },
-          { field: "complexity", headerName: "Complexity", type: "number", minWidth: 110 },
-          { field: "structuralRisk", headerName: "Structural", type: "number", minWidth: 120 },
-          { field: "changePressure", headerName: "Change", type: "number", minWidth: 110 },
-          { field: "coordinationCost", headerName: "Coordination", type: "number", minWidth: 130 },
-          { field: "knowledgeRisk", headerName: "Knowledge", type: "number", minWidth: 120 },
-          { field: "suggestedAction", headerName: "Suggested Action", type: "multiline", minWidth: 280, flex: 1.2 },
-          { field: "reasons", headerName: "Why It Is Hot", type: "multiline", minWidth: 340, flex: 1.6 },
-        ]}
-      />
-    </>
-  )}
+	<RepositoryHotspotsView
+		heading={repoName}
+		subtitle={`Ranked structural hotspots for ${repoName}.`}
+		cards={cards}
+		severityData={severityData}
+		severityColors={severityColors}
+		kindData={kindData}
+		dominantDimensionData={dominantDimensionData}
+		topHotspotData={topHotspotData}
+		hotspotRows={hotspotRows}
+	/>
 </Dashboard>
-
-<style>
-  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
-  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
-  .hint { font-size: 0.85rem; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
-  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
-  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
-  .card-critical .card-value { color: #dc2626; }
-  .card-high .card-value { color: #ea580c; }
-  .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-</style>
