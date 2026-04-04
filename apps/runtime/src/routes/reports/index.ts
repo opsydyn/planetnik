@@ -22,6 +22,7 @@ import {
   readReportLandscapeRepositoriesSummary,
   readReportLandscapeOverviewSummary,
   readReportLandscapeTagsSummary,
+  readReportLandscapeTeamsSummary,
   readReportLandscapeRepositorySummary,
   readReportLandscapeRepositoryMetricsSummary,
   readReportLandscapeRepositoryCommitsSummary,
@@ -222,6 +223,30 @@ const ReportLandscapeTagsSummarySchema = Schema.Struct({
 
 const ReportLandscapeTagsResponseSchema = Schema.Struct({
   tags: ReportLandscapeTagsSummarySchema,
+})
+
+const ReportLandscapeTeamsSummarySchema = Schema.Struct({
+  totalTeams: Schema.Number,
+  totalMembers: Schema.Number,
+  totalRepositoryTouches: Schema.Number,
+  teams: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.String,
+      description: Schema.String,
+      commitsCount: Schema.Number,
+      commits30d: Schema.Number,
+      memberCount: Schema.Number,
+      repositoryCount: Schema.Number,
+      latestCommitDate: Schema.String,
+      members: Schema.Array(Schema.String),
+      repositories: Schema.Array(Schema.String),
+    }),
+  ),
+})
+
+const ReportLandscapeTeamsResponseSchema = Schema.Struct({
+  teams: ReportLandscapeTeamsSummarySchema,
 })
 
 const ReportContributorsResponseSchema = Schema.Struct({
@@ -1171,6 +1196,48 @@ export const reportRoutes = new Elysia({ name: "reports" })
 
     return Schema.decodeUnknownSync(ReportLandscapeTagsResponseSchema)({
       tags,
+    })
+  })
+  .get("/api/reports/:slug/teams", async ({ request, params }) => {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    })
+
+    if (!session?.session || !session.user) {
+      return new Response(
+        JSON.stringify({
+          error: "unauthorized",
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const personalWorkspace = await ensurePersonalWorkspace(session)
+    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+    if (!found || !found.analysisRoot) {
+      return new Response(
+        JSON.stringify({
+          error: "not_found",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      )
+    }
+
+    const teams = readReportLandscapeTeamsSummary(found.analysisRoot)
+
+    return Schema.decodeUnknownSync(ReportLandscapeTeamsResponseSchema)({
+      teams,
     })
   })
   .get("/api/reports/:slug/contributors", async ({ request, params }) => {

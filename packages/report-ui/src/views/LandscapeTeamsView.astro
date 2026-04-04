@@ -1,0 +1,119 @@
+---
+import ReportDataGrid from "../tables/ReportDataGrid";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+
+interface MetricCard {
+	readonly label: string;
+	readonly value: string;
+}
+
+interface Props {
+	heading?: string;
+	subtitle: string;
+	cards: ReadonlyArray<MetricCard>;
+	rows: ReadonlyArray<GridRow>;
+	searchPlaceholder?: string;
+	emptyHint?: string;
+}
+
+const props = Astro.props as Props;
+
+const {
+	heading = "Teams",
+	subtitle,
+	cards,
+	rows,
+	searchPlaceholder = "Search team, member, or repository",
+	emptyHint = "Add teamsConfig to the landscape configuration to populate this page.",
+} = props;
+---
+
+<h2>{heading}</h2>
+<p class="subtitle">{subtitle}</p>
+
+{
+	rows.length > 0 ? (
+		<>
+			<div class="cards">
+				{cards.map((card) => (
+					<div class="card">
+						<div class="card-value">{card.value}</div>
+						<div class="card-label">{card.label}</div>
+					</div>
+				))}
+			</div>
+
+			<ReportDataGrid
+				client:visible
+				title="Team Inventory"
+				description="Search teams by member, repository, or recent activity."
+				searchPlaceholder={searchPlaceholder}
+				rows={rows}
+				columns={[
+					{ field: "name", headerName: "Team", minWidth: 180 },
+					{ field: "description", headerName: "Description", type: "multiline", minWidth: 240, flex: 1.2 },
+					{ field: "commitsCount", headerName: "Commits", type: "number", minWidth: 110, sort: "desc" },
+					{ field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+					{ field: "memberCount", headerName: "Members", type: "number", minWidth: 100 },
+					{ field: "repositoryCount", headerName: "Repositories", type: "number", minWidth: 120 },
+					{ field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+					{ field: "members", headerName: "Members", type: "multiline", minWidth: 260, flex: 1 },
+					{ field: "repositories", headerName: "Repositories", type: "multiline", minWidth: 300, flex: 1.2 },
+				]}
+			/>
+		</>
+	) : (
+		<div class="empty">
+			<p>No team mappings were exported for this landscape.</p>
+			<p class="hint">{emptyHint}</p>
+		</div>
+	)
+}
+
+<style>
+	.subtitle {
+		color: var(--color-text-muted);
+		margin-bottom: 1.5rem;
+		max-width: 72ch;
+	}
+
+	.cards {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.9rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.card,
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 16px;
+		padding: 1.1rem 1.2rem;
+	}
+
+	.card-value {
+		font-size: 1.9rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.card-label {
+		margin-top: 0.45rem;
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.hint {
+		color: var(--color-text-muted);
+		margin-top: 0.5rem;
+	}
+
+	@media (max-width: 720px) {
+		.cards {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

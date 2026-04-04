@@ -254,6 +254,7 @@ function buildReportNavSections(
 				items: [
 					{ href: `${baseHref}/repositories`, label: "Repositories" },
 					{ href: `${baseHref}/contributors`, label: "Contributors" },
+					{ href: `${baseHref}/teams`, label: "Teams" },
 					{ href: `${baseHref}/topology`, label: "Team Topology" },
 					{ href: `${baseHref}/tags`, label: "Tags" },
 					{ href: `${baseHref}/security`, label: "Dependency Security" },

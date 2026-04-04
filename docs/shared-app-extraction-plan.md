@@ -388,22 +388,42 @@ For each migration slice:
    - `bun run --cwd apps/site build`
 4. app-local view-model tests remain in the consuming app unless the mapper is later extracted as a pure shared helper
 
+## Delivery Checklist
+
+Use this section as the live migration checklist. Mark items off as slices land.
+
+### Done
+
+- [x] shared shell/theme foundation
+- [x] shared breadcrumb/icon/logo primitives
+- [x] `landscape/repositories`
+- [x] `landscape/contributors`
+- [x] `landscape/tags`
+- [x] `landscape/teams`
+
+### Todo
+
+- [ ] repo dashboard summary surface
+- [ ] repo metrics
+- [ ] repo commits
+- [ ] repo dependencies
+- [ ] repo duplication
+- [ ] repo controls
+- [ ] repo impact
+- [ ] repo hotspots
+- [ ] graph-heavy surfaces:
+  - topology
+  - coupling
+  - components
+
 ## Near-Term Plan
-
-### Already done
-
-- shared shell/theme foundation
-- shared breadcrumb/icon/logo primitives
-- first shared report surface:
-  - `LandscapeRepositoriesView`
 
 ### Next recommended slices
 
-1. `landscape/contributors`
-2. `landscape/tags`
-3. repo dashboard summary surface
-4. repo metrics
-5. repo commits
+1. `landscape/teams`
+2. repo dashboard summary surface
+3. repo metrics
+4. repo commits
 
 That sequence keeps the migration on high-value, lower-risk UI before graph-heavy pages.
 

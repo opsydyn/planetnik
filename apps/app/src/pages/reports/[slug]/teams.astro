@@ -1,0 +1,46 @@
+---
+import LandscapeTeamsView from "@planetnik/report-ui/views/LandscapeTeamsView";
+import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
+import { buildReportLandscapeTeamsViewModel } from "../../../lib/report-landscape-teams-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportLandscapeTeams,
+} from "../../../lib/runtime-client.js";
+import { shouldRedirectReportDetail } from "../../../lib/report-detail-view-model.js";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+if (reportDetail.context?.mode !== "landscape") {
+	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const teams = await getRuntimeReportLandscapeTeams(cookie, slug);
+const viewModel = buildReportLandscapeTeamsViewModel({
+	teams: teams ?? {
+		totalTeams: 0,
+		totalMembers: 0,
+		totalRepositoryTouches: 0,
+		teams: [],
+	},
+});
+---
+
+<AppShell
+	title="Landscape Teams"
+	subtitle=""
+	shellContext={buildHostedReportShellContext(reportDetail)}
+	headerMode="breadcrumbs"
+>
+	<LandscapeTeamsView
+		subtitle={viewModel.subtitle}
+		cards={viewModel.cards}
+		rows={viewModel.rows}
+	/>
+</AppShell>

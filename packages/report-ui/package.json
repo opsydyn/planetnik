@@ -18,6 +18,7 @@
 		"./tables/StaticReportTable": "./src/tables/StaticReportTable.astro",
 		"./views/LandscapeRepositoriesView": "./src/views/LandscapeRepositoriesView.astro",
 		"./views/LandscapeContributorsView": "./src/views/LandscapeContributorsView.astro",
+		"./views/LandscapeTeamsView": "./src/views/LandscapeTeamsView.astro",
 		"./views/LandscapeTagsView": "./src/views/LandscapeTagsView.astro",
 		"./views/LandscapeOverviewView": "./src/views/LandscapeOverviewView.astro"
 	},

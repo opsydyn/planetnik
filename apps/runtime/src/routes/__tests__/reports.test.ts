@@ -902,6 +902,43 @@ const readReportLandscapeTagsSummary = mock((analysisRoot: string) => {
 		untaggedRepositories: ["legacy-tool"],
 	};
 });
+const readReportLandscapeTeamsSummary = mock((analysisRoot: string) => {
+	if (analysisRoot !== "/datasets/platform-landscape/data") {
+		return null;
+	}
+
+	return {
+		totalTeams: 2,
+		totalMembers: 6,
+		totalRepositoryTouches: 5,
+		teams: [
+			{
+				id: "Platform",
+				name: "Platform",
+				description: "Shared platform capabilities.",
+				commitsCount: 120,
+				commits30d: 18,
+				memberCount: 4,
+				repositoryCount: 3,
+				latestCommitDate: "2026-03-31",
+				members: ["Alan", "Sam", "Nina", "Jay"],
+				repositories: ["web-app", "api", "infra"],
+			},
+			{
+				id: "Data",
+				name: "Data",
+				description: "Data platform.",
+				commitsCount: 40,
+				commits30d: 6,
+				memberCount: 2,
+				repositoryCount: 2,
+				latestCommitDate: "2026-03-28",
+				members: ["Pat", "Lee"],
+				repositories: ["etl", "warehouse"],
+			},
+		],
+	};
+});
 const readReportLandscapeRepositorySummary = mock(
 	(analysisRoot: string, repoKey: string) => {
 		if (
@@ -1589,6 +1626,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportSecuritySummary,
 	readReportLandscapeOverviewSummary,
 	readReportLandscapeTagsSummary,
+	readReportLandscapeTeamsSummary,
 	readReportLandscapeRepositoriesSummary,
 	readReportLandscapeRepositorySummary,
 	readReportLandscapeRepositoryMetricsSummary,
@@ -1639,6 +1677,7 @@ describe("runtime report routes", () => {
 		readReportSecuritySummary.mockClear();
 		readReportLandscapeOverviewSummary.mockClear();
 		readReportLandscapeTagsSummary.mockClear();
+		readReportLandscapeTeamsSummary.mockClear();
 		readReportLandscapeRepositoriesSummary.mockClear();
 		readReportLandscapeRepositorySummary.mockClear();
 		readReportLandscapeRepositoryMetricsSummary.mockClear();
@@ -2536,6 +2575,54 @@ describe("runtime report routes", () => {
 		});
 		expect(body.tags.untaggedRepositories).toEqual(["legacy-tool"]);
 		expect(readReportLandscapeTagsSummary).toHaveBeenCalledWith(
+			"/datasets/platform-landscape/data",
+		);
+	});
+
+	test("returns a landscape teams summary for a connected landscape report", async () => {
+		storedReports = [
+			{
+				id: "report-2",
+				workspaceId: personalWorkspace.id,
+				slug: "platform-landscape",
+				name: "Platform Landscape",
+				kind: "planetnik-report",
+				status: "connected",
+				analysisRoot: "/datasets/platform-landscape/data",
+				createdAt: new Date("2026-04-02T17:20:19.145Z"),
+				updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+				lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+			},
+		];
+		const app = createApp();
+
+		const response = await app.fetch(
+			new Request("http://localhost/api/reports/platform-landscape/teams", {
+				headers: {
+					cookie: "better-auth.session_token=test",
+				},
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			teams: {
+				totalTeams: number;
+				totalMembers: number;
+				totalRepositoryTouches: number;
+				teams: Array<{ name: string; memberCount: number; repositoryCount: number }>;
+			};
+		};
+
+		expect(body.teams.totalTeams).toBe(2);
+		expect(body.teams.totalMembers).toBe(6);
+		expect(body.teams.totalRepositoryTouches).toBe(5);
+		expect(body.teams.teams[0]).toMatchObject({
+			name: "Platform",
+			memberCount: 4,
+			repositoryCount: 3,
+		});
+		expect(readReportLandscapeTeamsSummary).toHaveBeenCalledWith(
 			"/datasets/platform-landscape/data",
 		);
 	});

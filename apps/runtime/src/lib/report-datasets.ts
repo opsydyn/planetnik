@@ -409,6 +409,24 @@ export type ReportLandscapeTagsSummary = {
 	readonly untaggedRepositories: ReadonlyArray<string>;
 };
 
+export type ReportLandscapeTeamsSummary = {
+	readonly totalTeams: number;
+	readonly totalMembers: number;
+	readonly totalRepositoryTouches: number;
+	readonly teams: ReadonlyArray<{
+		readonly id: string;
+		readonly name: string;
+		readonly description: string;
+		readonly commitsCount: number;
+		readonly commits30d: number;
+		readonly memberCount: number;
+		readonly repositoryCount: number;
+		readonly latestCommitDate: string;
+		readonly members: ReadonlyArray<string>;
+		readonly repositories: ReadonlyArray<string>;
+	}>;
+};
+
 export type ReportComponentsSummary = {
 	readonly totalComponents: number;
 	readonly singleOwnerComponents: number;
@@ -1782,6 +1800,78 @@ export function readReportLandscapeTagsSummary(
 				: untaggedRepositories.length,
 		tags: rows,
 		untaggedRepositories,
+	};
+}
+
+export function readReportLandscapeTeamsSummary(
+	dataDir: string,
+): ReportLandscapeTeamsSummary {
+	const teams = readJsonRecord(dataDir, "landscape_teams.json");
+	const items = Array.isArray(teams?.teams) ? teams.teams : [];
+
+	const rows = items
+		.filter(
+			(item): item is Record<string, unknown> =>
+				typeof item === "object" && item !== null,
+		)
+		.map((item, index) => {
+			const id =
+				(typeof item.id === "string" && item.id) ||
+				(typeof item.name === "string" && item.name) ||
+				(typeof item.key === "string" && item.key) ||
+				`teams-${index + 1}`;
+			const members = Array.isArray(item.members)
+				? item.members.filter((member): member is string => typeof member === "string")
+				: [];
+			const repositories = Array.isArray(item.repositories)
+				? item.repositories
+						.filter(
+							(repository): repository is Record<string, unknown> =>
+								typeof repository === "object" && repository !== null,
+						)
+						.map((repository) =>
+							typeof repository.name === "string" ? repository.name : null,
+						)
+						.filter((repository): repository is string => repository !== null)
+				: [];
+
+			return {
+				id,
+				name: typeof item.name === "string" ? item.name : "Unknown Team",
+				description:
+					typeof item.description === "string" && item.description.length > 0
+						? item.description
+						: "—",
+				commitsCount:
+					typeof item.commitsCount === "number" ? item.commitsCount : 0,
+				commits30d:
+					typeof item.commitsCount30Days === "number"
+						? item.commitsCount30Days
+						: typeof item.commits30d === "number"
+							? item.commits30d
+							: 0,
+				memberCount:
+					typeof item.memberCount === "number" ? item.memberCount : members.length,
+				repositoryCount:
+					typeof item.repositoryCount === "number"
+						? item.repositoryCount
+						: repositories.length,
+				latestCommitDate:
+					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+				members,
+				repositories,
+			};
+		});
+
+	return {
+		totalTeams:
+			typeof teams?.teamCount === "number" ? teams.teamCount : rows.length,
+		totalMembers: rows.reduce((sum, team) => sum + team.memberCount, 0),
+		totalRepositoryTouches: rows.reduce(
+			(sum, team) => sum + team.repositoryCount,
+			0,
+		),
+		teams: rows,
 	};
 }
 

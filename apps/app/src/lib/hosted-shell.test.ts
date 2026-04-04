@@ -159,6 +159,10 @@ describe("hosted shell", () => {
 						label: "Contributors",
 					},
 					{
+						href: "/reports/platform-landscape/teams",
+						label: "Teams",
+					},
+					{
 						href: "/reports/platform-landscape/topology",
 						label: "Team Topology",
 					},

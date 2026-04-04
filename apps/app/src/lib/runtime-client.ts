@@ -599,6 +599,24 @@ export type RuntimeReportLandscapeTags = {
   readonly untaggedRepositories: ReadonlyArray<string>;
 };
 
+export type RuntimeReportLandscapeTeams = {
+  readonly totalTeams: number;
+  readonly totalMembers: number;
+  readonly totalRepositoryTouches: number;
+  readonly teams: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly description: string;
+    readonly commitsCount: number;
+    readonly commits30d: number;
+    readonly memberCount: number;
+    readonly repositoryCount: number;
+    readonly latestCommitDate: string;
+    readonly members: ReadonlyArray<string>;
+    readonly repositories: ReadonlyArray<string>;
+  }>;
+};
+
 export type RuntimeReportFileInventoryRow = {
   readonly relativePath: string;
   readonly extension: string;
@@ -1046,6 +1064,20 @@ export async function getRuntimeReportLandscapeTags(
   }
 
   return data.tags;
+}
+
+export async function getRuntimeReportLandscapeTeams(
+  cookie: string,
+  slug: string,
+): Promise<RuntimeReportLandscapeTeams | null> {
+  const { data } = await runtimeClient.api.reports({ slug }).teams.get(
+    withRuntimeCookie(cookie),
+  );
+  if (!data || isTransportResponse(data)) {
+    return null;
+  }
+
+  return data.teams;
 }
 
 export async function getRuntimeReportLandscapeRepositoryMetrics(

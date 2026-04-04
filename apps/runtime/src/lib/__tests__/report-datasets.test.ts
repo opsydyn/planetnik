@@ -28,6 +28,7 @@ const {
 	readReportImpactSummary,
 	readReportLandscapeOverviewSummary,
 	readReportLandscapeTagsSummary,
+	readReportLandscapeTeamsSummary,
 	readReportMetricsSummary,
 	readReportCommitsSummary,
 	readReportSecuritySummary,
@@ -331,6 +332,71 @@ describe("runtime report dataset helpers", () => {
 				},
 			],
 			untaggedRepositories: ["legacy-tool"],
+		});
+	});
+
+	test("reads a landscape teams summary with member and repository totals", () => {
+		const root = makeTempRoot();
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		writeJson(join(dataDir, "landscape_teams.json"), {
+			teamCount: 2,
+			teams: [
+				{
+					name: "Platform",
+					description: "Shared platform capabilities.",
+					commitsCount: 120,
+					commitsCount30Days: 18,
+					repositoryCount: 3,
+					memberCount: 4,
+					latestCommitDate: "2026-03-31",
+					members: ["Alan", "Sam", "Nina", "Jay"],
+					repositories: [{ name: "web-app" }, { name: "api" }, { name: "infra" }],
+				},
+				{
+					name: "Data",
+					description: "",
+					commitsCount: 40,
+					commits30d: 6,
+					repositoryCount: 2,
+					memberCount: 2,
+					latestCommitDate: "2026-03-28",
+					members: ["Pat", "Lee"],
+					repositories: [{ name: "etl" }, { name: "warehouse" }],
+				},
+			],
+		});
+
+		expect(readReportLandscapeTeamsSummary(dataDir)).toEqual({
+			totalTeams: 2,
+			totalMembers: 6,
+			totalRepositoryTouches: 5,
+			teams: [
+				{
+					id: "Platform",
+					name: "Platform",
+					description: "Shared platform capabilities.",
+					commitsCount: 120,
+					commits30d: 18,
+					memberCount: 4,
+					repositoryCount: 3,
+					latestCommitDate: "2026-03-31",
+					members: ["Alan", "Sam", "Nina", "Jay"],
+					repositories: ["web-app", "api", "infra"],
+				},
+				{
+					id: "Data",
+					name: "Data",
+					description: "—",
+					commitsCount: 40,
+					commits30d: 6,
+					memberCount: 2,
+					repositoryCount: 2,
+					latestCommitDate: "2026-03-28",
+					members: ["Pat", "Lee"],
+					repositories: ["etl", "warehouse"],
+				},
+			],
 		});
 	});
 
