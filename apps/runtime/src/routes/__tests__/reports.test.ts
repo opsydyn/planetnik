@@ -1548,6 +1548,15 @@ describe("runtime report routes", () => {
 		resolveReportDataSource.mockClear();
 		readReportContextSummary.mockClear();
 		readReportArtifactSummary.mockClear();
+		readReportContributorsSummary.mockClear();
+		readReportLandscapeContributorsSummary.mockClear();
+		readReportContributorDetail.mockClear();
+		readReportTopologySummary.mockClear();
+		readReportMetricsSummary.mockClear();
+		readReportDuplicationSummary.mockClear();
+		readReportDependenciesSummary.mockClear();
+		readReportControlsSummary.mockClear();
+		readReportImpactSummary.mockClear();
 		readReportFilesView.mockClear();
 		readReportUnitsView.mockClear();
 		readReportHotspotsSummary.mockClear();

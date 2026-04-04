@@ -1467,6 +1467,10 @@ describe("runtime report dataset helpers", () => {
 				componentsTouched: 1,
 				primaryComponent: "runtime",
 				knowledgeSignal: "Single-component specialist",
+				repositoryCount: null,
+				latestCommitDate: "2026-03-31",
+				isBot: null,
+				repositories: [],
 			},
 			{
 				email: "sam@example.com",
@@ -1485,6 +1489,10 @@ describe("runtime report dataset helpers", () => {
 				componentsTouched: 5,
 				primaryComponent: "reports",
 				knowledgeSignal: "Cross-context knowledge",
+				repositoryCount: null,
+				latestCommitDate: "2026-03-30",
+				isBot: null,
+				repositories: [],
 			},
 		]);
 	});

@@ -1596,7 +1596,7 @@ export function readReportContributorsSummary(
 export function readReportLandscapeContributorsSummary(
 	dataDir: string,
 ): LandscapeContributorSummary | null {
-	const raw = readJsonFile(dataDir, "landscape_contributors.json");
+	const raw = readJsonRecord(dataDir, "landscape_contributors.json");
 	if (!raw || typeof raw !== "object") {
 		return null;
 	}

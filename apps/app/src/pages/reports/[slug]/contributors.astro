@@ -24,33 +24,36 @@ if (shouldRedirectReportDetail(reportDetail)) {
 
 const contributors = await getRuntimeReportContributors(cookie, slug);
 const isLandscapeReport = reportDetail.context?.mode === "landscape";
-const viewModel = isLandscapeReport
+const landscapeViewModel = isLandscapeReport
 	? buildReportLandscapeContributorsViewModel({
 			slug,
 			contributors,
 		})
-	: buildReportContributorsViewModel({
+	: null;
+const viewModel = !isLandscapeReport
+	? buildReportContributorsViewModel({
 			slug,
 			reportName: reportDetail.report.name,
 			contributors,
-		});
+		})
+	: null;
 ---
 
 <AppShell
-	title={`${viewModel.heading} Contributors`}
-	subtitle={viewModel.subtitle}
+	title={`${isLandscapeReport ? (landscapeViewModel?.heading ?? "Contributors") : (viewModel?.heading ?? "Contributors")} Contributors`}
+	subtitle={isLandscapeReport ? (landscapeViewModel?.subtitle ?? "") : (viewModel?.subtitle ?? "")}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
 	{
-		isLandscapeReport ? (
+		isLandscapeReport && landscapeViewModel ? (
 			<LandscapeContributorsView
-				subtitle={viewModel.subtitle}
-				cards={viewModel.cards}
-				topContributorBars={viewModel.topContributorBars}
-				rows={viewModel.rows}
+				subtitle={landscapeViewModel.subtitle}
+				cards={landscapeViewModel.cards}
+				topContributorBars={landscapeViewModel.topContributorBars}
+				rows={landscapeViewModel.rows}
 				searchPlaceholder="Search contributor or repository"
 			/>
-		) : (
+		) : viewModel ? (
 			<div class="dashboard-stack">
 				<section class="dashboard-card dashboard-card-primary">
 					<p class="card-kicker">Contributors</p>
@@ -125,6 +128,6 @@ const viewModel = isLandscapeReport
 					)}
 				</section>
 			</div>
-		)
+		) : null
 	}
 </AppShell>
