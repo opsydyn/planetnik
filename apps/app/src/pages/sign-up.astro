@@ -1,5 +1,6 @@
 ---
 import SignUpForm from "../components/auth/SignUpForm";
+import PublicVideoToggle from "../components/auth/PublicVideoToggle";
 import AppShell from "../layouts/AppShell.astro";
 ---
 
@@ -9,6 +10,7 @@ import AppShell from "../layouts/AppShell.astro";
 >
 	<div class="stack">
 		<SignUpForm client:load />
+		<PublicVideoToggle client:load />
 		<p class="muted-copy">
 			Once this succeeds, the middleware-protected home route becomes the first
 			real SSR surface for the hosted app.

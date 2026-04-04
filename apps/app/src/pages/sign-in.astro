@@ -1,18 +1,16 @@
 ---
 import SignInForm from "../components/auth/SignInForm";
+import PublicVideoToggle from "../components/auth/PublicVideoToggle";
 import AppShell from "../layouts/AppShell.astro";
 ---
 
 <AppShell
-	title="Sign in to the hosted shell"
-	subtitle="This Astro app resolves sessions in middleware and proxies Better Auth requests through its own origin."
+	title="Sign in to Planetnik"
+	subtitle="Read the weather"
 >
 	<div class="stack">
 		<SignInForm client:load />
-		<p class="muted-copy">
-			The app shell is now live. Successful sign-in should return you to the
-			protected home route.
-		</p>
+		<PublicVideoToggle client:load />
 		<div class="route-links">
 			<a href="/sign-up">Create an account</a>
 		</div>

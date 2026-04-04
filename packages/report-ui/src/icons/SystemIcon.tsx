@@ -15,6 +15,8 @@ import { HardDrivesIcon } from "@phosphor-icons/react/dist/csr/HardDrives";
 import { HouseIcon } from "@phosphor-icons/react/dist/csr/House";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
 import { MoonIcon } from "@phosphor-icons/react/dist/csr/Moon";
+import { PauseIcon } from "@phosphor-icons/react/dist/csr/Pause";
+import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play";
 import { RowsIcon } from "@phosphor-icons/react/dist/csr/Rows";
 import { SidebarSimpleIcon } from "@phosphor-icons/react/dist/csr/SidebarSimple";
 import { SquaresFourIcon } from "@phosphor-icons/react/dist/csr/SquaresFour";
@@ -50,6 +52,8 @@ const systemIcons = {
 	house: HouseIcon,
 	list: ListIcon,
 	moon: MoonIcon,
+	pause: PauseIcon,
+	play: PlayIcon,
 	rows: RowsIcon,
 	"sidebar-simple": SidebarSimpleIcon,
 	sidebarSimple: SidebarSimpleIcon,

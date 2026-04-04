@@ -60,13 +60,29 @@ const shell = buildHostedShellModel({
 	<body data-shell={shell.chrome}>
 		{shell.chrome === "public" ? (
 			<div class="shell-public">
+				<div class="public-video-layer" aria-hidden="true">
+					<video
+						id="public-video-player"
+						class="public-video"
+						autoplay
+						muted
+						playsinline
+						preload="metadata"
+						src="/movie.mp4"
+						data-playlist="/movie.mp4,/movie-2.mp4,/movie-3.mp4,/movie-4.mp4,/movie-5.mp4,/movie-6.mp4"
+					>
+						<source src="/movie.mp4" type="video/mp4" />
+					</video> 
+					<audio
+						id="public-audio-player"
+						preload="metadata"
+						src="/Broken Codefire.mp3"
+						loop
+					></audio>
+					<div class="public-video-overlay"></div>
+				</div>
 				<div class="shell-public-inner">
 					<header class="public-topbar">
-						<PlanetnikLogo
-							href={userEmail ? "/" : "/sign-in"}
-							src="/planetnik-logo-2.webp"
-							variant="sidebar"
-						/>
 						<div class="topbar-meta">
 							<span class="status-pill">
 								<span class="status-dot"></span>
@@ -76,6 +92,7 @@ const shell = buildHostedShellModel({
 					</header>
 
 					<main class="public-content-grid">
+						<div class="public-auth-stack">
 						<section class="hero-panel">
 							<p class="eyebrow">Astro + Bun + runtime auth boundary</p>
 							<h1>{title}</h1>
@@ -85,6 +102,7 @@ const shell = buildHostedShellModel({
 						<section class="surface-panel">
 							<slot />
 						</section>
+						</div>
 					</main>
 				</div>
 			</div>
@@ -178,6 +196,45 @@ const shell = buildHostedShellModel({
 			</>
 		)}
 
+		<script is:inline>
+			function setupPublicVideoPlaylist() {
+				const video = document.getElementById("public-video-player")
+				if (!(video instanceof HTMLVideoElement)) return
+
+				const playlist = (video.dataset.playlist ?? "")
+					.split(",")
+					.map((item) => item.trim())
+					.filter(Boolean)
+
+				if (playlist.length < 2) return
+
+				let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
+
+				const playIndex = (index) => {
+					currentIndex = index
+					const nextSrc = playlist[currentIndex]
+					if (!nextSrc) return
+					if (video.getAttribute("src") !== nextSrc) {
+						video.setAttribute("src", nextSrc)
+						video.load()
+					}
+					video.play().catch(() => {})
+				}
+
+				video.onended = () => {
+					playIndex((currentIndex + 1) % playlist.length)
+				}
+
+				video.onloadedmetadata = () => {
+					video.play().catch(() => {})
+				}
+
+				playIndex(currentIndex)
+			}
+
+			document.addEventListener("astro:page-load", setupPublicVideoPlaylist)
+			setupPublicVideoPlaylist()
+		</script>
 		<script is:inline>
 			function setupHostedShellNavigation() {
 				const sidebar = document.getElementById("sidebar")
