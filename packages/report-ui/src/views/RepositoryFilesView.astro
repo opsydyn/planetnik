@@ -1,0 +1,455 @@
+---
+import DistributionChart from "../charts/DistributionChart.js";
+import DonutChart from "../charts/DonutChart.js";
+import HorizontalBarChart from "../charts/HorizontalBarChart.js";
+import ScatterPlot from "../charts/ScatterPlot.js";
+import ReportDataGrid from "../tables/ReportDataGrid.js";
+import TemporalDependenciesExplorer from "../temporal/TemporalDependenciesExplorer.js";
+
+type ViewLink = {
+	label: string;
+	href: string;
+	active: boolean;
+};
+
+type DistributionItem = {
+	label: string;
+	value: number;
+	detail: string;
+	detailSecondary?: string;
+};
+
+type BarItem = {
+	label: string;
+	value: number;
+};
+
+type ScatterItem = {
+	x: number;
+	y: number;
+	label: string;
+};
+
+type AgeCategory = {
+	label: string;
+	value: number;
+	detail: string;
+	color: string;
+};
+
+type AgeDetailRow = {
+	id: string;
+	category: string;
+	files: number;
+};
+
+type FileSizeRow = {
+	id: string;
+	file: string;
+	extension: string;
+	linesOfCode: number;
+};
+
+type ChurnRow = {
+	id: string;
+	file: string;
+	commits: number;
+	contributors: number;
+	firstChange: string;
+	lastChange: string;
+};
+
+type TemporalDependencyRow = {
+	periodKey: string;
+	periodLabel: string;
+	periodDays: number;
+	file1: string;
+	file2: string;
+	sameCommits: number;
+	commitsFile1: number;
+	commitsFile2: number;
+	latestCommit: string;
+};
+
+type TemporalSection = {
+	periodKey: string;
+	periodLabel: string;
+	periodDays: number;
+	dependencies: TemporalDependencyRow[];
+};
+
+interface Props {
+	view: "size" | "age" | "churn" | "temporal";
+	repoName: string;
+	viewLinks: ViewLink[];
+	size?: {
+		fileCount: number;
+		totalLoc: number;
+		distribution: DistributionItem[];
+		largestFiles: BarItem[];
+		rows: FileSizeRow[];
+	};
+	age?: {
+		ageInDays: number | null;
+		activeDays: number | null;
+		weeks: number | null;
+		distribution: AgeCategory[];
+		detailRows: AgeDetailRow[];
+	};
+	churn?: {
+		activeDays: number | null;
+		weeks: number | null;
+		estimatedWorkingDays: number | null;
+		filesWithHistoryCount: number;
+		churnScatter: ScatterItem[];
+		volatilityScatter: ScatterItem[];
+		mostChanged: BarItem[];
+		rows: ChurnRow[];
+	};
+	temporal?: {
+		sections: TemporalSection[];
+	};
+}
+
+const { view, repoName, viewLinks, size, age, churn, temporal } = Astro.props as Props;
+
+const donutAgeData = (age?.distribution ?? []).map((item) => ({
+	label: item.label,
+	value: item.value,
+}));
+---
+
+<div class="files-view">
+	<h2>{repoName}</h2>
+
+	<nav class="view-tabs" aria-label="File views">
+		{viewLinks.map((link) => (
+			<a
+				href={link.href}
+				class={link.active ? "view-tab is-active" : "view-tab"}
+				aria-current={link.active ? "page" : undefined}
+			>
+				{link.label}
+			</a>
+		))}
+	</nav>
+
+	{view === "size" && size && (
+		<div class="view-content">
+			<p class="subtitle">{size.fileCount.toLocaleString()} files, {size.totalLoc.toLocaleString()} total lines of code</p>
+			<section class="section">
+				<h3>Size Distribution</h3>
+				<DistributionChart
+					client:load
+					data={size.distribution}
+					helpText="Shows how files cluster by size band. A long tail of very large files usually signals review friction and refactoring opportunities."
+				/>
+			</section>
+			<section class="section">
+				<h3>Largest Files</h3>
+				<HorizontalBarChart
+					client:visible
+					data={size.largestFiles}
+					valueLabel="LOC"
+					helpText="Ranks the biggest files by lines of code. Start with large files that also appear in hotspots, churn, or duplication views."
+				/>
+			</section>
+			<section class="section">
+				<ReportDataGrid
+					client:visible
+					title="File Inventory"
+					description="Search, sort, and paginate the full file inventory for this repository."
+					searchPlaceholder="Search file path or extension"
+					rows={size.rows}
+					columns={[
+						{ field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.4 },
+						{ field: "extension", headerName: "Extension", type: "code", minWidth: 120 },
+						{ field: "linesOfCode", headerName: "Lines of Code", type: "number", minWidth: 150, sort: "desc" },
+					]}
+				/>
+			</section>
+		</div>
+	)}
+
+	{view === "age" && age && (
+		<div class="view-content">
+			<div class="cards">
+				{age.ageInDays !== null && (
+					<div class="card">
+						<div class="card-value">{age.ageInDays.toLocaleString()}</div>
+						<div class="card-label">Age (Days)</div>
+					</div>
+				)}
+				{age.activeDays !== null && (
+					<div class="card">
+						<div class="card-value">{age.activeDays.toLocaleString()}</div>
+						<div class="card-label">Active Days</div>
+					</div>
+				)}
+				{age.weeks !== null && (
+					<div class="card">
+						<div class="card-value">{age.weeks.toLocaleString()}</div>
+						<div class="card-label">Weeks</div>
+					</div>
+				)}
+			</div>
+			{age.distribution.length > 0 && (
+				<div>
+					<section class="section">
+						<h3>Age Risk Overview</h3>
+						<DonutChart
+							client:load
+							data={donutAgeData}
+							valueLabel="files"
+							helpText="Shows how files split across age bands. Older risky areas often need extra care because change has more history and hidden assumptions behind it."
+						/>
+					</section>
+					<section class="section">
+						<h3>File Age Distribution</h3>
+						<DistributionChart
+							client:visible
+							data={age.distribution}
+							helpText="Shows the age spread of files so you can tell whether legacy risk is concentrated or widespread. Pair old age with churn and dependencies to prioritize safely."
+						/>
+					</section>
+				</div>
+			)}
+			<section class="section">
+				<ReportDataGrid
+					client:visible
+					title="Age Categories"
+					description="Search and sort age-risk categories."
+					searchPlaceholder="Search age category"
+					rows={age.detailRows}
+					columns={[
+						{ field: "category", headerName: "Category", minWidth: 240, flex: 1.1 },
+						{ field: "files", headerName: "Files", type: "number", minWidth: 140, sort: "desc" },
+					]}
+					paginationPageSize={10}
+				/>
+				{age.ageInDays === null && (
+					<div class="empty">
+						<p>No file history data available.</p>
+						<p class="hint">Run git history extraction and regenerate reports to populate file age data.</p>
+					</div>
+				)}
+			</section>
+		</div>
+	)}
+
+	{view === "churn" && churn && (
+		<div class="view-content">
+			<div class="cards">
+				{churn.activeDays !== null && (
+					<div class="card">
+						<div class="card-value">{churn.activeDays.toLocaleString()}</div>
+						<div class="card-label">Active Days</div>
+					</div>
+				)}
+				{churn.weeks !== null && (
+					<div class="card">
+						<div class="card-value">{churn.weeks.toLocaleString()}</div>
+						<div class="card-label">Weeks Span</div>
+					</div>
+				)}
+				{churn.estimatedWorkingDays !== null && (
+					<div class="card">
+						<div class="card-value">{churn.estimatedWorkingDays.toLocaleString()}</div>
+						<div class="card-label">Est. Working Days</div>
+					</div>
+				)}
+				{churn.filesWithHistoryCount > 0 && (
+					<div class="card">
+						<div class="card-value">{churn.filesWithHistoryCount.toLocaleString()}</div>
+						<div class="card-label">Files With History</div>
+					</div>
+				)}
+			</div>
+			{churn.rows.length > 0 ? (
+				<div>
+					<section class="section">
+						<h3>Commits vs Contributors per File</h3>
+						<ScatterPlot
+							client:load
+							data={churn.churnScatter}
+							xLabel="Commits"
+							yLabel="Contributors"
+							thresholds={{ x: 20, y: 5 }}
+							helpText="Compares how often files change against how many people change them. Files high on both axes are common coordination hotspots."
+						/>
+					</section>
+					<section class="section">
+						<h3>File Size vs Change Frequency</h3>
+						<ScatterPlot
+							client:visible
+							data={churn.volatilityScatter}
+							xLabel="Lines of Code"
+							yLabel="Commits"
+							thresholds={{ x: 200, y: 20 }}
+							helpText="Compares file size to change frequency. Large, frequently changed files are strong refactoring candidates because risk compounds with every edit."
+						/>
+					</section>
+					<section class="section">
+						<h3>Most Changed Files</h3>
+						<HorizontalBarChart
+							client:visible
+							data={churn.mostChanged}
+							valueLabel="commits"
+							helpText="Ranks files by total commits. Use it as an entry point, then cross-check duplication, complexity, and ownership before planning fixes."
+						/>
+					</section>
+					<ReportDataGrid
+						client:visible
+						title="Churn Table"
+						description="Search and paginate every file with history while keeping the churn charts above."
+						searchPlaceholder="Search file path or date"
+						rows={churn.rows}
+						columns={[
+							{ field: "file", headerName: "File", type: "path", minWidth: 340, flex: 1.5 },
+							{ field: "commits", headerName: "Commits", type: "number", minWidth: 120, sort: "desc" },
+							{ field: "contributors", headerName: "Contributors", type: "number", minWidth: 140 },
+							{ field: "firstChange", headerName: "First Change", type: "date", minWidth: 140 },
+							{ field: "lastChange", headerName: "Last Change", type: "date", minWidth: 140 },
+						]}
+					/>
+				</div>
+			) : churn.activeDays === null ? (
+				<div class="empty">
+					<p>No file history data available.</p>
+					<p class="hint">Run git history extraction and regenerate reports.</p>
+				</div>
+			) : null}
+		</div>
+	)}
+
+	{view === "temporal" && temporal && (
+		<div class="view-content">
+			<p class="subtitle">Files that change together frequently inside {repoName}</p>
+			{temporal.sections.length === 0 ? (
+				<div class="empty">
+					<p>No temporal dependency data available.</p>
+					<p class="hint">Run git history extraction and regenerate reports.</p>
+				</div>
+			) : (
+				<TemporalDependenciesExplorer
+					client:load
+					sections={temporal.sections}
+				/>
+			)}
+		</div>
+	)}
+</div>
+
+<style>
+	.files-view {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.files-view h2 {
+		margin: 0;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		margin: 0;
+		font-size: 0.9rem;
+	}
+
+	.view-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.view-tab {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		background: var(--color-card);
+		color: var(--color-text-muted);
+		font-size: 0.88rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+	}
+
+	.view-tab:hover {
+		border-color: #a5b4fc;
+		color: var(--color-text);
+	}
+
+	.view-tab.is-active {
+		border-color: #6366f1;
+		background: linear-gradient(135deg, var(--color-accent-soft) 0%, var(--color-card) 100%);
+		color: var(--color-text);
+		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+	}
+
+	.view-content {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.section {
+		display: grid;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.section h3 {
+		margin: 0;
+		font-size: 1.05rem;
+		font-weight: 700;
+		color: var(--color-text);
+	}
+
+	.cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 1rem;
+	}
+
+	.card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.card-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.card-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 2rem;
+		text-align: center;
+	}
+
+	.empty p {
+		color: var(--color-text-muted);
+		margin-bottom: 0.5rem;
+	}
+
+	.hint {
+		font-size: 0.85rem;
+	}
+</style>

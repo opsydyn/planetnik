@@ -1,13 +1,8 @@
 ---
-import DistributionChart from "../../../../../components/charts/DistributionChart";
-import DonutChart from "../../../../../components/charts/DonutChart";
-import HorizontalBarChart from "../../../../../components/charts/HorizontalBarChart";
-import ScatterPlot from "../../../../../components/charts/ScatterPlot";
-import TemporalDependenciesExplorer from "../../../../../components/TemporalDependenciesExplorer";
-import ReportDataGrid from "../../../../../components/tables/ReportDataGrid";
+import RepositoryFilesView from "@planetnik/report-ui/views/RepositoryFilesView";
 import Dashboard from "../../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../../lib/chartHelp";
 import {
+	getLandscapeRepositoryFilePageHref,
 	readLandscapeRepoJson,
 	readLandscapeRepoText,
 } from "../../../../../lib/landscape";
@@ -16,8 +11,6 @@ import {
 	type LandscapeRepoPageProps,
 } from "../../../../../lib/landscapeRepoContext";
 import { getMetric, parseMetricsText } from "../../../../../lib/metrics";
-import { route } from "../../../../../lib/route";
-
 interface RepoFileRecord {
 	relativePath: string;
 	extension: string;
@@ -45,13 +38,10 @@ interface RepoTemporalDependency {
 }
 
 const viewLabels = {
-	size: { pageTitle: "File Size", heading: "File Size" },
-	age: { pageTitle: "File Age", heading: "File Age & Freshness" },
-	churn: { pageTitle: "File Churn", heading: "File Change Frequency" },
-	temporal: {
-		pageTitle: "Temporal Dependencies",
-		heading: "Temporal Dependencies",
-	},
+	size: { pageTitle: "File Size" },
+	age: { pageTitle: "File Age" },
+	churn: { pageTitle: "File Churn" },
+	temporal: { pageTitle: "Temporal Dependencies" },
 } as const;
 
 export async function getStaticPaths() {
@@ -105,6 +95,20 @@ const temporalDeps =
 		"temporal_dependencies.json",
 	)?.dependencies ?? [];
 
+// View links
+const viewKeys = [
+	{ value: "size", label: "Size" },
+	{ value: "age", label: "Age" },
+	{ value: "churn", label: "Churn" },
+	{ value: "temporal", label: "Temporal" },
+] as const;
+const viewLinks = viewKeys.map((v) => ({
+	label: v.label,
+	href: getLandscapeRepositoryFilePageHref(props.repoKey, v.value),
+	active: v.value === props.view,
+}));
+
+// Size view
 const sortedFilesBySize = [...filesMain].sort(
 	(a, b) => b.linesOfCode - a.linesOfCode,
 );
@@ -120,7 +124,6 @@ const sizeBuckets = [
 	{ label: "501-1000", min: 501, max: 1000, count: 0, loc: 0 },
 	{ label: "1001+", min: 1001, max: Infinity, count: 0, loc: 0 },
 ];
-
 for (const file of sortedFilesBySize) {
 	for (const bucket of sizeBuckets) {
 		if (file.linesOfCode >= bucket.min && file.linesOfCode <= bucket.max) {
@@ -130,19 +133,16 @@ for (const file of sortedFilesBySize) {
 		}
 	}
 }
-
-const fileSizeDistribution = sizeBuckets.map((bucket) => ({
+const sizeDistribution = sizeBuckets.map((bucket) => ({
 	label: `${bucket.label} LOC`,
 	value: bucket.loc,
 	detail: `${bucket.count} files`,
 	detailSecondary: `${bucket.loc.toLocaleString()} LOC`,
 }));
-
-const largestFilesBarData = sortedFilesBySize.slice(0, 15).map((file) => ({
+const largestFiles = sortedFilesBySize.slice(0, 15).map((file) => ({
 	label: file.relativePath.split("/").pop() ?? file.relativePath,
 	value: file.linesOfCode,
 }));
-
 const fileSizeRows = sortedFilesBySize.map((file) => ({
 	id: file.relativePath,
 	file: file.relativePath,
@@ -150,6 +150,7 @@ const fileSizeRows = sortedFilesBySize.map((file) => ({
 	linesOfCode: file.linesOfCode,
 }));
 
+// Age view
 const ageInDays = getMetric(metrics, "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS");
 const activeDays = getMetric(metrics, "FILE_CHANGE_HISTORY_ACTIVE_DAYS");
 const weeks = getMetric(metrics, "FILE_CHANGE_HISTORY_WEEKS");
@@ -172,11 +173,10 @@ const ageDistribution = ageCategories
 			label: category.label,
 			value: value ?? 0,
 			detail: `${(value ?? 0).toLocaleString()} files`,
-			color: ageRiskColors[index],
+			color: ageRiskColors[index] ?? "#888",
 		};
 	})
 	.filter((item) => item.value > 0);
-
 const ageDetailRows = ageCategories
 	.map((category) => {
 		const value = getMetric(metrics, category.metric);
@@ -189,27 +189,24 @@ const ageDetailRows = ageCategories
 			row !== null,
 	);
 
+// Churn view
 const filesWithHistory = filesMain
 	.filter((file) => file.commitsCount && file.commitsCount > 0)
 	.sort((a, b) => (b.commitsCount ?? 0) - (a.commitsCount ?? 0));
-
-const churnScatterData = filesWithHistory.slice(0, 200).map((file) => ({
+const churnScatter = filesWithHistory.slice(0, 200).map((file) => ({
 	x: file.commitsCount ?? 0,
 	y: file.contributorsCount ?? 0,
 	label: file.relativePath.split("/").pop() ?? file.relativePath,
 }));
-
-const mostChangedFilesBarData = filesWithHistory.slice(0, 15).map((file) => ({
-	label: file.relativePath.split("/").pop() ?? file.relativePath,
-	value: file.commitsCount ?? 0,
-}));
-
-const volatilityData = filesWithHistory.slice(0, 200).map((file) => ({
+const volatilityScatter = filesWithHistory.slice(0, 200).map((file) => ({
 	x: file.linesOfCode,
 	y: file.commitsCount ?? 0,
 	label: file.relativePath.split("/").pop() ?? file.relativePath,
 }));
-
+const mostChanged = filesWithHistory.slice(0, 15).map((file) => ({
+	label: file.relativePath.split("/").pop() ?? file.relativePath,
+	value: file.commitsCount ?? 0,
+}));
 const churnRows = filesWithHistory.map((file) => ({
 	id: file.relativePath,
 	file: file.relativePath,
@@ -219,13 +216,13 @@ const churnRows = filesWithHistory.map((file) => ({
 	lastChange: file.latestDate ?? "—",
 }));
 
+// Temporal view
 const groupedTemporalDeps = new Map<string, RepoTemporalDependency[]>();
 for (const dependency of temporalDeps) {
 	const group = groupedTemporalDeps.get(dependency.periodKey) ?? [];
 	group.push(dependency);
 	groupedTemporalDeps.set(dependency.periodKey, group);
 }
-
 const temporalSections = [...groupedTemporalDeps.entries()]
 	.map(([periodKey, group]) => {
 		const first = group[0];
@@ -245,169 +242,36 @@ const temporalSections = [...groupedTemporalDeps.entries()]
 ---
 
 <Dashboard title={`${repoName} ${viewMeta.pageTitle}`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  {props.view === "size" && (
-    <div>
-      <h2>{viewMeta.heading}</h2>
-      <p class="subtitle">{sortedFilesBySize.length} files, {totalFileLoc.toLocaleString()} total lines of code</p>
-      <section class="section">
-        <h3>Size Distribution</h3>
-        <DistributionChart client:load data={fileSizeDistribution} helpText={chartHelp.fileSize.distribution} />
-      </section>
-      <section class="section">
-        <h3>Largest Files</h3>
-        <HorizontalBarChart client:visible data={largestFilesBarData} valueLabel="LOC" helpText={chartHelp.fileSize.largestFiles} />
-      </section>
-      <section class="section">
-        <ReportDataGrid
-          client:visible
-          title="Largest Files Table"
-          description="Search, sort, and paginate the full file inventory for this repository."
-          searchPlaceholder="Search file path or extension"
-          rows={fileSizeRows}
-          columns={[
-            { field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.4 },
-            { field: "extension", headerName: "Extension", type: "code", minWidth: 120 },
-            { field: "linesOfCode", headerName: "Lines of Code", type: "number", minWidth: 150, sort: "desc" },
-          ]}
-        />
-      </section>
-    </div>
-  )}
-
-  {props.view === "age" && (
-    <div>
-      <h2>{viewMeta.heading}</h2>
-      <div class="cards">
-        {ageInDays !== null && <div class="card"><div class="card-value">{ageInDays.toLocaleString()}</div><div class="card-label">Age (Days)</div></div>}
-        {activeDays !== null && <div class="card"><div class="card-value">{activeDays.toLocaleString()}</div><div class="card-label">Active Days</div></div>}
-        {weeks !== null && <div class="card"><div class="card-value">{weeks.toLocaleString()}</div><div class="card-label">Weeks</div></div>}
-      </div>
-      {ageDistribution.length > 0 && (
-        <div>
-          <section class="section">
-            <h3>Age Risk Overview</h3>
-            <DonutChart client:load data={ageDistribution.map((item) => ({ label: item.label, value: item.value }))} valueLabel="files" helpText={chartHelp.fileAge.overview} />
-          </section>
-          <section class="section">
-            <h3>File Age Distribution</h3>
-            <DistributionChart client:visible data={ageDistribution} helpText={chartHelp.fileAge.distribution} />
-          </section>
-        </div>
-      )}
-      <section class="section">
-        <h3>File Age Detail</h3>
-        <ReportDataGrid
-          client:visible
-          title="Age Categories"
-          description="Search and sort age-risk categories without losing the summary charts above."
-          searchPlaceholder="Search age category"
-          rows={ageDetailRows}
-          columns={[
-            { field: "category", headerName: "Category", minWidth: 240, flex: 1.1 },
-            { field: "files", headerName: "Files", type: "number", minWidth: 140, sort: "desc" },
-          ]}
-          paginationPageSize={10}
-        />
-        {ageInDays === null && (
-          <div class="empty">
-            <p>No file history data available.</p>
-            <p class="hint">Run git history extraction and regenerate reports to populate file age data.</p>
-          </div>
-        )}
-      </section>
-    </div>
-  )}
-
-  {props.view === "churn" && (
-    <div>
-      <h2>{viewMeta.heading}</h2>
-      <div class="cards">
-        {activeDays !== null && <div class="card"><div class="card-value">{activeDays.toLocaleString()}</div><div class="card-label">Active Days</div></div>}
-        {weeks !== null && <div class="card"><div class="card-value">{weeks.toLocaleString()}</div><div class="card-label">Weeks Span</div></div>}
-        {estimatedWorkingDays !== null && <div class="card"><div class="card-value">{estimatedWorkingDays.toLocaleString()}</div><div class="card-label">Est. Working Days</div></div>}
-        {filesWithHistory.length > 0 && <div class="card"><div class="card-value">{filesWithHistory.length.toLocaleString()}</div><div class="card-label">Files With History</div></div>}
-      </div>
-      {filesWithHistory.length > 0 ? (
-        <div>
-          <section class="section">
-            <h3>Commits vs Contributors per File</h3>
-            <ScatterPlot client:load data={churnScatterData} xLabel="Commits" yLabel="Contributors" thresholds={{ x: 20, y: 5 }} helpText={chartHelp.churn.commitsVsContributors} />
-          </section>
-          <section class="section">
-            <h3>File Size vs Change Frequency</h3>
-            <ScatterPlot client:visible data={volatilityData} xLabel="Lines of Code" yLabel="Commits" thresholds={{ x: 200, y: 20 }} helpText={chartHelp.churn.sizeVsFrequency} />
-          </section>
-          <section class="section">
-            <h3>Most Changed Files</h3>
-            <HorizontalBarChart client:visible data={mostChangedFilesBarData} valueLabel="commits" helpText={chartHelp.churn.mostChanged} />
-          </section>
-          <ReportDataGrid
-            client:visible
-            title="Churn Table"
-            description="Search and paginate every file with history while keeping the churn charts above."
-            searchPlaceholder="Search file path or date"
-            rows={churnRows}
-            columns={[
-              { field: "file", headerName: "File", type: "path", minWidth: 340, flex: 1.5 },
-              { field: "commits", headerName: "Commits", type: "number", minWidth: 120, sort: "desc" },
-              { field: "contributors", headerName: "Contributors", type: "number", minWidth: 140 },
-              { field: "firstChange", headerName: "First Change", type: "date", minWidth: 140 },
-              { field: "lastChange", headerName: "Last Change", type: "date", minWidth: 140 },
-            ]}
-          />
-        </div>
-      ) : activeDays === null ? (
-        <div class="empty">
-          <p>No file history data available.</p>
-          <p class="hint">Run git history extraction and regenerate reports.</p>
-        </div>
-      ) : null}
-    </div>
-  )}
-
-  {props.view === "temporal" && (
-    <div>
-      <h2>{viewMeta.heading}</h2>
-      <p class="subtitle">Files that change together frequently inside {repoName}</p>
-      {temporalSections.length === 0 ? (
-        <div class="empty">
-          <p>No temporal dependency data available.</p>
-          <p class="hint">Run git history extraction and regenerate reports.</p>
-        </div>
-      ) : (
-        <TemporalDependenciesExplorer
-          client:load
-          sections={temporalSections.map((section) => ({
-            periodKey: section.periodKey,
-            periodLabel: section.periodLabel,
-            periodDays: section.periodDays,
-            dependencies: section.dependencies.map((dependency) => ({
-              periodKey: dependency.periodKey,
-              periodLabel: dependency.periodLabel,
-              periodDays: dependency.periodDays,
-              file1: dependency.file1,
-              file2: dependency.file2,
-              sameCommits: dependency.sameCommits,
-              commitsFile1: dependency.commitsFile1,
-              commitsFile2: dependency.commitsFile2,
-              latestCommit: dependency.latestCommit,
-            })),
-          }))}
-        />
-      )}
-    </div>
-  )}
+	<RepositoryFilesView
+		view={props.view}
+		repoName={repoName}
+		viewLinks={viewLinks}
+		size={{
+			fileCount: sortedFilesBySize.length,
+			totalLoc: totalFileLoc,
+			distribution: sizeDistribution,
+			largestFiles,
+			rows: fileSizeRows,
+		}}
+		age={{
+			ageInDays,
+			activeDays,
+			weeks,
+			distribution: ageDistribution,
+			detailRows: ageDetailRows,
+		}}
+		churn={{
+			activeDays,
+			weeks,
+			estimatedWorkingDays,
+			filesWithHistoryCount: filesWithHistory.length,
+			churnScatter,
+			volatilityScatter,
+			mostChanged,
+			rows: churnRows,
+		}}
+		temporal={{
+			sections: temporalSections,
+		}}
+	/>
 </Dashboard>
-
-<style>
-  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
-  .section { margin-bottom: 2rem; }
-  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-  .card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 1.25rem; }
-  .card-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
-  .card-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
-  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
-  .hint { font-size: 0.85rem; }
-</style>

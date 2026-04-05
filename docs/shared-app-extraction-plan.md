@@ -408,13 +408,14 @@ Use this section as the live migration checklist. Mark items off as slices land.
 - [x] repo controls
 - [x] repo impact
 - [x] repo hotspots
+- [x] repo topology — `RepositoryTopologyView` + `TemporalDependenciesExplorer` promoted
+- [x] repo coupling — `RepositoryBalancedCouplingView`
+- [x] repo components — `RepositoryComponentsView`
+- [x] repo files — `RepositoryFilesView` + `TemporalDependenciesExplorer`
 
 ### Todo
 
-- [ ] graph-heavy surfaces:
-  - topology
-  - coupling
-  - components
+- [ ] repo units (`/files/[view]` equivalent for units)
 
 ## Near-Term Plan
 

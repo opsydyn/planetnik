@@ -3,9 +3,9 @@ import AppShell from "../../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../../lib/hosted-shell.js";
 import {
 	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryHref,
 	getHostedReportRepositoryPageHref,
 } from "../../../../../../lib/hosted-routes.js";
-import { buildReportFilesViewModel } from "../../../../../../lib/report-files-view-model.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../../../../lib/report-detail-view-model.js";
@@ -14,6 +14,7 @@ import {
 	getRuntimeReportLandscapeRepository,
 	getRuntimeReportLandscapeRepositoryFilesView,
 } from "../../../../../../lib/runtime-client.js";
+import RepositoryFilesView from "@planetnik/report-ui/views/RepositoryFilesView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -51,71 +52,135 @@ if (!files) {
 	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
-const viewModel = buildReportFilesViewModel({
-	reportName: repository.name,
-	slug,
-	routeBase: getHostedReportRepositoryPageHref(slug, repo, "/files"),
-	files,
-});
+const routeBase = getHostedReportRepositoryPageHref(slug, repo, "/files");
+const fileViews = [
+	{ value: "size", label: "Size" },
+	{ value: "age", label: "Age" },
+	{ value: "churn", label: "Churn" },
+	{ value: "temporal", label: "Temporal" },
+] as const;
+const viewLinks = fileViews.map((v) => ({
+	label: v.label,
+	href: `${routeBase}/${v.value}`,
+	active: v.value === view,
+}));
+
+const ageRiskColors = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"];
+
+const sizeProps =
+	files.view === "size"
+		? {
+				fileCount: files.headline.fileCount,
+				totalLoc: files.headline.totalLinesOfCode,
+				distribution: [...files.sizeDistribution],
+				largestFiles: [...files.largestFiles],
+				rows: files.rows.map((row) => ({
+					id: row.relativePath,
+					file: row.relativePath,
+					extension: `.${row.extension}`,
+					linesOfCode: row.linesOfCode,
+				})),
+			}
+		: undefined;
+
+const ageProps =
+	files.view === "age"
+		? {
+				ageInDays: files.headline.ageInDays,
+				activeDays: files.headline.activeDays,
+				weeks: files.headline.weeks,
+				distribution: files.categories.map((item, i) => ({
+					label: item.label,
+					value: item.value,
+					detail: `${item.value.toLocaleString()} files`,
+					color: ageRiskColors[i] ?? "#888",
+				})),
+				detailRows: files.categories.map((item) => ({
+					id: item.label,
+					category: item.label,
+					files: item.value,
+				})),
+			}
+		: undefined;
+
+const churnRows =
+	files.view === "churn"
+		? [...files.rows]
+				.filter((r) => (r.commitsCount ?? 0) > 0)
+				.sort((a, b) => (b.commitsCount ?? 0) - (a.commitsCount ?? 0))
+		: [];
+
+const churnProps =
+	files.view === "churn"
+		? {
+				activeDays: files.headline.activeDays,
+				weeks: files.headline.weeks,
+				estimatedWorkingDays: files.headline.estimatedWorkingDays,
+				filesWithHistoryCount: files.headline.filesWithHistoryCount,
+				churnScatter: churnRows.slice(0, 200).map((f) => ({
+					x: f.commitsCount ?? 0,
+					y: f.contributorsCount ?? 0,
+					label: f.relativePath.split("/").pop() ?? f.relativePath,
+				})),
+				volatilityScatter: churnRows.slice(0, 200).map((f) => ({
+					x: f.linesOfCode,
+					y: f.commitsCount ?? 0,
+					label: f.relativePath.split("/").pop() ?? f.relativePath,
+				})),
+				mostChanged: [...files.mostChangedFiles],
+				rows: churnRows.map((f) => ({
+					id: f.relativePath,
+					file: f.relativePath,
+					commits: f.commitsCount ?? 0,
+					contributors: f.contributorsCount ?? 0,
+					firstChange: f.firstDate ?? "—",
+					lastChange: f.latestDate ?? "—",
+				})),
+			}
+		: undefined;
+
+const temporalProps =
+	files.view === "temporal"
+		? {
+				sections: files.sections.map((section) => ({
+					periodKey: section.periodKey,
+					periodLabel: section.periodLabel,
+					periodDays: section.periodDays,
+					dependencies: section.dependencies.map((dep) => ({
+						periodKey: section.periodKey,
+						periodLabel: section.periodLabel,
+						periodDays: section.periodDays,
+						file1: dep.file1,
+						file2: dep.file2,
+						sameCommits: dep.sameCommits,
+						commitsFile1: dep.commitsFile1,
+						commitsFile2: dep.commitsFile2,
+						latestCommit: dep.latestCommit,
+					})),
+				})),
+			}
+		: undefined;
+
+const viewHeadings = {
+	size: "File Size",
+	age: "File Age & Freshness",
+	churn: "File Change Frequency",
+	temporal: "Temporal Dependencies",
+} as const;
 ---
 
 <AppShell
-	title={`${viewModel.heading} Files`}
-	subtitle={viewModel.subtitle}
+	title={`${repository.name} ${viewHeadings[view]}`}
+	subtitle={`${repository.name} · Files`}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Files</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route keeps the repo-drilldown file-view semantics aligned
-				with the static landscape shell while the shared UI extraction is still
-				pending.
-			</p>
-			<div class="card-actions">
-				{viewModel.viewLinks.map((link) => (
-					<a
-						class={link.active ? "button" : "button-secondary"}
-						href={link.href}
-					>
-						{link.label}
-					</a>
-				))}
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
-					Open repository dashboard
-				</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Files</p>
-					<h2>{section.title}</h2>
-					{section.rows.length > 0 ? (
-						<ul class="todo-list">
-							{section.rows.map((row) => (
-								<li>
-									<strong>{row.label}</strong>: {row.value}
-								</li>
-							))}
-						</ul>
-					) : (
-						<p class="muted-copy">No exported rows are available for this view.</p>
-					)}
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryFilesView
+		view={view}
+		repoName={repository.name}
+		viewLinks={viewLinks}
+		size={sizeProps}
+		age={ageProps}
+		churn={churnProps}
+		temporal={temporalProps}
+	/>
 </AppShell>

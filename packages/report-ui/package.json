@@ -40,7 +40,10 @@
 		"./views/RepositoryComponentsView": "./src/views/RepositoryComponentsView.astro",
 		"./views/RepositoryMetricsView": "./src/views/RepositoryMetricsView.astro",
 		"./views/RepositoryTopologyView": "./src/views/RepositoryTopologyView.astro",
-		"./topology/TopologyGraph": "./src/topology/TopologyGraph.tsx"
+		"./views/RepositoryFilesView": "./src/views/RepositoryFilesView.astro",
+		"./views/RepositoryUnitsView": "./src/views/RepositoryUnitsView.astro",
+		"./topology/TopologyGraph": "./src/topology/TopologyGraph.tsx",
+		"./temporal/TemporalDependenciesExplorer": "./src/temporal/TemporalDependenciesExplorer.tsx"
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",

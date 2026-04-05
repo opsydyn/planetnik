@@ -3,9 +3,9 @@ import AppShell from "../../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../../lib/hosted-shell.js";
 import {
 	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryHref,
 	getHostedReportRepositoryPageHref,
 } from "../../../../../../lib/hosted-routes.js";
-import { buildReportUnitsViewModel } from "../../../../../../lib/report-units-view-model.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../../../../lib/report-detail-view-model.js";
@@ -14,6 +14,7 @@ import {
 	getRuntimeReportLandscapeRepository,
 	getRuntimeReportLandscapeRepositoryUnitsView,
 } from "../../../../../../lib/runtime-client.js";
+import RepositoryUnitsView from "@planetnik/report-ui/views/RepositoryUnitsView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -51,71 +52,77 @@ if (!units) {
 	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
-const viewModel = buildReportUnitsViewModel({
-	reportName: repository.name,
-	slug,
-	routeBase: getHostedReportRepositoryPageHref(slug, repo, "/units"),
-	units,
-});
+const routeBase = getHostedReportRepositoryPageHref(slug, repo, "/units");
+const unitViews = [
+	{ value: "size", label: "Size" },
+	{ value: "complexity", label: "Complexity" },
+] as const;
+const viewLinks = unitViews.map((v) => ({
+	label: v.label,
+	href: `${routeBase}/${v.value}`,
+	active: v.value === view,
+}));
+
+const complexityColors = ["#22c55e", "#eab308", "#f97316", "#ef4444"];
+
+const sizeProps =
+	units.view === "size"
+		? {
+				unitCount: units.headline.unitCount,
+				totalLoc: units.headline.totalLinesOfCode,
+				sizeRisk: [...units.sizeRisk],
+				sizeDistribution: [...units.sizeDistribution],
+				rows: units.rows.map((row) => ({
+					id: `${row.relativeFileName}:${row.startLine}`,
+					unit: row.shortName,
+					file: row.relativeFileName,
+					linesOfCode: row.linesOfCode,
+					mcCabeIndex: row.mcCabeIndex,
+					numberOfParameters: row.numberOfParameters,
+				})),
+			}
+		: undefined;
+
+const complexityProps =
+	units.view === "complexity"
+		? {
+				unitCount: units.headline.unitCount,
+				complexityRisk: [...units.complexityRisk],
+				complexityDistribution: units.complexityDistribution.map((item, i) => ({
+					...item,
+					color: complexityColors[i] ?? "#888",
+				})),
+				complexityScatter: units.rows.slice(0, 200).map((row) => ({
+					x: row.linesOfCode,
+					y: row.mcCabeIndex,
+					label: row.shortName,
+				})),
+				rows: units.rows.map((row) => ({
+					id: `${row.relativeFileName}:${row.startLine}`,
+					unit: row.shortName,
+					file: row.relativeFileName,
+					mcCabeIndex: row.mcCabeIndex,
+					linesOfCode: row.linesOfCode,
+				})),
+			}
+		: undefined;
+
+const viewHeadings = {
+	size: "Unit Size",
+	complexity: "Conditional Complexity",
+} as const;
 ---
 
 <AppShell
-	title={`${viewModel.heading} Units`}
-	subtitle={viewModel.subtitle}
+	title={`${repository.name} ${viewHeadings[view]}`}
+	subtitle={`${repository.name} · Units`}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Units</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route keeps the repo-drilldown unit-view semantics aligned
-				with the static landscape shell while the shared UI extraction is still
-				pending.
-			</p>
-			<div class="card-actions">
-				{viewModel.viewLinks.map((link) => (
-					<a
-						class={link.active ? "button" : "button-secondary"}
-						href={link.href}
-					>
-						{link.label}
-					</a>
-				))}
-				<a class="button-secondary" href={`/reports/${slug}/repositories/${repo}`}>
-					Open repository dashboard
-				</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Units</p>
-					<h2>{section.title}</h2>
-					{section.rows.length > 0 ? (
-						<ul class="todo-list">
-							{section.rows.map((row) => (
-								<li>
-									<strong>{row.label}</strong>: {row.value}
-								</li>
-							))}
-						</ul>
-					) : (
-						<p class="muted-copy">No exported rows are available for this view.</p>
-					)}
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryUnitsView
+		view={view}
+		repoName={repository.name}
+		viewLinks={viewLinks}
+		size={sizeProps}
+		complexity={complexityProps}
+	/>
 </AppShell>

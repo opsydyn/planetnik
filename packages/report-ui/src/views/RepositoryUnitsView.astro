@@ -1,0 +1,243 @@
+---
+import DistributionChart from "../charts/DistributionChart.js";
+import DonutChart from "../charts/DonutChart.js";
+import ScatterPlot from "../charts/ScatterPlot.js";
+import ReportDataGrid from "../tables/ReportDataGrid.js";
+
+type ViewLink = {
+	label: string;
+	href: string;
+	active: boolean;
+};
+
+type DonutItem = {
+	label: string;
+	value: number;
+};
+
+type DistributionItem = {
+	label: string;
+	value: number;
+	detail: string;
+	detailSecondary?: string;
+	color?: string;
+};
+
+type ScatterItem = {
+	x: number;
+	y: number;
+	label: string;
+};
+
+type UnitSizeRow = {
+	id: string;
+	unit: string;
+	file: string;
+	linesOfCode: number;
+	mcCabeIndex: number;
+	numberOfParameters: number;
+};
+
+type UnitComplexityRow = {
+	id: string;
+	unit: string;
+	file: string;
+	mcCabeIndex: number;
+	linesOfCode: number;
+};
+
+interface Props {
+	view: "size" | "complexity";
+	repoName: string;
+	viewLinks: ViewLink[];
+	size?: {
+		unitCount: number;
+		totalLoc: number;
+		sizeRisk: DonutItem[];
+		sizeDistribution: DistributionItem[];
+		rows: UnitSizeRow[];
+	};
+	complexity?: {
+		unitCount: number;
+		complexityRisk: DonutItem[];
+		complexityDistribution: DistributionItem[];
+		complexityScatter: ScatterItem[];
+		rows: UnitComplexityRow[];
+	};
+}
+
+const { view, repoName, viewLinks, size, complexity } = Astro.props as Props;
+---
+
+<div class="units-view">
+	<h2>{repoName}</h2>
+
+	<nav class="view-tabs" aria-label="Unit views">
+		{viewLinks.map((link) => (
+			<a
+				href={link.href}
+				class={link.active ? "view-tab is-active" : "view-tab"}
+				aria-current={link.active ? "page" : undefined}
+			>
+				{link.label}
+			</a>
+		))}
+	</nav>
+
+	{view === "size" && size && (
+		<div class="view-content">
+			<p class="subtitle">{size.unitCount.toLocaleString()} units, {size.totalLoc.toLocaleString()} total lines in units</p>
+			<section class="section">
+				<h3>Size Risk</h3>
+				<DonutChart
+					client:load
+					data={size.sizeRisk}
+					valueLabel="units"
+					helpText="Shows how unit sizes split across risk bands. A large risky slice suggests review effort should shift toward breaking units into smaller, clearer pieces."
+				/>
+			</section>
+			<section class="section">
+				<h3>Size Distribution</h3>
+				<DistributionChart
+					client:load
+					data={size.sizeDistribution}
+					helpText="Shows the full spread of unit sizes. Use it to see whether size problems are isolated outliers or a systemic habit across the codebase."
+				/>
+			</section>
+			<section class="section">
+				<ReportDataGrid
+					client:visible
+					title="Unit Size Table"
+					description="Search across the full unit inventory instead of a fixed top snapshot."
+					searchPlaceholder="Search unit or file path"
+					rows={size.rows}
+					columns={[
+						{ field: "unit", headerName: "Unit", minWidth: 260, flex: 1.1 },
+						{ field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.2 },
+						{ field: "linesOfCode", headerName: "LOC", type: "number", minWidth: 110, sort: "desc" },
+						{ field: "mcCabeIndex", headerName: "McCabe", type: "number", minWidth: 120 },
+						{ field: "numberOfParameters", headerName: "Params", type: "number", minWidth: 120 },
+					]}
+				/>
+			</section>
+		</div>
+	)}
+
+	{view === "complexity" && complexity && (
+		<div class="view-content">
+			<p class="subtitle">{complexity.unitCount.toLocaleString()} units analyzed</p>
+			<section class="section">
+				<h3>Complexity Risk</h3>
+				<DonutChart
+					client:load
+					data={complexity.complexityRisk}
+					valueLabel="units"
+					helpText="Shows how many units fall into each complexity risk band. If higher-risk slices grow, tighten review expectations and target simplification work there."
+				/>
+			</section>
+			<section class="section">
+				<h3>McCabe Complexity Distribution</h3>
+				<DistributionChart
+					client:load
+					data={complexity.complexityDistribution}
+					helpText="Shows the overall complexity spread. A fat high-end tail usually means complexity is systemic rather than a few isolated outliers."
+				/>
+			</section>
+			<section class="section">
+				<h3>LOC vs McCabe Complexity</h3>
+				<ScatterPlot
+					client:visible
+					data={complexity.complexityScatter}
+					xLabel="Lines of Code"
+					yLabel="McCabe Index"
+					thresholds={{ x: 50, y: 10 }}
+					helpText="Compares unit size and McCabe complexity together. Large, complex points deserve attention first because they are harder to change and easier to misunderstand."
+				/>
+			</section>
+			<section class="section">
+				<ReportDataGrid
+					client:visible
+					title="Complexity Table"
+					description="Search and paginate the full complexity dataset while the charts stay focused on the highest-signal views."
+					searchPlaceholder="Search unit or file path"
+					rows={complexity.rows}
+					columns={[
+						{ field: "unit", headerName: "Unit", minWidth: 260, flex: 1.1 },
+						{ field: "file", headerName: "File", type: "path", minWidth: 320, flex: 1.2 },
+						{ field: "mcCabeIndex", headerName: "McCabe", type: "number", minWidth: 120, sort: "desc" },
+						{ field: "linesOfCode", headerName: "LOC", type: "number", minWidth: 120 },
+					]}
+				/>
+			</section>
+		</div>
+	)}
+</div>
+
+<style>
+	.units-view {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.units-view h2 {
+		margin: 0;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		margin: 0;
+		font-size: 0.9rem;
+	}
+
+	.view-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.view-tab {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		background: var(--color-card);
+		color: var(--color-text-muted);
+		font-size: 0.88rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+	}
+
+	.view-tab:hover {
+		border-color: #a5b4fc;
+		color: var(--color-text);
+	}
+
+	.view-tab.is-active {
+		border-color: #6366f1;
+		background: linear-gradient(135deg, var(--color-accent-soft) 0%, var(--color-card) 100%);
+		color: var(--color-text);
+		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+	}
+
+	.view-content {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.section {
+		display: grid;
+		gap: 0.75rem;
+		min-width: 0;
+	}
+
+	.section h3 {
+		margin: 0;
+		font-size: 1.05rem;
+		font-weight: 700;
+		color: var(--color-text);
+	}
+</style>
