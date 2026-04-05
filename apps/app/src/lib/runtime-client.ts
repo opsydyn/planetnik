@@ -161,6 +161,20 @@ export type RuntimeReportContributorDetail = {
     readonly logicalComponents: ReadonlyArray<string>;
     readonly concerns: ReadonlyArray<string>;
   }>;
+  readonly dailyActivity: ReadonlyArray<{
+    readonly date: string;
+    readonly commits: number;
+  }>;
+  readonly impact: {
+    readonly glueScore: number;
+    readonly snackingScore: number;
+    readonly structuralImpactScore: number;
+    readonly visibleActivityScore: number;
+    readonly dominantDimension: string;
+    readonly isGlue: boolean;
+    readonly isSnacking: boolean;
+    readonly reasons: ReadonlyArray<string>;
+  } | null;
 };
 
 export type RuntimeTopologyPeopleDep = {
@@ -941,7 +955,7 @@ export async function getRuntimeReportContributorDetail(
     return null;
   }
 
-  return data.contributor;
+  return data.contributor as RuntimeReportContributorDetail;
 }
 
 export async function getRuntimeReportTopology(
@@ -1287,7 +1301,7 @@ export async function getRuntimeReportLandscapeRepositoryContributorDetail(
     return null;
   }
 
-  return data.contributor;
+  return data.contributor as RuntimeReportContributorDetail;
 }
 
 export async function getRuntimeReportLandscapeRepositoryTopology(

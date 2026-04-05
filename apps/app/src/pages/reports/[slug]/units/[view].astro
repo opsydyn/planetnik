@@ -1,7 +1,6 @@
 ---
 import AppShell from "../../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../../lib/hosted-shell.js";
-import { buildReportUnitsViewModel } from "../../../../lib/report-units-view-model.js";
 import {
 	getRuntimeReport,
 	getRuntimeReportUnitsView,
@@ -9,6 +8,7 @@ import {
 import {
 	shouldRedirectReportDetail,
 } from "../../../../lib/report-detail-view-model.js";
+import RepositoryUnitsView from "@planetnik/report-ui/views/RepositoryUnitsView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -29,69 +29,70 @@ if (!units) {
 	return Astro.redirect(`/reports/${slug}/overview`);
 }
 
-const viewModel = buildReportUnitsViewModel({
-	reportName: reportDetail.report.name,
-	slug,
-	units,
-});
+const routeBase = `/reports/${slug}/units`;
+const viewLinks = [
+	{ label: "Size", href: `${routeBase}/size`, active: view === "size" },
+	{ label: "Complexity", href: `${routeBase}/complexity`, active: view === "complexity" },
+];
+
+const sizeProps = units.view === "size" ? {
+	unitCount: units.headline.unitCount,
+	totalLoc: units.headline.totalLinesOfCode,
+	sizeRisk: [...units.sizeRisk],
+	sizeDistribution: units.sizeDistribution.map((item) => ({
+		label: item.label,
+		value: item.value,
+		detail: item.detail,
+	})),
+	rows: units.rows.map((r) => ({
+		id: `${r.relativeFileName}:${r.startLine}`,
+		unit: r.shortName,
+		file: r.relativeFileName,
+		linesOfCode: r.linesOfCode,
+		mcCabeIndex: r.mcCabeIndex,
+		numberOfParameters: r.numberOfParameters,
+	})),
+} : undefined;
+
+const complexityProps = units.view === "complexity" ? (() => {
+	const sorted = [...units.rows].sort((a, b) => b.mcCabeIndex - a.mcCabeIndex);
+	const complexityScatter = sorted.slice(0, 200).map((r) => ({
+		x: r.linesOfCode,
+		y: r.mcCabeIndex,
+		label: r.shortName,
+	}));
+	return {
+		unitCount: units.headline.unitCount,
+		complexityRisk: [...units.complexityRisk],
+		complexityDistribution: units.complexityDistribution.map((item) => ({
+			label: item.label,
+			value: item.value,
+			detail: item.detail,
+		})),
+		complexityScatter,
+		rows: sorted.map((r) => ({
+			id: `${r.relativeFileName}:${r.startLine}`,
+			unit: r.shortName,
+			file: r.relativeFileName,
+			mcCabeIndex: r.mcCabeIndex,
+			linesOfCode: r.linesOfCode,
+		})),
+	};
+})() : undefined;
+
+const viewTitle = view === "size" ? "Unit Size" : "Conditional Complexity";
 ---
 
 <AppShell
-	title={`${viewModel.heading} Units`}
-	subtitle={viewModel.subtitle}
+	title={viewTitle}
+	subtitle={`${reportDetail.report.name} · Units`}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Units</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route keeps the static unit-view semantics intact while the
-				shared chart and grid extraction is still deferred.
-			</p>
-			<div class="card-actions">
-				{viewModel.viewLinks.map((link) => (
-					<a
-						class={link.active ? "button" : "button-secondary"}
-						href={link.href}
-					>
-						{link.label}
-					</a>
-				))}
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Units</p>
-					<h2>{section.title}</h2>
-					{section.rows.length > 0 ? (
-						<ul class="todo-list">
-							{section.rows.map((row) => (
-								<li>
-									<strong>{row.label}</strong>: {row.value}
-								</li>
-							))}
-						</ul>
-					) : (
-						<p class="muted-copy">No exported rows are available for this view.</p>
-					)}
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryUnitsView
+		view={view}
+		repoName={reportDetail.report.name}
+		viewLinks={viewLinks}
+		{...(sizeProps ? { size: sizeProps } : {})}
+		{...(complexityProps ? { complexity: complexityProps } : {})}
+	/>
 </AppShell>

@@ -1,7 +1,6 @@
 ---
 import AppShell from "../../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../../lib/hosted-shell.js";
-import { buildReportFilesViewModel } from "../../../../lib/report-files-view-model.js";
 import {
 	getRuntimeReport,
 	getRuntimeReportFilesView,
@@ -9,6 +8,7 @@ import {
 import {
 	shouldRedirectReportDetail,
 } from "../../../../lib/report-detail-view-model.js";
+import RepositoryFilesView from "@planetnik/report-ui/views/RepositoryFilesView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -29,69 +29,116 @@ if (!files) {
 	return Astro.redirect(`/reports/${slug}/overview`);
 }
 
-const viewModel = buildReportFilesViewModel({
-	reportName: reportDetail.report.name,
-	slug,
-	files,
-});
+const routeBase = `/reports/${slug}/files`;
+const viewLinks = [
+	{ label: "Size", href: `${routeBase}/size`, active: view === "size" },
+	{ label: "Age", href: `${routeBase}/age`, active: view === "age" },
+	{ label: "Churn", href: `${routeBase}/churn`, active: view === "churn" },
+	{ label: "Temporal", href: `${routeBase}/temporal`, active: view === "temporal" },
+];
+
+const AGE_RISK_COLORS = ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"];
+
+const sizeProps = files.view === "size" ? {
+	fileCount: files.headline.fileCount,
+	totalLoc: files.headline.totalLinesOfCode,
+	distribution: files.sizeDistribution.map((item) => ({
+		label: item.label,
+		value: item.value,
+		detail: item.detail,
+	})),
+	largestFiles: [...files.largestFiles],
+	rows: files.rows.map((r) => ({
+		id: r.relativePath,
+		file: r.relativePath,
+		extension: r.extension,
+		linesOfCode: r.linesOfCode,
+	})),
+} : undefined;
+
+const ageProps = files.view === "age" ? {
+	ageInDays: files.headline.ageInDays,
+	activeDays: files.headline.activeDays,
+	weeks: files.headline.weeks,
+	distribution: files.categories.map((cat, i) => ({
+		label: cat.label,
+		value: cat.value,
+		detail: `${cat.value.toLocaleString()} files`,
+		color: AGE_RISK_COLORS[i] ?? "#94a3b8",
+	})).filter((d) => d.value > 0),
+	detailRows: files.categories.map((cat, i) => ({
+		id: String(i),
+		category: cat.label,
+		files: cat.value,
+	})),
+} : undefined;
+
+const churnProps = files.view === "churn" ? (() => {
+	const rowsWithHistory = files.rows.filter((r) => (r.commitsCount ?? 0) > 0);
+	const churnScatter = rowsWithHistory.slice(0, 200).map((r) => ({
+		x: r.commitsCount ?? 0,
+		y: r.contributorsCount ?? 0,
+		label: r.relativePath.split("/").pop() ?? r.relativePath,
+	}));
+	const volatilityScatter = rowsWithHistory.slice(0, 200).map((r) => ({
+		x: r.linesOfCode,
+		y: r.commitsCount ?? 0,
+		label: r.relativePath.split("/").pop() ?? r.relativePath,
+	}));
+	const mostChanged = [...files.mostChangedFiles];
+	return {
+		activeDays: files.headline.activeDays,
+		weeks: files.headline.weeks,
+		estimatedWorkingDays: files.headline.estimatedWorkingDays,
+		filesWithHistoryCount: files.headline.filesWithHistoryCount,
+		churnScatter,
+		volatilityScatter,
+		mostChanged,
+		rows: rowsWithHistory.map((r) => ({
+			id: r.relativePath,
+			file: r.relativePath,
+			commits: r.commitsCount ?? 0,
+			contributors: r.contributorsCount ?? 0,
+			firstChange: r.firstDate ?? "",
+			lastChange: r.latestDate ?? "",
+		})),
+	};
+})() : undefined;
+
+const temporalProps = files.view === "temporal" ? {
+	sections: files.sections.map((s) => ({
+		periodKey: s.periodKey,
+		periodLabel: s.periodLabel,
+		periodDays: s.periodDays,
+		dependencies: s.dependencies.map((d) => ({
+			periodKey: s.periodKey,
+			periodLabel: s.periodLabel,
+			periodDays: s.periodDays,
+			file1: d.file1,
+			file2: d.file2,
+			sameCommits: d.sameCommits,
+			commitsFile1: d.commitsFile1,
+			commitsFile2: d.commitsFile2,
+			latestCommit: d.latestCommit,
+		})),
+	})),
+} : undefined;
+
+const viewTitle = view === "size" ? "File Size" : view === "age" ? "File Age" : view === "churn" ? "File Churn" : "Temporal Dependencies";
 ---
 
 <AppShell
-	title={`${viewModel.heading} Files`}
-	subtitle={viewModel.subtitle}
+	title={viewTitle}
+	subtitle={`${reportDetail.report.name} · Files`}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Files</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route keeps the static file-view semantics intact while the
-				shared chart and table extraction is still pending.
-			</p>
-			<div class="card-actions">
-				{viewModel.viewLinks.map((link) => (
-					<a
-						class={link.active ? "button" : "button-secondary"}
-						href={link.href}
-					>
-						{link.label}
-					</a>
-				))}
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			{viewModel.sections.map((section) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">Files</p>
-					<h2>{section.title}</h2>
-					{section.rows.length > 0 ? (
-						<ul class="todo-list">
-							{section.rows.map((row) => (
-								<li>
-									<strong>{row.label}</strong>: {row.value}
-								</li>
-							))}
-						</ul>
-					) : (
-						<p class="muted-copy">No exported rows are available for this view.</p>
-					)}
-				</article>
-			))}
-		</section>
-	</div>
+	<RepositoryFilesView
+		view={view}
+		repoName={reportDetail.report.name}
+		viewLinks={viewLinks}
+		{...(sizeProps ? { size: sizeProps } : {})}
+		{...(ageProps ? { age: ageProps } : {})}
+		{...(churnProps ? { churn: churnProps } : {})}
+		{...(temporalProps ? { temporal: temporalProps } : {})}
+	/>
 </AppShell>

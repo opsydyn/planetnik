@@ -301,6 +301,24 @@ const ReportContributorDetailSchema = Schema.Struct({
       concerns: Schema.Array(Schema.String),
     }),
   ),
+  dailyActivity: Schema.Array(
+    Schema.Struct({
+      date: Schema.String,
+      commits: Schema.Number,
+    }),
+  ),
+  impact: Schema.NullOr(
+    Schema.Struct({
+      glueScore: Schema.Number,
+      snackingScore: Schema.Number,
+      structuralImpactScore: Schema.Number,
+      visibleActivityScore: Schema.Number,
+      dominantDimension: Schema.String,
+      isGlue: Schema.Boolean,
+      isSnacking: Schema.Boolean,
+      reasons: Schema.Array(Schema.String),
+    }),
+  ),
 })
 
 const ReportContributorDetailResponseSchema = Schema.Struct({

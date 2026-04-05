@@ -2,13 +2,19 @@
 import DonutChart from "@planetnik/report-ui/charts/DonutChart";
 import HorizontalBarChart from "@planetnik/report-ui/charts/HorizontalBarChart";
 import ReportDataGrid from "@planetnik/report-ui/tables/ReportDataGrid";
+import SecurityBallChart from "@planetnik/report-ui/security/SecurityBallChart";
+import SharedPackagesGraph from "@planetnik/report-ui/security/SharedPackagesGraph";
 import AppShell from "../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
+import {
+	getHostedReportRepositoryHref,
+} from "../../../lib/hosted-routes.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../lib/report-detail-view-model.js";
 import {
 	getRuntimeReport,
+	getRuntimeReportLandscapeRepositories,
 	getRuntimeReportSecurity,
 } from "../../../lib/runtime-client.js";
 
@@ -24,9 +30,18 @@ if (reportDetail.context?.reportMode !== "landscape") {
 	return Astro.redirect(`/reports/${slug}/overview`);
 }
 
-const security = await getRuntimeReportSecurity(cookie, slug);
+const [security, repositories] = await Promise.all([
+	getRuntimeReportSecurity(cookie, slug),
+	getRuntimeReportLandscapeRepositories(cookie, slug),
+]);
+
 if (!security) {
 	return Astro.redirect(`/reports/${slug}/overview`);
+}
+
+const repoHrefMap: Record<string, string> = {};
+for (const repo of repositories?.repositories ?? []) {
+	repoHrefMap[repo.name] = getHostedReportRepositoryHref(slug, repo.repoKey);
 }
 
 const exposurePercent = Math.round(security.supplyChainExposureScore * 100);
@@ -43,11 +58,25 @@ const repoAlertBars = security.repoHealth
 	.filter((r) => r.openAlerts > 0)
 	.sort((a, b) => b.openAlerts - a.openAlerts)
 	.slice(0, 15)
-	.map((r) => ({ label: r.repo, value: r.openAlerts }));
+	.map((r) => ({ label: r.repo, value: r.openAlerts, href: repoHrefMap[r.repo] }));
 
-const repoRows = security.repoHealth.map((r, i) => ({
-	id: String(i),
+const securityBallRepos = security.repoHealth.map((r) => ({
 	repo: r.repo,
+	href: repoHrefMap[r.repo],
+	totalAlerts: r.totalAlerts,
+	openAlerts: r.openAlerts,
+	critical: r.severityCounts.critical,
+	high: r.severityCounts.high,
+	medium: r.severityCounts.medium,
+	low: r.severityCounts.low,
+	mttrDays: r.meanTimeToResolveDays ?? null,
+	oldestOpenDays: r.oldestOpenAlertDays ?? null,
+}));
+
+const repoRows = security.repoHealth.map((r) => ({
+	id: r.repo,
+	repo: r.repo,
+	repoHref: repoHrefMap[r.repo] ?? "",
 	totalAlerts: r.totalAlerts,
 	openAlerts: r.openAlerts,
 	fixedAlerts: r.fixedAlerts,
@@ -106,6 +135,22 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		</article>
 	</section>
 
+	{securityBallRepos.some((r) => r.totalAlerts > 0) && (
+		<>
+			<h3 class="section-heading">Vulnerability Landscape</h3>
+			<SecurityBallChart
+				client:load
+				repos={securityBallRepos}
+				totalOpen={security.totalOpenAlerts}
+				severityCounts={security.severityCounts}
+				exposureScore={security.supplyChainExposureScore}
+				helpText="Vulnerability landscape — repos orbit the central vulnerability mass, sized by open alerts, colored by highest severity. Pulsing rings indicate critical vulnerabilities."
+			/>
+		</>
+	)}
+
+	<h3 class="section-heading">Alert Distribution</h3>
+
 	{(severityItems.length > 0 || repoAlertBars.length > 0) && (
 		<section class="chart-row">
 			{severityItems.length > 0 && (
@@ -133,32 +178,53 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		</section>
 	)}
 
-	<ReportDataGrid
-		client:load
-		title="Repository Security Health"
-		description="Per-repository vulnerability alert breakdown with severity counts and resolution metrics."
-		searchPlaceholder="Search repositories"
-		rows={repoRows}
-		columns={[
-			{ field: "repo", headerName: "Repository", type: "text", flex: 2, sort: "asc" },
-			{ field: "totalAlerts", headerName: "Total", type: "number", flex: 1 },
-			{ field: "openAlerts", headerName: "Open", type: "number", flex: 1, sort: "desc" },
-			{ field: "fixedAlerts", headerName: "Fixed", type: "number", flex: 1 },
-			{ field: "critical", headerName: "Critical", type: "number", flex: 1 },
-			{ field: "high", headerName: "High", type: "number", flex: 1 },
-			{ field: "medium", headerName: "Medium", type: "number", flex: 1 },
-			{ field: "low", headerName: "Low", type: "number", flex: 1 },
-			{ field: "mttr", headerName: "MTTR (days)", type: "text", flex: 1 },
-			{ field: "oldestDays", headerName: "Oldest Open (days)", type: "text", flex: 1 },
-		]}
-	/>
+	{security.sharedVulnerablePackages.length > 0 && (
+		<div class="section-block">
+			<h3 class="section-heading">Supply Chain Risk</h3>
+			<SharedPackagesGraph
+				client:load
+				packages={[...security.sharedVulnerablePackages].map((p) => ({
+					name: p.name,
+					ecosystem: p.ecosystem,
+					severity: p.severity,
+					affectedRepos: [...p.affectedRepos],
+				}))}
+				repoHrefMap={repoHrefMap}
+				helpText="Supply chain risk — package nodes (colored by severity) connect to repos that depend on them. Larger nodes affect more repos."
+			/>
+		</div>
+	)}
+
+	<h3 class="section-heading">Repository Details</h3>
+
+	<div class="section-block">
+		<ReportDataGrid
+			client:load
+			title="Repository Security Health"
+			description="Per-repository vulnerability alert breakdown with severity counts and resolution metrics."
+			searchPlaceholder="Search repositories"
+			rows={repoRows}
+			columns={[
+				{ field: "repo", headerName: "Repository", type: "link", hrefField: "repoHref", flex: 2, sort: "asc" },
+				{ field: "totalAlerts", headerName: "Total", type: "number", flex: 1 },
+				{ field: "openAlerts", headerName: "Open", type: "number", flex: 1, sort: "desc" },
+				{ field: "fixedAlerts", headerName: "Fixed", type: "number", flex: 1 },
+				{ field: "critical", headerName: "Critical", type: "number", flex: 1 },
+				{ field: "high", headerName: "High", type: "number", flex: 1 },
+				{ field: "medium", headerName: "Medium", type: "number", flex: 1 },
+				{ field: "low", headerName: "Low", type: "number", flex: 1 },
+				{ field: "mttr", headerName: "MTTR (days)", type: "text", flex: 1 },
+				{ field: "oldestDays", headerName: "Oldest Open (days)", type: "text", flex: 1 },
+			]}
+		/>
+	</div>
 
 	{sharedRows.length > 0 && (
 		<div class="section-block">
 			<ReportDataGrid
 				client:load
 				title="Shared Vulnerable Packages"
-				description="Packages with known vulnerabilities appearing in multiple repositories."
+				description="Packages with known vulnerabilities appearing in multiple repositories — highest supply chain risk."
 				searchPlaceholder="Search packages"
 				rows={sharedRows}
 				columns={[
@@ -189,11 +255,21 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
 		padding: 1rem 1.25rem;
+		text-align: center;
 	}
 	.stat-card--critical { border-color: var(--color-danger, #ef4444); }
 	.stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
 	.stat-card--critical .stat-value { color: var(--color-danger, #ef4444); }
 	.stat-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.25rem; }
+
+	.section-heading {
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: var(--color-text);
+		margin: 0.5rem 0 1rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--color-border);
+	}
 
 	.chart-row {
 		display: grid;
@@ -202,5 +278,5 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		margin-bottom: 2rem;
 	}
 	.chart-col { min-width: 0; }
-	.section-block { margin-top: 2rem; }
+	.section-block { margin-bottom: 2rem; }
 </style>

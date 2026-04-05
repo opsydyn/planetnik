@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isValid } from "date-fns"
 import { appConfig } from "../config.js";
 import {
 	getFlexibleDataDirCandidates,
@@ -12,6 +13,43 @@ import {
 const runtimeRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const workspaceRoot = join(runtimeRoot, "../..");
 const defaultDatasetsRoot = join(workspaceRoot, "datasets");
+
+/**
+ * Normalise any date value to YYYY-MM-DD.
+ * Handles:
+ *   - ISO date strings: "2023-02-27"
+ *   - ISO datetime strings: "2023-02-27T00:00:00.000Z"
+ *   - JS Date.toString() strings: "Mon Feb 27 2023 00:00:00 GMT+0000 (Greenwich Mean Time)"
+ *   - Millisecond timestamps (number): 1677456000000
+ * Returns "" for empty/invalid input so callers can use `|| "—"` guards as before.
+ */
+export function toISODateString(value: unknown): string {
+	if (value === null || value === undefined) return ""
+	let parsed: Date
+	if (typeof value === "number") {
+		if (!Number.isFinite(value)) return ""
+		parsed = new Date(value)
+	} else if (typeof value === "string") {
+		const trimmed = value.trim()
+		if (trimmed === "") return ""
+		// Already YYYY-MM-DD — fast path
+		if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+		parsed = new Date(trimmed)
+	} else {
+		return ""
+	}
+	if (!isValid(parsed)) return ""
+	return parsed.toISOString().slice(0, 10)
+}
+
+/**
+ * Same as toISODateString but returns null instead of "" for missing/invalid
+ * values, for fields typed `string | null`.
+ */
+function toISODateStringOrNull(value: unknown): string | null {
+	const result = toISODateString(value)
+	return result === "" ? null : result
+}
 
 export type RuntimeDataset = {
 	readonly name: string;
@@ -130,6 +168,20 @@ export type ReportContributorDetail = {
 		readonly logicalComponents: ReadonlyArray<string>;
 		readonly concerns: ReadonlyArray<string>;
 	}>;
+	readonly dailyActivity: ReadonlyArray<{
+		readonly date: string;
+		readonly commits: number;
+	}>;
+	readonly impact: {
+		readonly glueScore: number;
+		readonly snackingScore: number;
+		readonly structuralImpactScore: number;
+		readonly visibleActivityScore: number;
+		readonly dominantDimension: string;
+		readonly isGlue: boolean;
+		readonly isSnacking: boolean;
+		readonly reasons: ReadonlyArray<string>;
+	} | null;
 };
 
 export type TopologyPeopleDep = {
@@ -963,8 +1015,8 @@ function readFileInventory(dataDir: string): ReadonlyArray<ReportFileRecord> {
 				typeof file.contributorsCount === "number"
 					? file.contributorsCount
 					: null,
-			firstDate: typeof file.firstDate === "string" ? file.firstDate : null,
-			latestDate: typeof file.latestDate === "string" ? file.latestDate : null,
+			firstDate: toISODateStringOrNull(file.firstDate),
+			latestDate: toISODateStringOrNull(file.latestDate),
 		}))
 		.filter(
 			(file) => file.relativePath.length > 0 && file.linesOfCode >= 0,
@@ -1754,10 +1806,7 @@ export function readReportLandscapeOverviewSummary(
 							: null;
 					const contributors =
 						typeof item.contributors === "number" ? item.contributors : null;
-					const latestCommitDate =
-						typeof item.latestCommitDate === "string"
-							? item.latestCommitDate
-							: null;
+					const latestCommitDate = toISODateStringOrNull(item.latestCommitDate);
 
 					if (
 						!name ||
@@ -1940,7 +1989,7 @@ export function readReportLandscapeTeamsSummary(
 						? item.repositoryCount
 						: repositories.length,
 				latestCommitDate:
-					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+					toISODateString(item.latestCommitDate),
 				members,
 				repositories,
 			};
@@ -2119,9 +2168,9 @@ export function readReportLandscapeContributorsSummary(
 				commits180Days,
 				commits365Days,
 				firstCommit:
-					typeof item.firstCommitDate === "string" ? item.firstCommitDate : "",
+					toISODateString(item.firstCommitDate),
 				lastCommit:
-					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+					toISODateString(item.latestCommitDate),
 				percentage: "",
 				filesTouched: null,
 				componentsTouched: null,
@@ -2129,7 +2178,7 @@ export function readReportLandscapeContributorsSummary(
 				knowledgeSignal: repositoryCount >= 3 ? "Cross-context knowledge" : "",
 				repositoryCount,
 				latestCommitDate:
-					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+					toISODateString(item.latestCommitDate),
 				isBot: item.isBot === true,
 				repositories,
 			};
@@ -2149,6 +2198,47 @@ export function readReportLandscapeContributorsSummary(
 		).length,
 		botCount: items.filter((contributor) => contributor.isBot === true).length,
 		contributors: items,
+	};
+}
+
+function readContributorImpactEntry(
+	dataDir: string,
+	email: string,
+): ReportContributorDetail["impact"] {
+	const impact = readJsonRecord(dataDir, "contributor_impact.json");
+	const periods = Array.isArray(impact?.periods) ? impact.periods : [];
+	const allTimePeriod = periods.find(
+		(period): period is Record<string, unknown> =>
+			typeof period === "object" &&
+			period !== null &&
+			(period as Record<string, unknown>).period_key === "all_time",
+	);
+	const contributors = Array.isArray(allTimePeriod?.contributors)
+		? allTimePeriod.contributors.filter(
+				(entry): entry is Record<string, unknown> =>
+					typeof entry === "object" && entry !== null,
+			)
+		: [];
+	const entry = contributors.find(
+		(c) => c.email === email,
+	) as Record<string, unknown> | undefined;
+	if (!entry) {
+		return null;
+	}
+	return {
+		glueScore: typeof entry.glue_score === "number" ? entry.glue_score : 0,
+		snackingScore: typeof entry.snacking_score === "number" ? entry.snacking_score : 0,
+		structuralImpactScore:
+			typeof entry.structural_impact_score === "number" ? entry.structural_impact_score : 0,
+		visibleActivityScore:
+			typeof entry.visible_activity_score === "number" ? entry.visible_activity_score : 0,
+		dominantDimension:
+			typeof entry.dominant_dimension === "string" ? entry.dominant_dimension : "",
+		isGlue: entry.is_glue === true,
+		isSnacking: entry.is_snacking === true,
+		reasons: Array.isArray(entry.reasons)
+			? entry.reasons.filter((r): r is string => typeof r === "string")
+			: [],
 	};
 }
 
@@ -2228,9 +2318,9 @@ export function readReportContributorDetail(
 				? detail.commitsCount365Days
 				: 0,
 		firstCommitDate:
-			typeof detail.firstCommitDate === "string" ? detail.firstCommitDate : "",
+			toISODateString(detail.firstCommitDate),
 		latestCommitDate:
-			typeof detail.latestCommitDate === "string" ? detail.latestCommitDate : "",
+			toISODateString(detail.latestCommitDate),
 		percentage: summary?.percentage ?? "",
 		activeDays: Array.isArray(detail.dailyActivity) ? detail.dailyActivity.length : 0,
 		filesCount: Array.isArray(detail.files) ? detail.files.length : 0,
@@ -2289,6 +2379,19 @@ export function readReportContributorDetail(
 					.sort((left, right) => right.commits - left.commits)
 					.slice(0, 10)
 			: [],
+		dailyActivity: Array.isArray(detail.dailyActivity)
+			? detail.dailyActivity
+					.filter(
+						(entry): entry is Record<string, unknown> =>
+							typeof entry === "object" && entry !== null,
+					)
+					.map((entry) => ({
+						date: toISODateString(entry.date),
+						commits: typeof entry.commits === "number" ? entry.commits : 0,
+					}))
+					.filter((entry) => entry.date.length > 0)
+			: [],
+		impact: readContributorImpactEntry(dataDir, email),
 	};
 }
 
@@ -3532,9 +3635,9 @@ export function readReportLandscapeRepositorySummary(
 						? item.commitsCount90Days
 						: 0,
 				firstCommitDate:
-					typeof item.firstCommitDate === "string" ? item.firstCommitDate : "",
+					toISODateString(item.firstCommitDate),
 				latestCommitDate:
-					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+					toISODateString(item.latestCommitDate),
 				type: item.isBot === true ? ("Bot" as const) : ("Human" as const),
 				glueScore:
 					typeof impact?.glue_score === "number"
@@ -3578,10 +3681,7 @@ export function readReportLandscapeRepositorySummary(
 				: typeof metadata?.description === "string"
 					? metadata.description
 					: "Repository drilldown within the current landscape analysis.",
-		latestCommitDate:
-			typeof repositoryEntry.latestCommitDate === "string"
-				? repositoryEntry.latestCommitDate
-				: "",
+		latestCommitDate: toISODateString(repositoryEntry.latestCommitDate),
 		commits30d:
 			typeof repositoryEntry.commits30d === "number"
 				? repositoryEntry.commits30d
@@ -3633,8 +3733,7 @@ export function readReportLandscapeRepositoriesSummary(
 		.map((item) => {
 			const repoKey = typeof item.repoKey === "string" ? item.repoKey : null;
 			const name = typeof item.name === "string" ? item.name : null;
-			const latestCommitDate =
-				typeof item.latestCommitDate === "string" ? item.latestCommitDate : null;
+			const latestCommitDate = toISODateStringOrNull(item.latestCommitDate);
 
 			if (!repoKey || !name || !latestCommitDate) {
 				return null;
@@ -3935,9 +4034,9 @@ export function readReportLandscapeRepositoryContributorsSummary(
 						? item.commitsCount365Days
 						: 0,
 				firstCommit:
-					typeof item.firstCommitDate === "string" ? item.firstCommitDate : "",
+					toISODateString(item.firstCommitDate),
 				lastCommit:
-					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+					toISODateString(item.latestCommitDate),
 				percentage:
 					typeof item.percentage === "string" ? item.percentage : "",
 				filesTouched: null,
@@ -3946,7 +4045,7 @@ export function readReportLandscapeRepositoryContributorsSummary(
 				knowledgeSignal,
 				repositoryCount: null,
 				latestCommitDate:
-					typeof item.latestCommitDate === "string" ? item.latestCommitDate : "",
+					toISODateString(item.latestCommitDate),
 				isBot: null,
 				repositories: [],
 			}];
@@ -4032,9 +4131,9 @@ export function readReportLandscapeRepositoryContributorDetail(
 				? detail.commitsCount365Days
 				: 0,
 		firstCommitDate:
-			typeof detail.firstCommitDate === "string" ? detail.firstCommitDate : "",
+			toISODateString(detail.firstCommitDate),
 		latestCommitDate:
-			typeof detail.latestCommitDate === "string" ? detail.latestCommitDate : "",
+			toISODateString(detail.latestCommitDate),
 		percentage: summary?.percentage ?? "",
 		activeDays: Array.isArray(detail.dailyActivity) ? detail.dailyActivity.length : 0,
 		filesCount: Array.isArray(detail.files) ? detail.files.length : 0,
@@ -4090,6 +4189,19 @@ export function readReportLandscapeRepositoryContributorDetail(
 							: [],
 					}))
 			: [],
+		dailyActivity: Array.isArray(detail.dailyActivity)
+			? detail.dailyActivity
+					.filter(
+						(entry): entry is Record<string, unknown> =>
+							typeof entry === "object" && entry !== null,
+					)
+					.map((entry) => ({
+						date: toISODateString(entry.date),
+						commits: typeof entry.commits === "number" ? entry.commits : 0,
+					}))
+					.filter((entry) => entry.date.length > 0)
+			: [],
+		impact: readContributorImpactEntry(repoDataDir, email),
 	};
 }
 

@@ -48,6 +48,8 @@ describe("report contributor detail view model", () => {
 						concerns: ["api"],
 					},
 				],
+				dailyActivity: [],
+				impact: null,
 			},
 		});
 
@@ -128,6 +130,8 @@ describe("report contributor detail view model", () => {
 						concerns: ["ui"],
 					},
 				],
+				dailyActivity: [],
+				impact: null,
 			},
 		});
 

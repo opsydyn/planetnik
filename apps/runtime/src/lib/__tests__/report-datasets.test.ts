@@ -55,6 +55,7 @@ const {
 	readReportLandscapeRepositoryCouplingSummary,
 	readReportUnitsView,
 	resolveReportDataSource,
+	toISODateString,
 } = await import("../report-datasets.js");
 
 const tempRoots: string[] = [];
@@ -1515,6 +1516,8 @@ describe("runtime report dataset helpers", () => {
 					concerns: ["ui"],
 				},
 			],
+			dailyActivity: [{ date: "2026-03-31", commits: 2 }],
+			impact: null,
 		});
 	});
 
@@ -2009,6 +2012,8 @@ describe("runtime report dataset helpers", () => {
 					concerns: ["api"],
 				},
 			],
+			dailyActivity: [{ date: "2026-03-31", commits: 2 }],
+			impact: null,
 		});
 	});
 
@@ -3582,5 +3587,37 @@ describe("runtime report dataset helpers", () => {
 			message: "Trend data requires multiple analysis snapshots over time.",
 			hint: "Run planetnik generateReports periodically. Each run adds a snapshot to the trend baseline.",
 		});
+	});
+});
+
+describe("toISODateString", () => {
+	test("passes through already-ISO dates unchanged", () => {
+		expect(toISODateString("2023-02-27")).toBe("2023-02-27");
+		expect(toISODateString("2017-05-31")).toBe("2017-05-31");
+	});
+
+	test("normalises JS Date.toString() GMT strings to YYYY-MM-DD", () => {
+		expect(toISODateString("Mon Feb 27 2023 00:00:00 GMT+0000 (Greenwich Mean Time)")).toBe("2023-02-27");
+		expect(toISODateString("Wed May 31 2017 01:00:00 GMT+0100 (British Summer Time)")).toBe("2017-05-31");
+		expect(toISODateString("Mon Dec 18 2017 00:00:00 GMT+0000 (Greenwich Mean Time)")).toBe("2017-12-18");
+		expect(toISODateString("Fri Jan 10 2025 00:00:00 GMT+0000 (Greenwich Mean Time)")).toBe("2025-01-10");
+	});
+
+	test("normalises ISO datetime strings", () => {
+		expect(toISODateString("2023-02-27T00:00:00.000Z")).toBe("2023-02-27");
+		expect(toISODateString("2023-02-27T12:34:56Z")).toBe("2023-02-27");
+	});
+
+	test("normalises millisecond timestamps", () => {
+		// 2023-02-27 UTC = 1677456000000
+		expect(toISODateString(1677456000000)).toBe("2023-02-27");
+	});
+
+	test("returns empty string for missing or invalid values", () => {
+		expect(toISODateString("")).toBe("");
+		expect(toISODateString(null)).toBe("");
+		expect(toISODateString(undefined)).toBe("");
+		expect(toISODateString("not a date")).toBe("");
+		expect(toISODateString({})).toBe("");
 	});
 });

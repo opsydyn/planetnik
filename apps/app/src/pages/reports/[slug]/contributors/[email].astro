@@ -3,17 +3,22 @@ import AppShell from "../../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../../lib/hosted-shell.js";
 import {
 	getHostedReportContributorEmailFromParam,
+	getHostedReportContributorRouteParam,
+	getHostedReportRepositoryContributorHref,
+	getHostedReportRepositoryHref,
 } from "../../../../lib/hosted-routes.js";
-import {
-	buildReportContributorDetailViewModel,
-} from "../../../../lib/report-contributor-detail-view-model.js";
 import {
 	getRuntimeReport,
 	getRuntimeReportContributorDetail,
+	getRuntimeReportContributors,
 } from "../../../../lib/runtime-client.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../../lib/report-detail-view-model.js";
+import { getContributorMonthlyActivity } from "@planetnik/report-ui/contributors/contributorHeatmap";
+import HorizontalBarChart from "@planetnik/report-ui/charts/HorizontalBarChart";
+import ReportDataGrid from "@planetnik/report-ui/tables/ReportDataGrid";
+import RepositoryContributorDetailView from "@planetnik/report-ui/views/RepositoryContributorDetailView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -24,116 +29,225 @@ if (shouldRedirectReportDetail(reportDetail)) {
 	return Astro.redirect("/");
 }
 
-const contributor = email
+const isLandscape = reportDetail.context?.reportMode === "landscape";
+
+// Landscape: find from the summary list
+const landscapeContributor = isLandscape
+	? ((await getRuntimeReportContributors(cookie, slug)).find((c) => c.email === email) ?? null)
+	: null;
+
+// Single-repo: fetch full detail
+const singleRepoContributor = !isLandscape
 	? await getRuntimeReportContributorDetail(cookie, slug, email)
 	: null;
 
-if (!contributor) {
+if (isLandscape && !landscapeContributor) {
+	return Astro.redirect(`/reports/${slug}/contributors`);
+}
+if (!isLandscape && !singleRepoContributor) {
 	return Astro.redirect(`/reports/${slug}/contributors`);
 }
 
-const viewModel = buildReportContributorDetailViewModel({
-	slug,
-	reportName: reportDetail.report.name,
-	contributor,
-});
+// Landscape computed values
+const repositoryRows = landscapeContributor?.repositories.map((repo) => ({
+	id: repo.repoKey,
+	repository: repo.name,
+	repositoryHref: getHostedReportRepositoryHref(slug, repo.repoKey),
+	repoContributorView: "Open contributor view",
+	repoContributorHref: getHostedReportRepositoryContributorHref(slug, repo.repoKey, email),
+})) ?? [];
+
+const repositoryBarData = landscapeContributor?.repositories.slice(0, 12).map((repo) => ({
+	label: repo.name,
+	value: 1,
+	href: getHostedReportRepositoryHref(slug, repo.repoKey),
+})) ?? [];
+
+// Single-repo computed values
+const collaborators = singleRepoContributor?.collaborators.map((entry) => ({
+	email: entry.email,
+	displayName: entry.displayName,
+	sharedFiles: entry.sharedFiles,
+	href: `/reports/${slug}/contributors/${getHostedReportContributorRouteParam(entry.email)}`,
+})) ?? [];
+
+const topCollaboratorHref = singleRepoContributor?.topCollaboratorEmail
+	? `/reports/${slug}/contributors/${getHostedReportContributorRouteParam(singleRepoContributor.topCollaboratorEmail)}`
+	: null;
+
+const dailyActivity = singleRepoContributor ? [...singleRepoContributor.dailyActivity] : [];
+const monthlyActivity = getContributorMonthlyActivity(dailyActivity);
+
+const pageTitle = isLandscape
+	? `${landscapeContributor?.displayName ?? email} — Landscape Contributor`
+	: `${singleRepoContributor?.displayName ?? email} Contributor`;
 ---
 
 <AppShell
-	title={`${viewModel.heading} Contributor`}
-	subtitle={viewModel.subtitle}
+	title={pageTitle}
+	subtitle={`${reportDetail.report.name} · Contributors`}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Contributor</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				Hosted contributor drilldown stays tied to the same dataset export contract
-				as the static report app, without copying the static Astro pages directly.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={viewModel.backHref}>
-					Back to contributors
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
+	{isLandscape && landscapeContributor ? (
+		<>
+			<a class="back-link" href={`/reports/${slug}/contributors`}>&larr; Back to contributors</a>
 
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
+			<header class="page-header">
+				<div>
+					<h2>{landscapeContributor.displayName}</h2>
+					<p class="subtitle">
+						<code class="email">{landscapeContributor.email}</code>
+						&middot; {(landscapeContributor.repositoryCount ?? landscapeContributor.repositories.length).toLocaleString()} repositories
+					</p>
+				</div>
+				<div class="status-list">
+					<span class="badge">{landscapeContributor.isBot ? "bot" : "human"}</span>
+				</div>
+			</header>
+
+			<section class="stats-grid">
+				<article class="stat-card">
+					<div class="stat-value">{landscapeContributor.commitsAllTime.toLocaleString()}</div>
+					<div class="stat-label">All-Time Commits</div>
 				</article>
-			))}
-		</section>
+				<article class="stat-card">
+					<div class="stat-value">{landscapeContributor.commits30Days.toLocaleString()}</div>
+					<div class="stat-label">Commits (30d)</div>
+				</article>
+				<article class="stat-card">
+					<div class="stat-value">{landscapeContributor.commits90Days.toLocaleString()}</div>
+					<div class="stat-label">Commits (90d)</div>
+				</article>
+				<article class="stat-card">
+					<div class="stat-value">{(landscapeContributor.repositoryCount ?? landscapeContributor.repositories.length).toLocaleString()}</div>
+					<div class="stat-label">Repositories</div>
+				</article>
+				<article class="stat-card">
+					<div class="stat-value">{landscapeContributor.latestCommitDate || "—"}</div>
+					<div class="stat-label">Latest Commit</div>
+				</article>
+			</section>
 
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Profile</p>
-				<h2>Contributor facts</h2>
-				<dl class="fact-list">
-					{viewModel.facts.map((fact) => (
-						<div>
-							<dt>{fact.label}</dt>
-							<dd>{fact.value}</dd>
-						</div>
-					))}
-				</dl>
-			</article>
+			{repositoryBarData.length > 0 && (
+				<section class="section">
+					<h3>Repository Footprint</h3>
+					<HorizontalBarChart
+						client:visible
+						data={repositoryBarData}
+						valueLabel="repositories"
+						maxItems={12}
+						helpText="Repositories this contributor has committed to."
+					/>
+				</section>
+			)}
 
-			<article class="dashboard-card">
-				<p class="card-kicker">Languages</p>
-				<h2>Extension footprint</h2>
-				{viewModel.extensions.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.extensions.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No extension footprint is available.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Components</p>
-				<h2>Logical component footprint</h2>
-				{viewModel.components.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.components.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No logical component footprint is available.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Files</p>
-				<h2>Top touched files</h2>
-				{viewModel.topFiles.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.topFiles.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No ranked source-file footprint is available.</p>
-				)}
-			</article>
-		</section>
-	</div>
+			<ReportDataGrid
+				client:visible
+				title="Repository Contribution Paths"
+				description="Jump to the repository summary or directly to the contributor's repo-scoped detail page."
+				searchPlaceholder="Search repository"
+				rows={repositoryRows}
+				columns={[
+					{ field: "repository", headerName: "Repository", type: "link", hrefField: "repositoryHref", minWidth: 220, flex: 1, sort: "asc" },
+					{ field: "repoContributorView", headerName: "Repo Contributor View", type: "link", hrefField: "repoContributorHref", minWidth: 220 },
+				]}
+			/>
+		</>
+	) : singleRepoContributor ? (
+		<RepositoryContributorDetailView
+			repoName={reportDetail.report.name}
+			backHref={`/reports/${slug}/contributors`}
+			contributorName={singleRepoContributor.displayName}
+			email={singleRepoContributor.email}
+			isActive={singleRepoContributor.status === "Active"}
+			isRookie={singleRepoContributor.status === "Rookie"}
+			commitsCount={singleRepoContributor.commitsCount}
+			activeDays={singleRepoContributor.activeDays}
+			filesCount={singleRepoContributor.filesCount}
+			collaboratorsCount={singleRepoContributor.collaboratorsCount}
+			firstCommitDate={singleRepoContributor.firstCommitDate}
+			latestCommitDate={singleRepoContributor.latestCommitDate}
+			commitsCount30Days={singleRepoContributor.commitsCount30Days}
+			commitsCount90Days={singleRepoContributor.commitsCount90Days}
+			commitsCount180Days={singleRepoContributor.commitsCount180Days}
+			commitsCount365Days={singleRepoContributor.commitsCount365Days}
+			topCollaboratorName={singleRepoContributor.topCollaboratorDisplayName}
+			topCollaboratorHref={topCollaboratorHref}
+			extensions={[...singleRepoContributor.extensions]}
+			components={[...singleRepoContributor.logicalComponents]}
+			collaborators={collaborators}
+			touchedFiles={singleRepoContributor.topFiles.map((f) => ({
+				relativePath: f.relativePath,
+				commits: f.commits,
+				logicalComponents: [...f.logicalComponents],
+				concerns: [...f.concerns],
+			}))}
+			dailyActivity={dailyActivity}
+			monthlyActivity={monthlyActivity}
+			{...(singleRepoContributor.impact ? { impact: {
+				glueScore: singleRepoContributor.impact.glueScore,
+				snackingScore: singleRepoContributor.impact.snackingScore,
+				structuralImpactScore: singleRepoContributor.impact.structuralImpactScore,
+				visibleActivityScore: singleRepoContributor.impact.visibleActivityScore,
+				dominantDimension: singleRepoContributor.impact.dominantDimension,
+				isGlue: singleRepoContributor.impact.isGlue,
+				isSnacking: singleRepoContributor.impact.isSnacking,
+				reasons: [...singleRepoContributor.impact.reasons],
+			} } : {})}
+		/>
+	) : null}
 </AppShell>
+
+<style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: 1rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+	.back-link:hover { color: var(--color-accent); }
+
+	.page-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+	.subtitle { margin-top: 0.35rem; color: var(--color-text-muted); }
+	.email { font-size: 0.9em; }
+
+	.status-list { display: flex; gap: 0.5rem; }
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.35rem 0.65rem;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		border: 1px solid var(--color-border);
+		background: var(--color-card);
+		color: var(--color-text-muted);
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 16px;
+		padding: 1.15rem 1.2rem;
+	}
+	.stat-value { font-size: 1.85rem; font-weight: 700; line-height: 1; color: var(--color-accent); }
+	.stat-label { margin-top: 0.45rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.78rem; }
+
+	.section { margin-bottom: 1.5rem; }
+	.section h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.8rem; }
+</style>

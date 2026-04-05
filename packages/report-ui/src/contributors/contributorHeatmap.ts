@@ -103,7 +103,7 @@ export function getContributorMonthlyActivity(
 ): Array<{ label: string; value: number }> {
 	const monthlyActivity = new Map<string, number>();
 	for (const entry of dailyActivity) {
-		if (!entry.date || entry.date.length < 7) continue;
+		if (typeof entry.date !== "string" || entry.date.length < 7) continue;
 		const month = entry.date.slice(0, 7);
 		monthlyActivity.set(month, (monthlyActivity.get(month) ?? 0) + entry.commits);
 	}

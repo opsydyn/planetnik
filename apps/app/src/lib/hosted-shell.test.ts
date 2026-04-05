@@ -22,7 +22,7 @@ describe("hosted shell", () => {
 		expect(shell.chrome).toBe("public");
 		expect(shell.navSections).toEqual([]);
 		expect(shell.breadcrumbs).toEqual([]);
-		expect(shell.sessionLabel).toBe("Planetnik access");
+		expect(shell.sessionLabel).toBe("Planetnik Portal");
 	});
 
 	test("uses application chrome for the signed-in dashboard", () => {
@@ -42,6 +42,14 @@ describe("hosted shell", () => {
 			{
 				label: "Workspace",
 				items: [{ href: "/", label: "Dashboard" }],
+			},
+			{
+				label: "About",
+				items: [
+					{ href: "/about", label: "About" },
+					{ href: "/guide", label: "Guide" },
+					{ href: "/technology", label: "Technology" },
+				],
 			},
 		]);
 	});

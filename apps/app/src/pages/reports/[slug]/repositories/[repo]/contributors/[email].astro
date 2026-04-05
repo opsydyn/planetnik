@@ -16,6 +16,7 @@ import {
 	getRuntimeReportLandscapeRepository,
 	getRuntimeReportLandscapeRepositoryContributorDetail,
 } from "../../../../../../lib/runtime-client.js";
+import { getContributorMonthlyActivity } from "@planetnik/report-ui/contributors/contributorHeatmap";
 import RepositoryContributorDetailView from "@planetnik/report-ui/views/RepositoryContributorDetailView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
@@ -53,6 +54,9 @@ const collaborators = contributor.collaborators.map((entry) => ({
 	sharedFiles: entry.sharedFiles,
 	href: getHostedReportRepositoryContributorHref(slug, repo, entry.email),
 }));
+
+const dailyActivity = [...contributor.dailyActivity];
+const monthlyActivity = getContributorMonthlyActivity(dailyActivity);
 
 const topCollaboratorHref = contributor.topCollaboratorEmail
 	? getHostedReportRepositoryContributorHref(slug, repo, contributor.topCollaboratorEmail)
@@ -92,5 +96,17 @@ const topCollaboratorHref = contributor.topCollaboratorEmail
 			logicalComponents: [...f.logicalComponents],
 			concerns: [...f.concerns],
 		}))}
+		dailyActivity={dailyActivity}
+		monthlyActivity={monthlyActivity}
+		{...(contributor.impact ? { impact: {
+			glueScore: contributor.impact.glueScore,
+			snackingScore: contributor.impact.snackingScore,
+			structuralImpactScore: contributor.impact.structuralImpactScore,
+			visibleActivityScore: contributor.impact.visibleActivityScore,
+			dominantDimension: contributor.impact.dominantDimension,
+			isGlue: contributor.impact.isGlue,
+			isSnacking: contributor.impact.isSnacking,
+			reasons: [...contributor.impact.reasons],
+		} } : {})}
 	/>
 </AppShell>

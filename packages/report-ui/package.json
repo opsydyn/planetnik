@@ -47,6 +47,9 @@
 		"./views/RepositoryUnitsView": "./src/views/RepositoryUnitsView.astro",
 		"./views/RepositoryContributorsView": "./src/views/RepositoryContributorsView.astro",
 		"./views/RepositoryContributorDetailView": "./src/views/RepositoryContributorDetailView.astro",
+		"./contributors/contributorHeatmap": "./src/contributors/contributorHeatmap.ts",
+		"./security/SecurityBallChart": "./src/security/SecurityBallChart.tsx",
+		"./security/SharedPackagesGraph": "./src/security/SharedPackagesGraph.tsx",
 		"./charts/CommitHeatmap": "./src/charts/CommitHeatmap.tsx",
 		"./topology/TopologyGraph": "./src/topology/TopologyGraph.tsx",
 		"./temporal/TemporalDependenciesExplorer": "./src/temporal/TemporalDependenciesExplorer.tsx"

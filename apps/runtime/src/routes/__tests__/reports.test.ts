@@ -312,6 +312,8 @@ const readReportContributorDetail = mock(
 					concerns: ["api"],
 				},
 			],
+			dailyActivity: [{ date: "2026-03-31", commits: 2 }],
+			impact: null,
 		};
 	},
 );
@@ -1434,6 +1436,8 @@ const readReportLandscapeRepositoryContributorDetail = mock(
 					concerns: ["ui"],
 				},
 			],
+			dailyActivity: [{ date: "2026-03-31", commits: 2 }],
+			impact: null,
 		};
 	},
 );
