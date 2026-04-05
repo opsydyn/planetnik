@@ -1,0 +1,202 @@
+---
+import AppShell from "../../../layouts/AppShell.astro";
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
+import { shouldRedirectReportDetail } from "../../../lib/report-detail-view-model.js";
+import {
+	getRuntimeReport,
+	getRuntimeReportContributors,
+	getRuntimeReportControls,
+	getRuntimeReportHotspots,
+	getRuntimeReportImpact,
+	getRuntimeReportLandscapeOverview,
+	getRuntimeReportLandscapeRepositories,
+	getRuntimeReportSecurity,
+} from "../../../lib/runtime-client.js";
+import type {
+	AnalysisContextProps,
+} from "../../../components/intelligence/useAnalysisContext";
+import IntelligenceChat from "../../../components/intelligence/IntelligenceChat";
+
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const slug = Astro.params.slug ?? "";
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
+
+if (shouldRedirectReportDetail(reportDetail)) {
+	return Astro.redirect("/");
+}
+
+const isLandscape = reportDetail.context?.reportMode === "landscape";
+const baseHref = `/reports/${slug}`;
+const runtimeUrl = import.meta.env.PUBLIC_COPILOT_RUNTIME_URL ?? "";
+
+// Fetch analysis context data — run in parallel
+const [contributors, hotspots, impact, controls, security, landscapeOverview, landscapeRepos] =
+	await Promise.all([
+		getRuntimeReportContributors(cookie, slug),
+		isLandscape ? null : getRuntimeReportHotspots(cookie, slug),
+		isLandscape ? null : getRuntimeReportImpact(cookie, slug),
+		isLandscape ? null : getRuntimeReportControls(cookie, slug),
+		getRuntimeReportSecurity(cookie, slug),
+		isLandscape ? getRuntimeReportLandscapeOverview(cookie, slug) : null,
+		isLandscape ? getRuntimeReportLandscapeRepositories(cookie, slug) : null,
+	]);
+
+// Build AnalysisContextProps
+const analysisData = isLandscape && landscapeOverview
+	? {
+			name: landscapeOverview.landscapeName,
+			description: `Landscape with ${landscapeOverview.repositoryCount} repositories`,
+			filesCount: 0,
+			linesOfCode: landscapeOverview.totals.totalLinesOfCode,
+		}
+	: reportDetail.report
+		? {
+				name: reportDetail.report.name,
+				description: undefined,
+				filesCount: 0,
+				linesOfCode: 0,
+			}
+		: null;
+
+const hotspotsData = isLandscape && landscapeRepos?.repositories
+	? [...landscapeRepos.repositories]
+			.sort((a, b) => b.mainLinesOfCode - a.mainLinesOfCode)
+			.slice(0, 10)
+			.map((r) => ({
+				name: r.name,
+				kind: "repository" as const,
+				score: r.mainLinesOfCode,
+				severity: r.mainLinesOfCode > 50000 ? "High" : r.mainLinesOfCode > 10000 ? "Medium" : "Low",
+				dominantDimension: "structuralRisk",
+				reasons: [
+					`${r.mainLinesOfCode.toLocaleString()} lines of code`,
+					`${r.contributorsCount} contributors`,
+				],
+			}))
+	: hotspots?.rows
+			.slice(0, 10)
+			.map((h) => ({
+				name: h.name,
+				kind: h.kind,
+				score: h.score,
+				severity: h.severity,
+				dominantDimension: h.dominantDimension,
+				suggestedAction: h.suggestedAction,
+				reasons: [...h.reasons].slice(0, 3),
+			})) ?? null;
+
+const impactData = impact
+	? {
+			overall_score: impact.structuralImpact.overallScore,
+			dominant_dimension: impact.structuralImpact.dominantDimension,
+			dimensions: Object.fromEntries(
+				impact.impactDimensions.map((d) => [d.label, d.score]),
+			),
+			opportunities: impact.topOpportunities.slice(0, 10).map((o) => ({
+				name: o.name,
+				kind: o.kind,
+				impact_score: o.impactScore,
+				dominant_dimension: o.dominantDimension,
+				suggested_action: o.suggestedAction,
+			})),
+		}
+	: null;
+
+const contributorsData = contributors && contributors.length > 0
+	? [...contributors]
+			.sort((a, b) => b.commitsAllTime - a.commitsAllTime)
+			.slice(0, 15)
+			.map((c) => ({
+				email: c.email,
+				commitsAllTime: c.commitsAllTime,
+				commits30Days: c.commits30Days,
+				commits90Days: c.commits90Days,
+			}))
+	: null;
+
+const controlsData = controls && controls.controls.length > 0
+	? controls.controls.map((c) => ({
+			goal: c.goal,
+			metricId: c.metricId,
+			metricValue: c.metricValue ?? 0,
+			desiredRange: c.desiredRangeText,
+			status: c.status,
+		}))
+	: null;
+
+const securityData = security
+	? {
+			totalAlerts: security.totalAlerts,
+			totalOpenAlerts: security.totalOpenAlerts,
+			reposWithAlerts: security.reposWithAlerts,
+			totalRepos: security.totalRepos,
+			severityCounts: {
+				critical: security.severityCounts.critical,
+				high: security.severityCounts.high,
+				medium: security.severityCounts.medium,
+				low: security.severityCounts.low,
+			},
+			meanTimeToResolveDays: security.meanTimeToResolveDays,
+			supplyChainExposureScore: security.supplyChainExposureScore,
+			sharedVulnerablePackages: [...security.sharedVulnerablePackages].slice(0, 10).map((p) => ({
+				name: p.name,
+				ecosystem: p.ecosystem,
+				severity: p.severity,
+				affectedRepos: [...p.affectedRepos],
+			})),
+			repoHealth: [...security.repoHealth].slice(0, 20).map((r) => ({
+				repo: r.repo,
+				openAlerts: r.openAlerts,
+				critical: r.severityCounts.critical,
+				high: r.severityCounts.high,
+			})),
+		}
+	: null;
+
+const dataProps: AnalysisContextProps = {
+	analysisData,
+	hotspotsData,
+	impactData,
+	contributorsData,
+	controlsData,
+	securityData,
+};
+---
+
+<AppShell
+	title="Intelligence"
+	subtitle="Ask Płanetnik"
+	shellContext={buildHostedReportShellContext(reportDetail)}
+>
+	<div class="intelligence-spacer"></div>
+	<div class="intelligence-container">
+		<IntelligenceChat
+			client:load
+			runtimeUrl={runtimeUrl}
+			baseHref={baseHref}
+			isLandscape={isLandscape}
+			{...dataProps}
+		/>
+	</div>
+</AppShell>
+
+<style>
+	.intelligence-spacer {
+		height: 1.5rem;
+	}
+
+	.intelligence-container {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		height: calc(100vh - 10rem);
+		min-height: 500px;
+		overflow: hidden;
+	}
+
+	@media (min-width: 768px) {
+		.intelligence-container {
+			height: calc(100vh - 7rem);
+		}
+	}
+</style>

@@ -258,6 +258,10 @@ function buildReportNavSections(
           { href: `${baseHref}/security`, label: "Dependency Security" },
         ],
       },
+      {
+        label: "Intelligence",
+        items: [{ href: `${baseHref}/intelligence`, label: "Ask Płanetnik" }],
+      },
     ]
   }
 
@@ -312,6 +316,10 @@ function buildReportNavSections(
         { href: `${baseHref}/controls`, label: "Goals & Controls" },
         { href: `${baseHref}/trends`, label: "Trends" },
       ],
+    },
+    {
+      label: "Intelligence",
+      items: [{ href: `${baseHref}/intelligence`, label: "Ask Płanetnik" }],
     },
   ]
 
@@ -428,6 +436,10 @@ function buildRepositoryNavSections(
           label: "Goals & Controls",
         },
       ],
+    },
+    {
+      label: "Intelligence",
+      items: [{ href: `${reportHref}/intelligence`, label: "Ask Płanetnik" }],
     },
   ]
 

@@ -97,6 +97,7 @@ describe("hosted shell", () => {
 			"Units",
 			"Team",
 			"Quality",
+			"Intelligence",
 		]);
 		expect(shell.navSections[0]?.items).toEqual([
 			{ href: "/reports/effect-ts", label: "Report Details" },
@@ -181,6 +182,15 @@ describe("hosted shell", () => {
 					{
 						href: "/reports/platform-landscape/security",
 						label: "Dependency Security",
+					},
+				],
+			},
+			{
+				label: "Intelligence",
+				items: [
+					{
+						href: "/reports/platform-landscape/intelligence",
+						label: "Ask Płanetnik",
 					},
 				],
 			},
@@ -375,6 +385,7 @@ describe("hosted shell", () => {
 			"Units",
 			"Team",
 			"Quality",
+			"Intelligence",
 		]);
 		expect(shell.navSections[1]?.items).toEqual([
 			{
