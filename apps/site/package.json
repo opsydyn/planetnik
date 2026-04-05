@@ -20,6 +20,7 @@
 		"@copilotkit/react-ui": "^1.54.1",
 		"@dagrejs/dagre": "^2.0.4",
 		"@effect-atom/atom-react": "^0.5.0",
+		"@effect/platform-browser": "^0.76.0",
 		"@iconify-json/devicon": "^1.2.62",
 		"@planetnik/report-ui": "workspace:*",
 		"@phosphor-icons/react": "^2.1.10",

@@ -1,18 +1,14 @@
+import { useAtom } from "@effect-atom/atom-react"
 import { PauseIcon } from "@phosphor-icons/react/dist/csr/Pause"
 import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
+import { publicVideoPausedAtom } from "../../lib/public-video-preferences.js"
 
-const STORAGE_KEY = "planetnik.publicVideoPaused"
 const PLAYER_ID = "public-video-player"
 const AUDIO_ID = "public-audio-player"
 
 export default function PublicVideoToggle() {
-  const [isPaused, setIsPaused] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === "true") setIsPaused(true)
-  }, [])
+  const [isPaused, setIsPaused] = useAtom(publicVideoPausedAtom)
 
   useEffect(() => {
     const video = document.getElementById(PLAYER_ID)
@@ -26,7 +22,6 @@ export default function PublicVideoToggle() {
       void video.play().catch(() => {})
       if (audio instanceof HTMLAudioElement) void audio.play().catch(() => {})
     }
-    localStorage.setItem(STORAGE_KEY, String(isPaused))
   }, [isPaused])
 
   return (
