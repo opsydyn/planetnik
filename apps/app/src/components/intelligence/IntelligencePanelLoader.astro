@@ -1,0 +1,148 @@
+---
+import IntelligencePanel from "./IntelligencePanel";
+import type { AnalysisContextProps } from "./useAnalysisContext";
+import {
+	getRuntimeReportContributors,
+	getRuntimeReportControls,
+	getRuntimeReportHotspots,
+	getRuntimeReportImpact,
+	getRuntimeReportLandscapeOverview,
+	getRuntimeReportLandscapeRepositories,
+	getRuntimeReportSecurity,
+} from "../../lib/runtime-client.js";
+
+interface Props {
+	slug: string;
+	isLandscape: boolean;
+	baseHref: string;
+}
+
+const { slug, isLandscape, baseHref } = Astro.props;
+const cookie = Astro.request.headers.get("cookie") ?? "";
+const runtimeUrl = import.meta.env.PUBLIC_COPILOT_RUNTIME_URL ?? "";
+
+const [contributors, hotspots, impact, controls, security, landscapeOverview, landscapeRepos] =
+	await Promise.all([
+		getRuntimeReportContributors(cookie, slug),
+		isLandscape ? null : getRuntimeReportHotspots(cookie, slug),
+		isLandscape ? null : getRuntimeReportImpact(cookie, slug),
+		isLandscape ? null : getRuntimeReportControls(cookie, slug),
+		getRuntimeReportSecurity(cookie, slug),
+		isLandscape ? getRuntimeReportLandscapeOverview(cookie, slug) : null,
+		isLandscape ? getRuntimeReportLandscapeRepositories(cookie, slug) : null,
+	]);
+
+const analysisData = isLandscape && landscapeOverview
+	? {
+			name: landscapeOverview.landscapeName,
+			description: `Landscape with ${landscapeOverview.repositoryCount} repositories`,
+			filesCount: 0,
+			linesOfCode: landscapeOverview.totals.totalLinesOfCode,
+		}
+	: null;
+
+const hotspotsData = isLandscape && landscapeRepos?.repositories
+	? [...landscapeRepos.repositories]
+			.sort((a, b) => b.mainLinesOfCode - a.mainLinesOfCode)
+			.slice(0, 10)
+			.map((r) => ({
+				name: r.name,
+				kind: "repository" as const,
+				score: r.mainLinesOfCode,
+				severity: r.mainLinesOfCode > 50000 ? "High" : r.mainLinesOfCode > 10000 ? "Medium" : "Low",
+				dominantDimension: "structuralRisk",
+				reasons: [
+					`${r.mainLinesOfCode.toLocaleString()} lines of code`,
+					`${r.contributorsCount} contributors`,
+				],
+			}))
+	: hotspots?.rows
+			.slice(0, 10)
+			.map((h) => ({
+				name: h.name,
+				kind: h.kind,
+				score: h.score,
+				severity: h.severity,
+				dominantDimension: h.dominantDimension,
+				suggestedAction: h.suggestedAction,
+				reasons: [...h.reasons].slice(0, 3),
+			})) ?? null;
+
+const impactData = impact
+	? {
+			overall_score: impact.structuralImpact.overallScore,
+			dominant_dimension: impact.structuralImpact.dominantDimension,
+			dimensions: Object.fromEntries(impact.impactDimensions.map((d) => [d.label, d.score])),
+			opportunities: impact.topOpportunities.slice(0, 10).map((o) => ({
+				name: o.name,
+				kind: o.kind,
+				impact_score: o.impactScore,
+				dominant_dimension: o.dominantDimension,
+				suggested_action: o.suggestedAction,
+			})),
+		}
+	: null;
+
+const contributorsData = contributors && contributors.length > 0
+	? [...contributors]
+			.sort((a, b) => b.commitsAllTime - a.commitsAllTime)
+			.slice(0, 15)
+			.map((c) => ({
+				email: c.email,
+				commitsAllTime: c.commitsAllTime,
+				commits30Days: c.commits30Days,
+				commits90Days: c.commits90Days,
+			}))
+	: null;
+
+const controlsData = controls && controls.controls.length > 0
+	? controls.controls.map((c) => ({
+			goal: c.goal,
+			metricId: c.metricId,
+			metricValue: c.metricValue ?? 0,
+			desiredRange: c.desiredRangeText,
+			status: c.status,
+		}))
+	: null;
+
+const securityData = security
+	? {
+			totalAlerts: security.totalAlerts,
+			totalOpenAlerts: security.totalOpenAlerts,
+			reposWithAlerts: security.reposWithAlerts,
+			totalRepos: security.totalRepos,
+			severityCounts: { ...security.severityCounts },
+			meanTimeToResolveDays: security.meanTimeToResolveDays,
+			supplyChainExposureScore: security.supplyChainExposureScore,
+			sharedVulnerablePackages: [...security.sharedVulnerablePackages].slice(0, 10).map((p) => ({
+				name: p.name,
+				ecosystem: p.ecosystem,
+				severity: p.severity,
+				affectedRepos: [...p.affectedRepos],
+			})),
+			repoHealth: [...security.repoHealth].slice(0, 20).map((r) => ({
+				repo: r.repo,
+				openAlerts: r.openAlerts,
+				critical: r.severityCounts.critical,
+				high: r.severityCounts.high,
+			})),
+		}
+	: null;
+
+const dataProps: AnalysisContextProps = {
+	analysisData,
+	hotspotsData,
+	impactData,
+	contributorsData,
+	controlsData,
+	securityData,
+};
+---
+
+<IntelligencePanel
+	client:load
+	runtimeUrl={runtimeUrl}
+	baseHref={baseHref}
+	isLandscape={isLandscape}
+	{...dataProps}
+/>

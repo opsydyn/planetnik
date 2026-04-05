@@ -2,7 +2,7 @@
 	position: fixed;
 	bottom: 1.25rem;
 	right: 1.25rem;
-	z-index: 400;
+	z-index: 420;
 	width: 52px;
 	height: 52px;
 	border-radius: 50%;
@@ -39,7 +39,7 @@
 	position: fixed;
 	bottom: 1.25rem;
 	right: 1.25rem;
-	z-index: 410;
+	z-index: 430;
 	width: 400px;
 	height: 560px;
 	max-height: calc(100vh - 6rem);

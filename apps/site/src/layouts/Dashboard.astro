@@ -400,11 +400,9 @@ function isActiveLink(href: string): boolean {
       }
     </script>
 
-    {import.meta.env.DEV && (
-      <div transition:persist="intelligence-panel">
-        <IntelligencePanelLoader />
-      </div>
-    )}
+    <div transition:persist="intelligence-panel">
+      <IntelligencePanelLoader />
+    </div>
 
     <script>
       function setupDashboardNavigation() {

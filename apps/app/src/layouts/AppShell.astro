@@ -4,6 +4,7 @@ import Breadcrumb from "@planetnik/report-ui/shell/Breadcrumb";
 import PlanetnikLogo from "@planetnik/report-ui/shell/PlanetnikLogo";
 import ThemeSwitcher from "@planetnik/report-ui/theme-switcher/ThemeSwitcher";
 import "@planetnik/report-ui/theme/dashboard-shell.css";
+import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
 import {
 	buildHostedShellModel,
 	isHostedNavItemActive,
@@ -19,6 +20,15 @@ interface Props {
 }
 
 const { title, subtitle, shellContext, headerMode = "full" } = Astro.props;
+const panelSlug =
+	shellContext?.kind === "report" || shellContext?.kind === "repository"
+		? shellContext.reportSlug
+		: null;
+const panelIsLandscape =
+	shellContext?.kind === "report" || shellContext?.kind === "repository"
+		? shellContext.reportMode === "landscape"
+		: false;
+const panelBaseHref = panelSlug ? `/reports/${panelSlug}` : null;
 const userEmail =
 	typeof Astro.locals.user?.email === "string" ? Astro.locals.user.email : null;
 const shell = buildHostedShellModel({
@@ -306,5 +316,12 @@ const shell = buildHostedShellModel({
 			document.addEventListener("astro:page-load", setupHostedSidebarToggle)
 			setupHostedSidebarToggle()
 		</script>
+		{panelSlug && panelBaseHref && (
+			<IntelligencePanelLoader
+				slug={panelSlug}
+				isLandscape={panelIsLandscape}
+				baseHref={panelBaseHref}
+			/>
+		)}
 	</body>
 </html>
