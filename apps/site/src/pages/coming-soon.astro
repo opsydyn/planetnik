@@ -59,6 +59,7 @@ import { route } from "../lib/route";
         object-fit: cover;
         filter: saturate(0.9) contrast(1.02);
         opacity: 0.3;
+        will-change: opacity;
       }
 
       .video-overlay {
@@ -111,10 +112,9 @@ import { route } from "../lib/route";
         padding: 0.7rem 0.95rem;
         border: 1px solid rgba(248, 250, 252, 0.12);
         border-radius: 999px;
-        background: rgba(15, 23, 42, 0.6);
+        background: rgba(10, 15, 35, 0.85);
         color: rgba(248, 250, 252, 0.6);
         font-size: 0.875rem;
-        backdrop-filter: blur(8px);
       }
 
       .status-dot {
@@ -144,8 +144,7 @@ import { route } from "../lib/route";
         min-width: 0;
         border: 1px solid rgba(248, 250, 252, 0.1);
         border-radius: 24px;
-        background: color-mix(in srgb, rgba(15, 23, 42, 0.9) 76%, transparent);
-        backdrop-filter: blur(16px);
+        background: rgba(10, 15, 35, 0.92);
         box-shadow: 0 28px 90px rgba(0, 0, 0, 0.4);
       }
 
@@ -324,10 +323,9 @@ import { route } from "../lib/route";
       <video
         id="public-video-player"
         class="bg-video"
-        autoplay
         muted
         playsinline
-        preload="metadata"
+        preload="none"
         src={route("/movie.mp4")}
         data-playlist={[1,2,3,4,5,6].map(n => route(n === 1 ? "/movie.mp4" : `/movie-${n}.mp4`)).join(",")}
       >
@@ -423,7 +421,11 @@ import { route } from "../lib/route";
       }
 
       document.addEventListener("astro:page-load", setupVideoPlaylist)
-      setupVideoPlaylist()
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(setupVideoPlaylist)
+      } else {
+        setTimeout(setupVideoPlaylist, 200)
+      }
     </script>
   </body>
 </html>
