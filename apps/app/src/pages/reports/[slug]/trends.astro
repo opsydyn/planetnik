@@ -34,40 +34,22 @@ const viewModel = buildReportTrendsViewModel({
 	subtitle={viewModel.subtitle}
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Trends</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route matches the static app’s current contract: an explicit
-				empty state until multi-snapshot trend exports exist.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}/commits`}>
-					Open commits
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			<article class="dashboard-card">
-				<p class="card-kicker">Status</p>
-				<h2>{viewModel.statusLabel}</h2>
-				<p>{viewModel.message}</p>
-			</article>
-		</section>
-
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Trend baseline</p>
-				<h2>What is missing</h2>
-				<p>{viewModel.message}</p>
-				<p class="muted-copy">{viewModel.hint}</p>
-			</article>
-		</section>
+	<h2>Trend</h2>
+	<div class="empty">
+		<p>{viewModel.message}</p>
+		<p class="hint">{viewModel.hint}</p>
 	</div>
 </AppShell>
+
+<style>
+	h2 { margin-bottom: 1rem; }
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 2rem;
+		text-align: center;
+	}
+	.empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+	.hint { font-size: 0.85rem; }
+</style>

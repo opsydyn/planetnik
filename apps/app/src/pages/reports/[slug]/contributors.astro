@@ -1,7 +1,11 @@
 ---
-import AppShell from "../../../layouts/AppShell.astro";
 import LandscapeContributorsView from "@planetnik/report-ui/views/LandscapeContributorsView";
+import ReportDataGrid from "@planetnik/report-ui/tables/ReportDataGrid";
+import AppShell from "../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
+import {
+	shouldRedirectReportDetail,
+} from "../../../lib/report-detail-view-model.js";
 import {
 	buildReportContributorsViewModel,
 } from "../../../lib/report-contributors-view-model.js";
@@ -10,9 +14,6 @@ import {
 	getRuntimeReport,
 	getRuntimeReportContributors,
 } from "../../../lib/runtime-client.js";
-import {
-	shouldRedirectReportDetail,
-} from "../../../lib/report-detail-view-model.js";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -54,80 +55,62 @@ const viewModel = !isLandscapeReport
 				searchPlaceholder="Search contributor or repository"
 			/>
 		) : viewModel ? (
-			<div class="dashboard-stack">
-				<section class="dashboard-card dashboard-card-primary">
-					<p class="card-kicker">Contributors</p>
+			<>
+				<header class="page-header">
 					<h2>{viewModel.heading}</h2>
-					<p>
-						Hosted contributor summaries stay aligned with the static report contract by
-						reading <code>contributors.txt</code> plus optional
-						<code>contributor_details</code> footprint data.
-					</p>
-					<div class="card-actions">
-						<a class="button-secondary" href={`/reports/${slug}/overview`}>
-							Open overview
-						</a>
-						<a class="button-secondary" href={`/reports/${slug}`}>View report details</a>
-						<a class="button" href="/sign-out">Sign out</a>
-					</div>
-				</section>
+					<p class="subtitle">{viewModel.subtitle}</p>
+				</header>
 
-				<section class="overview-cards">
+				<section class="stats-grid">
 					{viewModel.cards.map((card) => (
-						<article class="dashboard-card">
-							<p class="card-kicker">{card.label}</p>
-							<h2>{card.value}</h2>
-							{card.detail ? <p>{card.detail}</p> : <p> </p>}
+						<article class="stat-card">
+							<div class="stat-value">{card.value}</div>
+							<div class="stat-label">{card.label}</div>
+							{card.detail ? <div class="stat-detail">{card.detail}</div> : null}
 						</article>
 					))}
 				</section>
 
-				<section class="dashboard-card">
-					<p class="card-kicker">Table</p>
-					<h2>Contributor summary</h2>
-					{viewModel.rows.length > 0 ? (
-						<div class="contributors-table-wrap">
-							<table class="contributors-table">
-								<thead>
-									<tr>
-										<th>Contributor</th>
-										<th>Status</th>
-										<th>All time</th>
-										<th>30d</th>
-										<th>Components</th>
-										<th>Primary component</th>
-										<th>Knowledge signal</th>
-									</tr>
-								</thead>
-								<tbody>
-									{viewModel.rows.map((row) => (
-										<tr>
-											<td>
-												<div class="table-primary">
-													<a class="report-link" href={row.href}>{row.contributor}</a>
-												</div>
-												{row.email ? (
-													<div class="table-secondary">{row.email}</div>
-												) : null}
-											</td>
-											<td>{row.status}</td>
-											<td>{row.allTime}</td>
-											<td>{row.commits30Days}</td>
-											<td>{row.componentsTouched || "0"}</td>
-											<td>{row.primaryComponent || "Unassigned"}</td>
-											<td>{row.knowledgeSignal || " "}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					) : (
-						<p class="muted-copy">
-							No contributor summary is available for this linked dataset yet.
-						</p>
-					)}
-				</section>
-			</div>
+				<ReportDataGrid
+					client:load
+					title="Contributors"
+					description="Contributor activity and knowledge spread across the codebase."
+					searchPlaceholder="Search contributor"
+					rows={viewModel.rows.map((row, i) => ({ id: String(i), ...row }))}
+					columns={[
+						{ field: "contributor", headerName: "Contributor", type: "link", hrefField: "href", flex: 2, sort: "asc" },
+						{ field: "email", headerName: "Email", type: "text", flex: 2 },
+						{ field: "status", headerName: "Status", type: "text", flex: 1 },
+						{ field: "allTime", headerName: "All Time", type: "text", flex: 1 },
+						{ field: "commits30Days", headerName: "30d", type: "text", flex: 1 },
+						{ field: "componentsTouched", headerName: "Components", type: "text", flex: 1 },
+						{ field: "primaryComponent", headerName: "Primary Component", type: "text", flex: 2 },
+						{ field: "knowledgeSignal", headerName: "Signal", type: "text", flex: 1 },
+					]}
+				/>
+			</>
 		) : null
 	}
 </AppShell>
+
+<style>
+	.page-header { margin-bottom: 1.25rem; }
+	.page-header h2 { margin-bottom: 0.25rem; }
+	.subtitle { color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.35rem; }
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+	.stat-value { font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+	.stat-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+	.stat-detail { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.35rem; }
+</style>

@@ -1,10 +1,12 @@
 ---
+import DonutChart from "@planetnik/report-ui/charts/DonutChart";
+import HorizontalBarChart from "@planetnik/report-ui/charts/HorizontalBarChart";
+import ReportDataGrid from "@planetnik/report-ui/tables/ReportDataGrid";
 import AppShell from "../../../layouts/AppShell.astro";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../lib/report-detail-view-model.js";
-import { buildReportSecurityViewModel } from "../../../lib/report-security-view-model.js";
 import {
 	getRuntimeReport,
 	getRuntimeReportSecurity,
@@ -27,79 +29,178 @@ if (!security) {
 	return Astro.redirect(`/reports/${slug}/overview`);
 }
 
-const viewModel = buildReportSecurityViewModel({
-	reportName: reportDetail.report.name,
-	security,
-});
+const exposurePercent = Math.round(security.supplyChainExposureScore * 100);
+
+const severityItems = [
+	{ label: "Critical", value: security.severityCounts.critical, color: "#ef4444" },
+	{ label: "High", value: security.severityCounts.high, color: "#f59e0b" },
+	{ label: "Medium", value: security.severityCounts.medium, color: "#eab308" },
+	{ label: "Low", value: security.severityCounts.low, color: "#22c55e" },
+].filter((b) => b.value > 0);
+const severityColors = severityItems.map((s) => s.color);
+
+const repoAlertBars = security.repoHealth
+	.filter((r) => r.openAlerts > 0)
+	.sort((a, b) => b.openAlerts - a.openAlerts)
+	.slice(0, 15)
+	.map((r) => ({ label: r.repo, value: r.openAlerts }));
+
+const repoRows = security.repoHealth.map((r, i) => ({
+	id: String(i),
+	repo: r.repo,
+	totalAlerts: r.totalAlerts,
+	openAlerts: r.openAlerts,
+	fixedAlerts: r.fixedAlerts,
+	critical: r.severityCounts.critical,
+	high: r.severityCounts.high,
+	medium: r.severityCounts.medium,
+	low: r.severityCounts.low,
+	mttr: r.meanTimeToResolveDays !== null ? String(r.meanTimeToResolveDays) : "—",
+	oldestDays: r.oldestOpenAlertDays !== null ? String(r.oldestOpenAlertDays) : "—",
+}));
+
+const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
+	id: `shared-${i}`,
+	package: p.name,
+	ecosystem: p.ecosystem,
+	severity: p.severity,
+	repoCount: p.affectedRepos.length,
+	affectedRepos: [...p.affectedRepos].join(", "),
+}));
 ---
 
 <AppShell
-	title={`${viewModel.heading} Security`}
-	subtitle={viewModel.subtitle}
+	title="Dependency Security"
+	subtitle="Dependabot vulnerability alerts across the landscape"
 	shellContext={buildHostedReportShellContext(reportDetail)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Security</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted route reads the same landscape dependency health export as
-				the static site and keeps the contract explicit before the shared UI
-				pass.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={`/reports/${slug}/overview`}>
-					Open overview
-				</a>
-				<a class="button-secondary" href={`/reports/${slug}`}>
-					View report details
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
+	<header class="page-header">
+		<h2>Dependency Security</h2>
+		<p class="subtitle">Dependabot vulnerability alerts across the landscape — severity breakdown, patch status, and supply chain exposure.</p>
+	</header>
 
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
+	<section class="stats-grid">
+		<article class="stat-card">
+			<div class="stat-value">{security.totalAlerts.toLocaleString()}</div>
+			<div class="stat-label">Total Alerts</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{security.totalOpenAlerts.toLocaleString()}</div>
+			<div class="stat-label">Open Alerts</div>
+		</article>
+		<article class="stat-card stat-card--critical">
+			<div class="stat-value">{security.severityCounts.critical.toLocaleString()}</div>
+			<div class="stat-label">Critical</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{security.reposWithAlerts}/{security.totalRepos}</div>
+			<div class="stat-label">Repos with Alerts</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{security.meanTimeToResolveDays !== null ? `${security.meanTimeToResolveDays}d` : "—"}</div>
+			<div class="stat-label">Mean Time to Resolve</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{exposurePercent}%</div>
+			<div class="stat-label">Supply Chain Exposure</div>
+		</article>
+	</section>
 
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Repositories</p>
-				<h2>Repository security health</h2>
-				{viewModel.repoRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.repoRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No repository-level security rows were exported.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Supply Chain</p>
-				<h2>Shared vulnerable packages</h2>
-				{viewModel.packageRows.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.packageRows.map((row) => (
-							<li>
-								<strong>{row.label}</strong>: {row.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No shared vulnerable packages were exported.</p>
-				)}
-			</article>
+	{(severityItems.length > 0 || repoAlertBars.length > 0) && (
+		<section class="chart-row">
+			{severityItems.length > 0 && (
+				<div class="chart-col">
+					<DonutChart
+						client:load
+						data={severityItems}
+						valueLabel="Alerts"
+						colors={severityColors}
+						helpText="Distribution of vulnerability alerts by severity level across all repositories."
+					/>
+				</div>
+			)}
+			{repoAlertBars.length > 0 && (
+				<div class="chart-col">
+					<HorizontalBarChart
+						client:load
+						data={repoAlertBars}
+						valueLabel="Open Alerts"
+						barColor="var(--color-warning, #f59e0b)"
+						helpText="Repositories with the most open vulnerability alerts."
+					/>
+				</div>
+			)}
 		</section>
-	</div>
+	)}
+
+	<ReportDataGrid
+		client:load
+		title="Repository Security Health"
+		description="Per-repository vulnerability alert breakdown with severity counts and resolution metrics."
+		searchPlaceholder="Search repositories"
+		rows={repoRows}
+		columns={[
+			{ field: "repo", headerName: "Repository", type: "text", flex: 2, sort: "asc" },
+			{ field: "totalAlerts", headerName: "Total", type: "number", flex: 1 },
+			{ field: "openAlerts", headerName: "Open", type: "number", flex: 1, sort: "desc" },
+			{ field: "fixedAlerts", headerName: "Fixed", type: "number", flex: 1 },
+			{ field: "critical", headerName: "Critical", type: "number", flex: 1 },
+			{ field: "high", headerName: "High", type: "number", flex: 1 },
+			{ field: "medium", headerName: "Medium", type: "number", flex: 1 },
+			{ field: "low", headerName: "Low", type: "number", flex: 1 },
+			{ field: "mttr", headerName: "MTTR (days)", type: "text", flex: 1 },
+			{ field: "oldestDays", headerName: "Oldest Open (days)", type: "text", flex: 1 },
+		]}
+	/>
+
+	{sharedRows.length > 0 && (
+		<div class="section-block">
+			<ReportDataGrid
+				client:load
+				title="Shared Vulnerable Packages"
+				description="Packages with known vulnerabilities appearing in multiple repositories."
+				searchPlaceholder="Search packages"
+				rows={sharedRows}
+				columns={[
+					{ field: "package", headerName: "Package", type: "text", flex: 2, sort: "asc" },
+					{ field: "ecosystem", headerName: "Ecosystem", type: "text", flex: 1 },
+					{ field: "severity", headerName: "Severity", type: "text", flex: 1 },
+					{ field: "repoCount", headerName: "Repos Affected", type: "number", flex: 1, sort: "desc" },
+					{ field: "affectedRepos", headerName: "Repositories", type: "text", flex: 3 },
+				]}
+			/>
+		</div>
+	)}
 </AppShell>
+
+<style>
+	.page-header { margin-bottom: 1.5rem; }
+	.page-header h2 { margin-bottom: 0.25rem; }
+	.subtitle { color: var(--color-text-muted); font-size: 0.9rem; }
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1rem 1.25rem;
+	}
+	.stat-card--critical { border-color: var(--color-danger, #ef4444); }
+	.stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+	.stat-card--critical .stat-value { color: var(--color-danger, #ef4444); }
+	.stat-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.25rem; }
+
+	.chart-row {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 1.5rem;
+		margin-bottom: 2rem;
+	}
+	.chart-col { min-width: 0; }
+	.section-block { margin-top: 2rem; }
+</style>
