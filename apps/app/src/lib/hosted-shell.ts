@@ -233,7 +233,7 @@ export function buildHostedShellModel(input: BuildHostedShellModelInput): Hosted
   }
 }
 
-function buildReportNavSections(
+export function buildReportNavSections(
   context: Extract<HostedShellContext, { kind: "report" }>,
 ): ReadonlyArray<HostedNavSection> {
   const baseHref = `/reports/${context.reportSlug}`

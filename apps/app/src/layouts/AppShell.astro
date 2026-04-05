@@ -5,6 +5,7 @@ import PlanetnikLogo from "@planetnik/report-ui/shell/PlanetnikLogo";
 import ThemeSwitcher from "@planetnik/report-ui/theme-switcher/ThemeSwitcher";
 import "@planetnik/report-ui/theme/dashboard-shell.css";
 import { ClientRouter } from "astro:transitions";
+import GlobalSearch from "../components/search/GlobalSearch";
 import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
 import {
 	buildHostedShellModel,
@@ -211,6 +212,13 @@ const shell = buildHostedShellModel({
 				</main>
 				<div class="top-right-tools">
 					<ThemeSwitcher />
+					{panelSlug && (
+						<GlobalSearch
+							client:load
+							projectName={shell.scopeLabel ?? title}
+							searchIndexUrl={`/api/reports/${panelSlug}/search-index.json`}
+						/>
+					)}
 				</div>
 			</>
 		)}
