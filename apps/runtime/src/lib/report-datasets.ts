@@ -488,7 +488,11 @@ export type ReportCouplingSummary = {
 		readonly totalComponents: number;
 		readonly overloadedComponents: number;
 		readonly knowledgeExposedComponents: number;
+		readonly averageLoad: number;
+		readonly averageBalance: number;
 		readonly averageRisk: number;
+		readonly maxRisk: number;
+		readonly topRiskComponent: string | undefined;
 	};
 	readonly riskTierCounts: {
 		readonly critical: number;
@@ -497,13 +501,16 @@ export type ReportCouplingSummary = {
 		readonly low: number;
 	};
 	readonly dimensionMix: ReadonlyArray<{
+		readonly id: string;
 		readonly label: string;
 		readonly value: number;
+		readonly color: string;
 	}>;
 	readonly dominantBreakdown: ReadonlyArray<{
 		readonly label: string;
 		readonly value: number;
 		readonly detail: string;
+		readonly color: string;
 	}>;
 	readonly topRiskComponents: ReadonlyArray<{
 		readonly component: string;
@@ -524,12 +531,15 @@ export type ReportCouplingSummary = {
 		readonly contributors: number;
 		readonly incomingDependencies: number;
 		readonly outgoingDependencies: number;
+		readonly staticPartners: number;
 		readonly temporalPartners: number;
 		readonly contributorOverlap: number;
+		readonly hotspotPressure: number;
 		readonly staticCoupling: number;
 		readonly temporalCoupling: number;
 		readonly coordinationCoupling: number;
 		readonly knowledgeRisk: number;
+		readonly dominantDimensionId: string;
 		readonly explainability: ReadonlyArray<string>;
 	}>;
 };
@@ -1079,6 +1089,13 @@ const COUPLING_DIMENSION_LABELS: Record<CouplingDimensionId, string> = {
 	temporalCoupling: "Temporal",
 	coordinationCoupling: "Coordination",
 	knowledgeRisk: "Knowledge",
+};
+
+const COUPLING_DIMENSION_COLORS: Record<string, string> = {
+	Static: "#6366f1",
+	Temporal: "#8b5cf6",
+	Coordination: "#06b6d4",
+	Knowledge: "#ef4444",
 };
 
 function round1(value: number): number {
@@ -4091,6 +4108,7 @@ export function readReportCouplingSummary(
 	);
 	const incoming = new Map<string, number>();
 	const outgoing = new Map<string, number>();
+	const staticPartnersMap = new Map<string, Set<string>>();
 
 	for (const dependency of filteredDependencies) {
 		outgoing.set(
@@ -4101,6 +4119,14 @@ export function readReportCouplingSummary(
 			dependency.toComponent,
 			(incoming.get(dependency.toComponent) ?? 0) + dependency.count,
 		);
+
+		const fromPartners = staticPartnersMap.get(dependency.fromComponent) ?? new Set<string>();
+		fromPartners.add(dependency.toComponent);
+		staticPartnersMap.set(dependency.fromComponent, fromPartners);
+
+		const toPartners = staticPartnersMap.get(dependency.toComponent) ?? new Set<string>();
+		toPartners.add(dependency.fromComponent);
+		staticPartnersMap.set(dependency.toComponent, toPartners);
 
 		if (!componentStats.has(dependency.fromComponent)) {
 			componentStats.set(dependency.fromComponent, {
@@ -4258,13 +4284,16 @@ export function readReportCouplingSummary(
 				balanceScore,
 				riskTier: getCouplingRiskTier(systemicRisk),
 				dominantDimension: COUPLING_DIMENSION_LABELS[dominantDimension],
+				dominantDimensionId: dominantDimension,
 				files: stats.files,
 				linesOfCode: stats.linesOfCode,
 				contributors: stats.contributors.size,
 				incomingDependencies,
 				outgoingDependencies,
+				staticPartners: staticPartnersMap.get(component)?.size ?? 0,
 				temporalPartners: temporalPartners.get(component)?.size ?? 0,
 				contributorOverlap: contributorOverlap.get(component) ?? 0,
+				hotspotPressure: round1((hotspot?.score ?? 0) / 10),
 				staticCoupling,
 				temporalCoupling,
 				coordinationCoupling,
@@ -4318,29 +4347,41 @@ export function readReportCouplingSummary(
 			knowledgeExposedComponents: snapshots.filter(
 				(snapshot) => snapshot.contributors <= 2,
 			).length,
+			averageLoad: round1(average(snapshots.map((snapshot) => snapshot.overallLoad))),
+			averageBalance: round1(average(snapshots.map((snapshot) => snapshot.balanceScore))),
 			averageRisk: round1(
 				average(snapshots.map((snapshot) => snapshot.systemicRisk)),
 			),
+			maxRisk: round1(Math.max(...snapshots.map((snapshot) => snapshot.systemicRisk), 0)),
+			topRiskComponent: snapshots[0]?.component,
 		},
 		riskTierCounts,
 		dimensionMix: [
 			{
+				id: "staticCoupling",
 				label: COUPLING_DIMENSION_LABELS.staticCoupling,
 				value: round1(average(snapshots.map((snapshot) => snapshot.staticCoupling))),
+				color: "#6366f1",
 			},
 			{
+				id: "temporalCoupling",
 				label: COUPLING_DIMENSION_LABELS.temporalCoupling,
 				value: round1(average(snapshots.map((snapshot) => snapshot.temporalCoupling))),
+				color: "#8b5cf6",
 			},
 			{
+				id: "coordinationCoupling",
 				label: COUPLING_DIMENSION_LABELS.coordinationCoupling,
 				value: round1(
 					average(snapshots.map((snapshot) => snapshot.coordinationCoupling)),
 				),
+				color: "#06b6d4",
 			},
 			{
+				id: "knowledgeRisk",
 				label: COUPLING_DIMENSION_LABELS.knowledgeRisk,
 				value: round1(average(snapshots.map((snapshot) => snapshot.knowledgeRisk))),
+				color: "#ef4444",
 			},
 		],
 		dominantBreakdown: [...dominantBreakdownMap.entries()].map(
@@ -4348,6 +4389,7 @@ export function readReportCouplingSummary(
 				label,
 				value,
 				detail: `${value} components`,
+				color: COUPLING_DIMENSION_COLORS[label] ?? "#6366f1",
 			}),
 		),
 		topRiskComponents: snapshots.slice(0, 12).map((snapshot) => ({

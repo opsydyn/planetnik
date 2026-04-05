@@ -1,0 +1,245 @@
+---
+import BigBallOfMudChart from "../coupling/BigBallOfMudChart";
+import type { BalancedCouplingModel } from "../coupling/BalancedCouplingTypes";
+import DistributionChart from "../charts/DistributionChart";
+import type { DistributionItem } from "../charts/DistributionChart";
+import DonutChart from "../charts/DonutChart";
+import HorizontalBarChart from "../charts/HorizontalBarChart";
+import type { GridRow } from "../tables/ReportDataGrid.types";
+import ReportDataGrid from "../tables/ReportDataGrid";
+
+interface CouplingCard {
+	label: string;
+	value: string;
+	detail: string | null;
+	accentColor?: string;
+}
+
+interface DonutItem {
+	label: string;
+	value: number;
+}
+
+interface BarItem {
+	label: string;
+	value: number;
+}
+
+interface Props {
+	heading: string;
+	subtitle: string;
+	backHref?: string;
+	decompositionKey: string;
+	temporalWindowLabel: string | null;
+	cards: ReadonlyArray<CouplingCard>;
+	model: BalancedCouplingModel;
+	riskTierData: ReadonlyArray<DonutItem>;
+	topRiskData: ReadonlyArray<BarItem>;
+	dominantDimensionData: ReadonlyArray<DistributionItem>;
+	couplingRows: ReadonlyArray<GridRow>;
+}
+
+const {
+	heading,
+	subtitle,
+	backHref,
+	decompositionKey,
+	temporalWindowLabel,
+	cards,
+	model,
+	riskTierData,
+	topRiskData,
+	dominantDimensionData,
+	couplingRows,
+} = Astro.props;
+
+const hasData = model.snapshots.length > 0;
+const dimensionMixData = model.aggregate.dimensionMix.map((item) => ({
+	label: item.label,
+	value: item.value,
+}));
+const dimensionMixColors = model.aggregate.dimensionMix.map((item) => item.color);
+const searchHint = `Decomposition: ${decompositionKey}${temporalWindowLabel ? ` • Temporal input: ${temporalWindowLabel}` : ""}`;
+---
+
+<div class="repo-coupling">
+	{backHref && (
+		<div class="back-nav">
+			<a href={backHref} class="back-link">← Back to repository</a>
+		</div>
+	)}
+
+	<div class="page-header">
+		<h2>{heading}</h2>
+		<p class="subtitle">{subtitle}</p>
+	</div>
+
+	{!hasData ? (
+		<div class="empty">
+			<p>No component coupling model could be derived yet.</p>
+			<p class="hint">
+				Export logical components, component dependencies, and hotspot data first, then regenerate the reports.
+			</p>
+		</div>
+	) : (
+		<>
+			<div class="cards">
+				{cards.map((card) => (
+					<div class="card">
+						<div
+							class="card-value"
+							style={card.accentColor ? `color: ${card.accentColor}` : undefined}
+						>
+							{card.value}
+						</div>
+						<div class="card-label">{card.label}</div>
+						{card.detail && <div class="card-detail">{card.detail}</div>}
+					</div>
+				))}
+			</div>
+
+			<section class="section">
+				<h3>Big Ball of Mud</h3>
+				<BigBallOfMudChart client:load model={model} />
+			</section>
+
+			<div class="two-up">
+				{dimensionMixData.length > 0 && (
+					<section class="section">
+						<h3>Average Coupling Mix</h3>
+						<DonutChart
+							client:visible
+							data={dimensionMixData}
+							colors={dimensionMixColors}
+							valueLabel="avg score"
+						/>
+					</section>
+				)}
+
+				{dominantDimensionData.length > 0 && (
+					<section class="section">
+						<h3>Dominant Dimension by Component</h3>
+						<DistributionChart client:visible data={dominantDimensionData} />
+					</section>
+				)}
+			</div>
+
+			{topRiskData.length > 0 && (
+				<section class="section">
+					<h3>Top Risk Components</h3>
+					<HorizontalBarChart client:visible data={topRiskData} valueLabel="risk" />
+				</section>
+			)}
+
+			{riskTierData.length > 1 && (
+				<section class="section">
+					<h3>Risk Tier Mix</h3>
+					<DonutChart client:visible data={riskTierData} valueLabel="components" />
+				</section>
+			)}
+
+			<ReportDataGrid
+				client:visible
+				title="Coupling Inventory"
+				description="Search by component, risk type, or explainability reason while keeping the mud view above."
+				searchPlaceholder="Search component, reason, or coupling dimension"
+				searchHint={searchHint}
+				rows={couplingRows}
+				columns={[
+					{ field: "component", headerName: "Component", minWidth: 220, flex: 1.2 },
+					{ field: "riskTier", headerName: "Tier", minWidth: 110 },
+					{ field: "systemicRisk", headerName: "Risk", type: "number", minWidth: 90, sort: "desc" },
+					{ field: "overallLoad", headerName: "Load", type: "number", minWidth: 90 },
+					{ field: "balanceScore", headerName: "Balance", type: "number", minWidth: 100 },
+					{ field: "dominantDimension", headerName: "Primary Dimension", minWidth: 170 },
+					{ field: "files", headerName: "Files", type: "number", minWidth: 90 },
+					{ field: "loc", headerName: "LOC", type: "number", minWidth: 100 },
+					{ field: "contributors", headerName: "Contributors", type: "number", minWidth: 120 },
+					{ field: "incomingDependencies", headerName: "Incoming", type: "number", minWidth: 110 },
+					{ field: "outgoingDependencies", headerName: "Outgoing", type: "number", minWidth: 110 },
+					{ field: "temporalPartners", headerName: "Temporal Partners", type: "number", minWidth: 150 },
+					{ field: "contributorOverlap", headerName: "Contributor Overlap", type: "number", minWidth: 160 },
+					{ field: "staticCoupling", headerName: "Static", type: "number", minWidth: 100 },
+					{ field: "temporalCoupling", headerName: "Temporal", type: "number", minWidth: 110 },
+					{ field: "coordinationCoupling", headerName: "Coordination", type: "number", minWidth: 130 },
+					{ field: "knowledgeRisk", headerName: "Knowledge", type: "number", minWidth: 110 },
+					{ field: "explainability", headerName: "Why It Matters", type: "multiline", minWidth: 340, flex: 1.8 },
+				]}
+			/>
+		</>
+	)}
+</div>
+
+<style>
+	.repo-coupling {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+	.back-nav { margin-bottom: -0.5rem; }
+	.back-link {
+		font-size: 0.85rem;
+		color: var(--color-text-muted);
+		text-decoration: none;
+	}
+	.back-link:hover { color: var(--color-accent); }
+	.page-header h2 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin: 0 0 0.35rem;
+	}
+	.subtitle {
+		color: var(--color-text-muted);
+		font-size: 0.95rem;
+		max-width: 72ch;
+		margin: 0;
+	}
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 2rem;
+		text-align: center;
+	}
+	.empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
+	.hint { font-size: 0.85rem; }
+	.cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+		gap: 1rem;
+	}
+	.card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+	.card-value {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1.1;
+	}
+	.card-label {
+		font-size: 0.8rem;
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	.card-detail {
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		margin-top: 0.2rem;
+	}
+	.section { display: flex; flex-direction: column; gap: 0.75rem; }
+	.section h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+	.two-up {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.25rem;
+	}
+	@media (max-width: 900px) {
+		.two-up { grid-template-columns: 1fr; }
+	}
+</style>

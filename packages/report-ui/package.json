@@ -11,6 +11,8 @@
 		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro",
 		"./shell/Breadcrumb": "./src/shell/Breadcrumb.astro",
 		"./shell/PlanetnikLogo": "./src/shell/PlanetnikLogo.astro",
+		"./coupling/BalancedCouplingTypes": "./src/coupling/BalancedCouplingTypes.ts",
+		"./coupling/BigBallOfMudChart": "./src/coupling/BigBallOfMudChart.tsx",
 		"./charts/ScatterPlot": "./src/charts/ScatterPlot.tsx",
 		"./charts/Treemap": "./src/charts/Treemap.tsx",
 		"./charts/DependencyMatrix": "./src/charts/DependencyMatrix.tsx",
@@ -34,6 +36,7 @@
 		"./views/RepositoryCommitsView": "./src/views/RepositoryCommitsView.astro",
 		"./views/RepositoryDependenciesView": "./src/views/RepositoryDependenciesView.astro",
 		"./views/RepositoryDuplicationView": "./src/views/RepositoryDuplicationView.astro",
+		"./views/RepositoryBalancedCouplingView": "./src/views/RepositoryBalancedCouplingView.astro",
 		"./views/RepositoryComponentsView": "./src/views/RepositoryComponentsView.astro",
 		"./views/RepositoryMetricsView": "./src/views/RepositoryMetricsView.astro"
 	},

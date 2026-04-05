@@ -567,6 +567,12 @@ const readReportImpactSummary = mock((analysisRoot: string) => {
 				impactScore: 8.8,
 				dominantDimension: "coordination_relief",
 				suggestedAction: "Stabilize the boundary and reduce repeated coordination.",
+				reasons: ["High coordination cost", "Single owner"],
+				complexityReduction: 6.2,
+				boundaryShaping: 5.1,
+				knowledgeSpread: 7.4,
+				coordinationRelief: 8.8,
+				changeEnablement: 6.0,
 			},
 		],
 		snackingCandidates: [
@@ -575,9 +581,11 @@ const readReportImpactSummary = mock((analysisRoot: string) => {
 				kind: "file",
 				visibleActivityScore: 6.4,
 				structuralImpactScore: 2.1,
+				delta: 4.3,
 				reason: "Visible motion is outpacing structural leverage.",
 			},
 		],
+		conceptMappings: [],
 	};
 });
 const readReportFilesView = mock((analysisRoot: string, view: string) => {
@@ -1475,6 +1483,12 @@ const readReportLandscapeRepositoryImpactSummary = mock(
 					impactScore: 7.9,
 					dominantDimension: "coordination_relief",
 					suggestedAction: "Tighten the boundary and cut repeated coordination.",
+					reasons: ["High coordination cost"],
+					complexityReduction: 5.8,
+					boundaryShaping: 4.9,
+					knowledgeSpread: 6.8,
+					coordinationRelief: 7.9,
+					changeEnablement: 5.5,
 				},
 			],
 			snackingCandidates: [
@@ -1483,9 +1497,11 @@ const readReportLandscapeRepositoryImpactSummary = mock(
 					kind: "file",
 					visibleActivityScore: 5.8,
 					structuralImpactScore: 1.9,
+					delta: 3.9,
 					reason: "Visible motion is outpacing structural leverage.",
 				},
 			],
+			conceptMappings: [],
 		};
 	},
 );
@@ -1611,7 +1627,11 @@ const readReportLandscapeRepositoryCouplingSummary = mock(
 				totalComponents: 2,
 				overloadedComponents: 1,
 				knowledgeExposedComponents: 2,
+				averageLoad: 6.2,
+				averageBalance: 5.8,
 				averageRisk: 6.8,
+				maxRisk: 8.1,
+				topRiskComponent: "api",
 			},
 			riskTierCounts: {
 				critical: 1,
@@ -1620,14 +1640,14 @@ const readReportLandscapeRepositoryCouplingSummary = mock(
 				low: 0,
 			},
 			dimensionMix: [
-				{ label: "Static", value: 5.2 },
-				{ label: "Temporal", value: 4.0 },
-				{ label: "Coordination", value: 6.3 },
-				{ label: "Knowledge", value: 7.2 },
+				{ id: "staticCoupling", label: "Static", value: 5.2, color: "#6366f1" },
+				{ id: "temporalCoupling", label: "Temporal", value: 4.0, color: "#8b5cf6" },
+				{ id: "coordinationCoupling", label: "Coordination", value: 6.3, color: "#06b6d4" },
+				{ id: "knowledgeRisk", label: "Knowledge", value: 7.2, color: "#ef4444" },
 			],
 			dominantBreakdown: [
-				{ label: "Coordination", value: 1, detail: "1 components" },
-				{ label: "Knowledge", value: 1, detail: "1 components" },
+				{ label: "Coordination", value: 1, detail: "1 components", color: "#06b6d4" },
+				{ label: "Knowledge", value: 1, detail: "1 components", color: "#ef4444" },
 			],
 			topRiskComponents: [
 				{
@@ -1654,12 +1674,15 @@ const readReportLandscapeRepositoryCouplingSummary = mock(
 					contributors: 1,
 					incomingDependencies: 5,
 					outgoingDependencies: 0,
+					staticPartners: 3,
 					temporalPartners: 1,
 					contributorOverlap: 1,
+					hotspotPressure: 0.8,
 					staticCoupling: 7.5,
 					temporalCoupling: 4.0,
 					coordinationCoupling: 6.1,
 					knowledgeRisk: 9.2,
+					dominantDimensionId: "knowledgeRisk",
 					explainability: [
 						"single-owner knowledge exposure",
 						"High coordination cost",
@@ -1668,6 +1691,10 @@ const readReportLandscapeRepositoryCouplingSummary = mock(
 			],
 		};
 	},
+);
+
+const readReportLandscapeRepositoryHotspotsSummary = mock(
+	(_analysisRoot: string, _repoKey: string) => null,
 );
 
 mock.module("../../lib/auth.js", () => ({
@@ -1725,6 +1752,7 @@ mock.module("../../lib/report-datasets.js", () => ({
 	readReportLandscapeRepositoryControlsSummary,
 	readReportLandscapeRepositoryComponentsSummary,
 	readReportLandscapeRepositoryCouplingSummary,
+	readReportLandscapeRepositoryHotspotsSummary,
 }));
 
 const { createApp } = await import("../../app.js");
@@ -1777,6 +1805,7 @@ describe("runtime report routes", () => {
 		readReportLandscapeRepositoryControlsSummary.mockClear();
 		readReportLandscapeRepositoryComponentsSummary.mockClear();
 		readReportLandscapeRepositoryCouplingSummary.mockClear();
+		readReportLandscapeRepositoryHotspotsSummary.mockClear();
 	});
 
 	test("creates a connected report from a valid dataset source and loads its detail", async () => {

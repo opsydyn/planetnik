@@ -354,7 +354,11 @@ export type RuntimeReportCoupling = {
     readonly totalComponents: number;
     readonly overloadedComponents: number;
     readonly knowledgeExposedComponents: number;
+    readonly averageLoad: number;
+    readonly averageBalance: number;
     readonly averageRisk: number;
+    readonly maxRisk: number;
+    readonly topRiskComponent?: string;
   };
   readonly riskTierCounts: {
     readonly critical: number;
@@ -363,13 +367,16 @@ export type RuntimeReportCoupling = {
     readonly low: number;
   };
   readonly dimensionMix: ReadonlyArray<{
+    readonly id: string;
     readonly label: string;
     readonly value: number;
+    readonly color: string;
   }>;
   readonly dominantBreakdown: ReadonlyArray<{
     readonly label: string;
     readonly value: number;
     readonly detail: string;
+    readonly color: string;
   }>;
   readonly topRiskComponents: ReadonlyArray<{
     readonly component: string;
@@ -390,12 +397,15 @@ export type RuntimeReportCoupling = {
     readonly contributors: number;
     readonly incomingDependencies: number;
     readonly outgoingDependencies: number;
+    readonly staticPartners: number;
     readonly temporalPartners: number;
     readonly contributorOverlap: number;
+    readonly hotspotPressure: number;
     readonly staticCoupling: number;
     readonly temporalCoupling: number;
     readonly coordinationCoupling: number;
     readonly knowledgeRisk: number;
+    readonly dominantDimensionId: string;
     readonly explainability: ReadonlyArray<string>;
   }>;
 };

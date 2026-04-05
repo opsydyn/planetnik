@@ -1,11 +1,6 @@
 ---
-import DistributionChart from "../../../../components/charts/DistributionChart";
-import DonutChart from "../../../../components/charts/DonutChart";
-import HorizontalBarChart from "../../../../components/charts/HorizontalBarChart";
-import BigBallOfMudChart from "../../../../components/coupling/BigBallOfMudChart";
-import ReportDataGrid from "../../../../components/tables/ReportDataGrid";
+import RepositoryBalancedCouplingView from "@planetnik/report-ui/views/RepositoryBalancedCouplingView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { chartHelp } from "../../../../lib/chartHelp";
 import { buildBalancedCouplingModel } from "../../../../lib/coupling/balancedCouplingModel";
 import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
@@ -169,27 +164,40 @@ const riskTierCounts = {
 	low: model.snapshots.filter((s) => s.riskTier === "Low").length,
 };
 
-const riskTierData = [
-	...(riskTierCounts.critical > 0
-		? [{ label: "Critical", value: riskTierCounts.critical }]
-		: []),
-	...(riskTierCounts.high > 0
-		? [{ label: "High", value: riskTierCounts.high }]
-		: []),
-	...(riskTierCounts.medium > 0
-		? [{ label: "Medium", value: riskTierCounts.medium }]
-		: []),
-	...(riskTierCounts.low > 0
-		? [{ label: "Low", value: riskTierCounts.low }]
-		: []),
+const cards = [
+	{ label: "Components", value: model.aggregate.totalComponents.toString(), detail: null },
+	{
+		label: "Overloaded",
+		value: model.aggregate.overloadedComponents.toString(),
+		detail: null,
+		...(model.aggregate.overloadedComponents > 0 ? { accentColor: "#dc2626" } : {}),
+	},
+	{
+		label: "Knowledge Exposed",
+		value: model.aggregate.knowledgeExposedComponents.toString(),
+		detail: null,
+		...(model.aggregate.knowledgeExposedComponents > 0 ? { accentColor: "#d97706" } : {}),
+	},
+	{
+		label: "Average Risk",
+		value: model.aggregate.averageRisk.toFixed(1),
+		detail: selectedTemporal?.periodLabel ?? "No temporal window",
+	},
 ];
 
-const dimensionMixData = model.aggregate.dimensionMix.map((item) => ({
-	label: item.label,
-	value: item.value,
+const riskTierData = [
+	...(riskTierCounts.critical > 0 ? [{ label: "Critical", value: riskTierCounts.critical }] : []),
+	...(riskTierCounts.high > 0 ? [{ label: "High", value: riskTierCounts.high }] : []),
+	...(riskTierCounts.medium > 0 ? [{ label: "Medium", value: riskTierCounts.medium }] : []),
+	...(riskTierCounts.low > 0 ? [{ label: "Low", value: riskTierCounts.low }] : []),
+];
+
+const topRiskData = model.snapshots.slice(0, 12).map((snapshot) => ({
+	label: snapshot.component,
+	value: snapshot.systemicRisk,
 }));
 
-const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map(
+const dominantDimensionData = model.aggregate.dominantDimensionBreakdown.map(
 	(item) => ({
 		label: item.label,
 		value: item.value,
@@ -197,11 +205,6 @@ const dominantBreakdownData = model.aggregate.dominantDimensionBreakdown.map(
 		color: item.color,
 	}),
 );
-
-const topRiskData = model.snapshots.slice(0, 12).map((snapshot) => ({
-	label: snapshot.component,
-	value: snapshot.systemicRisk,
-}));
 
 const couplingRows = model.snapshots.map((snapshot) => ({
 	id: snapshot.id,
@@ -234,195 +237,16 @@ const couplingRows = model.snapshots.map((snapshot) => ({
 ---
 
 <Dashboard title={`${repoName} Balanced Coupling`} projectName={projectName} repoScope={{ repoKey: props.repoKey, repoName }}>
-  <h2>Balanced Coupling</h2>
-  <p class="subtitle">
-    First-pass system coupling view built from the current logical component map, static dependencies,
-    {selectedTemporal ? ` ${selectedTemporal.periodLabel.toLowerCase()} temporal coupling,` : ""} and component hotspots.
-  </p>
-
-  {model.snapshots.length === 0 ? (
-    <div class="empty">
-      <p>No component coupling model could be derived yet.</p>
-      <p class="hint">
-        Export logical components, component dependencies, and hotspot data first, then regenerate the site reports.
-      </p>
-    </div>
-  ) : (
-    <>
-      <div class="cards">
-        <div class="card">
-          <div class="card-value">{model.aggregate.totalComponents}</div>
-          <div class="card-label">Components</div>
-        </div>
-        <div class="card card-critical">
-          <div class="card-value">{model.aggregate.overloadedComponents}</div>
-          <div class="card-label">Overloaded</div>
-        </div>
-        <div class="card card-warning">
-          <div class="card-value">{model.aggregate.knowledgeExposedComponents}</div>
-          <div class="card-label">Knowledge Exposed</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{model.aggregate.averageRisk.toFixed(1)}</div>
-          <div class="card-label">Average Risk</div>
-        </div>
-        <div class="card">
-          <div class="card-value">{selectedTemporal?.periodLabel ?? "No temporal window"}</div>
-          <div class="card-label">Temporal Window</div>
-        </div>
-      </div>
-
-      <section class="section">
-        <h3>Big Ball of Mud</h3>
-        <BigBallOfMudChart client:load model={model} helpText={chartHelp.coupling.mudChart} />
-      </section>
-
-      <div class="two-up">
-        {dimensionMixData.length > 0 && (
-          <section class="section">
-            <h3>Average Coupling Mix</h3>
-            <DonutChart client:visible data={dimensionMixData} valueLabel="avg score" helpText={chartHelp.coupling.dimensionMix} />
-          </section>
-        )}
-
-        {dominantBreakdownData.length > 0 && (
-          <section class="section">
-            <h3>Dominant Dimension by Component</h3>
-            <DistributionChart client:visible data={dominantBreakdownData} helpText={chartHelp.coupling.dominantBreakdown} />
-          </section>
-        )}
-      </div>
-
-      <section class="section">
-        <h3>Top Risk Components</h3>
-        <HorizontalBarChart client:visible data={topRiskData} valueLabel="risk" helpText={chartHelp.coupling.topComponents} />
-      </section>
-
-      {riskTierData.length > 1 && (
-        <section class="section">
-          <h3>Risk Tier Mix</h3>
-          <DonutChart
-            client:visible
-            data={riskTierData}
-            valueLabel="components"
-            helpText={chartHelp.coupling.riskTierMix}
-          />
-        </section>
-      )}
-
-      <ReportDataGrid
-        client:visible
-        title="Coupling Inventory"
-        description="Search by component, risk type, or explainability reason while keeping the mud view above."
-        searchPlaceholder="Search component, reason, or coupling dimension"
-        searchHint={`Decomposition: ${decompositionKey}${selectedTemporal ? ` • Temporal input: ${selectedTemporal.periodLabel}` : ""}`}
-        rows={couplingRows}
-        columns={[
-          { field: "component", headerName: "Component", minWidth: 220, flex: 1.2 },
-          { field: "riskTier", headerName: "Tier", minWidth: 110 },
-          { field: "systemicRisk", headerName: "Risk", type: "number", minWidth: 90, sort: "desc" },
-          { field: "overallLoad", headerName: "Load", type: "number", minWidth: 90 },
-          { field: "balanceScore", headerName: "Balance", type: "number", minWidth: 100 },
-          { field: "dominantDimension", headerName: "Primary Dimension", minWidth: 170 },
-          { field: "files", headerName: "Files", type: "number", minWidth: 90 },
-          { field: "loc", headerName: "LOC", type: "number", minWidth: 100 },
-          { field: "contributors", headerName: "Contributors", type: "number", minWidth: 120 },
-          { field: "incomingDependencies", headerName: "Incoming", type: "number", minWidth: 110 },
-          { field: "outgoingDependencies", headerName: "Outgoing", type: "number", minWidth: 110 },
-          { field: "temporalPartners", headerName: "Temporal Partners", type: "number", minWidth: 150 },
-          { field: "contributorOverlap", headerName: "Contributor Overlap", type: "number", minWidth: 160 },
-          { field: "staticCoupling", headerName: "Static", type: "number", minWidth: 100 },
-          { field: "temporalCoupling", headerName: "Temporal", type: "number", minWidth: 110 },
-          { field: "coordinationCoupling", headerName: "Coordination", type: "number", minWidth: 130 },
-          { field: "knowledgeRisk", headerName: "Knowledge", type: "number", minWidth: 110 },
-          { field: "explainability", headerName: "Why It Matters", type: "multiline", minWidth: 340, flex: 1.8 },
-        ]}
-      />
-    </>
-  )}
+	<RepositoryBalancedCouplingView
+		heading={repoName}
+		subtitle={`First-pass system coupling view built from the current logical component map, static dependencies,${selectedTemporal ? ` ${selectedTemporal.periodLabel.toLowerCase()} temporal coupling,` : ""} and component hotspots.`}
+		decompositionKey={decompositionKey}
+		temporalWindowLabel={selectedTemporal?.periodLabel ?? null}
+		cards={cards}
+		model={model}
+		riskTierData={riskTierData}
+		topRiskData={topRiskData}
+		dominantDimensionData={dominantDimensionData}
+		couplingRows={couplingRows}
+	/>
 </Dashboard>
-
-<style>
-  .subtitle {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
-    font-size: 0.95rem;
-    max-width: 72ch;
-  }
-
-  .empty {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 2rem;
-    text-align: center;
-  }
-
-  .empty p {
-    color: var(--color-text-muted);
-    margin-bottom: 0.5rem;
-  }
-
-  .hint {
-    font-size: 0.85rem;
-  }
-
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-
-  .card {
-    background: var(--color-card);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 1.25rem;
-  }
-
-  .card-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--color-accent);
-    line-height: 1.1;
-  }
-
-  .card-label {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    margin-top: 0.35rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .card-critical .card-value {
-    color: #dc2626;
-  }
-
-  .card-warning .card-value {
-    color: #d97706;
-  }
-
-  .section {
-    margin-bottom: 2rem;
-  }
-
-  .section h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-  }
-
-  .two-up {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem;
-  }
-
-  @media (max-width: 900px) {
-    .two-up {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>

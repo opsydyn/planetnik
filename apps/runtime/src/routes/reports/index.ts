@@ -568,7 +568,11 @@ const ReportCouplingSummarySchema = Schema.Struct({
     totalComponents: Schema.Number,
     overloadedComponents: Schema.Number,
     knowledgeExposedComponents: Schema.Number,
+    averageLoad: Schema.Number,
+    averageBalance: Schema.Number,
     averageRisk: Schema.Number,
+    maxRisk: Schema.Number,
+    topRiskComponent: Schema.optional(Schema.String),
   }),
   riskTierCounts: Schema.Struct({
     critical: Schema.Number,
@@ -578,8 +582,10 @@ const ReportCouplingSummarySchema = Schema.Struct({
   }),
   dimensionMix: Schema.Array(
     Schema.Struct({
+      id: Schema.String,
       label: Schema.String,
       value: Schema.Number,
+      color: Schema.String,
     }),
   ),
   dominantBreakdown: Schema.Array(
@@ -587,6 +593,7 @@ const ReportCouplingSummarySchema = Schema.Struct({
       label: Schema.String,
       value: Schema.Number,
       detail: Schema.String,
+      color: Schema.String,
     }),
   ),
   topRiskComponents: Schema.Array(
@@ -606,13 +613,16 @@ const ReportCouplingSummarySchema = Schema.Struct({
       balanceScore: Schema.Number,
       riskTier: Schema.Literal("Low", "Medium", "High", "Critical"),
       dominantDimension: Schema.String,
+      dominantDimensionId: Schema.String,
       files: Schema.Number,
       linesOfCode: Schema.Number,
       contributors: Schema.Number,
       incomingDependencies: Schema.Number,
       outgoingDependencies: Schema.Number,
+      staticPartners: Schema.Number,
       temporalPartners: Schema.Number,
       contributorOverlap: Schema.Number,
+      hotspotPressure: Schema.Number,
       staticCoupling: Schema.Number,
       temporalCoupling: Schema.Number,
       coordinationCoupling: Schema.Number,
