@@ -163,6 +163,14 @@ export function buildHostedShellModel(
 					label: "Workspace",
 					items: [{ href: "/", label: "Dashboard" }],
 				},
+				{
+					label: "About",
+					items: [
+						{ href: "/about", label: "About" },
+						{ href: "/guide", label: "Guide" },
+						{ href: "/technology", label: "Technology" },
+					],
+				},
 			],
 			breadcrumbs: [{ label: "Home" }, { label: input.title }],
 			scopeLabel: "Hosted workspace",

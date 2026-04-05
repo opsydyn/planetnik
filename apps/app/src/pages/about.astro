@@ -1,0 +1,16 @@
+---
+import AboutView from "@planetnik/report-ui/views/AboutView";
+import AppShell from "../layouts/AppShell.astro";
+
+if (!Astro.locals.user) {
+	return Astro.redirect("/sign-in");
+}
+---
+
+<AppShell
+	title="About"
+	subtitle="Płanetnik — architecture analytics and weather metaphor"
+	shellContext={{ kind: "dashboard" }}
+>
+	<AboutView bannerSrc="/plantnik-banner.webp" />
+</AppShell>

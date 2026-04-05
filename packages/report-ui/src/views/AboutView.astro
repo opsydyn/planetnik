@@ -1,0 +1,428 @@
+---
+interface Props {
+	bannerSrc?: string;
+}
+
+const { bannerSrc } = Astro.props as Props;
+---
+
+<div class="about">
+	<div class="hero">
+		<p class="hero-tagline">Read the weather of the machine</p>
+	</div>
+
+	<p class="lead">
+		<strong>Płanetnik</strong> is a tool for documenting and analysing the architecture of complex software systems.
+	</p>
+
+	<p>
+		Built in the spirit of pragmatic architectural analytics, <strong>Płanetnik</strong> helps teams understand large
+		codebases directly from the source. No long workshops. No endless interviews. Just show the code.
+	</p>
+
+	<p>
+		Płanetnik extracts structural signals from source repositories and turns them into usable insight about system
+		shape, technical debt, coupling, complexity, ownership, drift, and entropy.
+	</p>
+
+	<p>
+		It also aims to make a harder leadership idea tangible in code: <strong>activity is visible, impact is structural</strong>.
+		The Impact page turns that principle into evidence about where engineering work is reshaping the system
+		rather than simply adding visible motion.
+	</p>
+
+	<p>
+		Where other tools stop at raw metrics, Płanetnik aims to reveal the <strong>weather system</strong> of the
+		codebase: the pressure fronts, storm zones, fault lines, unstable regions, and slow entropic decay that shape
+		software delivery over time.
+	</p>
+
+	<hr />
+
+	<h3>What Is Płanetnik?</h3>
+
+	<p>
+		In Polish folklore, a <strong><a href="https://en.wikipedia.org/wiki/P%C5%82anetnik" target="_blank" rel="noopener noreferrer">Płanetnik</a></strong> is a being associated with clouds, storms, hail, and shifting
+		weather.
+	</p>
+
+	<p>For this project, that metaphor becomes a way to think about software systems.</p>
+
+	<p>Large codebases have weather:</p>
+	<ul>
+		<li>pressure builds</li>
+		<li>turbulence spreads</li>
+		<li>local changes become system-wide storms</li>
+		<li>fragile areas attract repeated disruption</li>
+		<li>hidden structural debt shapes the forecast</li>
+		<li>entropy pulls structure away from its intended form</li>
+	</ul>
+
+	<p><strong>Płanetnik</strong> exists to make that weather visible.</p>
+
+	<hr />
+
+	<h3>Why Płanetnik?</h3>
+
+	<p>
+		Modern systems are often too large, too entangled, and too fast-moving to understand through documents alone.
+	</p>
+
+	<p>
+		Płanetnik provides a pragmatic and relatively inexpensive way to examine source code repositories and derive
+		meaningful architectural insight from what is actually there, not what people remember, assume, or hope is true.
+	</p>
+
+	<p>It helps you answer questions like:</p>
+
+	<ul>
+		<li>where is the codebase growing fastest?</li>
+		<li>which parts of the system are most coupled?</li>
+		<li>where is complexity starting to gather?</li>
+		<li>which boundaries are healthy, and which are breaking down?</li>
+		<li>what areas are structurally fragile?</li>
+		<li>where does technical debt behave like a recurring storm front?</li>
+		<li>where is entropy eroding architectural intent?</li>
+		<li>how do code structure and team structure interact?</li>
+		<li>what hidden forces are driving delivery pain?</li>
+	</ul>
+
+	{bannerSrc && (
+		<div class="section-banner">
+			<img src={bannerSrc} alt="Planetnik banner" class="section-banner-image" />
+		</div>
+	)}
+
+	<hr />
+
+	<h3>What Płanetnik Helps You See</h3>
+
+	<dl>
+		<dt>size</dt>
+		<dd>how big different parts of the system are, and where growth is concentrated</dd>
+
+		<dt>complexity</dt>
+		<dd>where cognitive load and implementation burden are increasing</dd>
+
+		<dt>coupling</dt>
+		<dd>which modules, domains, or services pull too hard on each other</dd>
+
+		<dt>hotspots</dt>
+		<dd>where structural risk, churn, and change pressure overlap</dd>
+
+		<dt>ownership</dt>
+		<dd>how code and people interactions align or conflict</dd>
+
+		<dt>drift</dt>
+		<dd>where the architecture is moving away from its intended shape</dd>
+
+		<dt>entropy</dt>
+		<dd>where disorder is accumulating through unmanaged change, weakened boundaries, duplicated logic, and unclear responsibility</dd>
+
+		<dt>turbulence</dt>
+		<dd>where the system experiences repeated instability, friction, and operational strain</dd>
+
+		<dt>team topology signals</dt>
+		<dd>how delivery structure and software structure influence one another</dd>
+	</dl>
+
+	<hr />
+
+	<h3>Approach</h3>
+
+	<blockquote>Do not begin with stories. begin with the code.</blockquote>
+
+	<p>
+		Płanetnik is inspired by the mighty <a href="https://www.sokrates.dev/" target="_blank" rel="noopener noreferrer">Sokrates</a>, a pragmatic source code examination tool
+		created by Željko Obrenović. It borrows from the same philosophy of examining codebases directly, but adds its own
+		structure, modelling, and analysis on top.
+	</p>
+
+	<p>
+		Rather than treating the repository as an opaque blob, Płanetnik helps organise and interpret what is found:
+		source patterns, file groups, module boundaries, dependency signals, historical pressure points, ownership clues,
+		architectural zones, and areas of structural erosion.
+	</p>
+
+	<p>The result is a richer architectural picture built from evidence already present in the repository.</p>
+
+	<hr />
+
+	<h3>Core Ideas</h3>
+
+	<h4>1. Show the Code</h4>
+	<p>The fastest path to architectural truth often starts with direct inspection of the repository.</p>
+
+	<h4>2. Software Has Weather</h4>
+	<p>
+		Technical debt is not always a buried ruin. Sometimes it is atmospheric: diffuse, recurring, mobile, and only
+		obvious when the pressure changes.
+	</p>
+
+	<h4>3. Entropy Is Always at Work</h4>
+	<p>
+		Without active design, systems drift. Boundaries soften. Responsibility spreads. Local fixes accumulate. The
+		architecture becomes harder to reason about.
+	</p>
+	<p>Płanetnik helps teams see that entropic movement before it becomes a full storm.</p>
+
+	<h4>4. Structure Matters</h4>
+	<p>
+		Files, directories, modules, packages, domains, and boundaries all leave traces. Płanetnik helps interpret those
+		traces.
+	</p>
+
+	<h4>5. Architecture Should Be Observable</h4>
+	<p>Architecture should not live only in slide decks and memory. It should be measurable, inspectable, and reviewable.</p>
+
+	<h4>6. Socio-Technical Systems Leave Patterns</h4>
+	<p>
+		Code shape, change patterns, ownership, and team interaction often reinforce each other. Płanetnik helps surface
+		those relationships.
+	</p>
+
+	<h4>7. Evidence Beats Ceremony</h4>
+	<p>
+		Rich architectural insight does not always require expensive process. A great deal can be learned by examining the
+		codebase with care, structure, and the right lens.
+	</p>
+
+	<hr />
+
+	<h3>The Weather Model</h3>
+
+	<dl>
+		<dt>pressure</dt>
+		<dd>delivery demand, backlog load, rushed change, and local compromise</dd>
+
+		<dt>turbulence</dt>
+		<dd>frequent breakage, unclear boundaries, unstable dependencies, and repeated rework</dd>
+
+		<dt>storm fronts</dt>
+		<dd>areas where high change, high coupling, and high complexity converge</dd>
+
+		<dt>drift</dt>
+		<dd>the slow movement away from intended architecture, domain boundaries, or operational clarity</dd>
+
+		<dt>entropy</dt>
+		<dd>the background tendency of systems to decay into disorder unless actively maintained</dd>
+
+		<dt>visibility</dt>
+		<dd>the ability to observe structural reality rather than rely on intuition alone</dd>
+	</dl>
+
+	<p>This is not just metaphor. It is a practical lens for understanding why large systems become harder to change.</p>
+
+	<hr />
+
+	<h3>Use Cases</h3>
+
+	<ul>
+		<li>document the architecture of a large codebase</li>
+		<li>understand a legacy system</li>
+		<li>prepare for domain decomposition</li>
+		<li>examine monolith boundaries</li>
+		<li>identify hotspots and unstable areas</li>
+		<li>support modernisation efforts</li>
+		<li>validate architectural assumptions</li>
+		<li>detect erosion of intended boundaries</li>
+		<li>make technical debt easier to discuss in concrete terms</li>
+		<li>support engineering leadership with grounded structural insight</li>
+		<li>improve conversations around ownership and team design</li>
+		<li>detect where entropy is outpacing maintenance</li>
+	</ul>
+
+	<hr />
+
+	<h3>Who It Is For</h3>
+
+	<ul>
+		<li>architects</li>
+		<li>staff and principal engineers</li>
+		<li>tech leads</li>
+		<li>platform teams</li>
+		<li>engineering managers</li>
+		<li>modernisation teams</li>
+		<li>anyone trying to understand what a system is really doing beneath the surface</li>
+	</ul>
+
+	<hr />
+
+	<h3>Philosophy</h3>
+
+	<p>Płanetnik is not a replacement for engineering judgement.</p>
+
+	<p>It is a way to ground judgement in evidence.</p>
+
+	<p>
+		It does not promise perfect truth. It provides a better forecast. Its goal is not to eliminate uncertainty, but to
+		make hidden structure, mounting pressure, and entropic risk more legible.
+	</p>
+
+	<hr />
+
+	<h3>Design Goals</h3>
+
+	<dl>
+		<dt>pragmatic</dt>
+		<dd>useful on real repositories without massive setup</dd>
+
+		<dt>fast</dt>
+		<dd>designed for iterative analysis, not slow ceremonial reporting</dd>
+
+		<dt>grounded</dt>
+		<dd>based on the source itself</dd>
+
+		<dt>polyglot-friendly</dt>
+		<dd>applicable across mixed-language codebases</dd>
+
+		<dt>architecture-aware</dt>
+		<dd>focused on structural insight, not just code metrics</dd>
+
+		<dt>socio-technical</dt>
+		<dd>aware that systems are shaped by both code and people</dd>
+
+		<dt>composable</dt>
+		<dd>suitable for pipelines, automation, and repeatable analysis</dd>
+
+		<dt>entropy-conscious</dt>
+		<dd>built to help teams spot decay before it hardens into chronic failure</dd>
+	</dl>
+
+	<hr />
+
+	<h3>Example Questions</h3>
+
+	<ul class="questions">
+		<li>where are storm fronts forming in the codebase?</li>
+		<li>which modules attract repeated change pressure?</li>
+		<li>where is coupling strongest?</li>
+		<li>which areas combine high size, high churn, and high complexity?</li>
+		<li>where are boundaries porous or breaking down?</li>
+		<li>where is entropy accumulating fastest?</li>
+		<li>which teams are exposed to the most architectural turbulence?</li>
+		<li>what parts of the system feel calm, but are structurally unstable underneath?</li>
+		<li>what is the likely cost of leaving this area untouched for another quarter?</li>
+	</ul>
+</div>
+
+<style>
+	.about {
+		max-width: none;
+	}
+
+	.about > :not(.section-banner) {
+		max-width: 720px;
+	}
+
+	.hero {
+		text-align: center;
+		margin-bottom: 2.5rem;
+		max-width: 720px;
+	}
+
+	.hero-tagline {
+		font-size: 1.1rem;
+		font-style: italic;
+		color: var(--color-text-muted);
+		letter-spacing: 0.02em;
+		margin: 0;
+	}
+
+	.lead {
+		font-size: 1.05rem;
+		line-height: 1.7;
+		margin-bottom: 1rem;
+	}
+
+	p {
+		line-height: 1.7;
+		margin-bottom: 0.85rem;
+		color: var(--color-text);
+	}
+
+	hr {
+		border: none;
+		border-top: 1px solid var(--color-border);
+		margin: 2rem 0;
+	}
+
+	h3 {
+		font-size: 1.15rem;
+		font-weight: 600;
+		margin-bottom: 1rem;
+		color: var(--color-text);
+	}
+
+	h4 {
+		font-size: 0.95rem;
+		font-weight: 600;
+		margin-top: 1.25rem;
+		margin-bottom: 0.5rem;
+		color: var(--color-text);
+	}
+
+	ul {
+		margin: 0.75rem 0 1rem 1.25rem;
+		line-height: 1.7;
+	}
+
+	li {
+		margin-bottom: 0.25rem;
+		color: var(--color-text);
+	}
+
+	dl {
+		margin: 0.75rem 0 1rem;
+	}
+
+	dt {
+		font-weight: 600;
+		margin-top: 0.85rem;
+		color: var(--color-accent);
+	}
+
+	dd {
+		margin-left: 0;
+		margin-top: 0.15rem;
+		color: var(--color-text);
+		line-height: 1.6;
+	}
+
+	blockquote {
+		border-left: 3px solid var(--color-accent);
+		padding: 0.5rem 1rem;
+		margin: 1rem 0;
+		font-style: italic;
+		color: var(--color-text-muted);
+		background: rgba(99, 102, 241, 0.04);
+		border-radius: 0 4px 4px 0;
+	}
+
+	a {
+		color: var(--color-accent);
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	a:hover {
+		text-decoration: underline;
+	}
+
+	.questions li {
+		font-style: italic;
+		color: var(--color-text-muted);
+	}
+
+	.section-banner {
+		width: 100%;
+		margin: 1.5rem 0 0.5rem;
+	}
+
+	.section-banner-image {
+		display: block;
+		width: 100%;
+		height: auto;
+		border-radius: 8px;
+	}
+</style>

@@ -1,0 +1,60 @@
+---
+import GuideView from "@planetnik/report-ui/views/GuideView";
+import AppShell from "../layouts/AppShell.astro";
+
+if (!Astro.locals.user) {
+	return Astro.redirect("/sign-in");
+}
+
+const tutorialSteps = [
+	{
+		title: "Browse your reports",
+		body: "Start from the dashboard to see which linked reports are available in your workspace. Each report represents a connected Planetnik dataset.",
+		href: "/",
+		label: "Open Dashboard",
+	},
+	{
+		title: "Open a report overview",
+		body: "Select a report and open its overview to understand scale, language mix, and the full set of available views — hotspots, topology, contributors, and more.",
+	},
+	{
+		title: "Find the next thing to fix",
+		body: "Use Impact and Hotspots to distinguish visible activity from structural leverage, then identify where risk, churn, ownership, and coupling overlap.",
+	},
+];
+
+const howToGuides = [
+	{
+		title: "Understand a new codebase fast",
+		text: "Use the overview and metrics pages to build an initial map of structure, size, and language mix before diving into detail.",
+		links: [],
+	},
+	{
+		title: "Investigate risky change areas",
+		text: "Start with Hotspots, then validate with File Churn, Temporal Dependencies, and Duplication before planning refactoring work.",
+		links: [],
+	},
+	{
+		title: "Review architectural boundaries",
+		text: "Use Components, Balanced Coupling, Dependencies, and Features of Interest together to see whether intended boundaries match real code structure.",
+		links: [],
+	},
+	{
+		title: "Assess team and knowledge risk",
+		text: "Use Contributors, Team Topology, and contributor detail pages to evaluate ownership spread, collaboration patterns, and concentration risk.",
+		links: [],
+	},
+];
+---
+
+<AppShell
+	title="Guide"
+	subtitle="How to use Płanetnik reports effectively"
+	shellContext={{ kind: "dashboard" }}
+>
+	<GuideView
+		bannerSrc="/plantnik-banner.webp"
+		tutorialSteps={tutorialSteps}
+		howToGuides={howToGuides}
+	/>
+</AppShell>

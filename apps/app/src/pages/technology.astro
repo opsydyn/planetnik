@@ -1,0 +1,19 @@
+---
+import TechnologyView from "@planetnik/report-ui/views/TechnologyView";
+import AppShell from "../layouts/AppShell.astro";
+
+if (!Astro.locals.user) {
+	return Astro.redirect("/sign-in");
+}
+---
+
+<AppShell
+	title="Technology"
+	subtitle="How Płanetnik is built and why it matters"
+	shellContext={{ kind: "dashboard" }}
+>
+	<TechnologyView
+		bannerSrc="/plantnik-banner.webp"
+		conductBannerSrc="/plantnik-banner-conduct.webp"
+	/>
+</AppShell>
