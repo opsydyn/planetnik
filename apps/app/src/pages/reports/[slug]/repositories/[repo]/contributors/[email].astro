@@ -4,12 +4,10 @@ import { buildHostedRepositoryShellContext } from "../../../../../../lib/hosted-
 import {
 	getHostedReportContributorEmailFromParam,
 	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryContributorHref,
 	getHostedReportRepositoryHref,
 	getHostedReportRepositoryPageHref,
 } from "../../../../../../lib/hosted-routes.js";
-import {
-	buildReportContributorDetailViewModel,
-} from "../../../../../../lib/report-contributor-detail-view-model.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../../../../lib/report-detail-view-model.js";
@@ -18,6 +16,7 @@ import {
 	getRuntimeReportLandscapeRepository,
 	getRuntimeReportLandscapeRepositoryContributorDetail,
 } from "../../../../../../lib/runtime-client.js";
+import RepositoryContributorDetailView from "@planetnik/report-ui/views/RepositoryContributorDetailView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -41,122 +40,57 @@ if (!repository) {
 }
 
 const contributor = email
-	? await getRuntimeReportLandscapeRepositoryContributorDetail(
-			cookie,
-			slug,
-			repo,
-			email,
-		)
+	? await getRuntimeReportLandscapeRepositoryContributorDetail(cookie, slug, repo, email)
 	: null;
 
 if (!contributor) {
 	return Astro.redirect(getHostedReportRepositoryPageHref(slug, repo, "/contributors"));
 }
 
-const viewModel = buildReportContributorDetailViewModel({
-	slug,
-	reportName: repository.name,
-	routeBase: getHostedReportRepositoryPageHref(slug, repo, "/contributors"),
-	contributor,
-});
+const collaborators = contributor.collaborators.map((entry) => ({
+	email: entry.email,
+	displayName: entry.displayName,
+	sharedFiles: entry.sharedFiles,
+	href: getHostedReportRepositoryContributorHref(slug, repo, entry.email),
+}));
+
+const topCollaboratorHref = contributor.topCollaboratorEmail
+	? getHostedReportRepositoryContributorHref(slug, repo, contributor.topCollaboratorEmail)
+	: null;
 ---
 
 <AppShell
-	title={`${viewModel.heading} Contributor`}
-	subtitle={viewModel.subtitle}
+	title={`${contributor.displayName} Contributor`}
+	subtitle={`${repository.name} · Contributors`}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Contributor</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				Hosted repo contributor drilldown stays tied to the same repo export
-				contract as the static landscape shell without copying the static Astro
-				pages directly.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={viewModel.backHref}>
-					Back to contributors
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
-					Open repository dashboard
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Profile</p>
-				<h2>Contributor facts</h2>
-				<dl class="fact-list">
-					{viewModel.facts.map((fact) => (
-						<div>
-							<dt>{fact.label}</dt>
-							<dd>{fact.value}</dd>
-						</div>
-					))}
-				</dl>
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Languages</p>
-				<h2>Extension footprint</h2>
-				{viewModel.extensions.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.extensions.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No extension footprint is available.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Components</p>
-				<h2>Logical component footprint</h2>
-				{viewModel.components.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.components.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No logical component footprint is available.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Files</p>
-				<h2>Top touched files</h2>
-				{viewModel.topFiles.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.topFiles.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No ranked source-file footprint is available.</p>
-				)}
-			</article>
-		</section>
-	</div>
+	<RepositoryContributorDetailView
+		repoName={repository.name}
+		backHref={getHostedReportRepositoryPageHref(slug, repo, "/contributors")}
+		contributorName={contributor.displayName}
+		email={contributor.email}
+		isActive={contributor.status === "Active"}
+		isRookie={contributor.status === "Rookie"}
+		commitsCount={contributor.commitsCount}
+		activeDays={contributor.activeDays}
+		filesCount={contributor.filesCount}
+		collaboratorsCount={contributor.collaboratorsCount}
+		firstCommitDate={contributor.firstCommitDate}
+		latestCommitDate={contributor.latestCommitDate}
+		commitsCount30Days={contributor.commitsCount30Days}
+		commitsCount90Days={contributor.commitsCount90Days}
+		commitsCount180Days={contributor.commitsCount180Days}
+		commitsCount365Days={contributor.commitsCount365Days}
+		topCollaboratorName={contributor.topCollaboratorDisplayName}
+		topCollaboratorHref={topCollaboratorHref}
+		extensions={[...contributor.extensions]}
+		components={[...contributor.logicalComponents]}
+		collaborators={collaborators}
+		touchedFiles={contributor.topFiles.map((f) => ({
+			relativePath: f.relativePath,
+			commits: f.commits,
+			logicalComponents: [...f.logicalComponents],
+			concerns: [...f.concerns],
+		}))}
+	/>
 </AppShell>

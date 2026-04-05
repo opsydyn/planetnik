@@ -42,6 +42,9 @@
 		"./views/RepositoryTopologyView": "./src/views/RepositoryTopologyView.astro",
 		"./views/RepositoryFilesView": "./src/views/RepositoryFilesView.astro",
 		"./views/RepositoryUnitsView": "./src/views/RepositoryUnitsView.astro",
+		"./views/RepositoryContributorsView": "./src/views/RepositoryContributorsView.astro",
+		"./views/RepositoryContributorDetailView": "./src/views/RepositoryContributorDetailView.astro",
+		"./charts/CommitHeatmap": "./src/charts/CommitHeatmap.tsx",
 		"./topology/TopologyGraph": "./src/topology/TopologyGraph.tsx",
 		"./temporal/TemporalDependenciesExplorer": "./src/temporal/TemporalDependenciesExplorer.tsx"
 	},
@@ -63,6 +66,7 @@
 		"graphology-types": "^0.24.8",
 		"sigma": "^3.0.2",
 		"@tanstack/react-table": "^8.21.3",
+		"@visx/heatmap": "^3.12.0",
 		"@visx/axis": "^3.12.0",
 		"@visx/grid": "^3.12.0",
 		"@visx/group": "^3.12.0",

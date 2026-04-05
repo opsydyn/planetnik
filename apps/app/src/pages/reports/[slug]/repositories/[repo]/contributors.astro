@@ -3,12 +3,10 @@ import AppShell from "../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import {
 	getHostedReportRepoKeyFromParam,
+	getHostedReportRepositoryContributorHref,
 	getHostedReportRepositoryHref,
 	getHostedReportRepositoryPageHref,
 } from "../../../../../lib/hosted-routes.js";
-import {
-	buildReportContributorsViewModel,
-} from "../../../../../lib/report-contributors-view-model.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../../../lib/report-detail-view-model.js";
@@ -17,6 +15,7 @@ import {
 	getRuntimeReportLandscapeRepository,
 	getRuntimeReportLandscapeRepositoryContributors,
 } from "../../../../../lib/runtime-client.js";
+import RepositoryContributorsView from "@planetnik/report-ui/views/RepositoryContributorsView";
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -43,93 +42,42 @@ const contributors = await getRuntimeReportLandscapeRepositoryContributors(
 	slug,
 	repo,
 );
-const viewModel = buildReportContributorsViewModel({
-	slug,
-	reportName: repository.name,
-	routeBase: getHostedReportRepositoryPageHref(slug, repo, "/contributors"),
-	contributors,
-});
+
+const rows = contributors.map((contributor) => ({
+	id: contributor.email,
+	contributor: contributor.displayName,
+	email: contributor.userName.trim().length > 0 ? contributor.email : "",
+	href: getHostedReportRepositoryContributorHref(slug, repo, contributor.email),
+	type: contributor.isBot === true ? "Bot" : contributor.isBot === false ? "Human" : "—",
+	commitsCount: contributor.commitsAllTime,
+	commits30d: contributor.commits30Days,
+	commits90d: contributor.commits90Days,
+	firstCommitDate: contributor.firstCommit,
+	latestCommitDate: contributor.latestCommitDate,
+	glueScore: "—",
+	structuralImpact: "—",
+	snackRisk: "—",
+	signal: contributor.knowledgeSignal || "—",
+}));
+
+const botCount = rows.filter((r) => r.type === "Bot").length;
+const humanCount = rows.filter((r) => r.type === "Human").length;
+const topContributor = [...rows].sort((a, b) => b.commitsCount - a.commitsCount)[0]?.contributor ?? "—";
 ---
 
 <AppShell
-	title={`${viewModel.heading} Contributors`}
-	subtitle={viewModel.subtitle}
+	title={`${repository.name} Contributors`}
+	subtitle={`${repository.name} · Contributors`}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Contributors</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				Hosted repo contributors stay aligned with the landscape drilldown by
-				reading repo-scoped <code>contributors.json</code> plus repo impact
-				signals from <code>contributor_impact.json</code>.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
-					Open repository dashboard
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/units/size")}>
-					Open units
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-card">
-			<p class="card-kicker">Table</p>
-			<h2>Contributor summary</h2>
-			{viewModel.rows.length > 0 ? (
-				<div class="contributors-table-wrap">
-					<table class="contributors-table">
-						<thead>
-							<tr>
-								<th>Contributor</th>
-								<th>Status</th>
-								<th>All time</th>
-								<th>30d</th>
-								<th>Components</th>
-								<th>Primary component</th>
-								<th>Knowledge signal</th>
-							</tr>
-						</thead>
-						<tbody>
-							{viewModel.rows.map((row) => (
-								<tr>
-									<td>
-										<div class="table-primary">
-											<a class="report-link" href={row.href}>{row.contributor}</a>
-										</div>
-										{row.email ? (
-											<div class="table-secondary">{row.email}</div>
-										) : null}
-									</td>
-									<td>{row.status}</td>
-									<td>{row.allTime}</td>
-									<td>{row.commits30Days}</td>
-									<td>{row.componentsTouched || "0"}</td>
-									<td>{row.primaryComponent || "Unassigned"}</td>
-									<td>{row.knowledgeSignal || " "}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			) : (
-				<p class="muted-copy">
-					No repository contributor summary is available for this linked dataset yet.
-				</p>
-			)}
-		</section>
-	</div>
+	<RepositoryContributorsView
+		repoName={repository.name}
+		description="Contributor activity and knowledge spread from the linked Planetnik dataset."
+		backHref={getHostedReportRepositoryHref(slug, repo)}
+		totalCount={rows.length}
+		humanCount={humanCount}
+		botCount={botCount}
+		topContributor={topContributor}
+		rows={rows}
+	/>
 </AppShell>

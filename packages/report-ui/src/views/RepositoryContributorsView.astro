@@ -1,0 +1,163 @@
+---
+import ReportDataGrid from "../tables/ReportDataGrid.js";
+
+type ContributorRow = {
+	id: string;
+	contributor: string;
+	email: string;
+	href: string;
+	type: string;
+	commitsCount: number;
+	commits30d: number;
+	commits90d: number;
+	firstCommitDate: string;
+	latestCommitDate: string;
+	glueScore: string;
+	structuralImpact: string;
+	snackRisk: string;
+	signal: string;
+};
+
+interface Props {
+	repoName: string;
+	description: string;
+	backHref?: string;
+	totalCount: number;
+	humanCount: number;
+	botCount: number;
+	topContributor: string;
+	rows: ContributorRow[];
+}
+
+const {
+	repoName,
+	description,
+	backHref,
+	totalCount,
+	humanCount,
+	botCount,
+	topContributor,
+	rows,
+} = Astro.props as Props;
+---
+
+<div class="contributors-view">
+	{backHref ? (
+		<a class="back-link" href={backHref}>&larr; Back to {repoName}</a>
+	) : null}
+
+	<header class="page-header">
+		<div>
+			<h2>Repository Contributors</h2>
+			<p class="subtitle">{description}</p>
+		</div>
+	</header>
+
+	<section class="stats-grid">
+		<article class="stat-card">
+			<div class="stat-value">{totalCount.toLocaleString()}</div>
+			<div class="stat-label">Contributors</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{humanCount.toLocaleString()}</div>
+			<div class="stat-label">Humans</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{botCount.toLocaleString()}</div>
+			<div class="stat-label">Bots</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{topContributor || "—"}</div>
+			<div class="stat-label">Top Committer</div>
+		</article>
+	</section>
+
+	<ReportDataGrid
+		client:visible
+		title="Repository Contributors"
+		description="Open repo-scoped contributor detail and inspect impact, collaboration, and activity inside this repository."
+		searchPlaceholder="Search contributor or impact signal"
+		rows={rows}
+		columns={[
+			{ field: "contributor", headerName: "Contributor", type: "link", hrefField: "href", secondaryField: "email", minWidth: 240, flex: 1.3, sort: "asc" },
+			{ field: "type", headerName: "Type", minWidth: 100 },
+			{ field: "commitsCount", headerName: "Commits", type: "number", minWidth: 110, sort: "desc" },
+			{ field: "commits30d", headerName: "Commits (30d)", type: "number", minWidth: 130 },
+			{ field: "commits90d", headerName: "Commits (90d)", type: "number", minWidth: 130 },
+			{ field: "glueScore", headerName: "Glue Score", minWidth: 120 },
+			{ field: "structuralImpact", headerName: "Structural Impact", minWidth: 150 },
+			{ field: "snackRisk", headerName: "Snack Risk", minWidth: 120 },
+			{ field: "signal", headerName: "Signal", minWidth: 180 },
+			{ field: "firstCommitDate", headerName: "First Commit", type: "date", minWidth: 130 },
+			{ field: "latestCommitDate", headerName: "Latest Commit", type: "date", minWidth: 130 },
+		]}
+	/>
+</div>
+
+<style>
+	.contributors-view {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.back-link {
+		display: inline-block;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.92rem;
+	}
+
+	.back-link:hover {
+		color: var(--color-accent);
+	}
+
+	.page-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 1rem;
+	}
+
+	.page-header h2 {
+		margin: 0;
+	}
+
+	.subtitle {
+		color: var(--color-text-muted);
+		max-width: 70ch;
+		margin-top: 0.35rem;
+		font-size: 0.9rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+		gap: 1rem;
+	}
+
+	.stat-card {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 16px;
+		padding: 1.15rem 1.2rem;
+	}
+
+	.stat-value {
+		font-size: 1.85rem;
+		font-weight: 700;
+		line-height: 1;
+		color: var(--color-accent);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.stat-label {
+		margin-top: 0.45rem;
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-size: 0.78rem;
+	}
+</style>

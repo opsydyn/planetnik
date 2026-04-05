@@ -1,0 +1,523 @@
+---
+import CommitHeatmap from "../charts/CommitHeatmap.js";
+import DonutChart from "../charts/DonutChart.js";
+import HorizontalBarChart from "../charts/HorizontalBarChart.js";
+import LineChart from "../charts/LineChart.js";
+import StaticReportTable from "../tables/StaticReportTable.astro";
+
+type DailyActivityEntry = { date: string; commits: number };
+
+type ImpactData = {
+	glueScore: number;
+	snackingScore: number;
+	structuralImpactScore: number;
+	visibleActivityScore: number;
+	dominantDimension: string;
+	isGlue: boolean;
+	isSnacking: boolean;
+	reasons: string[];
+};
+
+type ExtensionEntry = { extension: string; commits: number; files: number };
+type ComponentEntry = { name: string; files: number; linesOfCode: number };
+type CollaboratorEntry = { email: string; displayName: string; sharedFiles: number; href?: string };
+type TouchedFile = {
+	relativePath: string;
+	commits: number;
+	logicalComponents: string[];
+	concerns: string[];
+};
+
+interface Props {
+	repoName: string;
+	backHref: string;
+	contributorName: string;
+	email: string;
+	isActive: boolean;
+	isRookie: boolean;
+	commitsCount: number;
+	activeDays: number;
+	filesCount: number;
+	collaboratorsCount: number;
+	firstCommitDate: string;
+	latestCommitDate: string;
+	commitsCount30Days: number;
+	commitsCount90Days: number;
+	commitsCount180Days: number;
+	commitsCount365Days: number;
+	topCollaboratorName?: string | null;
+	topCollaboratorHref?: string | null;
+	extensions: ExtensionEntry[];
+	components: ComponentEntry[];
+	collaborators: CollaboratorEntry[];
+	touchedFiles: TouchedFile[];
+	dailyActivity?: DailyActivityEntry[];
+	monthlyActivity?: Array<{ label: string; value: number }>;
+	impact?: ImpactData;
+}
+
+const {
+	repoName,
+	backHref,
+	contributorName,
+	email,
+	isActive,
+	isRookie,
+	commitsCount,
+	activeDays,
+	filesCount,
+	collaboratorsCount,
+	firstCommitDate,
+	latestCommitDate,
+	commitsCount30Days,
+	commitsCount90Days,
+	commitsCount180Days,
+	commitsCount365Days,
+	topCollaboratorName,
+	topCollaboratorHref,
+	extensions,
+	components,
+	collaborators,
+	touchedFiles,
+	dailyActivity,
+	monthlyActivity,
+	impact,
+} = Astro.props as Props;
+
+const extensionChartData = [...extensions]
+	.sort((a, b) => b.commits - a.commits || a.extension.localeCompare(b.extension))
+	.map((entry) => ({
+		label: entry.extension ? `.${entry.extension}` : "No Extension",
+		value: entry.commits,
+	}));
+
+const componentBarData = [...components]
+	.sort((a, b) => b.linesOfCode - a.linesOfCode || a.name.localeCompare(b.name))
+	.slice(0, 10)
+	.map((entry) => ({ label: entry.name, value: entry.linesOfCode }));
+
+const collaboratorBarData = collaborators
+	.slice(0, 10)
+	.map((entry) => ({ label: entry.displayName, value: entry.sharedFiles }));
+
+const dominantImpactLabel = impact?.dominantDimension.replace(/_/g, " ") ?? null;
+---
+
+<div class="contributor-detail">
+	<a class="back-link" href={backHref}>&larr; Back to {repoName}</a>
+
+	<header class="page-header">
+		<div>
+			<h2>{contributorName}</h2>
+			<p class="subtitle">
+				<span class="email">{email}</span> &middot; {repoName}
+			</p>
+		</div>
+		<div class="status-list">
+			{isActive && <span class="badge active">active</span>}
+			{isRookie && <span class="badge rookie">rookie</span>}
+		</div>
+	</header>
+
+	<section class="stats-grid">
+		<article class="stat-card">
+			<div class="stat-value">{commitsCount.toLocaleString()}</div>
+			<div class="stat-label">Repo Commits</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{activeDays.toLocaleString()}</div>
+			<div class="stat-label">Active Days</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{filesCount.toLocaleString()}</div>
+			<div class="stat-label">Files Touched</div>
+		</article>
+		<article class="stat-card">
+			<div class="stat-value">{collaboratorsCount.toLocaleString()}</div>
+			<div class="stat-label">Collaborators</div>
+		</article>
+	</section>
+
+	<section class="detail-grid">
+		<article class="detail-card">
+			<div class="detail-label">First Commit</div>
+			<div class="detail-value">{firstCommitDate || "Unknown"}</div>
+		</article>
+		<article class="detail-card">
+			<div class="detail-label">Latest Commit</div>
+			<div class="detail-value">{latestCommitDate || "Unknown"}</div>
+		</article>
+		<article class="detail-card">
+			<div class="detail-label">30 / 90 / 180 / 365 Days</div>
+			<div class="detail-value monospace">
+				{commitsCount30Days} / {commitsCount90Days} / {commitsCount180Days} / {commitsCount365Days}
+			</div>
+		</article>
+		<article class="detail-card">
+			<div class="detail-label">Top Collaborator</div>
+			<div class="detail-value">
+				{topCollaboratorName ? (
+					topCollaboratorHref ? (
+						<a href={topCollaboratorHref}>{topCollaboratorName}</a>
+					) : (
+						topCollaboratorName
+					)
+				) : (
+					"None"
+				)}
+			</div>
+		</article>
+		{impact && (
+			<>
+				<article class="detail-card impact-summary-card">
+					<div class="detail-label">Contributor Impact</div>
+					<div class="impact-badges">
+						{impact.isGlue && <span class="impact-badge impact-badge--glue">Glue contributor</span>}
+						{impact.isSnacking && <span class="impact-badge impact-badge--snack">Snacking risk</span>}
+						{dominantImpactLabel && <span class="impact-badge impact-badge--neutral">{dominantImpactLabel}</span>}
+					</div>
+					<p class="impact-reasons">{impact.reasons.join(" • ")}</p>
+				</article>
+				<article class="detail-card impact-score-card">
+					<div class="detail-label">Glue Score</div>
+					<div class="detail-value impact-score impact-score--glue">{impact.glueScore.toFixed(1)}</div>
+				</article>
+				<article class="detail-card impact-score-card">
+					<div class="detail-label">Snack Risk</div>
+					<div class="detail-value impact-score impact-score--snack">{impact.snackingScore.toFixed(1)}</div>
+				</article>
+				<article class="detail-card impact-score-card">
+					<div class="detail-label">Structural Impact</div>
+					<div class="detail-value impact-score impact-score--structural">{impact.structuralImpactScore.toFixed(1)}</div>
+				</article>
+				<article class="detail-card impact-score-card">
+					<div class="detail-label">Visible Activity</div>
+					<div class="detail-value impact-score impact-score--visible">{impact.visibleActivityScore.toFixed(1)}</div>
+				</article>
+			</>
+		)}
+	</section>
+
+	{dailyActivity && dailyActivity.length > 0 && (
+		<section class="section">
+			<h3>Commit Heatmap</h3>
+			<p class="section-intro">Daily commit activity across the last 53 weeks ending on {latestCommitDate || firstCommitDate || "the latest available snapshot"}.</p>
+			<CommitHeatmap
+				client:load
+				data={dailyActivity}
+				endDate={latestCommitDate || firstCommitDate || undefined}
+				helpText="Shows when this contributor was active day by day. Look for long inactive periods, bursts, or sustained concentration that might affect ownership continuity."
+			/>
+		</section>
+	)}
+
+	{monthlyActivity && monthlyActivity.length > 0 && (
+		<section class="section">
+			<h3>Commit Activity</h3>
+			<LineChart
+				client:visible
+				series={[{ name: "Commits", data: monthlyActivity }]}
+				xLabel="Month"
+				yLabel="Commits"
+				helpText="Shows commit volume over time for this contributor. Spikes often align with feature pushes or firefighting, while long declines can indicate knowledge drift."
+			/>
+		</section>
+	)}
+
+	<section class="chart-grid">
+		{extensionChartData.length > 0 && (
+			<div class="chart-panel">
+				<h3>Language Footprint</h3>
+				<DonutChart
+					client:visible
+					data={extensionChartData}
+					valueLabel="commits"
+					helpText="Shows which languages this contributor changed most. A very narrow footprint signals specialization; a broad one signals wider coordination value."
+				/>
+			</div>
+		)}
+
+		{componentBarData.length > 0 && (
+			<div class="chart-panel">
+				<h3>Component Footprint</h3>
+				<HorizontalBarChart
+					client:visible
+					data={componentBarData}
+					valueLabel="loc"
+					maxItems={10}
+					helpText="Ranks the components this contributor touched most. Use it to understand real ownership, backup depth, and likely offboarding impact."
+				/>
+			</div>
+		)}
+	</section>
+
+	{collaboratorBarData.length > 0 && (
+		<section class="section">
+			<h3>Top Collaborators</h3>
+			<HorizontalBarChart
+				client:visible
+				data={collaboratorBarData}
+				valueLabel="shared files"
+				maxItems={10}
+				helpText="Shows who shares the most files with this contributor. Strong ties often reveal de facto team boundaries and coordination hotspots."
+			/>
+			<StaticReportTable ariaLabel="Top collaborators">
+				<thead>
+					<tr>
+						<th><span>Contributor</span></th>
+						<th><span>Shared Files</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{collaborators.map((entry) => (
+						<tr>
+							<td>
+								{entry.href ? (
+									<a href={entry.href}>{entry.displayName}</a>
+								) : (
+									entry.displayName
+								)}
+								<div class="email-sub">{entry.email}</div>
+							</td>
+							<td class="numeric">{entry.sharedFiles.toLocaleString()}</td>
+						</tr>
+					))}
+				</tbody>
+			</StaticReportTable>
+		</section>
+	)}
+
+	{touchedFiles.length > 0 && (
+		<section class="section">
+			<h3>Files Touched</h3>
+			<StaticReportTable ariaLabel="Files touched">
+				<thead>
+					<tr>
+						<th><span>File</span></th>
+						<th><span>Commits</span></th>
+						<th><span>Components</span></th>
+						<th><span>Concerns</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{touchedFiles.map((file) => (
+						<tr>
+							<td class="file-path">
+								<span class="monospace">{file.relativePath}</span>
+							</td>
+							<td class="numeric">{file.commits.toLocaleString()}</td>
+							<td>
+								<div class="tag-list">
+									{file.logicalComponents.length > 0
+										? file.logicalComponents.map((component) => <span class="tag">{component}</span>)
+										: <span class="placeholder">None</span>}
+								</div>
+							</td>
+							<td>
+								<div class="tag-list">
+									{file.concerns.length > 0
+										? file.concerns.map((concern) => <span class="tag concern">{concern}</span>)
+										: <span class="placeholder">None</span>}
+								</div>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</StaticReportTable>
+		</section>
+	)}
+</div>
+
+<style>
+	.contributor-detail {
+		display: grid;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.back-link {
+		display: inline-block;
+		color: var(--color-text-muted);
+		text-decoration: none;
+		font-size: 0.9rem;
+	}
+
+	.back-link:hover { color: var(--color-accent); }
+
+	.page-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.page-header h2 { margin: 0; }
+
+	.subtitle {
+		color: var(--color-text-muted);
+		margin-top: 0.35rem;
+		font-size: 0.95rem;
+	}
+
+	.email {
+		font-family: "SF Mono", "Fira Code", monospace;
+		font-size: 0.85em;
+	}
+
+	.status-list { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.35rem 0.65rem;
+		border-radius: 999px;
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.badge.active { background: #dcfce7; color: #166534; }
+	.badge.rookie { background: #dbeafe; color: #1d4ed8; }
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		gap: 1rem;
+	}
+
+	.detail-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 1rem;
+	}
+
+	.chart-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 1rem;
+		align-items: start;
+	}
+
+	.stat-card, .detail-card, .chart-panel {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 1.25rem;
+	}
+
+	.stat-value {
+		font-size: 1.8rem;
+		font-weight: 700;
+		color: var(--color-accent);
+		line-height: 1;
+	}
+
+	.stat-label, .detail-label {
+		margin-top: 0.4rem;
+		font-size: 0.78rem;
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.detail-value {
+		margin-top: 0.35rem;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.impact-summary-card {
+		display: grid;
+		gap: 0.85rem;
+		grid-column: span 2;
+	}
+
+	.impact-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+	.impact-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.32rem 0.62rem;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		border: 1px solid var(--color-border);
+		background: var(--color-surface-subtle);
+		color: var(--color-text-muted);
+	}
+
+	.impact-badge--glue {
+		background: color-mix(in srgb, var(--chart-green) 18%, transparent);
+		border-color: color-mix(in srgb, var(--chart-green) 40%, transparent);
+		color: var(--chart-green);
+	}
+
+	.impact-badge--snack {
+		background: color-mix(in srgb, var(--chart-orange) 18%, transparent);
+		border-color: color-mix(in srgb, var(--chart-orange) 40%, transparent);
+		color: var(--chart-orange);
+	}
+
+	.impact-reasons { color: var(--color-text-muted); line-height: 1.6; }
+
+	.impact-score-card { min-height: 132px; }
+
+	.impact-score { font-size: 1.95rem; line-height: 1; }
+	.impact-score--glue { color: var(--chart-green); }
+	.impact-score--snack { color: var(--chart-orange); }
+	.impact-score--structural { color: var(--color-accent); }
+	.impact-score--visible { color: var(--chart-accent-light); }
+
+	.section { display: grid; gap: 1rem; min-width: 0; }
+
+	.section h3, .chart-panel h3 {
+		margin: 0;
+		font-size: 1.05rem;
+		font-weight: 600;
+	}
+
+	.section-intro {
+		margin: 0;
+		color: var(--color-text-muted);
+		font-size: 0.92rem;
+	}
+
+	.numeric {
+		text-align: right !important;
+		font-family: "SF Mono", "Fira Code", monospace;
+	}
+
+	.email-sub, .placeholder {
+		margin-top: 0.2rem;
+		color: var(--color-text-muted);
+		font-size: 0.8rem;
+	}
+
+	.monospace, .file-path { font-family: "SF Mono", "Fira Code", monospace; }
+
+	.tag-list { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+
+	.tag {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.2rem 0.45rem;
+		border-radius: 999px;
+		background: #eef2ff;
+		color: #4338ca;
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+
+	.tag.concern { background: #ecfeff; color: #0f766e; }
+
+	a { color: var(--color-accent); text-decoration: none; }
+	a:hover { text-decoration: underline; }
+
+	@media (max-width: 768px) {
+		.page-header { flex-direction: column; }
+		.impact-summary-card { grid-column: span 1; }
+	}
+</style>
