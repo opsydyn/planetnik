@@ -49,7 +49,10 @@ interface NavSection {
 const intelligenceNavSection: NavSection = {
 	label: "Intelligence",
 	iconName: "chat-circle",
-	items: [{ href: route("/intelligence"), label: "Ask Płanetnik" }],
+	items: [
+		{ href: route("/intelligence"), label: "Ask Płanetnik" },
+		{ href: route("/coming-soon"), label: "Platform" },
+	],
 };
 
 const reportContext = await getEntry("reportContext", "context");

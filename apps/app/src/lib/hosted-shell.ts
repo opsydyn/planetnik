@@ -260,7 +260,10 @@ export function buildReportNavSections(
       },
       {
         label: "Intelligence",
-        items: [{ href: `${baseHref}/intelligence`, label: "Ask Płanetnik" }],
+        items: [
+          { href: `${baseHref}/intelligence`, label: "Ask Płanetnik" },
+          { href: "/coming-soon", label: "Platform" },
+        ],
       },
     ]
   }
@@ -319,7 +322,10 @@ export function buildReportNavSections(
     },
     {
       label: "Intelligence",
-      items: [{ href: `${baseHref}/intelligence`, label: "Ask Płanetnik" }],
+      items: [
+        { href: `${baseHref}/intelligence`, label: "Ask Płanetnik" },
+        { href: "/coming-soon", label: "Platform" },
+      ],
     },
   ]
 
