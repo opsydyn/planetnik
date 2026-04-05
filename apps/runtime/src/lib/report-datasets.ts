@@ -132,6 +132,38 @@ export type ReportContributorDetail = {
 	}>;
 };
 
+export type TopologyPeopleDep = {
+	readonly from: string;
+	readonly to: string;
+	readonly count: number;
+	readonly files: ReadonlyArray<string>;
+};
+
+export type TopologyContributorImpact = {
+	readonly email: string;
+	readonly display_name: string;
+	readonly glue_score: number;
+	readonly snacking_score: number;
+	readonly structural_impact_score: number;
+	readonly visible_activity_score: number;
+	readonly collaborator_count: number;
+	readonly shared_files_count: number;
+	readonly commits_count: number;
+	readonly files_touched: number;
+	readonly components_touched: number;
+	readonly dominant_dimension: string;
+	readonly dimensions: Record<string, number>;
+	readonly top_components: ReadonlyArray<{
+		readonly name: string;
+		readonly files: number;
+		readonly commits: number;
+	}>;
+	readonly top_routes: ReadonlyArray<string>;
+	readonly reasons: ReadonlyArray<string>;
+	readonly is_glue: boolean;
+	readonly is_snacking: boolean;
+};
+
 export type ReportTopologySummary = {
 	readonly availablePeriods: ReadonlyArray<string>;
 	readonly strongestConnections: ReadonlyArray<{
@@ -155,6 +187,8 @@ export type ReportTopologySummary = {
 		readonly snackingScore: number;
 		readonly dominantDimension: string;
 	}>;
+	readonly periodsData: Record<string, ReadonlyArray<TopologyPeopleDep>>;
+	readonly impactPeriods: Record<string, ReadonlyArray<TopologyContributorImpact>>;
 };
 
 type ReportTopologyConnection = ReportTopologySummary["strongestConnections"][number];
@@ -2295,6 +2329,7 @@ export function readReportTopologySummary(
 	}
 
 	const strongestConnections: ReportTopologyConnection[] = [];
+	const periodsData: Record<string, ReadonlyArray<TopologyPeopleDep>> = {};
 	for (const [periodLabel, fileName] of periodFiles) {
 		const filePath = join(dataDir, fileName);
 		if (!existsSync(filePath)) {
@@ -2308,27 +2343,35 @@ export function readReportTopologySummary(
 				continue;
 			}
 
-			best = raw
+			const edges = raw
 				.filter(
 					(edge): edge is Record<string, unknown> =>
 						typeof edge === "object" && edge !== null,
 				)
 				.map((edge) => ({
-					periodLabel,
 					from: typeof edge.from === "string" ? edge.from : "",
-					fromDisplayName:
-						typeof edge.from === "string"
-							? (contributorNames.get(edge.from) ?? edge.from)
-							: "",
 					to: typeof edge.to === "string" ? edge.to : "",
-					toDisplayName:
-						typeof edge.to === "string"
-							? (contributorNames.get(edge.to) ?? edge.to)
-							: "",
-					sharedCommits: typeof edge.count === "number" ? edge.count : 0,
-					filesCount: Array.isArray(edge.files) ? edge.files.length : 0,
+					count: typeof edge.count === "number" ? edge.count : 0,
+					files: Array.isArray(edge.files)
+						? edge.files.filter((f): f is string => typeof f === "string")
+						: [],
 				}))
-				.filter((edge) => edge.from.length > 0 && edge.to.length > 0)
+				.filter((edge) => edge.from.length > 0 && edge.to.length > 0);
+
+			if (edges.length === 0) continue;
+
+			periodsData[periodLabel] = edges;
+
+			best = edges
+				.map((edge) => ({
+					periodLabel,
+					from: edge.from,
+					fromDisplayName: contributorNames.get(edge.from) ?? edge.from,
+					to: edge.to,
+					toDisplayName: contributorNames.get(edge.to) ?? edge.to,
+					sharedCommits: edge.count,
+					filesCount: edge.files.length,
+				}))
 				.sort((left, right) => right.sharedCommits - left.sharedCommits)[0];
 		} catch {
 			continue;
@@ -2379,11 +2422,79 @@ export function readReportTopologySummary(
 		return null;
 	}
 
+	const periodKeyToLabel: Record<string, string> = {
+		all_time: "All Time",
+		"365d": "1 Year",
+		"180d": "6 Months",
+		"90d": "Quarter",
+		"30d": "Month",
+	};
+
+	const impactPeriods: Record<string, ReadonlyArray<TopologyContributorImpact>> = {};
+	for (const period of periods) {
+		if (typeof period !== "object" || period === null) continue;
+		const p = period as Record<string, unknown>;
+		const key = typeof p.period_key === "string" ? p.period_key : null;
+		if (!key) continue;
+		const label = periodKeyToLabel[key];
+		if (!label) continue;
+		const rawContributors = Array.isArray(p.contributors) ? p.contributors : [];
+		impactPeriods[label] = rawContributors
+			.filter(
+				(entry): entry is Record<string, unknown> =>
+					typeof entry === "object" && entry !== null,
+			)
+			.map((entry): TopologyContributorImpact => ({
+				email: typeof entry.email === "string" ? entry.email : "",
+				display_name: typeof entry.display_name === "string" ? entry.display_name : "",
+				glue_score: typeof entry.glue_score === "number" ? entry.glue_score : 0,
+				snacking_score: typeof entry.snacking_score === "number" ? entry.snacking_score : 0,
+				structural_impact_score: typeof entry.structural_impact_score === "number" ? entry.structural_impact_score : 0,
+				visible_activity_score: typeof entry.visible_activity_score === "number" ? entry.visible_activity_score : 0,
+				collaborator_count: typeof entry.collaborator_count === "number" ? entry.collaborator_count : 0,
+				shared_files_count: typeof entry.shared_files_count === "number" ? entry.shared_files_count : 0,
+				commits_count: typeof entry.commits_count === "number" ? entry.commits_count : 0,
+				files_touched: typeof entry.files_touched === "number" ? entry.files_touched : 0,
+				components_touched: typeof entry.components_touched === "number" ? entry.components_touched : 0,
+				dominant_dimension: typeof entry.dominant_dimension === "string" ? entry.dominant_dimension : "",
+				dimensions: typeof entry.dimensions === "object" && entry.dimensions !== null
+					? Object.fromEntries(
+							Object.entries(entry.dimensions as Record<string, unknown>).map(
+								([k, v]) => [k, typeof v === "number" ? v : 0],
+							),
+						)
+					: {},
+				top_components: Array.isArray(entry.top_components)
+					? entry.top_components
+							.filter(
+								(c): c is Record<string, unknown> =>
+									typeof c === "object" && c !== null,
+							)
+							.map((c) => ({
+								name: typeof c.name === "string" ? c.name : "",
+								files: typeof c.files === "number" ? c.files : 0,
+								commits: typeof c.commits === "number" ? c.commits : 0,
+							}))
+					: [],
+				top_routes: Array.isArray(entry.top_routes)
+					? entry.top_routes.filter((r): r is string => typeof r === "string")
+					: [],
+				reasons: Array.isArray(entry.reasons)
+					? entry.reasons.filter((r): r is string => typeof r === "string")
+					: [],
+				is_glue: typeof entry.is_glue === "boolean" ? entry.is_glue : false,
+				is_snacking: typeof entry.is_snacking === "boolean" ? entry.is_snacking : false,
+			}))
+			.filter((entry) => entry.email.length > 0);
+	}
+
 	return {
 		availablePeriods: strongestConnections.map((edge) => edge.periodLabel),
 		strongestConnections,
 		topGlueContributors,
 		topSnackingContributors,
+		periodsData,
+		impactPeriods,
 	};
 }
 
@@ -2531,6 +2642,8 @@ export function readReportLandscapeTopologySummary(
 		strongestConnections,
 		topGlueContributors,
 		topSnackingContributors,
+		periodsData: {},
+		impactPeriods: {},
 	};
 }
 

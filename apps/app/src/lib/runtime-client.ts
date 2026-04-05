@@ -163,6 +163,38 @@ export type RuntimeReportContributorDetail = {
   }>;
 };
 
+export type RuntimeTopologyPeopleDep = {
+  readonly from: string;
+  readonly to: string;
+  readonly count: number;
+  readonly files: ReadonlyArray<string>;
+};
+
+export type RuntimeTopologyContributorImpact = {
+  readonly email: string;
+  readonly display_name: string;
+  readonly glue_score: number;
+  readonly snacking_score: number;
+  readonly structural_impact_score: number;
+  readonly visible_activity_score: number;
+  readonly collaborator_count: number;
+  readonly shared_files_count: number;
+  readonly commits_count: number;
+  readonly files_touched: number;
+  readonly components_touched: number;
+  readonly dominant_dimension: string;
+  readonly dimensions: Record<string, number>;
+  readonly top_components: ReadonlyArray<{
+    readonly name: string;
+    readonly files: number;
+    readonly commits: number;
+  }>;
+  readonly top_routes: ReadonlyArray<string>;
+  readonly reasons: ReadonlyArray<string>;
+  readonly is_glue: boolean;
+  readonly is_snacking: boolean;
+};
+
 export type RuntimeReportTopology = {
   readonly availablePeriods: ReadonlyArray<string>;
   readonly strongestConnections: ReadonlyArray<{
@@ -186,6 +218,8 @@ export type RuntimeReportTopology = {
     readonly snackingScore: number;
     readonly dominantDimension: string;
   }>;
+  readonly periodsData: Record<string, ReadonlyArray<RuntimeTopologyPeopleDep>>;
+  readonly impactPeriods: Record<string, ReadonlyArray<RuntimeTopologyContributorImpact>>;
 };
 
 export type RuntimeReportMetrics = {

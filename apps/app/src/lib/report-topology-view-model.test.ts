@@ -35,6 +35,8 @@ describe("report topology view model", () => {
 						dominantDimension: "knowledge_spread",
 					},
 				],
+				periodsData: {},
+				impactPeriods: {},
 			},
 		});
 

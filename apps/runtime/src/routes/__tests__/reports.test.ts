@@ -349,6 +349,33 @@ const readReportTopologySummary = mock((analysisRoot: string) => {
 				dominantDimension: "knowledge_spread",
 			},
 		],
+		periodsData: {
+			"All Time": [{ from: "alan@example.com", to: "sam@example.com", count: 12, files: ["src/a.ts"] }],
+		},
+		impactPeriods: {
+			"All Time": [
+				{
+					email: "alan@example.com",
+					display_name: "Alan Currie",
+					glue_score: 8.8,
+					snacking_score: 0,
+					structural_impact_score: 7.2,
+					visible_activity_score: 6.1,
+					collaborator_count: 4,
+					shared_files_count: 12,
+					commits_count: 30,
+					files_touched: 20,
+					components_touched: 3,
+					dominant_dimension: "coordination_relief",
+					dimensions: { coordination_relief: 8.8 },
+					top_components: [{ name: "core", files: 5, commits: 10 }],
+					top_routes: [],
+					reasons: ["High glue"],
+					is_glue: true,
+					is_snacking: false,
+				},
+			],
+		},
 	};
 });
 const readReportLandscapeTopologySummary = mock((analysisRoot: string) => {
@@ -385,6 +412,8 @@ const readReportLandscapeTopologySummary = mock((analysisRoot: string) => {
 				dominantDimension: "shared_files",
 			},
 		],
+		periodsData: {},
+		impactPeriods: {},
 	};
 });
 const readReportMetricsSummary = mock((analysisRoot: string) => {
@@ -1446,6 +1475,33 @@ const readReportLandscapeRepositoryTopologySummary = mock(
 					dominantDimension: "knowledge_spread",
 				},
 			],
+			periodsData: {
+				"All Time": [{ from: "alan@example.com", to: "sam@example.com", count: 12, files: ["src/a.ts"] }],
+			},
+			impactPeriods: {
+				"All Time": [
+					{
+						email: "alan@example.com",
+						display_name: "Alan Currie",
+						glue_score: 8.8,
+						snacking_score: 0,
+						structural_impact_score: 7.2,
+						visible_activity_score: 6.1,
+						collaborator_count: 4,
+						shared_files_count: 12,
+						commits_count: 30,
+						files_touched: 20,
+						components_touched: 3,
+						dominant_dimension: "coordination_relief",
+						dimensions: { coordination_relief: 8.8 },
+						top_components: [{ name: "core", files: 5, commits: 10 }],
+						top_routes: [],
+						reasons: ["High glue"],
+						is_glue: true,
+						is_snacking: false,
+					},
+				],
+			},
 		};
 	},
 );

@@ -307,6 +307,38 @@ const ReportContributorDetailResponseSchema = Schema.Struct({
   contributor: ReportContributorDetailSchema,
 })
 
+const TopologyPeopleDepSchema = Schema.Struct({
+  from: Schema.String,
+  to: Schema.String,
+  count: Schema.Number,
+  files: Schema.Array(Schema.String),
+})
+
+const TopologyContributorImpactSchema = Schema.Struct({
+  email: Schema.String,
+  display_name: Schema.String,
+  glue_score: Schema.Number,
+  snacking_score: Schema.Number,
+  structural_impact_score: Schema.Number,
+  visible_activity_score: Schema.Number,
+  collaborator_count: Schema.Number,
+  shared_files_count: Schema.Number,
+  commits_count: Schema.Number,
+  files_touched: Schema.Number,
+  components_touched: Schema.Number,
+  dominant_dimension: Schema.String,
+  dimensions: Schema.Record({ key: Schema.String, value: Schema.Number }),
+  top_components: Schema.Array(Schema.Struct({
+    name: Schema.String,
+    files: Schema.Number,
+    commits: Schema.Number,
+  })),
+  top_routes: Schema.Array(Schema.String),
+  reasons: Schema.Array(Schema.String),
+  is_glue: Schema.Boolean,
+  is_snacking: Schema.Boolean,
+})
+
 const ReportTopologySummarySchema = Schema.Struct({
   availablePeriods: Schema.Array(Schema.String),
   strongestConnections: Schema.Array(
@@ -336,6 +368,8 @@ const ReportTopologySummarySchema = Schema.Struct({
       dominantDimension: Schema.String,
     }),
   ),
+  periodsData: Schema.Record({ key: Schema.String, value: Schema.Array(TopologyPeopleDepSchema) }),
+  impactPeriods: Schema.Record({ key: Schema.String, value: Schema.Array(TopologyContributorImpactSchema) }),
 })
 
 const ReportTopologyResponseSchema = Schema.Struct({

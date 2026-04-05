@@ -350,9 +350,9 @@ Goal:
 
 Targets:
 
-- topology
-- coupling
-- components
+- [x] topology — `RepositoryTopologyView` in `packages/report-ui`; runtime widened with `periodsData`/`impactPeriods`
+- [x] coupling — `RepositoryBalancedCouplingView` in `packages/report-ui`
+- [x] components — `RepositoryComponentsView` in `packages/report-ui`
 
 These should be last because they have the highest risk of:
 
@@ -402,16 +402,15 @@ Use this section as the live migration checklist. Mark items off as slices land.
 - [x] `landscape/teams`
 - [x] repo dashboard summary surface
 - [x] repo metrics
+- [x] repo commits
+- [x] repo dependencies
+- [x] repo duplication
+- [x] repo controls
+- [x] repo impact
+- [x] repo hotspots
 
 ### Todo
 
-- [ ] repo commits
-- [ ] repo commits
-- [ ] repo dependencies
-- [ ] repo duplication
-- [ ] repo controls
-- [ ] repo impact
-- [ ] repo hotspots
 - [ ] graph-heavy surfaces:
   - topology
   - coupling

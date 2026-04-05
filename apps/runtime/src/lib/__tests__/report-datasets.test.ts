@@ -1617,6 +1617,58 @@ describe("runtime report dataset helpers", () => {
 					dominantDimension: "coordination_relief",
 				},
 			],
+			periodsData: {
+				"All Time": [
+					{ from: "alan@example.com", to: "sam@example.com", count: 12, files: ["src/index.ts", "src/app.ts", "src/routes.ts"] },
+				],
+				Quarter: [
+					{ from: "alan@example.com", to: "jane@example.com", count: 5, files: ["src/index.ts"] },
+				],
+			},
+			impactPeriods: {
+				"All Time": [
+					{
+						email: "alan@example.com",
+						display_name: "Alan Currie",
+						glue_score: 8.8,
+						snacking_score: 2.1,
+						structural_impact_score: 0,
+						visible_activity_score: 0,
+						collaborator_count: 0,
+						shared_files_count: 0,
+						commits_count: 0,
+						files_touched: 0,
+						components_touched: 0,
+						dominant_dimension: "coordination_relief",
+						dimensions: {},
+						top_components: [],
+						top_routes: [],
+						reasons: [],
+						is_glue: false,
+						is_snacking: false,
+					},
+					{
+						email: "sam@example.com",
+						display_name: "Sam Example",
+						glue_score: 4.4,
+						snacking_score: 6.4,
+						structural_impact_score: 0,
+						visible_activity_score: 0,
+						collaborator_count: 0,
+						shared_files_count: 0,
+						commits_count: 0,
+						files_touched: 0,
+						components_touched: 0,
+						dominant_dimension: "knowledge_spread",
+						dimensions: {},
+						top_components: [],
+						top_routes: [],
+						reasons: [],
+						is_glue: false,
+						is_snacking: false,
+					},
+				],
+			},
 		});
 	});
 
@@ -1716,6 +1768,8 @@ describe("runtime report dataset helpers", () => {
 					dominantDimension: "shared_files",
 				},
 			],
+			periodsData: {},
+			impactPeriods: {},
 		});
 	});
 
@@ -2053,6 +2107,58 @@ describe("runtime report dataset helpers", () => {
 					dominantDimension: "coordination_relief",
 				},
 			],
+			periodsData: {
+				"All Time": [
+					{ from: "alan@example.com", to: "sam@example.com", count: 12, files: ["src/routes/reports/index.ts", "src/app.ts", "src/lib/auth.ts"] },
+				],
+				Quarter: [
+					{ from: "alan@example.com", to: "jane@example.com", count: 5, files: ["src/lib/report-datasets.ts"] },
+				],
+			},
+			impactPeriods: {
+				"All Time": [
+					{
+						email: "alan@example.com",
+						display_name: "Alan Currie",
+						glue_score: 8.8,
+						snacking_score: 2.1,
+						structural_impact_score: 0,
+						visible_activity_score: 0,
+						collaborator_count: 0,
+						shared_files_count: 0,
+						commits_count: 0,
+						files_touched: 0,
+						components_touched: 0,
+						dominant_dimension: "coordination_relief",
+						dimensions: {},
+						top_components: [],
+						top_routes: [],
+						reasons: [],
+						is_glue: false,
+						is_snacking: false,
+					},
+					{
+						email: "sam@example.com",
+						display_name: "Sam Example",
+						glue_score: 4.4,
+						snacking_score: 6.4,
+						structural_impact_score: 0,
+						visible_activity_score: 0,
+						collaborator_count: 0,
+						shared_files_count: 0,
+						commits_count: 0,
+						files_touched: 0,
+						components_touched: 0,
+						dominant_dimension: "knowledge_spread",
+						dimensions: {},
+						top_components: [],
+						top_routes: [],
+						reasons: [],
+						is_glue: false,
+						is_snacking: false,
+					},
+				],
+			},
 		});
 	});
 

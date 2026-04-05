@@ -1,4 +1,5 @@
 ---
+import RepositoryTopologyView from "@planetnik/report-ui/views/RepositoryTopologyView";
 import AppShell from "../../../../../layouts/AppShell.astro";
 import { buildHostedRepositoryShellContext } from "../../../../../lib/hosted-shell.js";
 import {
@@ -7,9 +8,6 @@ import {
 	getHostedReportRepositoryPageHref,
 } from "../../../../../lib/hosted-routes.js";
 import {
-	buildReportTopologyViewModel,
-} from "../../../../../lib/report-topology-view-model.js";
-import {
 	shouldRedirectReportDetail,
 } from "../../../../../lib/report-detail-view-model.js";
 import {
@@ -17,6 +15,34 @@ import {
 	getRuntimeReportLandscapeRepository,
 	getRuntimeReportLandscapeRepositoryTopology,
 } from "../../../../../lib/runtime-client.js";
+
+type PeopleDep = { from: string; to: string; count: number; files: string[] };
+type DimensionKey =
+	| "complexity_reduction"
+	| "boundary_shaping"
+	| "knowledge_spread"
+	| "coordination_relief"
+	| "change_enablement";
+type ContributorImpact = {
+	email: string;
+	display_name: string;
+	glue_score: number;
+	snacking_score: number;
+	structural_impact_score: number;
+	visible_activity_score: number;
+	collaborator_count: number;
+	shared_files_count: number;
+	commits_count: number;
+	files_touched: number;
+	components_touched: number;
+	dominant_dimension: DimensionKey;
+	dimensions: Record<DimensionKey, number>;
+	top_components: Array<{ name: string; files: number; commits: number }>;
+	top_routes: string[];
+	reasons: string[];
+	is_glue: boolean;
+	is_snacking: boolean;
+};
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -43,95 +69,50 @@ if (!topology) {
 	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
 }
 
-const viewModel = buildReportTopologyViewModel({
-	slug,
-	reportName: repository.name,
-	topology,
-});
+const hasData = Object.keys(topology.periodsData).length > 0;
+const contributorHrefBase = getHostedReportRepositoryPageHref(slug, repo, "/contributors");
+const periods = topology.periodsData as Record<string, PeopleDep[]>;
+const impactPeriods = topology.impactPeriods as Record<string, ContributorImpact[]>;
 ---
 
 <AppShell
-	title={`${viewModel.heading} Topology`}
-	subtitle={viewModel.subtitle}
+	title={`${repository.name} Topology`}
+	subtitle={`Contributors connected by shared file modifications inside ${repository.name}.`}
 	shellContext={buildHostedRepositoryShellContext(reportDetail, repository)}
 >
-	<div class="dashboard-stack">
-		<section class="dashboard-card dashboard-card-primary">
-			<p class="card-kicker">Repository Topology</p>
-			<h2>{viewModel.heading}</h2>
-			<p>
-				This hosted view keeps the repo drilldown aligned with the static topology
-				contract while staying server-rendered and summary-first.
-			</p>
-			<div class="card-actions">
-				<a class="button-secondary" href={getHostedReportRepositoryHref(slug, repo)}>
-					Open repository dashboard
-				</a>
-				<a class="button-secondary" href={getHostedReportRepositoryPageHref(slug, repo, "/contributors")}>
-					Open contributors
-				</a>
-				<a class="button" href="/sign-out">Sign out</a>
-			</div>
-		</section>
-
-		<section class="overview-cards">
-			{viewModel.cards.map((card) => (
-				<article class="dashboard-card">
-					<p class="card-kicker">{card.label}</p>
-					<h2>{card.value}</h2>
-					{card.detail ? <p>{card.detail}</p> : <p> </p>}
-				</article>
-			))}
-		</section>
-
-		<section class="dashboard-grid">
-			<article class="dashboard-card">
-				<p class="card-kicker">Connections</p>
-				<h2>Strongest collaboration links</h2>
-				{viewModel.strongestConnections.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.strongestConnections.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No shared-file contributor links were found.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Glue</p>
-				<h2>Top glue contributors</h2>
-				{viewModel.glueContributors.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.glueContributors.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No contributor glue signals were exported.</p>
-				)}
-			</article>
-
-			<article class="dashboard-card">
-				<p class="card-kicker">Snacking</p>
-				<h2>Top snacking-risk contributors</h2>
-				{viewModel.snackingContributors.length > 0 ? (
-					<ul class="todo-list">
-						{viewModel.snackingContributors.map((item) => (
-							<li>
-								<strong>{item.label}</strong>: {item.value}
-							</li>
-						))}
-					</ul>
-				) : (
-					<p class="muted-copy">No contributor snacking signals were exported.</p>
-				)}
-			</article>
-		</section>
-	</div>
+	{!hasData ? (
+		<div class="empty">
+			<p>No people dependency data available for this repository.</p>
+			<p class="hint">Generate repository reports inside the landscape analysis root to enable repo-scoped topology.</p>
+		</div>
+	) : (
+		<RepositoryTopologyView
+			heading={repository.name}
+			subtitle={`Contributors connected by shared file modifications inside ${repository.name}.`}
+			backHref={getHostedReportRepositoryHref(slug, repo)}
+			periods={periods}
+			impactPeriods={impactPeriods}
+			contributorHrefBase={contributorHrefBase}
+			componentsHref={null}
+		/>
+	)}
 </AppShell>
+
+<style>
+	.empty {
+		background: var(--color-card);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		padding: 2rem;
+		text-align: center;
+	}
+
+	.empty p {
+		color: var(--color-text-muted);
+		margin-bottom: 0.5rem;
+	}
+
+	.hint {
+		font-size: 0.85rem;
+	}
+</style>
