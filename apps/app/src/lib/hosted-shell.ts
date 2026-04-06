@@ -260,10 +260,7 @@ export function buildReportNavSections(
       },
       {
         label: "Intelligence",
-        items: [
-          { href: `${baseHref}/intelligence`, label: "Ask Płanetnik" },
-          { href: "/coming-soon", label: "Platform" },
-        ],
+        items: [{ href: "/coming-soon", label: "Platform - Coming Soon" }],
       },
     ]
   }
@@ -322,10 +319,7 @@ export function buildReportNavSections(
     },
     {
       label: "Intelligence",
-      items: [
-        { href: `${baseHref}/intelligence`, label: "Ask Płanetnik" },
-        { href: "/coming-soon", label: "Platform" },
-      ],
+      items: [{ href: "/coming-soon", label: "Platform - Coming Soon" }],
     },
   ]
 
@@ -445,7 +439,7 @@ function buildRepositoryNavSections(
     },
     {
       label: "Intelligence",
-      items: [{ href: `${reportHref}/intelligence`, label: "Ask Płanetnik" }],
+      items: [{ href: "/coming-soon", label: "Platform - Coming Soon" }],
     },
   ]
 

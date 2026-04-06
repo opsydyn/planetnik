@@ -50,8 +50,10 @@ const intelligenceNavSection: NavSection = {
 	label: "Intelligence",
 	iconName: "chat-circle",
 	items: [
-		{ href: route("/intelligence"), label: "Ask Płanetnik" },
-		{ href: route("/coming-soon"), label: "Platform" },
+		...(import.meta.env.DEV
+			? [{ href: route("/intelligence"), label: "Ask Płanetnik" }]
+			: []),
+		{ href: route("/coming-soon"), label: "Platform - Coming Soon" },
 	],
 };
 
@@ -125,7 +127,7 @@ const singleRepoNavSections: NavSection[] = [
 			{ href: route("/trends"), label: "Trend" },
 		],
 	},
-	...(import.meta.env.DEV ? [intelligenceNavSection] : []),
+	intelligenceNavSection,
 ];
 
 const landscapeNavSections: NavSection[] = [
@@ -151,7 +153,7 @@ const landscapeNavSections: NavSection[] = [
 			{ href: route("/landscape/security"), label: "Security" },
 		],
 	},
-	...(import.meta.env.DEV ? [intelligenceNavSection] : []),
+	intelligenceNavSection,
 ];
 
 function getLandscapeRepoNavSections(
@@ -262,6 +264,7 @@ function getLandscapeRepoNavSections(
 				},
 			],
 		},
+		intelligenceNavSection,
 	];
 }
 
