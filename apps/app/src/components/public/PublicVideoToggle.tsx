@@ -4,25 +4,25 @@ import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play"
 import { useEffect } from "react"
 import { publicVideoPausedAtom } from "../../lib/public-video-preferences.js"
 
-const PLAYER_ID = "public-video-player"
-const AUDIO_ID = "public-audio-player"
 
 export default function PublicVideoToggle() {
   const [isPaused, setIsPaused] = useAtom(publicVideoPausedAtom)
 
   useEffect(() => {
-    const video = document.getElementById(PLAYER_ID)
-    const audio = document.getElementById(AUDIO_ID)
-    if (!(video instanceof HTMLVideoElement)) return
-
-    if (isPaused) {
-      video.pause()
-      if (audio instanceof HTMLAudioElement) audio.pause()
-    } else {
-      void video.play().catch(() => {})
-      if (audio instanceof HTMLAudioElement) void audio.play().catch(() => {})
-    }
+    document.dispatchEvent(
+      new CustomEvent("planetnik:video-paused-change", { detail: { paused: isPaused } }),
+    )
   }, [isPaused])
+
+  // Keep atom in sync when spacebar changes localStorage externally
+  useEffect(() => {
+    const onExternalChange = (e: Event) => {
+      const event = e as CustomEvent<{ paused: boolean }>
+      setIsPaused(event.detail.paused)
+    }
+    document.addEventListener("planetnik:video-paused-change", onExternalChange)
+    return () => document.removeEventListener("planetnik:video-paused-change", onExternalChange)
+  }, [setIsPaused])
 
   return (
     <button

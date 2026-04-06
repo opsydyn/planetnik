@@ -224,8 +224,15 @@ const shell = buildHostedShellModel({
 		)}
 
 		<script is:inline>
+			const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
+
+			function isVideoPaused() {
+				return localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY) === "true"
+			}
+
 			function setupPublicVideoPlaylist() {
 				const video = document.getElementById("public-video-player")
+				const audio = document.getElementById("public-audio-player")
 				if (!(video instanceof HTMLVideoElement)) return
 
 				const playlist = (video.dataset.playlist ?? "")
@@ -238,6 +245,7 @@ const shell = buildHostedShellModel({
 				let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
 
 				const playIndex = (index) => {
+					if (isVideoPaused()) return
 					currentIndex = index
 					const nextSrc = playlist[currentIndex]
 					if (!nextSrc) return
@@ -246,6 +254,17 @@ const shell = buildHostedShellModel({
 						video.load()
 					}
 					video.play().catch(() => {})
+					if (audio instanceof HTMLAudioElement) audio.play().catch(() => {})
+				}
+
+				const pauseAll = () => {
+					video.pause()
+					if (audio instanceof HTMLAudioElement) audio.pause()
+				}
+
+				const resumeAll = () => {
+					video.play().catch(() => {})
+					if (audio instanceof HTMLAudioElement) audio.play().catch(() => {})
 				}
 
 				video.onended = () => {
@@ -253,10 +272,27 @@ const shell = buildHostedShellModel({
 				}
 
 				video.onloadedmetadata = () => {
-					video.play().catch(() => {})
+					if (!isVideoPaused()) video.play().catch(() => {})
 				}
 
-				playIndex(currentIndex)
+				// Respond to atom changes dispatched by the React toggle
+				document.addEventListener("planetnik:video-paused-change", (e) => {
+					if (e.detail?.paused) pauseAll()
+					else resumeAll()
+				})
+
+				// Spacebar toggles media (skip if focus is in an input/button)
+				document.addEventListener("keydown", (e) => {
+					if (e.code !== "Space") return
+					if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLButtonElement) return
+					e.preventDefault()
+					const nowPaused = !isVideoPaused()
+					localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, String(nowPaused))
+					document.dispatchEvent(new CustomEvent("planetnik:video-paused-change", { detail: { paused: nowPaused } }))
+				})
+
+				if (!isVideoPaused()) playIndex(currentIndex)
+				else pauseAll()
 			}
 
 			document.addEventListener("astro:page-load", setupPublicVideoPlaylist)
