@@ -1,7 +1,11 @@
 ---
+import { getEntry } from "astro:content";
 import { ClientRouter } from "astro:transitions";
 import PublicVideoToggle from "../components/public/PublicVideoToggle";
 import { route } from "../lib/route";
+
+const reportContext = await getEntry("reportContext", "context")
+const backHref = reportContext?.data.reportMode === "landscape" ? route("/landscape") : route("/")
 ---
 
 <!doctype html>
@@ -448,7 +452,7 @@ import { route } from "../lib/route";
 
     <div class="inner">
       <header class="topbar">
-        <a href={route("/")} class="back-link">← Back to report</a>
+        <a href={backHref} class="back-link">← Back to report</a>
         <PublicVideoToggle client:load />
       </header>
 
@@ -487,7 +491,13 @@ import { route } from "../lib/route";
           previousCleanup()
         }
 
-        const isVideoPaused = () => localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY) === "true"
+        const isVideoPaused = () => {
+          const storedValue = localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY)
+          if (storedValue === "true") return true
+          if (storedValue === "false") return false
+          localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
+          return true
+        }
 
         const setPausedState = (paused) => {
           localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, String(paused))

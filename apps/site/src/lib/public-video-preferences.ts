@@ -5,13 +5,14 @@ import { Schema } from "effect"
 export const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
 
 const localStorageRuntime = Atom.runtime(BrowserKeyValueStore.layerLocalStorage)
+const defaultPausedValue = () => true
 
 export const publicVideoPausedAtom = Atom.withServerValue(
   Atom.kvs({
     runtime: localStorageRuntime,
     key: PUBLIC_VIDEO_PAUSED_KEY,
     schema: Schema.Boolean,
-    defaultValue: () => false,
+    defaultValue: defaultPausedValue,
   }),
-  () => false,
+  defaultPausedValue,
 )

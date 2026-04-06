@@ -303,7 +303,11 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
       const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
 
       function isVideoPaused() {
-        return localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY) === "true"
+        const storedValue = localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY)
+        if (storedValue === "true") return true
+        if (storedValue === "false") return false
+        localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
+        return true
       }
 
       function setupVideoPlaylist() {

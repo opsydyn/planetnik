@@ -6,13 +6,34 @@ import { publicVideoPausedAtom } from "../../lib/public-video-preferences.js"
 const PLAYER_ID = "public-video-player"
 const AUDIO_ID = "public-audio-player"
 
+function syncMediaElements(paused: boolean) {
+  const video = document.getElementById(PLAYER_ID)
+  const audio = document.getElementById(AUDIO_ID)
+
+  if (!(video instanceof HTMLVideoElement)) {
+    return
+  }
+
+  if (paused) {
+    video.pause()
+    if (audio instanceof HTMLAudioElement) {
+      audio.pause()
+    }
+    return
+  }
+
+  void video.play().catch(() => {})
+  if (audio instanceof HTMLAudioElement) {
+    void audio.play().catch(() => {})
+  }
+}
+
 export default function PublicVideoToggle() {
   const [isPaused, setIsPaused] = useAtom(publicVideoPausedAtom)
 
   useEffect(() => {
-    document.dispatchEvent(
-      new CustomEvent("planetnik:video-paused-change", { detail: { paused: isPaused } }),
-    )
+    syncMediaElements(isPaused)
+    document.dispatchEvent(new CustomEvent("planetnik:video-paused-change", { detail: { paused: isPaused } }))
   }, [isPaused])
 
   // Keep atom in sync when spacebar changes localStorage externally
@@ -26,7 +47,9 @@ export default function PublicVideoToggle() {
   }, [setIsPaused])
 
   const handleToggle = () => {
-    setIsPaused((value) => !value)
+    const nextPaused = !isPaused
+    syncMediaElements(nextPaused)
+    setIsPaused(nextPaused)
   }
 
   return (
