@@ -222,7 +222,7 @@ const shell = buildHostedShellModel({
 			</>
 		)}
 
-		<script is:inline>
+		<script is:inline data-astro-rerun>
 			const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
 
 			function isVideoPaused() {
@@ -231,6 +231,11 @@ const shell = buildHostedShellModel({
 				if (storedValue === "false") return false
 				localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
 				return true
+			}
+
+			function hasUserActivation() {
+				const userActivation = navigator.userActivation
+				return Boolean(userActivation?.isActive || userActivation?.hasBeenActive)
 			}
 
 			function setupPublicVideoPlaylist() {
@@ -247,6 +252,10 @@ const shell = buildHostedShellModel({
 
 				let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
 
+				const pauseAudio = () => {
+					if (audio instanceof HTMLAudioElement) audio.pause()
+				}
+
 				const playIndex = (index) => {
 					if (isVideoPaused()) return
 					currentIndex = index
@@ -257,25 +266,49 @@ const shell = buildHostedShellModel({
 						video.load()
 					}
 					video.play().catch(() => {})
-					if (audio instanceof HTMLAudioElement) audio.play().catch(() => {})
+					if (audio instanceof HTMLAudioElement && hasUserActivation()) {
+						audio.play().catch(() => {})
+					}
 				}
 
 				const pauseAll = () => {
 					video.pause()
-					if (audio instanceof HTMLAudioElement) audio.pause()
+					pauseAudio()
 				}
 
 				const resumeAll = () => {
 					video.play().catch(() => {})
-					if (audio instanceof HTMLAudioElement) audio.play().catch(() => {})
+					if (audio instanceof HTMLAudioElement && hasUserActivation()) {
+						audio.play().catch(() => {})
+					} else {
+						pauseAudio()
+					}
+				}
+
+				const primePausedFrame = () => {
+					pauseAudio()
+					if (playlist.length > 0) {
+						const nextSrc = playlist[currentIndex]
+						if (nextSrc && video.getAttribute("src") !== nextSrc) {
+							video.setAttribute("src", nextSrc)
+						}
+					}
+					video.pause()
+					if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
+						video.load()
+					}
 				}
 
 				video.onended = () => {
 					playIndex((currentIndex + 1) % playlist.length)
 				}
 
-				video.onloadedmetadata = () => {
-					if (!isVideoPaused()) video.play().catch(() => {})
+				video.onloadeddata = () => {
+					if (isVideoPaused()) {
+						video.pause()
+						return
+					}
+					resumeAll()
 				}
 
 				// Respond to atom changes dispatched by the React toggle
@@ -295,7 +328,7 @@ const shell = buildHostedShellModel({
 				})
 
 				if (!isVideoPaused()) playIndex(currentIndex)
-				else pauseAll()
+				else primePausedFrame()
 			}
 
 			document.addEventListener("astro:page-load", setupPublicVideoPlaylist)

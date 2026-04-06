@@ -6,6 +6,11 @@ import { publicVideoPausedAtom } from "../../lib/public-video-preferences.js"
 const PLAYER_ID = "public-video-player"
 const AUDIO_ID = "public-audio-player"
 
+function canAutoplayAudibleMedia() {
+  const userActivation = navigator.userActivation
+  return Boolean(userActivation?.isActive || userActivation?.hasBeenActive)
+}
+
 function syncMediaElements(paused: boolean) {
   const video = document.getElementById(PLAYER_ID)
   const audio = document.getElementById(AUDIO_ID)
@@ -23,7 +28,7 @@ function syncMediaElements(paused: boolean) {
   }
 
   void video.play().catch(() => {})
-  if (audio instanceof HTMLAudioElement) {
+  if (audio instanceof HTMLAudioElement && canAutoplayAudibleMedia()) {
     void audio.play().catch(() => {})
   }
 }

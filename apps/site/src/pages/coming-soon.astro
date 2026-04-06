@@ -442,7 +442,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         class="bg-video"
         muted
         playsinline
-        preload="none"
+        preload="metadata"
         src={route("/movie.mp4")}
         data-playlist={[1,2,3,4,5,6].map(n => route(n === 1 ? "/movie.mp4" : `/movie-${n}.mp4`)).join(",")}
       ></video>
@@ -480,7 +480,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
       </main>
     </div>
 
-    <script is:inline>
+    <script is:inline data-astro-rerun>
       (() => {
         const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
         const CLEANUP_KEY = "__planetnikComingSoonMediaCleanup__"
@@ -497,6 +497,11 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           if (storedValue === "false") return false
           localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
           return true
+        }
+
+        const hasUserActivation = () => {
+          const userActivation = navigator.userActivation
+          return Boolean(userActivation?.isActive || userActivation?.hasBeenActive)
         }
 
         const setPausedState = (paused) => {
@@ -542,6 +547,27 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           }
         }
 
+        const pauseAudio = () => {
+          if (audio instanceof HTMLAudioElement) {
+            audio.pause()
+          }
+        }
+
+        const primePausedFrame = () => {
+          clearRetryListeners()
+          pauseAudio()
+
+          if (playlist.length > 0) {
+            ensureSource(currentIndex)
+          }
+
+          video.pause()
+
+          if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
+            video.load()
+          }
+        }
+
         const ensureSource = (index) => {
           const nextSource = playlist[index]
           if (!nextSource) return false
@@ -550,6 +576,21 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
             video.load()
           }
           return true
+        }
+
+        const resumeVideo = async () => video.play().then(() => true).catch(() => false)
+
+        const resumeAudio = async () => {
+          if (!(audio instanceof HTMLAudioElement)) {
+            return true
+          }
+
+          if (!hasUserActivation()) {
+            pauseAudio()
+            return false
+          }
+
+          return audio.play().then(() => true).catch(() => false)
         }
 
         const resumeAll = async () => {
@@ -562,22 +603,31 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
             ensureSource(currentIndex)
           }
 
-          const videoResult = await video.play().then(() => true).catch(() => false)
-          const audioResult = audio instanceof HTMLAudioElement
-            ? await audio.play().then(() => true).catch(() => false)
-            : true
+          const videoResult = await resumeVideo()
 
           if (destroyed || isVideoPaused()) {
             pauseAll()
             return
           }
 
-          if (videoResult && audioResult) {
+          if (!videoResult) {
+            pauseAll()
+            bindRetryListeners()
+            return
+          }
+
+          const audioResult = await resumeAudio()
+
+          if (destroyed || isVideoPaused()) {
+            pauseAll()
+            return
+          }
+
+          if (audioResult) {
             clearRetryListeners()
             return
           }
 
-          pauseAll()
           bindRetryListeners()
         }
 
@@ -632,7 +682,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           clearRetryListeners()
           pauseAll(true)
           video.onended = null
-          video.onloadedmetadata = null
+          video.onloadeddata = null
           document.removeEventListener("planetnik:video-paused-change", handlePauseChange)
           document.removeEventListener("keydown", handleKeydown)
           document.removeEventListener("astro:before-swap", cleanup)
@@ -643,10 +693,13 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         }
 
         video.onended = () => playIndex((currentIndex + 1) % Math.max(playlist.length, 1))
-        video.onloadedmetadata = () => {
-          if (!isVideoPaused()) {
-            void resumeAll()
+        video.onloadeddata = () => {
+          if (isVideoPaused()) {
+            video.pause()
+            return
           }
+
+          void resumeAll()
         }
 
         document.addEventListener("planetnik:video-paused-change", handlePauseChange)
@@ -657,7 +710,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         window[CLEANUP_KEY] = cleanup
 
         if (isVideoPaused()) {
-          pauseAll()
+          primePausedFrame()
         } else if (playlist.length > 0) {
           playIndex(currentIndex)
         } else {

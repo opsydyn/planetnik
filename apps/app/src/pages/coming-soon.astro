@@ -259,7 +259,7 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         class="bg-video"
         muted
         playsinline
-        preload="none"
+        preload="metadata"
         src="/movie.mp4"
         data-playlist="/movie.mp4,/movie-2.mp4,/movie-3.mp4,/movie-4.mp4,/movie-5.mp4,/movie-6.mp4"
       >
@@ -299,7 +299,7 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
       </main>
     </div>
 
-    <script is:inline>
+    <script is:inline data-astro-rerun>
       const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
 
       function isVideoPaused() {
@@ -308,6 +308,11 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         if (storedValue === "false") return false
         localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
         return true
+      }
+
+      function hasUserActivation() {
+        const userActivation = navigator.userActivation
+        return Boolean(userActivation?.isActive || userActivation?.hasBeenActive)
       }
 
       function setupVideoPlaylist() {
@@ -321,14 +326,22 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
 
         let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
 
+        const pauseAudio = () => {
+          if (audio instanceof HTMLAudioElement) audio.pause()
+        }
+
         const pauseAll = () => {
           video.pause()
-          if (audio instanceof HTMLAudioElement) audio.pause()
+          pauseAudio()
         }
 
         const resumeAll = () => {
           video.play().catch(() => {})
-          if (audio instanceof HTMLAudioElement) audio.play().catch(() => {})
+          if (audio instanceof HTMLAudioElement && hasUserActivation()) {
+            audio.play().catch(() => {})
+          } else {
+            pauseAudio()
+          }
         }
 
         const playIndex = (index) => {
@@ -341,11 +354,31 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
             video.load()
           }
           video.play().catch(() => {})
-          if (audio instanceof HTMLAudioElement) audio.play().catch(() => {})
+          if (audio instanceof HTMLAudioElement && hasUserActivation()) {
+            audio.play().catch(() => {})
+          }
+        }
+
+        const primePausedFrame = () => {
+          pauseAudio()
+          const src = playlist[currentIndex]
+          if (src && video.getAttribute("src") !== src) {
+            video.setAttribute("src", src)
+          }
+          video.pause()
+          if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
+            video.load()
+          }
         }
 
         video.onended = () => playIndex((currentIndex + 1) % playlist.length)
-        video.onloadedmetadata = () => { if (!isVideoPaused()) video.play().catch(() => {}) }
+        video.onloadeddata = () => {
+          if (isVideoPaused()) {
+            video.pause()
+            return
+          }
+          resumeAll()
+        }
 
         document.addEventListener("planetnik:video-paused-change", (e) => {
           if (e.detail?.paused) pauseAll()
@@ -362,7 +395,7 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         })
 
         if (!isVideoPaused()) playIndex(currentIndex)
-        else pauseAll()
+        else primePausedFrame()
       }
 
       document.addEventListener("astro:page-load", setupVideoPlaylist)
