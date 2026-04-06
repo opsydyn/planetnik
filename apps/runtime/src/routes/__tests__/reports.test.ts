@@ -846,6 +846,17 @@ const readReportSecuritySummary = mock((analysisRoot: string) => {
     },
     meanTimeToResolveDays: 14,
     supplyChainExposureScore: 0.67,
+    enrichmentSummary: {
+      enrichedAt: null,
+      latestAlertOpenedAt: null,
+      latestAdvisoryPublishedAt: null,
+      uniqueCveCount: 0,
+      epssCoverageCount: 0,
+      knownExploitedCount: 0,
+      epssAvailable: false,
+      kevAvailable: false,
+    },
+    topActionableVulnerabilities: [],
     sharedVulnerablePackages: [
       {
         ecosystem: "npm",

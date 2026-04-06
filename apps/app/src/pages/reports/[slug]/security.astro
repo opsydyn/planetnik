@@ -1,6 +1,9 @@
 ---
 import DonutChart from "@planetnik/report-ui/charts/DonutChart";
 import HorizontalBarChart from "@planetnik/report-ui/charts/HorizontalBarChart";
+import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
+import type { SystemIconName } from "@planetnik/report-ui/icons/SystemIcon.react";
+import { SecurityActionCenter } from "@planetnik/report-ui";
 import ReportDataGrid from "@planetnik/report-ui/tables/ReportDataGrid";
 import SecurityBallChart from "@planetnik/report-ui/security/SecurityBallChart";
 import SharedPackagesGraph from "@planetnik/report-ui/security/SharedPackagesGraph";
@@ -17,6 +20,97 @@ import {
 	getRuntimeReportLandscapeRepositories,
 	getRuntimeReportSecurity,
 } from "../../../lib/runtime-client.js";
+
+type MetricTone = "critical" | "warning" | "info" | "healthy" | "neutral";
+
+type SecurityMetric = {
+	label: string;
+	value: string;
+	hint: string;
+	iconName: SystemIconName;
+	tone: MetricTone;
+};
+
+function formatIsoDate(value: string | null | undefined) {
+	if (!value) return "—";
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return "—";
+	return date.toISOString().slice(0, 10);
+}
+
+function getDaysSince(value: string | null | undefined) {
+	if (!value) return null;
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return null;
+	const diffMs = Date.now() - date.getTime();
+	return Math.max(0, Math.floor(diffMs / 86_400_000));
+}
+
+function getRiskCountTone(
+	value: number,
+	criticalThreshold: number,
+	warningThreshold: number,
+): MetricTone {
+	if (value >= criticalThreshold) return "critical";
+	if (value >= warningThreshold) return "warning";
+	if (value > 0) return "info";
+	return "healthy";
+}
+
+function getRatioRiskTone(
+	value: number,
+	criticalThreshold: number,
+	warningThreshold: number,
+): MetricTone {
+	if (value >= criticalThreshold) return "critical";
+	if (value >= warningThreshold) return "warning";
+	if (value > 0) return "info";
+	return "healthy";
+}
+
+function getBacklogAgeTone(value: number | null | undefined): MetricTone {
+	if (value == null) return "neutral";
+	if (value > 365) return "critical";
+	if (value > 90) return "warning";
+	if (value > 30) return "info";
+	return "healthy";
+}
+
+function getRecentActivityTone(value: number | null | undefined): MetricTone {
+	if (value == null) return "neutral";
+	if (value <= 7) return "warning";
+	if (value <= 30) return "info";
+	return "neutral";
+}
+
+function getFreshnessTone(value: number | null | undefined): MetricTone {
+	if (value == null) return "neutral";
+	if (value <= 1) return "healthy";
+	if (value <= 7) return "info";
+	return "warning";
+}
+
+function getCoverageTone(covered: number, total: number): MetricTone {
+	if (total <= 0) return "neutral";
+	const ratio = covered / total;
+	if (ratio >= 0.85) return "healthy";
+	if (ratio >= 0.5) return "info";
+	if (ratio > 0) return "warning";
+	return "neutral";
+}
+
+function getRepoRiskLevel(repo: {
+	openAlerts: number;
+	severityCounts: { critical: number; high: number; medium: number; low: number };
+	oldestOpenAlertDays: number | null;
+}) {
+	if (repo.severityCounts.critical > 0) return "Critical backlog";
+	if (repo.severityCounts.high > 0 || (repo.oldestOpenAlertDays ?? 0) > 365) {
+		return "High risk";
+	}
+	if (repo.severityCounts.medium > 0 || repo.openAlerts > 0) return "Watchlist";
+	return "Clear";
+}
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
@@ -60,6 +154,19 @@ const repoAlertBars = security.repoHealth
 	.slice(0, 15)
 	.map((r) => ({ label: r.repo, value: r.openAlerts, href: repoHrefMap[r.repo] }));
 
+const topRiskRepoNames = new Set(
+	[...security.repoHealth]
+		.sort(
+			(a, b) =>
+				(b.severityCounts.critical > 0 ? 4 : b.severityCounts.high > 0 ? 3 : b.severityCounts.medium > 0 ? 2 : 1) -
+				(a.severityCounts.critical > 0 ? 4 : a.severityCounts.high > 0 ? 3 : a.severityCounts.medium > 0 ? 2 : 1) ||
+				b.openAlerts - a.openAlerts ||
+				(b.oldestOpenAlertDays ?? 0) - (a.oldestOpenAlertDays ?? 0),
+		)
+		.slice(0, 5)
+		.map((repo) => repo.repo),
+)
+
 const securityBallRepos = security.repoHealth.map((r) => ({
 	repo: r.repo,
 	href: repoHrefMap[r.repo],
@@ -77,16 +184,321 @@ const repoRows = security.repoHealth.map((r) => ({
 	id: r.repo,
 	repo: r.repo,
 	repoHref: repoHrefMap[r.repo] ?? "",
-	totalAlerts: r.totalAlerts,
+	riskLevel: getRepoRiskLevel(r),
+	rowTone: topRiskRepoNames.has(r.repo)
+		? r.severityCounts.critical > 0
+			? "critical"
+			: r.severityCounts.high > 0
+				? "warning"
+				: "info"
+		: undefined,
 	openAlerts: r.openAlerts,
-	fixedAlerts: r.fixedAlerts,
-	critical: r.severityCounts.critical,
-	high: r.severityCounts.high,
-	medium: r.severityCounts.medium,
-	low: r.severityCounts.low,
+	riskSummary:
+		r.severityCounts.critical > 0
+			? `${r.severityCounts.critical} critical · ${r.severityCounts.high} high`
+			: r.severityCounts.high > 0
+				? `${r.severityCounts.high} high · ${r.severityCounts.medium} medium`
+				: `${r.severityCounts.medium} medium · ${r.severityCounts.low} low`,
+	progressSummary: `${r.fixedAlerts} fixed · ${r.totalAlerts} total`,
 	mttr: r.meanTimeToResolveDays !== null ? String(r.meanTimeToResolveDays) : "—",
-	oldestDays: r.oldestOpenAlertDays !== null ? String(r.oldestOpenAlertDays) : "—",
+	oldestDays: r.oldestOpenAlertDays !== null ? `${r.oldestOpenAlertDays}d` : "Clear",
 }));
+
+const actionCenterItems = security.topActionableVulnerabilities.map((item, index) => ({
+	id: `${item.repo}-${item.advisoryId}-${index}`,
+	advisory: item.advisoryId,
+	advisoryHref: item.cveId
+		? `https://nvd.nist.gov/vuln/detail/${item.cveId}`
+		: `https://github.com/advisories/${item.ghsaId}`,
+	repo: item.repo,
+	repoHref: repoHrefMap[item.repo] ?? "",
+	manifestPath: item.manifestPath,
+	severity: item.severity.toUpperCase(),
+	package: item.package,
+	ecosystem: item.ecosystem,
+	ageDays: item.ageDays,
+	sharedRepoCount: item.sharedRepoCount,
+	action: item.recommendedAction,
+	patchedVersion: item.firstPatchedVersion ?? "—",
+	summary: item.summary,
+	knownExploited: item.knownExploited,
+	epssPercentile: item.epssPercentile,
+	epssPercentileLabel:
+		item.epssPercentile !== null ? `${Math.round(item.epssPercentile * 100)}%` : "—",
+	hasPatch: item.firstPatchedVersion !== null,
+	isExploitLikely: item.knownExploited || (item.epssPercentile ?? 0) >= 0.95,
+}));
+
+const advisoryGroupMap = new Map<string, {
+	id: string;
+	advisory: string;
+	advisoryHref: string;
+	severity: string;
+	summary: string;
+	packageNames: Set<string>;
+	repoNames: Set<string>;
+	openCount: number;
+	patchAvailableCount: number;
+	knownExploited: boolean;
+	epssPercentile: number | null;
+	epssPercentileLabel: string;
+	isExploitLikely: boolean;
+	affectedRepos: Array<{
+		id: string;
+		repo: string;
+		repoHref: string;
+		manifestPath: string;
+		package: string;
+		ecosystem: string;
+		ageDays: number;
+		action: string;
+		patchedVersion: string;
+	}>;
+}>();
+
+for (const item of actionCenterItems) {
+	const current = advisoryGroupMap.get(item.advisory);
+	if (!current) {
+		advisoryGroupMap.set(item.advisory, {
+			id: item.advisory,
+			advisory: item.advisory,
+			advisoryHref: item.advisoryHref,
+			severity: item.severity,
+			summary: item.summary,
+			packageNames: new Set([item.package]),
+			repoNames: new Set([item.repo]),
+			openCount: 1,
+			patchAvailableCount: item.hasPatch ? 1 : 0,
+			knownExploited: item.knownExploited,
+			epssPercentile: item.epssPercentile ?? null,
+			epssPercentileLabel: item.epssPercentileLabel,
+			isExploitLikely: item.isExploitLikely,
+			affectedRepos: [
+				{
+					id: item.id,
+					repo: item.repo,
+					repoHref: item.repoHref,
+					manifestPath: item.manifestPath,
+					package: item.package,
+					ecosystem: item.ecosystem,
+					ageDays: item.ageDays,
+					action: item.action,
+					patchedVersion: item.patchedVersion,
+				},
+			],
+		});
+		continue;
+	}
+
+	current.packageNames.add(item.package);
+	current.repoNames.add(item.repo);
+	current.openCount += 1;
+	if (item.hasPatch) current.patchAvailableCount += 1;
+	current.knownExploited = current.knownExploited || item.knownExploited;
+	current.isExploitLikely = current.isExploitLikely || item.isExploitLikely;
+	if ((item.epssPercentile ?? 0) > (current.epssPercentile ?? 0)) {
+		current.epssPercentile = item.epssPercentile ?? null;
+		current.epssPercentileLabel = item.epssPercentileLabel;
+	}
+	current.affectedRepos.push({
+		id: item.id,
+		repo: item.repo,
+		repoHref: item.repoHref,
+		manifestPath: item.manifestPath,
+		package: item.package,
+		ecosystem: item.ecosystem,
+		ageDays: item.ageDays,
+		action: item.action,
+		patchedVersion: item.patchedVersion,
+	});
+}
+
+const advisoryGroups = Array.from(advisoryGroupMap.values())
+	.map((group: {
+		id: string;
+		advisory: string;
+		advisoryHref: string;
+		severity: string;
+		summary: string;
+		packageNames: Set<string>;
+		repoNames: Set<string>;
+		openCount: number;
+		patchAvailableCount: number;
+		knownExploited: boolean;
+		epssPercentile: number | null;
+		epssPercentileLabel: string;
+		isExploitLikely: boolean;
+		affectedRepos: Array<{
+			id: string;
+			repo: string;
+			repoHref: string;
+			manifestPath: string;
+			package: string;
+			ecosystem: string;
+			ageDays: number;
+			action: string;
+			patchedVersion: string;
+		}>;
+	}) => ({
+		...group,
+		packageCount: group.packageNames.size,
+		repoCount: group.repoNames.size,
+		affectedRepos: group.affectedRepos.sort(
+			(a: { ageDays: number }, b: { ageDays: number }) => b.ageDays - a.ageDays,
+		),
+	}));
+
+const enrichedAtLabel = formatIsoDate(security.enrichmentSummary.enrichedAt);
+const latestAlertOpenedLabel = formatIsoDate(
+	security.enrichmentSummary.latestAlertOpenedAt,
+);
+const latestAdvisoryPublishedLabel = formatIsoDate(
+	security.enrichmentSummary.latestAdvisoryPublishedAt,
+);
+const oldestOpenAlertDays = security.repoHealth.reduce<number | null>(
+	(max, repo) => {
+		if (repo.oldestOpenAlertDays === null) return max;
+		return max === null
+			? repo.oldestOpenAlertDays
+			: Math.max(max, repo.oldestOpenAlertDays);
+	},
+	null,
+);
+
+const headlineMetrics: SecurityMetric[] = [
+	{
+		label: "Total Alerts",
+		value: security.totalAlerts.toLocaleString(),
+		hint: "Landscape-wide backlog is heavy",
+		iconName: "list",
+		tone: getRiskCountTone(security.totalAlerts, 2500, 1000),
+	},
+	{
+		label: "Open Alerts",
+		value: security.totalOpenAlerts.toLocaleString(),
+		hint: "Unresolved issues currently competing for attention",
+		iconName: "warning-circle",
+		tone: getRiskCountTone(security.totalOpenAlerts, 1500, 500),
+	},
+	{
+		label: "Critical",
+		value: security.severityCounts.critical.toLocaleString(),
+		hint: "Immediate remediation candidates",
+		iconName: "bug-beetle",
+		tone:
+			security.severityCounts.critical > 0
+				? getRiskCountTone(security.severityCounts.critical, 100, 1)
+				: "healthy",
+	},
+	{
+		label: "Repos with Alerts",
+		value: `${security.reposWithAlerts}/${security.totalRepos}`,
+		hint: "Blast radius across the repo set",
+		iconName: "hard-drives",
+		tone: getRatioRiskTone(
+			security.totalRepos > 0 ? security.reposWithAlerts / security.totalRepos : 0,
+			0.75,
+			0.4,
+		),
+	},
+	{
+		label: "Mean Time to Resolve",
+		value:
+			security.meanTimeToResolveDays !== null
+				? `${security.meanTimeToResolveDays}d`
+				: "—",
+		hint: "How sticky the security backlog has become",
+		iconName: "trend-up",
+		tone: getBacklogAgeTone(security.meanTimeToResolveDays),
+	},
+	{
+		label: "Supply Chain Exposure",
+		value: `${exposurePercent}%`,
+		hint: "Shared-package blast radius remains high",
+		iconName: "circuitry",
+		tone: getRatioRiskTone(security.supplyChainExposureScore, 0.9, 0.6),
+	},
+];
+
+const metaMetrics: SecurityMetric[] = [
+	{
+		label: "Alert Records",
+		value: security.totalAlerts.toLocaleString(),
+		hint: "All advisory instances captured in this run",
+		iconName: "rows",
+		tone: getRiskCountTone(security.totalAlerts, 2500, 1000),
+	},
+	{
+		label: "Repos with Alert Records",
+		value: security.reposWithAlerts.toLocaleString(),
+		hint: "Repositories contributing real alert evidence",
+		iconName: "hard-drives",
+		tone: getRatioRiskTone(
+			security.totalRepos > 0 ? security.reposWithAlerts / security.totalRepos : 0,
+			0.75,
+			0.4,
+		),
+	},
+	{
+		label: "Unique CVEs",
+		value: security.enrichmentSummary.uniqueCveCount.toLocaleString(),
+		hint: "Distinct vulnerabilities in play",
+		iconName: "bug-beetle",
+		tone: getRiskCountTone(security.enrichmentSummary.uniqueCveCount, 500, 100),
+	},
+	{
+		label: "EPSS Coverage",
+		value: security.enrichmentSummary.epssCoverageCount.toLocaleString(),
+		hint: "Exploit-likelihood coverage for tracked CVEs",
+		iconName: "graph",
+		tone: getCoverageTone(
+			security.enrichmentSummary.epssCoverageCount,
+			security.enrichmentSummary.uniqueCveCount,
+		),
+	},
+	{
+		label: "Known Exploited",
+		value: security.enrichmentSummary.knownExploitedCount.toLocaleString(),
+		hint: "CISA KEV overlap needs quick attention",
+		iconName: "lightning",
+		tone:
+			security.enrichmentSummary.knownExploitedCount > 0
+				? "critical"
+				: "healthy",
+	},
+	{
+		label: "Newest Alert Opened",
+		value: latestAlertOpenedLabel,
+		hint: "How recently new risk entered the queue",
+		iconName: "warning-circle",
+		tone: getRecentActivityTone(
+			getDaysSince(security.enrichmentSummary.latestAlertOpenedAt),
+		),
+	},
+	{
+		label: "Latest Advisory Published",
+		value: latestAdvisoryPublishedLabel,
+		hint: "Fresh upstream vulnerability disclosures",
+		iconName: "bug-beetle",
+		tone: getRecentActivityTone(
+			getDaysSince(security.enrichmentSummary.latestAdvisoryPublishedAt),
+		),
+	},
+	{
+		label: "Oldest Open Alert",
+		value: oldestOpenAlertDays !== null ? `${oldestOpenAlertDays} days` : "—",
+		hint: "Longest-running unresolved item",
+		iconName: "pause",
+		tone: getBacklogAgeTone(oldestOpenAlertDays),
+	},
+	{
+		label: "Enriched At",
+		value: enrichedAtLabel,
+		hint: "How fresh the EPSS / KEV overlay is",
+		iconName: "circuitry",
+		tone: getFreshnessTone(getDaysSince(security.enrichmentSummary.enrichedAt)),
+	},
+];
 
 const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 	id: `shared-${i}`,
@@ -108,35 +520,8 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		<p class="subtitle">Dependabot vulnerability alerts across the landscape — severity breakdown, patch status, and supply chain exposure.</p>
 	</header>
 
-	<section class="stats-grid">
-		<article class="stat-card">
-			<div class="stat-value">{security.totalAlerts.toLocaleString()}</div>
-			<div class="stat-label">Total Alerts</div>
-		</article>
-		<article class="stat-card">
-			<div class="stat-value">{security.totalOpenAlerts.toLocaleString()}</div>
-			<div class="stat-label">Open Alerts</div>
-		</article>
-		<article class="stat-card stat-card--critical">
-			<div class="stat-value">{security.severityCounts.critical.toLocaleString()}</div>
-			<div class="stat-label">Critical</div>
-		</article>
-		<article class="stat-card">
-			<div class="stat-value">{security.reposWithAlerts}/{security.totalRepos}</div>
-			<div class="stat-label">Repos with Alerts</div>
-		</article>
-		<article class="stat-card">
-			<div class="stat-value">{security.meanTimeToResolveDays !== null ? `${security.meanTimeToResolveDays}d` : "—"}</div>
-			<div class="stat-label">Mean Time to Resolve</div>
-		</article>
-		<article class="stat-card">
-			<div class="stat-value">{exposurePercent}%</div>
-			<div class="stat-label">Supply Chain Exposure</div>
-		</article>
-	</section>
-
 	{securityBallRepos.some((r) => r.totalAlerts > 0) && (
-		<>
+		<div class="section-block section-block--hero">
 			<h3 class="section-heading">Vulnerability Landscape</h3>
 			<SecurityBallChart
 				client:load
@@ -146,8 +531,42 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 				exposureScore={security.supplyChainExposureScore}
 				helpText="Vulnerability landscape — repos orbit the central vulnerability mass, sized by open alerts, colored by highest severity. Pulsing rings indicate critical vulnerabilities."
 			/>
-		</>
+		</div>
 	)}
+
+	<section class="stats-grid">
+		{headlineMetrics.map((metric) => (
+			<article class={`stat-card stat-card--${metric.tone}`}>
+				<div class="stat-card__icon" aria-hidden="true">
+					<SystemIcon name={metric.iconName} size={18} />
+				</div>
+				<div class="stat-value">{metric.value}</div>
+				<div class="stat-label">{metric.label}</div>
+				<div class="stat-hint">{metric.hint}</div>
+			</article>
+		))}
+	</section>
+
+	<div class="security-legend" aria-label="Metric tone legend">
+		<span class="security-legend__title">Tone legend</span>
+		<span class="security-legend__item security-legend__item--critical">Critical risk</span>
+		<span class="security-legend__item security-legend__item--warning">Needs attention</span>
+		<span class="security-legend__item security-legend__item--info">Active signal</span>
+		<span class="security-legend__item security-legend__item--healthy">Healthy / fresh</span>
+	</div>
+
+	<div class="meta-strip" aria-label="Security enrichment freshness and coverage">
+		{metaMetrics.map((metric) => (
+			<div class={`meta-pill meta-pill--${metric.tone}`}>
+				<div class="meta-pill__icon" aria-hidden="true">
+					<SystemIcon name={metric.iconName} size={16} />
+				</div>
+				<span class="meta-pill__label">{metric.label}</span>
+				<strong>{metric.value}</strong>
+				<div class="meta-pill__hint">{metric.hint}</div>
+			</div>
+		))}
+	</div>
 
 	<h3 class="section-heading">Alert Distribution</h3>
 
@@ -195,24 +614,33 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		</div>
 	)}
 
+	{actionCenterItems.length > 0 && (
+		<div class="section-block">
+			<SecurityActionCenter
+				client:load
+				title="Top actionable vulnerabilities"
+				description="Filter KEV, critical, patch-ready, or exploit-likely issues, then expand grouped advisory drilldowns to inspect the affected repositories cleanly."
+				items={actionCenterItems}
+				advisoryGroups={advisoryGroups}
+			/>
+		</div>
+	)}
+
 	<h3 class="section-heading">Repository Details</h3>
 
 	<div class="section-block">
 		<ReportDataGrid
 			client:load
 			title="Repository Security Health"
-			description="Per-repository vulnerability alert breakdown with severity counts and resolution metrics."
+			description="A cleaner triage view of repository security pressure: open load first, then risk mix, remediation progress, and backlog age."
 			searchPlaceholder="Search repositories"
 			rows={repoRows}
 			columns={[
 				{ field: "repo", headerName: "Repository", type: "link", hrefField: "repoHref", flex: 2, sort: "asc" },
-				{ field: "totalAlerts", headerName: "Total", type: "number", flex: 1 },
+				{ field: "riskLevel", headerName: "Risk Level", type: "status", minWidth: 190 },
 				{ field: "openAlerts", headerName: "Open", type: "number", flex: 1, sort: "desc" },
-				{ field: "fixedAlerts", headerName: "Fixed", type: "number", flex: 1 },
-				{ field: "critical", headerName: "Critical", type: "number", flex: 1 },
-				{ field: "high", headerName: "High", type: "number", flex: 1 },
-				{ field: "medium", headerName: "Medium", type: "number", flex: 1 },
-				{ field: "low", headerName: "Low", type: "number", flex: 1 },
+				{ field: "riskSummary", headerName: "Risk Mix", type: "text", flex: 2 },
+				{ field: "progressSummary", headerName: "Progress", type: "text", flex: 1.5 },
 				{ field: "mttr", headerName: "MTTR (days)", type: "text", flex: 1 },
 				{ field: "oldestDays", headerName: "Oldest Open (days)", type: "text", flex: 1 },
 			]}
@@ -256,11 +684,149 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		border-radius: 8px;
 		padding: 1rem 1.25rem;
 		text-align: center;
+		display: grid;
+		justify-items: center;
+		gap: 0.45rem;
 	}
-	.stat-card--critical { border-color: var(--color-danger, #ef4444); }
+	.stat-card__icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.1rem;
+		height: 2.1rem;
+		border-radius: 9999px;
+		background: color-mix(in srgb, currentColor 12%, transparent);
+		color: inherit;
+	}
+	.stat-card--critical {
+		border-color: color-mix(in srgb, var(--color-danger, #ef4444) 60%, transparent);
+		color: var(--color-danger, #ef4444);
+	}
+	.stat-card--warning {
+		border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 55%, transparent);
+		color: var(--color-warning, #f59e0b);
+	}
+	.stat-card--info {
+		border-color: color-mix(in srgb, var(--color-accent, #60a5fa) 50%, transparent);
+		color: var(--color-accent, #60a5fa);
+	}
+	.stat-card--healthy {
+		border-color: color-mix(in srgb, var(--color-success, #22c55e) 50%, transparent);
+		color: var(--color-success, #22c55e);
+	}
 	.stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
-	.stat-card--critical .stat-value { color: var(--color-danger, #ef4444); }
-	.stat-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.25rem; }
+	.stat-value { color: currentColor; }
+	.stat-label {
+		font-size: 0.8rem;
+		color: color-mix(in srgb, currentColor 70%, var(--color-text-muted));
+		margin-top: 0.25rem;
+	}
+	.stat-hint {
+		font-size: 0.75rem;
+		line-height: 1.45;
+		color: color-mix(in srgb, currentColor 58%, var(--color-text-muted));
+		max-width: 18ch;
+	}
+	.security-legend {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0 0 1rem;
+	}
+	.security-legend__title {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: var(--color-text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-right: 0.2rem;
+	}
+	.security-legend__item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.28rem 0.65rem;
+		border-radius: 9999px;
+		border: 1px solid var(--color-border);
+		font-size: 0.78rem;
+		font-weight: 600;
+	}
+	.security-legend__item--critical {
+		color: var(--color-danger, #ef4444);
+		border-color: color-mix(in srgb, var(--color-danger, #ef4444) 55%, transparent);
+		background: color-mix(in srgb, var(--color-danger, #ef4444) 10%, transparent);
+	}
+	.security-legend__item--warning {
+		color: var(--color-warning, #f59e0b);
+		border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 50%, transparent);
+		background: color-mix(in srgb, var(--color-warning, #f59e0b) 10%, transparent);
+	}
+	.security-legend__item--info {
+		color: var(--color-accent, #60a5fa);
+		border-color: color-mix(in srgb, var(--color-accent, #60a5fa) 45%, transparent);
+		background: color-mix(in srgb, var(--color-accent, #60a5fa) 10%, transparent);
+	}
+	.security-legend__item--healthy {
+		color: var(--color-success, #22c55e);
+		border-color: color-mix(in srgb, var(--color-success, #22c55e) 45%, transparent);
+		background: color-mix(in srgb, var(--color-success, #22c55e) 10%, transparent);
+	}
+	.meta-strip {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 0.75rem;
+		margin: 0 0 2rem;
+	}
+	.meta-pill {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		padding: 0.9rem 1rem;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--color-card) 82%, transparent);
+		border: 1px solid var(--color-border);
+		color: var(--color-text);
+	}
+	.meta-pill__icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.85rem;
+		height: 1.85rem;
+		border-radius: 9999px;
+		background: color-mix(in srgb, currentColor 12%, transparent);
+		color: inherit;
+		margin-bottom: 0.1rem;
+	}
+	.meta-pill strong { font-size: 1rem; color: currentColor; }
+	.meta-pill__label {
+		font-size: 0.75rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: color-mix(in srgb, currentColor 70%, var(--color-text-muted));
+	}
+	.meta-pill__hint {
+		font-size: 0.75rem;
+		line-height: 1.45;
+		color: color-mix(in srgb, currentColor 58%, var(--color-text-muted));
+	}
+	.meta-pill--critical {
+		border-color: color-mix(in srgb, var(--color-danger, #ef4444) 55%, transparent);
+		color: var(--color-danger, #ef4444);
+	}
+	.meta-pill--warning {
+		border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 50%, transparent);
+		color: var(--color-warning, #f59e0b);
+	}
+	.meta-pill--info {
+		border-color: color-mix(in srgb, var(--color-accent, #60a5fa) 45%, transparent);
+		color: var(--color-accent, #60a5fa);
+	}
+	.meta-pill--healthy {
+		border-color: color-mix(in srgb, var(--color-success, #22c55e) 45%, transparent);
+		color: var(--color-success, #22c55e);
+	}
 
 	.section-heading {
 		font-size: 1.1rem;
@@ -279,4 +845,5 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 	}
 	.chart-col { min-width: 0; }
 	.section-block { margin-bottom: 2rem; }
+	.section-block--hero { margin-bottom: 2.25rem; }
 </style>

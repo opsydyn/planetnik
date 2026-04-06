@@ -38,6 +38,45 @@ function formatNumber(value: GridCellValue): string {
 			: String(value);
 }
 
+function getStatusTone(value: GridCellValue): string {
+	const normalized = String(value ?? "").toLowerCase();
+
+	if (
+		normalized.includes("critical") ||
+		normalized.includes("known exploited") ||
+		normalized.includes("overdue")
+	) {
+		return "critical";
+	}
+
+	if (
+		normalized.includes("high") ||
+		normalized.includes("open") ||
+		normalized.includes("stale")
+	) {
+		return "warning";
+	}
+
+	if (
+		normalized.includes("medium") ||
+		normalized.includes("watch") ||
+		normalized.includes("active")
+	) {
+		return "info";
+	}
+
+	if (
+		normalized.includes("low") ||
+		normalized.includes("clear") ||
+		normalized.includes("fixed") ||
+		normalized.includes("healthy")
+	) {
+		return "healthy";
+	}
+
+	return "neutral";
+}
+
 function getColumnSearchText(row: GridRow, column: GridColumnConfig): string {
 	const values = [row[column.field]];
 
@@ -107,6 +146,15 @@ function renderCellValue(column: GridColumnConfig, row: GridRow) {
 		return <code className="report-grid__code">{value == null ? "—" : String(value)}</code>;
 	}
 
+	if (type === "status") {
+		const content = value == null ? "—" : String(value);
+		return (
+			<span className={`report-grid__status report-grid__status--${getStatusTone(value)}`}>
+				{content}
+			</span>
+		);
+	}
+
 	if (type === "path") {
 		const content = value == null ? "—" : String(value);
 		return (
@@ -143,7 +191,18 @@ function getCellClassName(column: GridColumnConfig): string {
 	if (type === "date") return "report-grid__date";
 	if (type === "path") return "report-grid__path-cell";
 	if (type === "multiline") return "report-grid__multiline";
+	if (type === "status") return "report-grid__status-cell";
 	return "";
+}
+
+function getRowClassName(row: GridRow): string | undefined {
+	const rowTone = row.rowTone;
+
+	if (typeof rowTone === "string" && rowTone) {
+		return `report-grid__row report-grid__row--${rowTone}`;
+	}
+
+	return undefined;
 }
 
 function getColumnStyle(column: GridColumnConfig) {
@@ -396,7 +455,7 @@ export default function ReportDataGridInner({
 							<tbody>
 								{pageRows.length > 0 ? (
 									pageRows.map((row) => (
-										<tr key={row.id}>
+										<tr key={row.id} className={getRowClassName(row.original)}>
 											{row.getVisibleCells().map((cell) => {
 												const config = getColumnMetaConfig(cell.column.columnDef);
 												return (

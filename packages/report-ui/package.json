@@ -50,6 +50,7 @@
 		"./views/RepositoryContributorDetailView": "./src/views/RepositoryContributorDetailView.astro",
 		"./contributors/contributorHeatmap": "./src/contributors/contributorHeatmap.ts",
 		"./security/SecurityBallChart": "./src/security/SecurityBallChart.tsx",
+		"./security/SecurityActionCenter": "./src/security/SecurityActionCenter.tsx",
 		"./security/SharedPackagesGraph": "./src/security/SharedPackagesGraph.tsx",
 		"./charts/CommitHeatmap": "./src/charts/CommitHeatmap.tsx",
 		"./topology/TopologyGraph": "./src/topology/TopologyGraph.tsx",

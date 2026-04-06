@@ -178,6 +178,22 @@
 	border-bottom: 0;
 }
 
+.report-grid__row--critical td {
+	background: color-mix(in srgb, var(--color-danger, #ef4444) 7%, var(--color-card));
+}
+
+.report-grid__row--warning td {
+	background: color-mix(in srgb, var(--color-warning, #f59e0b) 6%, var(--color-card));
+}
+
+.report-grid__row--info td {
+	background: color-mix(in srgb, var(--color-accent, #60a5fa) 5%, var(--color-card));
+}
+
+.report-grid__row:hover td {
+	filter: brightness(1.04);
+}
+
 .report-grid-table__sort {
 	width: 100%;
 	display: flex;
@@ -327,6 +343,54 @@
 .report-grid__secondary {
 	color: var(--color-text-muted);
 	font-size: 0.82rem;
+}
+
+.report-grid__status-cell {
+	vertical-align: middle;
+}
+
+.report-grid__status {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.3rem 0.65rem;
+	border-radius: 9999px;
+	border: 1px solid var(--color-border);
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	white-space: normal;
+	line-height: 1.15;
+	text-align: center;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	background: color-mix(in srgb, var(--color-card) 88%, transparent);
+	color: var(--color-text);
+}
+
+.report-grid__status--critical {
+	border-color: color-mix(in srgb, var(--color-danger, #ef4444) 55%, transparent);
+	background: color-mix(in srgb, var(--color-danger, #ef4444) 12%, transparent);
+	color: var(--color-danger, #ef4444);
+}
+
+.report-grid__status--warning {
+	border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 50%, transparent);
+	background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+	color: var(--color-warning, #f59e0b);
+}
+
+.report-grid__status--info {
+	border-color: color-mix(in srgb, var(--color-accent, #60a5fa) 50%, transparent);
+	background: color-mix(in srgb, var(--color-accent, #60a5fa) 12%, transparent);
+	color: var(--color-accent, #60a5fa);
+}
+
+.report-grid__status--healthy {
+	border-color: color-mix(in srgb, var(--color-success, #22c55e) 50%, transparent);
+	background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent);
+	color: var(--color-success, #22c55e);
 }
 
 @keyframes report-grid-shimmer {
