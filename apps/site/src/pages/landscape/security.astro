@@ -908,10 +908,11 @@ const securityBallRepos = repoHealth.map((r) => ({
     margin-bottom: 2rem;
   }
   .card {
-    --metric-accent: var(--text-primary);
-    --metric-ink: var(--text-primary);
-    --metric-border: var(--border-primary, rgba(255, 255, 255, 0.08));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 94%, var(--metric-accent) 6%);
+      --metric-accent: var(--color-text, var(--text-primary));
+      --metric-ink: var(--color-text, var(--text-primary));
+      --metric-border: var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
+      --metric-shell: color-mix(in srgb, var(--color-card, var(--surface-secondary)) 76%, transparent);
+      --metric-surface: color-mix(in srgb, var(--metric-shell) 92%, var(--metric-accent) 8%);
     background: var(--metric-surface);
     border: 1px solid var(--metric-border);
     border-radius: 8px;
@@ -920,7 +921,9 @@ const securityBallRepos = repoHealth.map((r) => ({
     display: grid;
     justify-items: center;
     gap: 0.45rem;
-    color: var(--text-primary);
+      color: var(--color-text, var(--text-primary));
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 12px 28px color-mix(in srgb, var(--metric-accent) 9%, transparent);
   }
   .card-icon {
@@ -930,38 +933,38 @@ const securityBallRepos = repoHealth.map((r) => ({
     width: 2.1rem;
     height: 2.1rem;
     border-radius: 9999px;
-    background: color-mix(in srgb, var(--metric-accent) 14%, var(--surface-secondary));
+      background: color-mix(in srgb, var(--metric-accent) 14%, var(--metric-shell));
     color: var(--metric-ink);
   }
   .card--critical {
     --metric-accent: var(--color-danger, #ef4444);
-    --metric-ink: color-mix(in srgb, var(--color-danger, #ef4444) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-danger, #ef4444) 30%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 90%, var(--color-danger, #ef4444) 10%);
+      --metric-ink: color-mix(in srgb, var(--color-danger, #ef4444) 78%, var(--color-text, var(--text-primary)) 22%);
+      --metric-border: color-mix(in srgb, var(--color-danger, #ef4444) 30%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+      --metric-surface: color-mix(in srgb, var(--metric-shell) 86%, var(--color-danger, #ef4444) 14%);
   }
   .card--warning {
     --metric-accent: var(--color-warning, #f59e0b);
-    --metric-ink: color-mix(in srgb, var(--color-warning, #f59e0b) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-warning, #f59e0b) 28%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-warning, #f59e0b) 9%);
+      --metric-ink: color-mix(in srgb, var(--color-warning, #f59e0b) 78%, var(--color-text, var(--text-primary)) 22%);
+      --metric-border: color-mix(in srgb, var(--color-warning, #f59e0b) 28%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+      --metric-surface: color-mix(in srgb, var(--metric-shell) 87%, var(--color-warning, #f59e0b) 13%);
   }
   .card--info {
     --metric-accent: var(--color-accent, #60a5fa);
-    --metric-ink: color-mix(in srgb, var(--color-accent, #60a5fa) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-accent, #60a5fa) 26%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-accent, #60a5fa) 9%);
+      --metric-ink: color-mix(in srgb, var(--color-accent, #60a5fa) 78%, var(--color-text, var(--text-primary)) 22%);
+      --metric-border: color-mix(in srgb, var(--color-accent, #60a5fa) 26%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+      --metric-surface: color-mix(in srgb, var(--metric-shell) 87%, var(--color-accent, #60a5fa) 13%);
   }
   .card--healthy {
     --metric-accent: var(--color-success, #22c55e);
-    --metric-ink: color-mix(in srgb, var(--color-success, #22c55e) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-success, #22c55e) 26%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-success, #22c55e) 9%);
+      --metric-ink: color-mix(in srgb, var(--color-success, #22c55e) 78%, var(--color-text, var(--text-primary)) 22%);
+      --metric-border: color-mix(in srgb, var(--color-success, #22c55e) 26%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+      --metric-surface: color-mix(in srgb, var(--metric-shell) 87%, var(--color-success, #22c55e) 13%);
   }
   .card--neutral {
-    --metric-accent: var(--text-secondary);
-    --metric-ink: var(--text-primary);
-    --metric-border: var(--border-primary, rgba(255, 255, 255, 0.08));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 97%, var(--text-secondary) 3%);
+      --metric-accent: var(--color-text-muted, var(--text-secondary));
+      --metric-ink: var(--color-text, var(--text-primary));
+      --metric-border: var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
+      --metric-surface: color-mix(in srgb, var(--metric-shell) 96%, var(--color-text-muted, var(--text-secondary)) 4%);
   }
   .card-value {
     font-size: 1.5rem;
@@ -976,10 +979,11 @@ const securityBallRepos = repoHealth.map((r) => ({
     margin: 0 0 2rem;
   }
   .meta-pill {
-    --metric-accent: var(--text-primary);
-    --metric-ink: var(--text-primary);
-    --metric-border: var(--border-primary, rgba(255, 255, 255, 0.08));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 94%, var(--metric-accent) 6%);
+     --metric-accent: var(--color-text, var(--text-primary));
+     --metric-ink: var(--color-text, var(--text-primary));
+     --metric-border: var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
+     --metric-shell: color-mix(in srgb, var(--color-card, var(--surface-secondary)) 76%, transparent);
+     --metric-surface: color-mix(in srgb, var(--metric-shell) 92%, var(--metric-accent) 8%);
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -987,7 +991,9 @@ const securityBallRepos = repoHealth.map((r) => ({
     border-radius: 10px;
     background: var(--metric-surface);
     border: 1px solid var(--metric-border);
-    color: var(--text-primary);
+     color: var(--color-text, var(--text-primary));
+     backdrop-filter: blur(16px);
+     -webkit-backdrop-filter: blur(16px);
   }
   .meta-pill__icon {
     display: inline-flex;
@@ -996,7 +1002,7 @@ const securityBallRepos = repoHealth.map((r) => ({
     width: 1.85rem;
     height: 1.85rem;
     border-radius: 9999px;
-    background: color-mix(in srgb, var(--metric-accent) 14%, var(--surface-secondary));
+    background: color-mix(in srgb, var(--metric-accent) 14%, var(--metric-shell));
     color: var(--metric-ink);
     margin-bottom: 0.1rem;
   }
@@ -1017,33 +1023,33 @@ const securityBallRepos = repoHealth.map((r) => ({
   }
   .meta-pill--critical {
     --metric-accent: var(--color-danger, #ef4444);
-    --metric-ink: color-mix(in srgb, var(--color-danger, #ef4444) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-danger, #ef4444) 30%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 90%, var(--color-danger, #ef4444) 10%);
+    --metric-ink: color-mix(in srgb, var(--color-danger, #ef4444) 78%, var(--color-text, var(--text-primary)) 22%);
+    --metric-border: color-mix(in srgb, var(--color-danger, #ef4444) 30%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+    --metric-surface: color-mix(in srgb, var(--metric-shell) 86%, var(--color-danger, #ef4444) 14%);
   }
   .meta-pill--warning {
     --metric-accent: var(--color-warning, #f59e0b);
-    --metric-ink: color-mix(in srgb, var(--color-warning, #f59e0b) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-warning, #f59e0b) 28%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-warning, #f59e0b) 9%);
+    --metric-ink: color-mix(in srgb, var(--color-warning, #f59e0b) 78%, var(--color-text, var(--text-primary)) 22%);
+    --metric-border: color-mix(in srgb, var(--color-warning, #f59e0b) 28%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+    --metric-surface: color-mix(in srgb, var(--metric-shell) 87%, var(--color-warning, #f59e0b) 13%);
   }
   .meta-pill--info {
     --metric-accent: var(--color-accent, #60a5fa);
-    --metric-ink: color-mix(in srgb, var(--color-accent, #60a5fa) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-accent, #60a5fa) 26%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-accent, #60a5fa) 9%);
+    --metric-ink: color-mix(in srgb, var(--color-accent, #60a5fa) 78%, var(--color-text, var(--text-primary)) 22%);
+    --metric-border: color-mix(in srgb, var(--color-accent, #60a5fa) 26%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+    --metric-surface: color-mix(in srgb, var(--metric-shell) 87%, var(--color-accent, #60a5fa) 13%);
   }
   .meta-pill--healthy {
     --metric-accent: var(--color-success, #22c55e);
-    --metric-ink: color-mix(in srgb, var(--color-success, #22c55e) 78%, var(--text-primary) 22%);
-    --metric-border: color-mix(in srgb, var(--color-success, #22c55e) 26%, var(--border-primary, rgba(255, 255, 255, 0.08)));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-success, #22c55e) 9%);
+    --metric-ink: color-mix(in srgb, var(--color-success, #22c55e) 78%, var(--color-text, var(--text-primary)) 22%);
+    --metric-border: color-mix(in srgb, var(--color-success, #22c55e) 26%, var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08))));
+    --metric-surface: color-mix(in srgb, var(--metric-shell) 87%, var(--color-success, #22c55e) 13%);
   }
   .meta-pill--neutral {
-    --metric-accent: var(--text-secondary);
-    --metric-ink: var(--text-primary);
-    --metric-border: var(--border-primary, rgba(255, 255, 255, 0.08));
-    --metric-surface: color-mix(in srgb, var(--surface-secondary) 97%, var(--text-secondary) 3%);
+    --metric-accent: var(--color-text-muted, var(--text-secondary));
+    --metric-ink: var(--color-text, var(--text-primary));
+    --metric-border: var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
+    --metric-surface: color-mix(in srgb, var(--metric-shell) 96%, var(--color-text-muted, var(--text-secondary)) 4%);
   }
   .card-label {
     font-size: 0.8rem;
@@ -1077,29 +1083,31 @@ const securityBallRepos = repoHealth.map((r) => ({
     gap: 0.35rem;
     padding: 0.28rem 0.65rem;
     border-radius: 9999px;
-    border: 1px solid var(--border-primary, rgba(255,255,255,0.08));
+    border: 1px solid var(--color-border, var(--border-primary, rgba(255,255,255,0.08)));
     font-size: 0.78rem;
     font-weight: 600;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
   .security-legend__item--critical {
-    color: color-mix(in srgb, var(--color-danger, #ef4444) 78%, var(--text-primary) 22%);
-    border-color: color-mix(in srgb, var(--color-danger, #ef4444) 28%, var(--border-primary, rgba(255,255,255,0.08)));
-    background: color-mix(in srgb, var(--surface-secondary) 90%, var(--color-danger, #ef4444) 10%);
+    color: color-mix(in srgb, var(--color-danger, #ef4444) 78%, var(--color-text, var(--text-primary)) 22%);
+    border-color: color-mix(in srgb, var(--color-danger, #ef4444) 28%, var(--color-border, var(--border-primary, rgba(255,255,255,0.08))));
+    background: color-mix(in srgb, color-mix(in srgb, var(--color-card, var(--surface-secondary)) 76%, transparent) 86%, var(--color-danger, #ef4444) 14%);
   }
   .security-legend__item--warning {
-    color: color-mix(in srgb, var(--color-warning, #f59e0b) 78%, var(--text-primary) 22%);
-    border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 28%, var(--border-primary, rgba(255,255,255,0.08)));
-    background: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-warning, #f59e0b) 9%);
+    color: color-mix(in srgb, var(--color-warning, #f59e0b) 78%, var(--color-text, var(--text-primary)) 22%);
+    border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 28%, var(--color-border, var(--border-primary, rgba(255,255,255,0.08))));
+    background: color-mix(in srgb, color-mix(in srgb, var(--color-card, var(--surface-secondary)) 76%, transparent) 87%, var(--color-warning, #f59e0b) 13%);
   }
   .security-legend__item--info {
-    color: color-mix(in srgb, var(--color-accent, #60a5fa) 78%, var(--text-primary) 22%);
-    border-color: color-mix(in srgb, var(--color-accent, #60a5fa) 26%, var(--border-primary, rgba(255,255,255,0.08)));
-    background: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-accent, #60a5fa) 9%);
+    color: color-mix(in srgb, var(--color-accent, #60a5fa) 78%, var(--color-text, var(--text-primary)) 22%);
+    border-color: color-mix(in srgb, var(--color-accent, #60a5fa) 26%, var(--color-border, var(--border-primary, rgba(255,255,255,0.08))));
+    background: color-mix(in srgb, color-mix(in srgb, var(--color-card, var(--surface-secondary)) 76%, transparent) 87%, var(--color-accent, #60a5fa) 13%);
   }
   .security-legend__item--healthy {
-    color: color-mix(in srgb, var(--color-success, #22c55e) 78%, var(--text-primary) 22%);
-    border-color: color-mix(in srgb, var(--color-success, #22c55e) 26%, var(--border-primary, rgba(255,255,255,0.08)));
-    background: color-mix(in srgb, var(--surface-secondary) 91%, var(--color-success, #22c55e) 9%);
+    color: color-mix(in srgb, var(--color-success, #22c55e) 78%, var(--color-text, var(--text-primary)) 22%);
+    border-color: color-mix(in srgb, var(--color-success, #22c55e) 26%, var(--color-border, var(--border-primary, rgba(255,255,255,0.08))));
+    background: color-mix(in srgb, color-mix(in srgb, var(--color-card, var(--surface-secondary)) 76%, transparent) 87%, var(--color-success, #22c55e) 13%);
   }
   .section-heading {
     font-size: 1.1rem;
