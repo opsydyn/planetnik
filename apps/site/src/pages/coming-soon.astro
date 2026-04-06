@@ -441,10 +441,10 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         id="public-video-player"
         class="bg-video"
         muted
+        loop
         playsinline
         preload="metadata"
-        src={route("/movie.mp4")}
-        data-playlist={[1,2,3,4,5,6].map(n => route(n === 1 ? "/movie.mp4" : `/movie-${n}.mp4`)).join(",")}
+        src={route("/movie-loop.mp4")}
       ></video>
       <audio id="public-audio-player" preload="metadata" src={route("/Lightningcore.mp3")} loop></audio>
       <div class="video-overlay"></div>
@@ -517,12 +517,6 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           return
         }
 
-        const playlist = (video.dataset.playlist ?? "")
-          .split(",")
-          .map((entry) => entry.trim())
-          .filter(Boolean)
-
-        let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
         let destroyed = false
         let retryBound = false
 
@@ -556,26 +550,11 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         const primePausedFrame = () => {
           clearRetryListeners()
           pauseAudio()
-
-          if (playlist.length > 0) {
-            ensureSource(currentIndex)
-          }
-
           video.pause()
 
           if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
             video.load()
           }
-        }
-
-        const ensureSource = (index) => {
-          const nextSource = playlist[index]
-          if (!nextSource) return false
-          if (video.getAttribute("src") !== nextSource) {
-            video.setAttribute("src", nextSource)
-            video.load()
-          }
-          return true
         }
 
         const resumeVideo = async () => video.play().then(() => true).catch(() => false)
@@ -597,10 +576,6 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           if (destroyed || isVideoPaused()) {
             pauseAll()
             return
-          }
-
-          if (playlist.length > 0) {
-            ensureSource(currentIndex)
           }
 
           const videoResult = await resumeVideo()
@@ -629,13 +604,6 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           }
 
           bindRetryListeners()
-        }
-
-        const playIndex = (index) => {
-          if (playlist.length === 0 || destroyed) return
-          currentIndex = index % playlist.length
-          if (!ensureSource(currentIndex)) return
-          void resumeAll()
         }
 
         function retryResumeOnInteraction() {
@@ -681,7 +649,6 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           destroyed = true
           clearRetryListeners()
           pauseAll(true)
-          video.onended = null
           video.onloadeddata = null
           document.removeEventListener("planetnik:video-paused-change", handlePauseChange)
           document.removeEventListener("keydown", handleKeydown)
@@ -692,7 +659,6 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           }
         }
 
-        video.onended = () => playIndex((currentIndex + 1) % Math.max(playlist.length, 1))
         video.onloadeddata = () => {
           if (isVideoPaused()) {
             video.pause()
@@ -711,8 +677,6 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
 
         if (isVideoPaused()) {
           primePausedFrame()
-        } else if (playlist.length > 0) {
-          playIndex(currentIndex)
         } else {
           void resumeAll()
         }

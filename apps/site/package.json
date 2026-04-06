@@ -11,7 +11,9 @@
 		"preview": "astro preview",
 		"astro": "astro",
 		"typecheck": "astro check",
-		"optimize-images": "sharp -i public/*.png -o public/ -f webp -- resize 1024"
+		"optimize-images": "sharp -i public/*.png -o public/ -f webp -- resize 1024",
+		"concat-background-video": "bun run scripts/concat-background-video.ts",
+		"optimize-pages-media": "bun run scripts/optimize-pages-media.ts"
 	},
 	"dependencies": {
 		"@astrojs/react": "^5.0.2",

@@ -79,12 +79,12 @@ const shell = buildHostedShellModel({
 						id="public-video-player"
 						class="public-video"
 						muted
+						loop
 						playsinline
 						preload="metadata"
-						src="/movie.mp4"
-						data-playlist="/movie.mp4,/movie-2.mp4,/movie-3.mp4,/movie-4.mp4,/movie-5.mp4,/movie-6.mp4"
+						src="/movie-loop.mp4"
 					>
-						<source src="/movie.mp4" type="video/mp4" />
+						<source src="/movie-loop.mp4" type="video/mp4" />
 					</video> 
 					<audio
 						id="public-audio-player"
@@ -243,32 +243,8 @@ const shell = buildHostedShellModel({
 				const audio = document.getElementById("public-audio-player")
 				if (!(video instanceof HTMLVideoElement)) return
 
-				const playlist = (video.dataset.playlist ?? "")
-					.split(",")
-					.map((item) => item.trim())
-					.filter(Boolean)
-
-				if (playlist.length < 2) return
-
-				let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
-
 				const pauseAudio = () => {
 					if (audio instanceof HTMLAudioElement) audio.pause()
-				}
-
-				const playIndex = (index) => {
-					if (isVideoPaused()) return
-					currentIndex = index
-					const nextSrc = playlist[currentIndex]
-					if (!nextSrc) return
-					if (video.getAttribute("src") !== nextSrc) {
-						video.setAttribute("src", nextSrc)
-						video.load()
-					}
-					video.play().catch(() => {})
-					if (audio instanceof HTMLAudioElement && hasUserActivation()) {
-						audio.play().catch(() => {})
-					}
 				}
 
 				const pauseAll = () => {
@@ -287,20 +263,10 @@ const shell = buildHostedShellModel({
 
 				const primePausedFrame = () => {
 					pauseAudio()
-					if (playlist.length > 0) {
-						const nextSrc = playlist[currentIndex]
-						if (nextSrc && video.getAttribute("src") !== nextSrc) {
-							video.setAttribute("src", nextSrc)
-						}
-					}
 					video.pause()
 					if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
 						video.load()
 					}
-				}
-
-				video.onended = () => {
-					playIndex((currentIndex + 1) % playlist.length)
 				}
 
 				video.onloadeddata = () => {
@@ -327,8 +293,8 @@ const shell = buildHostedShellModel({
 					document.dispatchEvent(new CustomEvent("planetnik:video-paused-change", { detail: { paused: nowPaused } }))
 				})
 
-				if (!isVideoPaused()) playIndex(currentIndex)
-				else primePausedFrame()
+				if (isVideoPaused()) primePausedFrame()
+				else resumeAll()
 			}
 
 			document.addEventListener("astro:page-load", setupPublicVideoPlaylist)

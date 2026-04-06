@@ -258,12 +258,12 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         id="public-video-player"
         class="bg-video"
         muted
+        loop
         playsinline
         preload="metadata"
-        src="/movie.mp4"
-        data-playlist="/movie.mp4,/movie-2.mp4,/movie-3.mp4,/movie-4.mp4,/movie-5.mp4,/movie-6.mp4"
+        src="/movie-loop.mp4"
       >
-        <source src="/movie.mp4" type="video/mp4" />
+        <source src="/movie-loop.mp4" type="video/mp4" />
       </video>
       <audio id="public-audio-player" preload="metadata" src="/Lightningcore.mp3" loop></audio>
       <div class="video-overlay"></div>
@@ -320,12 +320,6 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         const audio = document.getElementById("public-audio-player")
         if (!(video instanceof HTMLVideoElement)) return
 
-        const playlist = (video.dataset.playlist ?? "")
-          .split(",").map(s => s.trim()).filter(Boolean)
-        if (playlist.length < 2) return
-
-        let currentIndex = Math.max(0, playlist.indexOf(video.getAttribute("src") ?? ""))
-
         const pauseAudio = () => {
           if (audio instanceof HTMLAudioElement) audio.pause()
         }
@@ -344,34 +338,14 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
           }
         }
 
-        const playIndex = (index) => {
-          if (isVideoPaused()) return
-          currentIndex = index
-          const src = playlist[currentIndex]
-          if (!src) return
-          if (video.getAttribute("src") !== src) {
-            video.setAttribute("src", src)
-            video.load()
-          }
-          video.play().catch(() => {})
-          if (audio instanceof HTMLAudioElement && hasUserActivation()) {
-            audio.play().catch(() => {})
-          }
-        }
-
         const primePausedFrame = () => {
           pauseAudio()
-          const src = playlist[currentIndex]
-          if (src && video.getAttribute("src") !== src) {
-            video.setAttribute("src", src)
-          }
           video.pause()
           if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
             video.load()
           }
         }
 
-        video.onended = () => playIndex((currentIndex + 1) % playlist.length)
         video.onloadeddata = () => {
           if (isVideoPaused()) {
             video.pause()
@@ -394,8 +368,8 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
           document.dispatchEvent(new CustomEvent("planetnik:video-paused-change", { detail: { paused: nowPaused } }))
         })
 
-        if (!isVideoPaused()) playIndex(currentIndex)
-        else primePausedFrame()
+        if (isVideoPaused()) primePausedFrame()
+        else resumeAll()
       }
 
       document.addEventListener("astro:page-load", setupVideoPlaylist)
