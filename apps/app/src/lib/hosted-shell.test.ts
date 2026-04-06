@@ -192,6 +192,10 @@ describe("hosted shell", () => {
 						href: "/reports/platform-landscape/intelligence",
 						label: "Ask Płanetnik",
 					},
+					{
+						href: "/coming-soon",
+						label: "Platform",
+					},
 				],
 			},
 		]);
