@@ -14,6 +14,7 @@ import { GraphIcon } from "@phosphor-icons/react/dist/csr/Graph";
 import { HardDrivesIcon } from "@phosphor-icons/react/dist/csr/HardDrives";
 import { HouseIcon } from "@phosphor-icons/react/dist/csr/House";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
+import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
 import { MoonIcon } from "@phosphor-icons/react/dist/csr/Moon";
 import { PauseIcon } from "@phosphor-icons/react/dist/csr/Pause";
 import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play";
@@ -51,6 +52,7 @@ const systemIcons = {
 	"hard-drives": HardDrivesIcon,
 	house: HouseIcon,
 	list: ListIcon,
+	lightning: LightningIcon,
 	moon: MoonIcon,
 	pause: PauseIcon,
 	play: PlayIcon,

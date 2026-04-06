@@ -6,6 +6,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./theme/dashboard-shell.css": "./src/theme/dashboard-shell.css",
+		"./icons/SystemIcon.astro": "./src/icons/SystemIcon.astro",
 		"./icons/SystemIcon": "./src/icons/SystemIcon.astro",
 		"./icons/SystemIcon.react": "./src/icons/SystemIcon.tsx",
 		"./theme-switcher/ThemeSwitcher": "./src/theme-switcher/ThemeSwitcher.astro",

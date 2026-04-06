@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
 import PublicVideoToggle from "../components/public/PublicVideoToggle";
 ---
 
@@ -152,9 +153,10 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
       .hero-panel h1 {
         margin: 0.6rem 0 0.8rem;
         font-family: Georgia, "Times New Roman", serif;
-        font-size: clamp(2.6rem, 3.6vw, 4.4rem);
+        font-size: clamp(1.9rem, 3.3vw, 3.9rem);
         line-height: 0.94;
-        max-width: 8ch;
+        max-width: none;
+        white-space: nowrap;
         color: #f8fafc;
       }
 
@@ -213,12 +215,13 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         text-transform: uppercase;
       }
 
-      .coming-soon-badge-dot {
-        width: 0.45rem;
-        height: 0.45rem;
-        border-radius: 999px;
-        background: #6366f1;
+      .coming-soon-badge-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #facc15;
         animation: pulse 2s ease-in-out infinite;
+        filter: drop-shadow(0 0 0.45rem rgba(250, 204, 21, 0.45));
       }
 
       @keyframes pulse {
@@ -281,11 +284,13 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
             <div class="hero-top">
               <p class="eyebrow">Structural intelligence for software.</p>
               <div class="coming-soon-badge">
-                <span class="coming-soon-badge-dot"></span>
+                <span class="coming-soon-badge-icon" aria-hidden="true">
+                  <SystemIcon name="lightning" size={12} />
+                </span>
                 Storm forming
               </div>
             </div>
-            <h1>The system is shifting.</h1>
+            <h1>Płanetnik Platform.</h1>
             <p class="hero-line"><span class="hero-dim">Do not begin with stories.</span><br /><span class="hero-bright">Begin with the code.</span></p>
             <div class="hero-divider"></div>
             <p class="hero-sub">A workspace for teams who refuse to guess.</p>
