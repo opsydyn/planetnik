@@ -33,18 +33,16 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         min-height: 100vh;
-        display: grid;
-        align-items: center;
         padding: 2rem 2.5rem;
         position: relative;
         isolation: isolate;
-        overflow: hidden;
+        overflow-x: hidden;
         background: #020817;
         color: #f8fafc;
       }
 
       .video-layer {
-        position: absolute;
+        position: fixed;
         inset: 0;
         z-index: -1;
         pointer-events: none;
@@ -80,8 +78,10 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
       }
 
       .inner {
-        display: grid;
+        display: flex;
+        flex-direction: column;
         gap: 2rem;
+        min-height: 100vh;
         width: min(1240px, 100%);
         margin: 0 auto;
       }
@@ -125,11 +125,12 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
       }
 
       .content-grid {
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: flex-end;
         width: 100%;
-        min-height: min(720px, calc(100vh - 10rem));
+        padding: 2rem 0 3rem;
       }
 
       .auth-stack {
@@ -302,10 +303,10 @@ import PublicVideoToggle from "../components/public/PublicVideoToggle";
         color: rgba(248, 250, 252, 0.85);
       }
 
-      @media (max-width: 640px) {
+      @media (max-width: 860px) {
         body { padding: 1.5rem 1.25rem; }
-        .content-grid { justify-content: center; min-height: auto; }
-        .auth-stack { width: 100%; }
+        .content-grid { justify-content: center; padding: 1.5rem 0 2.5rem; }
+        .auth-stack { width: 100%; max-width: 520px; }
       }
     </style>
   </head>
