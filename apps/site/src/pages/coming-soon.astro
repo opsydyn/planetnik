@@ -123,14 +123,16 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
 
       .content-grid {
         flex: 1;
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(22rem, 34rem);
         align-items: center;
-        justify-content: flex-end;
         width: 100%;
         padding: 2rem 0 3rem;
       }
 
       .auth-stack {
+        grid-column: 2;
+        justify-self: end;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         gap: 1.35rem;
@@ -147,6 +149,8 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
 
       .hero-panel {
         padding: 1.9rem 2rem;
+        max-width: 40rem;
+        width: 100%;
       }
 
       .eyebrow {
@@ -162,8 +166,9 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         font-family: Georgia, "Times New Roman", serif;
         font-size: clamp(1.9rem, 3.3vw, 3.9rem);
         line-height: 0.94;
-        max-width: none;
-        white-space: nowrap;
+        max-width: 10ch;
+        white-space: normal;
+        text-wrap: balance;
         color: #f8fafc;
       }
 
@@ -183,6 +188,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         margin: 0;
         font-size: 1.1rem;
         line-height: 1.55;
+        max-width: 24rem;
       }
       .hero-dim { color: rgba(248, 250, 252, 0.45); }
       .hero-bright { color: #f8fafc; font-weight: 600; }
@@ -199,6 +205,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         font-size: 0.88rem;
         color: rgba(248, 250, 252, 0.4);
         letter-spacing: 0.01em;
+        max-width: 22rem;
       }
 
       .hero-imperatives {
@@ -433,8 +440,47 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
           gap: 1.75rem;
           padding: 0.95rem 0.95rem 1.25rem;
         }
-        .content-grid { justify-content: center; padding: 1.5rem 0 2.5rem; }
+        .content-grid {
+          display: flex;
+          justify-content: center;
+          padding: 1.5rem 0 2.5rem;
+        }
         .auth-stack { width: 100%; max-width: 520px; }
+      }
+
+      @media (min-width: 1500px) {
+        .inner {
+          width: min(1400px, 100%);
+        }
+
+        .content-grid {
+          grid-template-columns: minmax(0, 1fr) minmax(24rem, 38rem);
+          padding: 3.5rem 0 4.5rem;
+        }
+
+        .auth-stack {
+          width: min(560px, 100%);
+        }
+
+        .hero-panel {
+          padding: 2.35rem 2.5rem 2.6rem;
+        }
+
+        .hero-top {
+          margin-bottom: 1rem;
+        }
+
+        .hero-panel h1 {
+          margin-bottom: 1rem;
+        }
+
+        .hero-divider {
+          margin: 1.5rem 0 1.35rem;
+        }
+
+        .hero-imperatives {
+          gap: 0.35rem;
+        }
       }
     </style>
   </head>
