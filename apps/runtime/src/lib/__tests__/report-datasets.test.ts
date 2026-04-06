@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -70,7 +70,7 @@ function writeJson(path: string, value: unknown) {
 	writeFileSync(path, JSON.stringify(value, null, 2));
 }
 
-afterEach(() => {
+afterAll(() => {
 	for (const root of tempRoots.splice(0)) {
 		rmSync(root, { force: true, recursive: true });
 	}
