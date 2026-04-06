@@ -346,11 +346,13 @@ const TopologyContributorImpactSchema = Schema.Struct({
   components_touched: Schema.Number,
   dominant_dimension: Schema.String,
   dimensions: Schema.Record({ key: Schema.String, value: Schema.Number }),
-  top_components: Schema.Array(Schema.Struct({
-    name: Schema.String,
-    files: Schema.Number,
-    commits: Schema.Number,
-  })),
+  top_components: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      files: Schema.Number,
+      commits: Schema.Number,
+    }),
+  ),
   top_routes: Schema.Array(Schema.String),
   reasons: Schema.Array(Schema.String),
   is_glue: Schema.Boolean,
@@ -1096,1946 +1098,105 @@ const decodeReportLandscapeRepositoriesResponse = Schema.decodeUnknownSync(Repor
 const decodeReportFilesViewResponse = Schema.decodeUnknownSync(ReportFilesViewResponseSchema)
 const decodeReportUnitsViewResponse = Schema.decodeUnknownSync(ReportUnitsViewResponseSchema)
 
-export const reportRoutes = new Elysia({ name: "reports" })
-  .get("/api/reports", async ({ request }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const reports = await listWorkspaceReports(personalWorkspace.id)
-
-    return decodeReportsResponse({
-      reports: reports.map((item) => ({
-        id: item.id,
-        workspaceId: item.workspaceId,
-        slug: item.slug,
-        name: item.name,
-        kind: item.kind,
-        status: item.status,
-        analysisRoot: item.analysisRoot ?? null,
-        createdAt: item.createdAt.toISOString(),
-        updatedAt: item.updatedAt.toISOString(),
-        lastSyncedAt: item.lastSyncedAt?.toISOString() ?? null,
-      })),
-    })
-  })
-  .get("/api/datasets", () => {
-    return decodeDatasetsResponse({
-      datasets: listAvailableDatasets().map((dataset) => ({
-        name: dataset.name,
-        dataDir: dataset.dataDir,
-        title: dataset.title,
-        reportMode: dataset.reportMode,
-      })),
-    })
-  })
-  .get("/api/reports/:slug", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const context = found.analysisRoot ? readReportContextSummary(found.analysisRoot) : null
-    const artifact = found.analysisRoot && context ? readReportArtifactSummary(found.analysisRoot, context) : null
-
-    return decodeReportDetailResponse({
-      report: {
-        id: found.id,
-        workspaceId: found.workspaceId,
-        slug: found.slug,
-        name: found.name,
-        kind: found.kind,
-        status: found.status,
-        analysisRoot: found.analysisRoot ?? null,
-        createdAt: found.createdAt.toISOString(),
-        updatedAt: found.updatedAt.toISOString(),
-        lastSyncedAt: found.lastSyncedAt?.toISOString() ?? null,
-      },
-      context,
-      artifact,
-    })
-  })
-  .get("/api/reports/:slug/landscape-overview", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const overview = readReportLandscapeOverviewSummary(found.analysisRoot)
-
-    if (!overview) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return Schema.decodeUnknownSync(ReportLandscapeOverviewResponseSchema)({
-      overview,
-    })
-  })
-  .get("/api/reports/:slug/tags", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const tags = readReportLandscapeTagsSummary(found.analysisRoot)
-
-    return Schema.decodeUnknownSync(ReportLandscapeTagsResponseSchema)({
-      tags,
-    })
-  })
-  .get("/api/reports/:slug/teams", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const teams = readReportLandscapeTeamsSummary(found.analysisRoot)
-
-    return Schema.decodeUnknownSync(ReportLandscapeTeamsResponseSchema)({
-      teams,
-    })
-  })
-  .get("/api/reports/:slug/contributors", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    if (!found.analysisRoot) {
-      return decodeReportContributorsResponse({
-        contributors: [],
-      })
-    }
-
-    const context = readReportContextSummary(found.analysisRoot)
-    const contributors =
-      context?.reportMode === "landscape"
-        ? (readReportLandscapeContributorsSummary(found.analysisRoot)?.contributors ?? [])
-        : readReportContributorsSummary(found.analysisRoot)
-
-    return decodeReportContributorsResponse({
-      contributors: [...contributors],
-    })
-  })
-  .get("/api/reports/:slug/contributors/:email", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    if (!found.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const contributor = readReportContributorDetail(found.analysisRoot, params.email)
-    if (!contributor) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportContributorDetailResponse({
-      contributor,
-    })
-  })
-  .get("/api/reports/:slug/topology", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const context = readReportContextSummary(found.analysisRoot)
-    const topology =
-      context?.reportMode === "landscape"
-        ? readReportLandscapeTopologySummary(found.analysisRoot)
-        : readReportTopologySummary(found.analysisRoot)
-    if (!topology) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportTopologyResponse({
-      topology,
-    })
-  })
-  .get("/api/reports/:slug/metrics", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const metrics = readReportMetricsSummary(found.analysisRoot)
-    if (!metrics) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportMetricsResponse({
-      metrics,
-    })
-  })
-  .get("/api/reports/:slug/duplication", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const duplication = readReportDuplicationSummary(found.analysisRoot)
-    if (!duplication) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportDuplicationResponse({
-      duplication,
-    })
-  })
-  .get("/api/reports/:slug/dependencies", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const dependencies = readReportDependenciesSummary(found.analysisRoot)
-    if (!dependencies) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportDependenciesResponse({
-      dependencies,
-    })
-  })
-  .get("/api/reports/:slug/controls", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const controls = readReportControlsSummary(found.analysisRoot)
-    if (!controls) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportControlsResponse({
-      controls,
-    })
-  })
-  .get("/api/reports/:slug/impact", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const impact = readReportImpactSummary(found.analysisRoot)
-    if (!impact) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportImpactResponse({
-      impact,
-    })
-  })
-  .get("/api/reports/:slug/hotspots", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const hotspots = readReportHotspotsSummary(found.analysisRoot)
-    if (!hotspots) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportHotspotsResponse({
-      hotspots,
-    })
-  })
-  .get("/api/reports/:slug/commits", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const commits = readReportCommitsSummary(found.analysisRoot)
-    if (!commits) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportCommitsResponse({
-      commits,
-    })
-  })
-  .get("/api/reports/:slug/trends", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportTrendsResponse({
-      trends: readReportTrendsSummary(found.analysisRoot),
-    })
-  })
-  .get("/api/reports/:slug/security", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const security = readReportSecuritySummary(found.analysisRoot)
-    if (!security) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportSecurityResponse({
-      security,
-    })
-  })
-  .get("/api/reports/:slug/repositories", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const repositories = readReportLandscapeRepositoriesSummary(found.analysisRoot)
-    if (!repositories) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportLandscapeRepositoriesResponse({
-      repositories,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const repository = readReportLandscapeRepositorySummary(found.analysisRoot, params.repo)
-    if (!repository) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportLandscapeRepositoryResponse({
-      repository,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/metrics", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const metrics = readReportLandscapeRepositoryMetricsSummary(found.analysisRoot, params.repo)
-    if (!metrics) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportMetricsResponse({
-      metrics,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/commits", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const commits = readReportLandscapeRepositoryCommitsSummary(found.analysisRoot, params.repo)
-    if (!commits) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportCommitsResponse({
-      commits,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/dependencies", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const dependencies = readReportLandscapeRepositoryDependenciesSummary(found.analysisRoot, params.repo)
-    if (!dependencies) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportDependenciesResponse({
-      dependencies,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/duplication", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const duplication = readReportLandscapeRepositoryDuplicationSummary(found.analysisRoot, params.repo)
-    if (!duplication) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportDuplicationResponse({
-      duplication,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/hotspots", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const hotspots = readReportLandscapeRepositoryHotspotsSummary(found.analysisRoot, params.repo)
-    if (!hotspots) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportHotspotsResponse({
-      hotspots,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/files/:view", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    if (params.view !== "size" && params.view !== "age" && params.view !== "churn" && params.view !== "temporal") {
-      return new Response(
-        JSON.stringify({
-          error: "invalid_view",
-        }),
-        {
-          status: 400,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const files = readReportLandscapeRepositoryFilesView(found.analysisRoot, params.repo, params.view)
-    if (!files) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportFilesViewResponse({
-      files,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/units/:view", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    if (params.view !== "size" && params.view !== "complexity") {
-      return new Response(
-        JSON.stringify({
-          error: "invalid_view",
-        }),
-        {
-          status: 400,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const units = readReportLandscapeRepositoryUnitsView(found.analysisRoot, params.repo, params.view)
-    if (!units) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportUnitsViewResponse({
-      units,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/contributors", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const contributors = readReportLandscapeRepositoryContributorsSummary(found.analysisRoot, params.repo)
-
-    return decodeReportContributorsResponse({
-      contributors,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/contributors/:email", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const contributor = readReportLandscapeRepositoryContributorDetail(found.analysisRoot, params.repo, params.email)
-    if (!contributor) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportContributorDetailResponse({
-      contributor,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/topology", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const topology = readReportLandscapeRepositoryTopologySummary(found.analysisRoot, params.repo)
-    if (!topology) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportTopologyResponse({
-      topology,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/impact", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const impact = readReportLandscapeRepositoryImpactSummary(found.analysisRoot, params.repo)
-    if (!impact) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportImpactResponse({
-      impact,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/controls", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const controls = readReportLandscapeRepositoryControlsSummary(found.analysisRoot, params.repo)
-    if (!controls) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportControlsResponse({
-      controls,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/components", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const components = readReportLandscapeRepositoryComponentsSummary(found.analysisRoot, params.repo)
-    if (!components) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportComponentsResponse({
-      components,
-    })
-  })
-  .get("/api/reports/:slug/repositories/:repo/coupling", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const coupling = readReportLandscapeRepositoryCouplingSummary(found.analysisRoot, params.repo)
-    if (!coupling) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportCouplingResponse({
-      coupling,
-    })
-  })
-  .get("/api/reports/:slug/files/:view", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    if (params.view !== "size" && params.view !== "age" && params.view !== "churn" && params.view !== "temporal") {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const files = readReportFilesView(found.analysisRoot, params.view)
-    if (!files) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportFilesViewResponse({
-      files,
-    })
-  })
-  .get("/api/reports/:slug/units/:view", async ({ request, params }) => {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    })
-
-    if (!session?.session || !session.user) {
-      return new Response(
-        JSON.stringify({
-          error: "unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    if (params.view !== "size" && params.view !== "complexity") {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const personalWorkspace = await ensurePersonalWorkspace(session)
-    const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
-
-    if (!found?.analysisRoot) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    const units = readReportUnitsView(found.analysisRoot, params.view)
-    if (!units) {
-      return new Response(
-        JSON.stringify({
-          error: "not_found",
-        }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "application/json",
-          },
-        },
-      )
-    }
-
-    return decodeReportUnitsViewResponse({
-      units,
-    })
-  })
-  .post(
-    "/api/reports",
-    async ({ request, body }) => {
+const defaultReportRouteDependencies = {
+  auth,
+  createWorkspaceReport,
+  ensurePersonalWorkspace,
+  findWorkspaceReportBySlug,
+  listWorkspaceReports,
+  listAvailableDatasets,
+  readReportArtifactSummary,
+  readReportContributorDetail,
+  readReportContributorsSummary,
+  readReportLandscapeContributorsSummary,
+  readReportContextSummary,
+  readReportControlsSummary,
+  readReportDependenciesSummary,
+  readReportFilesView,
+  readReportHotspotsSummary,
+  readReportCommitsSummary,
+  readReportLandscapeRepositoriesSummary,
+  readReportLandscapeOverviewSummary,
+  readReportLandscapeTagsSummary,
+  readReportLandscapeTeamsSummary,
+  readReportLandscapeRepositorySummary,
+  readReportLandscapeRepositoryMetricsSummary,
+  readReportLandscapeRepositoryCommitsSummary,
+  readReportLandscapeRepositoryDependenciesSummary,
+  readReportLandscapeRepositoryDuplicationSummary,
+  readReportLandscapeRepositoryHotspotsSummary,
+  readReportLandscapeRepositoryFilesView,
+  readReportLandscapeRepositoryUnitsView,
+  readReportLandscapeRepositoryContributorsSummary,
+  readReportLandscapeRepositoryContributorDetail,
+  readReportLandscapeRepositoryTopologySummary,
+  readReportLandscapeRepositoryImpactSummary,
+  readReportLandscapeRepositoryControlsSummary,
+  readReportLandscapeRepositoryComponentsSummary,
+  readReportLandscapeRepositoryCouplingSummary,
+  readReportSecuritySummary,
+  readReportTrendsSummary,
+  readReportDuplicationSummary,
+  readReportImpactSummary,
+  readReportMetricsSummary,
+  readReportTopologySummary,
+  readReportLandscapeTopologySummary,
+  readReportUnitsView,
+  resolveReportDataSource,
+}
+
+export type ReportRouteDependencies = typeof defaultReportRouteDependencies
+
+export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> = {}) => {
+  const {
+    auth,
+    createWorkspaceReport,
+    ensurePersonalWorkspace,
+    findWorkspaceReportBySlug,
+    listWorkspaceReports,
+    listAvailableDatasets,
+    readReportArtifactSummary,
+    readReportContributorDetail,
+    readReportContributorsSummary,
+    readReportLandscapeContributorsSummary,
+    readReportContextSummary,
+    readReportControlsSummary,
+    readReportDependenciesSummary,
+    readReportFilesView,
+    readReportHotspotsSummary,
+    readReportCommitsSummary,
+    readReportLandscapeRepositoriesSummary,
+    readReportLandscapeOverviewSummary,
+    readReportLandscapeTagsSummary,
+    readReportLandscapeTeamsSummary,
+    readReportLandscapeRepositorySummary,
+    readReportLandscapeRepositoryMetricsSummary,
+    readReportLandscapeRepositoryCommitsSummary,
+    readReportLandscapeRepositoryDependenciesSummary,
+    readReportLandscapeRepositoryDuplicationSummary,
+    readReportLandscapeRepositoryHotspotsSummary,
+    readReportLandscapeRepositoryFilesView,
+    readReportLandscapeRepositoryUnitsView,
+    readReportLandscapeRepositoryContributorsSummary,
+    readReportLandscapeRepositoryContributorDetail,
+    readReportLandscapeRepositoryTopologySummary,
+    readReportLandscapeRepositoryImpactSummary,
+    readReportLandscapeRepositoryControlsSummary,
+    readReportLandscapeRepositoryComponentsSummary,
+    readReportLandscapeRepositoryCouplingSummary,
+    readReportSecuritySummary,
+    readReportTrendsSummary,
+    readReportDuplicationSummary,
+    readReportImpactSummary,
+    readReportMetricsSummary,
+    readReportTopologySummary,
+    readReportLandscapeTopologySummary,
+    readReportUnitsView,
+    resolveReportDataSource,
+  } = { ...defaultReportRouteDependencies, ...overrides }
+
+  return new Elysia({ name: "reports" })
+    .get("/api/reports", async ({ request }) => {
       const session = await auth.api.getSession({
         headers: request.headers,
       })
@@ -3055,16 +1216,1297 @@ export const reportRoutes = new Elysia({ name: "reports" })
       }
 
       const personalWorkspace = await ensurePersonalWorkspace(session)
-      const resolvedSource = resolveReportDataSource({
-        ...(body.datasetName ? { datasetName: body.datasetName } : {}),
-        ...(body.analysisRoot ? { analysisRoot: body.analysisRoot } : {}),
-      })
-      const reportName = body.name?.trim() || resolvedSource?.title || "Imported report"
+      const reports = await listWorkspaceReports(personalWorkspace.id)
 
-      if ((body.datasetName || body.analysisRoot) && !resolvedSource) {
+      return decodeReportsResponse({
+        reports: reports.map((item) => ({
+          id: item.id,
+          workspaceId: item.workspaceId,
+          slug: item.slug,
+          name: item.name,
+          kind: item.kind,
+          status: item.status,
+          analysisRoot: item.analysisRoot ?? null,
+          createdAt: item.createdAt.toISOString(),
+          updatedAt: item.updatedAt.toISOString(),
+          lastSyncedAt: item.lastSyncedAt?.toISOString() ?? null,
+        })),
+      })
+    })
+    .get("/api/datasets", () => {
+      return decodeDatasetsResponse({
+        datasets: listAvailableDatasets().map((dataset) => ({
+          name: dataset.name,
+          dataDir: dataset.dataDir,
+          title: dataset.title,
+          reportMode: dataset.reportMode,
+        })),
+      })
+    })
+    .get("/api/reports/:slug", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
         return new Response(
           JSON.stringify({
-            error: "invalid_dataset_source",
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const context = found.analysisRoot ? readReportContextSummary(found.analysisRoot) : null
+      const artifact = found.analysisRoot && context ? readReportArtifactSummary(found.analysisRoot, context) : null
+
+      return decodeReportDetailResponse({
+        report: {
+          id: found.id,
+          workspaceId: found.workspaceId,
+          slug: found.slug,
+          name: found.name,
+          kind: found.kind,
+          status: found.status,
+          analysisRoot: found.analysisRoot ?? null,
+          createdAt: found.createdAt.toISOString(),
+          updatedAt: found.updatedAt.toISOString(),
+          lastSyncedAt: found.lastSyncedAt?.toISOString() ?? null,
+        },
+        context,
+        artifact,
+      })
+    })
+    .get("/api/reports/:slug/landscape-overview", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const overview = readReportLandscapeOverviewSummary(found.analysisRoot)
+
+      if (!overview) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return Schema.decodeUnknownSync(ReportLandscapeOverviewResponseSchema)({
+        overview,
+      })
+    })
+    .get("/api/reports/:slug/tags", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const tags = readReportLandscapeTagsSummary(found.analysisRoot)
+
+      return Schema.decodeUnknownSync(ReportLandscapeTagsResponseSchema)({
+        tags,
+      })
+    })
+    .get("/api/reports/:slug/teams", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const teams = readReportLandscapeTeamsSummary(found.analysisRoot)
+
+      return Schema.decodeUnknownSync(ReportLandscapeTeamsResponseSchema)({
+        teams,
+      })
+    })
+    .get("/api/reports/:slug/contributors", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      if (!found.analysisRoot) {
+        return decodeReportContributorsResponse({
+          contributors: [],
+        })
+      }
+
+      const context = readReportContextSummary(found.analysisRoot)
+      const contributors =
+        context?.reportMode === "landscape"
+          ? (readReportLandscapeContributorsSummary(found.analysisRoot)?.contributors ?? [])
+          : readReportContributorsSummary(found.analysisRoot)
+
+      return decodeReportContributorsResponse({
+        contributors: [...contributors],
+      })
+    })
+    .get("/api/reports/:slug/contributors/:email", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      if (!found.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const contributor = readReportContributorDetail(found.analysisRoot, params.email)
+      if (!contributor) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportContributorDetailResponse({
+        contributor,
+      })
+    })
+    .get("/api/reports/:slug/topology", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const context = readReportContextSummary(found.analysisRoot)
+      const topology =
+        context?.reportMode === "landscape"
+          ? readReportLandscapeTopologySummary(found.analysisRoot)
+          : readReportTopologySummary(found.analysisRoot)
+      if (!topology) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportTopologyResponse({
+        topology,
+      })
+    })
+    .get("/api/reports/:slug/metrics", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const metrics = readReportMetricsSummary(found.analysisRoot)
+      if (!metrics) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportMetricsResponse({
+        metrics,
+      })
+    })
+    .get("/api/reports/:slug/duplication", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const duplication = readReportDuplicationSummary(found.analysisRoot)
+      if (!duplication) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportDuplicationResponse({
+        duplication,
+      })
+    })
+    .get("/api/reports/:slug/dependencies", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const dependencies = readReportDependenciesSummary(found.analysisRoot)
+      if (!dependencies) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportDependenciesResponse({
+        dependencies,
+      })
+    })
+    .get("/api/reports/:slug/controls", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const controls = readReportControlsSummary(found.analysisRoot)
+      if (!controls) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportControlsResponse({
+        controls,
+      })
+    })
+    .get("/api/reports/:slug/impact", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const impact = readReportImpactSummary(found.analysisRoot)
+      if (!impact) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportImpactResponse({
+        impact,
+      })
+    })
+    .get("/api/reports/:slug/hotspots", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const hotspots = readReportHotspotsSummary(found.analysisRoot)
+      if (!hotspots) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportHotspotsResponse({
+        hotspots,
+      })
+    })
+    .get("/api/reports/:slug/commits", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const commits = readReportCommitsSummary(found.analysisRoot)
+      if (!commits) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportCommitsResponse({
+        commits,
+      })
+    })
+    .get("/api/reports/:slug/trends", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportTrendsResponse({
+        trends: readReportTrendsSummary(found.analysisRoot),
+      })
+    })
+    .get("/api/reports/:slug/security", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const security = readReportSecuritySummary(found.analysisRoot)
+      if (!security) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportSecurityResponse({
+        security,
+      })
+    })
+    .get("/api/reports/:slug/repositories", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const repositories = readReportLandscapeRepositoriesSummary(found.analysisRoot)
+      if (!repositories) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportLandscapeRepositoriesResponse({
+        repositories,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const repository = readReportLandscapeRepositorySummary(found.analysisRoot, params.repo)
+      if (!repository) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportLandscapeRepositoryResponse({
+        repository,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/metrics", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const metrics = readReportLandscapeRepositoryMetricsSummary(found.analysisRoot, params.repo)
+      if (!metrics) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportMetricsResponse({
+        metrics,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/commits", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const commits = readReportLandscapeRepositoryCommitsSummary(found.analysisRoot, params.repo)
+      if (!commits) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportCommitsResponse({
+        commits,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/dependencies", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const dependencies = readReportLandscapeRepositoryDependenciesSummary(found.analysisRoot, params.repo)
+      if (!dependencies) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportDependenciesResponse({
+        dependencies,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/duplication", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const duplication = readReportLandscapeRepositoryDuplicationSummary(found.analysisRoot, params.repo)
+      if (!duplication) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportDuplicationResponse({
+        duplication,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/hotspots", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const hotspots = readReportLandscapeRepositoryHotspotsSummary(found.analysisRoot, params.repo)
+      if (!hotspots) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportHotspotsResponse({
+        hotspots,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/files/:view", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      if (params.view !== "size" && params.view !== "age" && params.view !== "churn" && params.view !== "temporal") {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_view",
           }),
           {
             status: 400,
@@ -3075,29 +2517,689 @@ export const reportRoutes = new Elysia({ name: "reports" })
         )
       }
 
-      const created = await createWorkspaceReport({
-        workspaceId: personalWorkspace.id,
-        name: reportName,
-        datasetName: body.datasetName?.trim() || null,
-        analysisRoot: resolvedSource?.dataDir ?? null,
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const files = readReportLandscapeRepositoryFilesView(found.analysisRoot, params.repo, params.view)
+      if (!files) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportFilesViewResponse({
+        files,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/units/:view", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
       })
 
-      return decodeCreateReportResponse({
-        report: {
-          id: created.id,
-          workspaceId: created.workspaceId,
-          slug: created.slug,
-          name: created.name,
-          kind: created.kind,
-          status: created.status,
-          analysisRoot: created.analysisRoot ?? null,
-          createdAt: created.createdAt.toISOString(),
-          updatedAt: created.updatedAt.toISOString(),
-          lastSyncedAt: created.lastSyncedAt?.toISOString() ?? null,
-        },
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      if (params.view !== "size" && params.view !== "complexity") {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_view",
+          }),
+          {
+            status: 400,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const units = readReportLandscapeRepositoryUnitsView(found.analysisRoot, params.repo, params.view)
+      if (!units) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportUnitsViewResponse({
+        units,
       })
-    },
-    {
-      body: CreateReportBodySchema,
-    },
-  )
+    })
+    .get("/api/reports/:slug/repositories/:repo/contributors", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const contributors = readReportLandscapeRepositoryContributorsSummary(found.analysisRoot, params.repo)
+
+      return decodeReportContributorsResponse({
+        contributors,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/contributors/:email", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const contributor = readReportLandscapeRepositoryContributorDetail(found.analysisRoot, params.repo, params.email)
+      if (!contributor) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportContributorDetailResponse({
+        contributor,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/topology", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const topology = readReportLandscapeRepositoryTopologySummary(found.analysisRoot, params.repo)
+      if (!topology) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportTopologyResponse({
+        topology,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/impact", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const impact = readReportLandscapeRepositoryImpactSummary(found.analysisRoot, params.repo)
+      if (!impact) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportImpactResponse({
+        impact,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/controls", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const controls = readReportLandscapeRepositoryControlsSummary(found.analysisRoot, params.repo)
+      if (!controls) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportControlsResponse({
+        controls,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/components", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const components = readReportLandscapeRepositoryComponentsSummary(found.analysisRoot, params.repo)
+      if (!components) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportComponentsResponse({
+        components,
+      })
+    })
+    .get("/api/reports/:slug/repositories/:repo/coupling", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const coupling = readReportLandscapeRepositoryCouplingSummary(found.analysisRoot, params.repo)
+      if (!coupling) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportCouplingResponse({
+        coupling,
+      })
+    })
+    .get("/api/reports/:slug/files/:view", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      if (params.view !== "size" && params.view !== "age" && params.view !== "churn" && params.view !== "temporal") {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const files = readReportFilesView(found.analysisRoot, params.view)
+      if (!files) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportFilesViewResponse({
+        files,
+      })
+    })
+    .get("/api/reports/:slug/units/:view", async ({ request, params }) => {
+      const session = await auth.api.getSession({
+        headers: request.headers,
+      })
+
+      if (!session?.session || !session.user) {
+        return new Response(
+          JSON.stringify({
+            error: "unauthorized",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      if (params.view !== "size" && params.view !== "complexity") {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const personalWorkspace = await ensurePersonalWorkspace(session)
+      const found = await findWorkspaceReportBySlug(personalWorkspace.id, params.slug)
+
+      if (!found?.analysisRoot) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      const units = readReportUnitsView(found.analysisRoot, params.view)
+      if (!units) {
+        return new Response(
+          JSON.stringify({
+            error: "not_found",
+          }),
+          {
+            status: 404,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        )
+      }
+
+      return decodeReportUnitsViewResponse({
+        units,
+      })
+    })
+    .post(
+      "/api/reports",
+      async ({ request, body }) => {
+        const session = await auth.api.getSession({
+          headers: request.headers,
+        })
+
+        if (!session?.session || !session.user) {
+          return new Response(
+            JSON.stringify({
+              error: "unauthorized",
+            }),
+            {
+              status: 401,
+              headers: {
+                "content-type": "application/json",
+              },
+            },
+          )
+        }
+
+        const personalWorkspace = await ensurePersonalWorkspace(session)
+        const resolvedSource = resolveReportDataSource({
+          ...(body.datasetName ? { datasetName: body.datasetName } : {}),
+          ...(body.analysisRoot ? { analysisRoot: body.analysisRoot } : {}),
+        })
+        const reportName = body.name?.trim() || resolvedSource?.title || "Imported report"
+
+        if ((body.datasetName || body.analysisRoot) && !resolvedSource) {
+          return new Response(
+            JSON.stringify({
+              error: "invalid_dataset_source",
+            }),
+            {
+              status: 400,
+              headers: {
+                "content-type": "application/json",
+              },
+            },
+          )
+        }
+
+        const created = await createWorkspaceReport({
+          workspaceId: personalWorkspace.id,
+          name: reportName,
+          datasetName: body.datasetName?.trim() || null,
+          analysisRoot: resolvedSource?.dataDir ?? null,
+        })
+
+        return decodeCreateReportResponse({
+          report: {
+            id: created.id,
+            workspaceId: created.workspaceId,
+            slug: created.slug,
+            name: created.name,
+            kind: created.kind,
+            status: created.status,
+            analysisRoot: created.analysisRoot ?? null,
+            createdAt: created.createdAt.toISOString(),
+            updatedAt: created.updatedAt.toISOString(),
+            lastSyncedAt: created.lastSyncedAt?.toISOString() ?? null,
+          },
+        })
+      },
+      {
+        body: CreateReportBodySchema,
+      },
+    )
+}
+
+export const reportRoutes = createReportRoutes()
