@@ -223,82 +223,89 @@ const shell = buildHostedShellModel({
 		)}
 
 		<script is:inline data-astro-rerun>
-			const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
+			(() => {
+				window.__planetnikPublicVideoController?.abort()
 
-			function isVideoPaused() {
-				const storedValue = localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY)
-				if (storedValue === "true") return true
-				if (storedValue === "false") return false
-				localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
-				return true
-			}
+				const controller = new AbortController()
+				window.__planetnikPublicVideoController = controller
+				const { signal } = controller
+				const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
 
-			function hasUserActivation() {
-				const userActivation = navigator.userActivation
-				return Boolean(userActivation?.isActive || userActivation?.hasBeenActive)
-			}
-
-			function setupPublicVideoPlaylist() {
-				const video = document.getElementById("public-video-player")
-				const audio = document.getElementById("public-audio-player")
-				if (!(video instanceof HTMLVideoElement)) return
-
-				const pauseAudio = () => {
-					if (audio instanceof HTMLAudioElement) audio.pause()
+				function isVideoPaused() {
+					const storedValue = localStorage.getItem(PUBLIC_VIDEO_PAUSED_KEY)
+					if (storedValue === "true") return true
+					if (storedValue === "false") return false
+					localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, "true")
+					return true
 				}
 
-				const pauseAll = () => {
-					video.pause()
-					pauseAudio()
+				function hasUserActivation() {
+					const userActivation = navigator.userActivation
+					return Boolean(userActivation?.isActive || userActivation?.hasBeenActive)
 				}
 
-				const resumeAll = () => {
-					video.play().catch(() => {})
-					if (audio instanceof HTMLAudioElement && hasUserActivation()) {
-						audio.play().catch(() => {})
-					} else {
+				function setupPublicVideoPlaylist() {
+					const video = document.getElementById("public-video-player")
+					const audio = document.getElementById("public-audio-player")
+					if (!(video instanceof HTMLVideoElement)) return
+
+					const pauseAudio = () => {
+						if (audio instanceof HTMLAudioElement) audio.pause()
+					}
+
+					const pauseAll = () => {
+						video.pause()
 						pauseAudio()
 					}
-				}
 
-				const primePausedFrame = () => {
-					pauseAudio()
-					video.pause()
-					if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
-						video.load()
+					const resumeAll = () => {
+						video.play().catch(() => {})
+						if (audio instanceof HTMLAudioElement && hasUserActivation()) {
+							audio.play().catch(() => {})
+						} else {
+							pauseAudio()
+						}
 					}
-				}
 
-				video.onloadeddata = () => {
-					if (isVideoPaused()) {
+					const primePausedFrame = () => {
+						pauseAudio()
 						video.pause()
-						return
+						if (video.networkState === HTMLMediaElement.NETWORK_EMPTY) {
+							video.load()
+						}
 					}
-					resumeAll()
+
+					video.onloadeddata = () => {
+						if (isVideoPaused()) {
+							video.pause()
+							return
+						}
+						resumeAll()
+					}
+
+					// Respond to atom changes dispatched by the React toggle.
+					document.addEventListener("planetnik:video-paused-change", (e) => {
+						if (e.detail?.paused) pauseAll()
+						else resumeAll()
+					}, { signal })
+
+					// Spacebar toggles media (skip if focus is in an input/button).
+					document.addEventListener("keydown", (e) => {
+						if (e.code !== "Space") return
+						if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLButtonElement) return
+						e.preventDefault()
+						const nowPaused = !isVideoPaused()
+						localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, String(nowPaused))
+						document.dispatchEvent(new CustomEvent("planetnik:video-paused-change", { detail: { paused: nowPaused } }))
+					}, { signal })
+
+					if (isVideoPaused()) primePausedFrame()
+					else resumeAll()
 				}
 
-				// Respond to atom changes dispatched by the React toggle
-				document.addEventListener("planetnik:video-paused-change", (e) => {
-					if (e.detail?.paused) pauseAll()
-					else resumeAll()
-				})
-
-				// Spacebar toggles media (skip if focus is in an input/button)
-				document.addEventListener("keydown", (e) => {
-					if (e.code !== "Space") return
-					if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLButtonElement) return
-					e.preventDefault()
-					const nowPaused = !isVideoPaused()
-					localStorage.setItem(PUBLIC_VIDEO_PAUSED_KEY, String(nowPaused))
-					document.dispatchEvent(new CustomEvent("planetnik:video-paused-change", { detail: { paused: nowPaused } }))
-				})
-
-				if (isVideoPaused()) primePausedFrame()
-				else resumeAll()
-			}
-
-			document.addEventListener("astro:page-load", setupPublicVideoPlaylist)
-			setupPublicVideoPlaylist()
+				document.addEventListener("astro:page-load", setupPublicVideoPlaylist, { signal })
+				setupPublicVideoPlaylist()
+			})()
 		</script>
 		<script is:inline>
 			function setupHostedShellNavigation() {
