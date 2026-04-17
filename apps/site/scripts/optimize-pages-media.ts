@@ -1,7 +1,6 @@
+import { spawnSync } from "node:child_process"
 import { existsSync, readdirSync, renameSync, rmSync, statSync } from "node:fs"
 import { basename, extname, join, resolve } from "node:path"
-import { spawnSync } from "node:child_process"
-
 const VIDEO_PATTERN = /^movie(?:-(?:\d+|loop))?\.mp4$/
 const AUDIO_PATTERN = /^Lightningcore\.mp3$/
 
