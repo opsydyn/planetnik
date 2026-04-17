@@ -1,0 +1,25 @@
+name: Deploy Hosted App Container App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/app/**
+      - packages/**
+      - package.json
+      - bun.lock
+      - apps/app/Dockerfile
+      - .github/workflows/deploy-app.yml
+      - .github/workflows/build-deploy-container-app.yml
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/build-deploy-container-app.yml
+    with:
+      app-name: ${{ vars.HOSTED_APP_NAME }}
+      dockerfile: apps/app/Dockerfile
+      build-args: |
+        PUBLIC_SERVER_URL=${{ vars.PUBLIC_SERVER_URL }}
+        PUBLIC_COPILOT_RUNTIME_URL=${{ vars.PUBLIC_COPILOT_RUNTIME_URL }}
+    secrets: inherit

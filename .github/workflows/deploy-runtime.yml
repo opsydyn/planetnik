@@ -1,0 +1,22 @@
+name: Deploy Runtime Container App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/runtime/**
+      - packages/**
+      - package.json
+      - bun.lock
+      - apps/runtime/Dockerfile
+      - .github/workflows/deploy-runtime.yml
+      - .github/workflows/build-deploy-container-app.yml
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/build-deploy-container-app.yml
+    with:
+      app-name: ${{ vars.RUNTIME_APP_NAME }}
+      dockerfile: apps/runtime/Dockerfile
+    secrets: inherit

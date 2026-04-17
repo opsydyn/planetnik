@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars for local use.
+# terraform.tfvars is gitignored. Never commit secrets.
+
+subscription_id     = ""
+project_name        = "planetnik"
+resource_group_name = "planetnik-rg"
+location            = "uksouth"
+acr_name            = "planetnikacr"
+
+# External Neon or Postgres connection string.
+database_url = "postgresql://user:pass@host/database?sslmode=require"
+
+# Generate with: openssl rand -base64 32
+better_auth_secret = ""
+
+# Optional. If omitted, /api/copilotkit returns 503 until configured.
+openai_api_key = ""
+copilot_model  = "gpt-4o"

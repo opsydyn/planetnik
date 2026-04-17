@@ -1,0 +1,71 @@
+name: Build and Deploy Container App
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        description: "Azure Container App name"
+        required: true
+        type: string
+      dockerfile:
+        description: "Dockerfile path relative to repo root"
+        required: true
+        type: string
+      build-args:
+        description: "Newline-separated Docker build args, KEY=VALUE"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build-push-deploy:
+    name: ${{ inputs.app-name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Planetnik
+        uses: actions/checkout@v5
+
+      - name: Set image tag
+        id: meta
+        shell: bash
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: az acr login --name "${{ vars.ACR_NAME }}"
+
+      - name: Prepare build args
+        id: build-args
+        shell: bash
+        run: |
+          ARGS=""
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            ARGS="${ARGS} --build-arg ${line}"
+          done <<< "${{ inputs.build-args }}"
+          echo "flags=${ARGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        shell: bash
+        run: |
+          docker build \
+            -f "${{ inputs.dockerfile }}" \
+            ${{ steps.build-args.outputs.flags }} \
+            -t "${{ vars.ACR_NAME }}.azurecr.io/${{ inputs.app-name }}:${{ steps.meta.outputs.tag }}" \
+            -t "${{ vars.ACR_NAME }}.azurecr.io/${{ inputs.app-name }}:latest" \
+            .
+          docker push "${{ vars.ACR_NAME }}.azurecr.io/${{ inputs.app-name }}" --all-tags
+
+      - name: Deploy to Container Apps
+        run: >-
+          az containerapp update
+          --name "${{ inputs.app-name }}"
+          --resource-group "${{ vars.RESOURCE_GROUP }}"
+          --image "${{ vars.ACR_NAME }}.azurecr.io/${{ inputs.app-name }}:${{ steps.meta.outputs.tag }}"
