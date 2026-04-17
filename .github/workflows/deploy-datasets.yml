@@ -166,7 +166,7 @@ jobs:
             --account-name "${{ steps.storage.outputs.account_name }}" \
             --account-key "${{ steps.storage.outputs.account_key }}" \
             --source datasets \
-            --pattern "*"
+            --pattern "${{ steps.landscape.outputs.dataset_name }}/*"
 
       - name: Upload datasets to Azure Files share
         if: steps.storage.outputs.storage_ready == 'true'
@@ -176,7 +176,9 @@ jobs:
             --account-name "${{ steps.storage.outputs.account_name }}" \
             --account-key "${{ steps.storage.outputs.account_key }}" \
             --destination datasets \
-            --source datasets \
+            --destination-path "${{ steps.landscape.outputs.dataset_name }}" \
+            --source "datasets/${{ steps.landscape.outputs.dataset_name }}" \
+            --max-connections 32 \
             --no-progress
 
       - name: Verify uploaded sentinel files
@@ -192,7 +194,7 @@ jobs:
               --path "$relative_path" \
               --query exists \
               --output tsv | grep -qx true
-          done < <(find datasets -type f \( -name report_context.json -o -name landscape_overview.json -o -name analysisResults.json \))
+          done < <(find "datasets/${{ steps.landscape.outputs.dataset_name }}" -type f \( -name report_context.json -o -name landscape_overview.json -o -name analysisResults.json \))
 
       - name: Workflow summary
         if: steps.storage.outputs.storage_ready == 'true'
@@ -201,4 +203,6 @@ jobs:
           echo "### Hosted dataset publish complete" >> "$GITHUB_STEP_SUMMARY"
           echo "- Storage account: ${{ steps.storage.outputs.account_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Share: datasets" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Source: datasets/" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dataset: ${{ steps.landscape.outputs.dataset_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source: datasets/${{ steps.landscape.outputs.dataset_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Upload parallelism: 32 connections" >> "$GITHUB_STEP_SUMMARY"
