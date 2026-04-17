@@ -35,6 +35,24 @@ variable "acr_name" {
   type        = string
 }
 
+variable "datasets_storage_account_name" {
+  description = "Optional globally unique Azure Storage Account name for hosted datasets. Defaults to a value derived from acr_name."
+  type        = string
+  default     = null
+}
+
+variable "datasets_share_name" {
+  description = "Azure Files share name mounted into planetnik-runtime for named datasets."
+  type        = string
+  default     = "datasets"
+}
+
+variable "datasets_share_quota_gb" {
+  description = "Quota in GiB for the hosted datasets Azure Files share."
+  type        = number
+  default     = 100
+}
+
 variable "database_url" {
   description = "External Postgres connection string, for example Neon."
   type        = string

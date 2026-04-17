@@ -6,6 +6,10 @@ project_name        = "planetnik"
 resource_group_name = "planetnik-rg"
 location            = "uksouth"
 acr_name            = "planetnikacr"
+# Optional override. Must be globally unique if provided.
+# datasets_storage_account_name = "planetnikstg1234"
+datasets_share_name = "datasets"
+datasets_share_quota_gb = 100
 
 # External Neon or Postgres connection string.
 database_url = "postgresql://user:pass@host/database?sslmode=require"

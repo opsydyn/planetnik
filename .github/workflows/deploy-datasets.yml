@@ -1,0 +1,116 @@
+name: Publish Hosted Datasets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - datasets/**
+      - .github/workflows/deploy-datasets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-datasets-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Sync datasets to Azure Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Planetnik
+        uses: actions/checkout@v5
+
+      - name: Validate dataset tree
+        shell: bash
+        run: |
+          test -d datasets || {
+            echo "datasets/ directory is missing"
+            exit 1
+          }
+
+          SENTINELS=$(find datasets -type f \( -name report_context.json -o -name landscape_overview.json -o -name analysisResults.json \) | wc -l | tr -d ' ')
+          if [ "$SENTINELS" -eq 0 ]; then
+            echo "No recognized Planetnik dataset sentinel files were found under datasets/."
+            echo "Expected one or more of: report_context.json, landscape_overview.json, analysisResults.json"
+            exit 1
+          fi
+
+          echo "Found $SENTINELS recognized dataset sentinel files."
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Resolve dataset storage account
+        id: storage
+        shell: bash
+        run: |
+          ACCOUNT_NAME=$(az resource list \
+            --resource-group "${{ vars.RESOURCE_GROUP }}" \
+            --resource-type "Microsoft.Storage/storageAccounts" \
+            --query "[0].name" \
+            --output tsv)
+
+          if [ -z "$ACCOUNT_NAME" ]; then
+            echo "No storage account found in resource group ${{ vars.RESOURCE_GROUP }}"
+            exit 1
+          fi
+
+          ACCOUNT_KEY=$(az storage account keys list \
+            --resource-group "${{ vars.RESOURCE_GROUP }}" \
+            --account-name "$ACCOUNT_NAME" \
+            --query "[0].value" \
+            --output tsv)
+
+          if [ -z "$ACCOUNT_KEY" ]; then
+            echo "Failed to resolve storage account key for $ACCOUNT_NAME"
+            exit 1
+          fi
+
+          echo "account_name=$ACCOUNT_NAME" >> "$GITHUB_OUTPUT"
+          echo "account_key=$ACCOUNT_KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Clear existing dataset files from share
+        shell: bash
+        run: |
+          az storage file delete-batch \
+            --account-name "${{ steps.storage.outputs.account_name }}" \
+            --account-key "${{ steps.storage.outputs.account_key }}" \
+            --source datasets \
+            --pattern "*"
+
+      - name: Upload datasets to Azure Files share
+        shell: bash
+        run: |
+          az storage file upload-batch \
+            --account-name "${{ steps.storage.outputs.account_name }}" \
+            --account-key "${{ steps.storage.outputs.account_key }}" \
+            --destination datasets \
+            --source datasets \
+            --no-progress
+
+      - name: Verify uploaded sentinel files
+        shell: bash
+        run: |
+          while IFS= read -r file; do
+            relative_path="${file#datasets/}"
+            az storage file exists \
+              --account-name "${{ steps.storage.outputs.account_name }}" \
+              --account-key "${{ steps.storage.outputs.account_key }}" \
+              --share-name datasets \
+              --path "$relative_path" \
+              --query exists \
+              --output tsv | grep -qx true
+          done < <(find datasets -type f \( -name report_context.json -o -name landscape_overview.json -o -name analysisResults.json \))
+
+      - name: Workflow summary
+        shell: bash
+        run: |
+          echo "### Hosted dataset publish complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Storage account: ${{ steps.storage.outputs.account_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Share: datasets" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source: datasets/" >> "$GITHUB_STEP_SUMMARY"

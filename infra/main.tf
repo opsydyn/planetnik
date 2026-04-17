@@ -17,12 +17,14 @@ provider "azurerm" {
 }
 
 locals {
-  runtime_app_name = "${var.project_name}-runtime"
-  hosted_app_name  = "${var.project_name}-app"
-  runtime_url      = "https://${local.runtime_app_name}.${azurerm_container_app_environment.main.default_domain}"
-  hosted_app_url   = "https://${local.hosted_app_name}.${azurerm_container_app_environment.main.default_domain}"
-  cookie_domain    = ".${azurerm_container_app_environment.main.default_domain}"
-  common_tags      = merge(var.tags, { project = var.project_name })
+  runtime_app_name              = "${var.project_name}-runtime"
+  hosted_app_name               = "${var.project_name}-app"
+  runtime_url                   = "https://${local.runtime_app_name}.${azurerm_container_app_environment.main.default_domain}"
+  hosted_app_url                = "https://${local.hosted_app_name}.${azurerm_container_app_environment.main.default_domain}"
+  cookie_domain                 = ".${azurerm_container_app_environment.main.default_domain}"
+  datasets_storage_account_name = coalesce(var.datasets_storage_account_name, substr(replace(lower(var.acr_name), "acr", "stg"), 0, 24))
+  datasets_mount_path           = "/workspace/datasets"
+  common_tags                   = merge(var.tags, { project = var.project_name })
 }
 
 resource "azurerm_resource_group" "main" {
@@ -55,6 +57,35 @@ resource "azurerm_container_app_environment" "main" {
   location                   = azurerm_resource_group.main.location
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
   tags                       = local.common_tags
+}
+
+resource "azurerm_storage_account" "datasets" {
+  name                            = local.datasets_storage_account_name
+  resource_group_name             = azurerm_resource_group.main.name
+  location                        = azurerm_resource_group.main.location
+  account_tier                    = "Standard"
+  account_replication_type        = "LRS"
+  account_kind                    = "StorageV2"
+  https_traffic_only_enabled      = true
+  min_tls_version                 = "TLS1_2"
+  allow_nested_items_to_be_public = false
+  tags                            = local.common_tags
+}
+
+resource "azurerm_storage_share" "datasets" {
+  name               = var.datasets_share_name
+  storage_account_id = azurerm_storage_account.datasets.id
+  quota              = var.datasets_share_quota_gb
+  enabled_protocol   = "SMB"
+}
+
+resource "azurerm_container_app_environment_storage" "datasets" {
+  name                         = var.datasets_share_name
+  container_app_environment_id = azurerm_container_app_environment.main.id
+  account_name                 = azurerm_storage_account.datasets.name
+  share_name                   = azurerm_storage_share.datasets.name
+  access_key                   = azurerm_storage_account.datasets.primary_access_key
+  access_mode                  = "ReadWrite"
 }
 
 resource "azurerm_container_app" "runtime" {
@@ -164,6 +195,11 @@ resource "azurerm_container_app" "runtime" {
         value = var.copilot_model
       }
 
+      env {
+        name  = "PLANETNIK_DATASETS_ROOT"
+        value = local.datasets_mount_path
+      }
+
       dynamic "env" {
         for_each = var.openai_api_key == null || var.openai_api_key == "" ? [] : [var.openai_api_key]
         content {
@@ -171,6 +207,17 @@ resource "azurerm_container_app" "runtime" {
           secret_name = "openai-api-key"
         }
       }
+
+      volume_mounts {
+        name = var.datasets_share_name
+        path = local.datasets_mount_path
+      }
+    }
+
+    volume {
+      name         = var.datasets_share_name
+      storage_name = azurerm_container_app_environment_storage.datasets.name
+      storage_type = "AzureFile"
     }
   }
 

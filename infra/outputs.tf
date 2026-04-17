@@ -27,3 +27,18 @@ output "runtime_app_name" {
   description = "Runtime Container App name."
   value       = azurerm_container_app.runtime.name
 }
+
+output "datasets_storage_account_name" {
+  description = "Storage account used for hosted datasets."
+  value       = azurerm_storage_account.datasets.name
+}
+
+output "datasets_share_name" {
+  description = "Azure Files share used for hosted datasets."
+  value       = azurerm_storage_share.datasets.name
+}
+
+output "runtime_datasets_root" {
+  description = "Datasets root mounted into the runtime container."
+  value       = "/workspace/datasets"
+}
