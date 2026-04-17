@@ -158,16 +158,6 @@ jobs:
           echo "account_name=$ACCOUNT_NAME" >> "$GITHUB_OUTPUT"
           echo "account_key=$ACCOUNT_KEY" >> "$GITHUB_OUTPUT"
 
-      - name: Clear existing dataset files from share
-        if: steps.storage.outputs.storage_ready == 'true'
-        shell: bash
-        run: |
-          az storage file delete-batch \
-            --account-name "${{ steps.storage.outputs.account_name }}" \
-            --account-key "${{ steps.storage.outputs.account_key }}" \
-            --source datasets \
-            --pattern "${{ steps.landscape.outputs.dataset_name }}/*"
-
       - name: Upload datasets to Azure Files share
         if: steps.storage.outputs.storage_ready == 'true'
         shell: bash
@@ -206,3 +196,4 @@ jobs:
           echo "- Dataset: ${{ steps.landscape.outputs.dataset_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Source: datasets/${{ steps.landscape.outputs.dataset_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Upload parallelism: 32 connections" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Mode: overwrite in place (no pre-delete)" >> "$GITHUB_STEP_SUMMARY"
