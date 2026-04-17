@@ -24,28 +24,43 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Validate dataset tree
+        id: dataset_tree
         shell: bash
         run: |
-          test -d datasets || {
-            echo "datasets/ directory is missing"
-            exit 1
-          }
+          if [ ! -d datasets ]; then
+            echo "datasets_ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Hosted dataset publish skipped"
+              echo "- Reason: datasets/ is not present in the checked-out repository"
+              echo "- Detail: datasets/ is currently ignored locally, so no dataset content is reaching GitHub Actions yet"
+              echo "- Next step: either commit the dataset source or generate it in CI before this workflow uploads anything"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
           SENTINELS=$(find datasets -type f \( -name report_context.json -o -name landscape_overview.json -o -name analysisResults.json \) | wc -l | tr -d ' ')
           if [ "$SENTINELS" -eq 0 ]; then
-            echo "No recognized Planetnik dataset sentinel files were found under datasets/."
-            echo "Expected one or more of: report_context.json, landscape_overview.json, analysisResults.json"
-            exit 1
+            echo "datasets_ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Hosted dataset publish skipped"
+              echo "- Reason: no recognized Planetnik dataset sentinel files were found under datasets/"
+              echo "- Expected: report_context.json, landscape_overview.json, or analysisResults.json"
+              echo "- Next step: generate or commit a resolver-ready dataset before rerunning this workflow"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
 
+          echo "datasets_ready=true" >> "$GITHUB_OUTPUT"
           echo "Found $SENTINELS recognized dataset sentinel files."
 
       - name: Log in to Azure
+        if: steps.dataset_tree.outputs.datasets_ready == 'true'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Resolve dataset storage account
+        if: steps.dataset_tree.outputs.datasets_ready == 'true'
         id: storage
         shell: bash
         run: |
