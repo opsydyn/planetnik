@@ -111,13 +111,13 @@ variable "runtime_memory" {
 variable "app_min_replicas" {
   description = "Minimum hosted app replicas."
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "app_max_replicas" {
   description = "Maximum hosted app replicas."
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "app_cpu" {
