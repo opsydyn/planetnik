@@ -63,6 +63,12 @@ Migrate from CopilotKit runtime actions to a Mastra-powered agent. Adds agent or
 
 Embed full analysis output into a vector store for semantic search. Add session memory for conversation continuity. Enables fuzzy questions and cross-dimension queries without exhaustive tool calls.
 
+### Canonical Report Contracts + AI-Ready Analysis Data
+
+Retire Sokrates-era text and HTML artifacts as the primary reporting contract. Define a versioned minimum JSON snapshot model, keep TXT/HTML as optional compatibility or debug projections, and use the same canonical snapshot as the foundation for Tree-sitter-powered extraction improvements and hosted semantic retrieval over Neon/`pgvector`.
+
+See [docs/report-data-modernization-roadmap.md](docs/report-data-modernization-roadmap.md).
+
 ---
 
 ## Later

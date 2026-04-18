@@ -1917,7 +1917,7 @@ describe("runtime report routes", () => {
     const app = createApp()
 
     const response = await app.fetch(
-      new Request("http://localhost/api/reports/effect-ts/contributors/alan%40example.com", {
+      new Request("http://localhost/api/reports/effect-ts/contributors/alan$40example.com", {
         headers: {
           cookie: "better-auth.session_token=test",
         },
@@ -2808,6 +2808,102 @@ describe("runtime report routes", () => {
     )
   })
 
+  test("decodes ingress-safe repository path segments for a landscape repository dashboard", async () => {
+    storedReports = [
+      {
+        id: "report-2",
+        workspaceId: personalWorkspace.id,
+        slug: "platform-landscape",
+        name: "Platform Landscape",
+        kind: "planetnik-report",
+        status: "connected",
+        analysisRoot: "/datasets/platform-landscape/data",
+        createdAt: new Date("2026-04-02T17:20:19.145Z"),
+        updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+        lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+      },
+    ]
+    readReportLandscapeRepositorySummary.mockImplementationOnce((analysisRoot: string, repoKey: string) => {
+      if (analysisRoot !== "/datasets/platform-landscape/data" || repoKey !== "acme/web-app") {
+        return null
+      }
+
+      return {
+        repoKey: "acme/web-app",
+        name: "web-app",
+        description: "Customer-facing web application.",
+        latestCommitDate: "2026-03-31",
+        commits30d: 12,
+        commits90d: 34,
+        contributorsCount: 4,
+        filesCount: 128,
+        linesOfCode: 18450,
+        duplicationPercentage: 2.4,
+        links: [{ label: "Open repository", href: "https://github.com/acme/web-app" }],
+        contributors: [
+          {
+            email: "alan@example.com",
+            displayName: "Alan Currie",
+            commitsCount: 18,
+            commits30d: 6,
+            commits90d: 12,
+            firstCommitDate: "2024-01-03",
+            latestCommitDate: "2026-03-31",
+            type: "Human",
+            glueScore: "8.8",
+            structuralImpact: "7.1",
+            snackRisk: "2.4",
+            signal: "Glue",
+          },
+        ],
+        topContributors: [
+          {
+            email: "alan@example.com",
+            displayName: "Alan Currie",
+            commitsCount: 18,
+            commits30d: 6,
+            commits90d: 12,
+            firstCommitDate: "2024-01-03",
+            latestCommitDate: "2026-03-31",
+            type: "Human",
+            glueScore: "8.8",
+            structuralImpact: "7.1",
+            snackRisk: "2.4",
+            signal: "Glue",
+          },
+        ],
+      }
+    })
+    const app = createApp()
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/reports/platform-landscape/repositories/acme$2Fweb-app", {
+        headers: {
+          cookie: "better-auth.session_token=test",
+        },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      repository: {
+        repoKey: string
+        name: string
+        linesOfCode: number
+      }
+    }
+
+    expect(body.repository).toMatchObject({
+      repoKey: "acme/web-app",
+      name: "web-app",
+      linesOfCode: 18450,
+    })
+    expect(readReportLandscapeRepositorySummary).toHaveBeenCalledWith(
+      "/datasets/platform-landscape/data",
+      "acme/web-app",
+    )
+  })
+
   test("returns landscape repository metrics for a connected report", async () => {
     storedReports = [
       {
@@ -3152,7 +3248,7 @@ describe("runtime report routes", () => {
 
     const response = await app.fetch(
       new Request(
-        "http://localhost/api/reports/platform-landscape/repositories/acme__web-app/contributors/alan@example.com",
+        "http://localhost/api/reports/platform-landscape/repositories/acme__web-app/contributors/alan$40example.com",
         {
           headers: {
             cookie: "better-auth.session_token=test",

@@ -91,12 +91,27 @@ afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
-const { getRuntimeReportLandscapeRepository, getRuntimeReportLandscapeRepositoryContributorDetail } = await import(
-  "./runtime-client.js"
-)
+const {
+  getRuntimeReportContributorDetail,
+  getRuntimeReportLandscapeRepository,
+  getRuntimeReportLandscapeRepositoryContributorDetail,
+} = await import("./runtime-client.js")
 
 describe("runtime client landscape repository paths", () => {
-  test("encodes slash-containing repo keys in request URLs", async () => {
+  test("encodes contributor emails with ingress-safe route segments", async () => {
+    const contributor = await getRuntimeReportContributorDetail(
+      "better-auth.session_token=abc",
+      "alanpcurrie-landscape",
+      "alan@example.com",
+    )
+
+    expect(contributor?.email).toBe("alan@example.com")
+    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "http://example.test/api/reports/alanpcurrie-landscape/contributors/alan$40example.com",
+    )
+  })
+
+  test("encodes slash-containing repo keys with ingress-safe route segments", async () => {
     const repository = await getRuntimeReportLandscapeRepository(
       "better-auth.session_token=abc",
       "alanpcurrie-landscape",
@@ -105,11 +120,11 @@ describe("runtime client landscape repository paths", () => {
 
     expect(repository?.repoKey).toBe("alanpcurrie/next-app-playground")
     expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/reports/alanpcurrie-landscape/repositories/alanpcurrie%2Fnext-app-playground",
+      "http://example.test/api/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Fnext-app-playground",
     )
   })
 
-  test("encodes repository contributor emails in nested request URLs", async () => {
+  test("encodes repository contributor emails in nested request URLs with ingress-safe route segments", async () => {
     const contributor = await getRuntimeReportLandscapeRepositoryContributorDetail(
       "better-auth.session_token=abc",
       "alanpcurrie-landscape",
@@ -119,7 +134,7 @@ describe("runtime client landscape repository paths", () => {
 
     expect(contributor?.email).toBe("alan@example.com")
     expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/reports/alanpcurrie-landscape/repositories/alanpcurrie%2Fnext-app-playground/contributors/alan%40example.com",
+      "http://example.test/api/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Fnext-app-playground/contributors/alan$40example.com",
     )
   })
 })

@@ -886,7 +886,7 @@ function withRuntimeCookie(cookie: string): RuntimeHeaders {
 }
 
 function encodeRuntimePathParam(value: string): string {
-  return encodeURIComponent(value)
+  return encodeURIComponent(value).replace(/%/g, "$")
 }
 
 function isTransportResponse(value: unknown): value is Response {

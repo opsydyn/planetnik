@@ -1,5 +1,5 @@
-import { Elysia, t } from "elysia"
 import { Schema } from "@effect/schema"
+import { Elysia, t } from "elysia"
 import { auth } from "../../lib/auth.js"
 import {
   createWorkspaceReport,
@@ -10,41 +10,41 @@ import {
 import {
   listAvailableDatasets,
   readReportArtifactSummary,
+  readReportCommitsSummary,
+  readReportContextSummary,
   readReportContributorDetail,
   readReportContributorsSummary,
-  readReportLandscapeContributorsSummary,
-  readReportContextSummary,
   readReportControlsSummary,
   readReportDependenciesSummary,
+  readReportDuplicationSummary,
   readReportFilesView,
   readReportHotspotsSummary,
-  readReportCommitsSummary,
-  readReportLandscapeRepositoriesSummary,
+  readReportImpactSummary,
+  readReportLandscapeContributorsSummary,
   readReportLandscapeOverviewSummary,
-  readReportLandscapeTagsSummary,
-  readReportLandscapeTeamsSummary,
-  readReportLandscapeRepositorySummary,
-  readReportLandscapeRepositoryMetricsSummary,
+  readReportLandscapeRepositoriesSummary,
   readReportLandscapeRepositoryCommitsSummary,
+  readReportLandscapeRepositoryComponentsSummary,
+  readReportLandscapeRepositoryContributorDetail,
+  readReportLandscapeRepositoryContributorsSummary,
+  readReportLandscapeRepositoryControlsSummary,
+  readReportLandscapeRepositoryCouplingSummary,
   readReportLandscapeRepositoryDependenciesSummary,
   readReportLandscapeRepositoryDuplicationSummary,
-  readReportLandscapeRepositoryHotspotsSummary,
   readReportLandscapeRepositoryFilesView,
-  readReportLandscapeRepositoryUnitsView,
-  readReportLandscapeRepositoryContributorsSummary,
-  readReportLandscapeRepositoryContributorDetail,
-  readReportLandscapeRepositoryTopologySummary,
+  readReportLandscapeRepositoryHotspotsSummary,
   readReportLandscapeRepositoryImpactSummary,
-  readReportLandscapeRepositoryControlsSummary,
-  readReportLandscapeRepositoryComponentsSummary,
-  readReportLandscapeRepositoryCouplingSummary,
-  readReportSecuritySummary,
-  readReportTrendsSummary,
-  readReportDuplicationSummary,
-  readReportImpactSummary,
-  readReportMetricsSummary,
-  readReportTopologySummary,
+  readReportLandscapeRepositoryMetricsSummary,
+  readReportLandscapeRepositorySummary,
+  readReportLandscapeRepositoryTopologySummary,
+  readReportLandscapeRepositoryUnitsView,
+  readReportLandscapeTagsSummary,
+  readReportLandscapeTeamsSummary,
   readReportLandscapeTopologySummary,
+  readReportMetricsSummary,
+  readReportSecuritySummary,
+  readReportTopologySummary,
+  readReportTrendsSummary,
   readReportUnitsView,
   resolveReportDataSource,
 } from "../../lib/report-datasets.js"
@@ -133,6 +133,14 @@ const CreateReportBodySchema = t.Object({
 const CreateReportResponseSchema = Schema.Struct({
   report: ReportSchema,
 })
+
+function decodeIngressSafePathParam(value: string): string {
+  try {
+    return decodeURIComponent(value.replace(/\$/g, "%"))
+  } catch {
+    return value
+  }
+}
 
 const ReportDetailResponseSchema = Schema.Struct({
   report: ReportSchema,
@@ -1594,7 +1602,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const contributor = readReportContributorDetail(found.analysisRoot, params.email)
+      const email = decodeIngressSafePathParam(params.email)
+      const contributor = readReportContributorDetail(found.analysisRoot, email)
       if (!contributor) {
         return new Response(
           JSON.stringify({
@@ -2243,7 +2252,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const repository = readReportLandscapeRepositorySummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const repository = readReportLandscapeRepositorySummary(found.analysisRoot, repo)
       if (!repository) {
         return new Response(
           JSON.stringify({
@@ -2298,7 +2308,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const metrics = readReportLandscapeRepositoryMetricsSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const metrics = readReportLandscapeRepositoryMetricsSummary(found.analysisRoot, repo)
       if (!metrics) {
         return new Response(
           JSON.stringify({
@@ -2353,7 +2364,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const commits = readReportLandscapeRepositoryCommitsSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const commits = readReportLandscapeRepositoryCommitsSummary(found.analysisRoot, repo)
       if (!commits) {
         return new Response(
           JSON.stringify({
@@ -2408,7 +2420,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const dependencies = readReportLandscapeRepositoryDependenciesSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const dependencies = readReportLandscapeRepositoryDependenciesSummary(found.analysisRoot, repo)
       if (!dependencies) {
         return new Response(
           JSON.stringify({
@@ -2463,7 +2476,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const duplication = readReportLandscapeRepositoryDuplicationSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const duplication = readReportLandscapeRepositoryDuplicationSummary(found.analysisRoot, repo)
       if (!duplication) {
         return new Response(
           JSON.stringify({
@@ -2518,7 +2532,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const hotspots = readReportLandscapeRepositoryHotspotsSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const hotspots = readReportLandscapeRepositoryHotspotsSummary(found.analysisRoot, repo)
       if (!hotspots) {
         return new Response(
           JSON.stringify({
@@ -2587,7 +2602,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const files = readReportLandscapeRepositoryFilesView(found.analysisRoot, params.repo, params.view)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const files = readReportLandscapeRepositoryFilesView(found.analysisRoot, repo, params.view)
       if (!files) {
         return new Response(
           JSON.stringify({
@@ -2656,7 +2672,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const units = readReportLandscapeRepositoryUnitsView(found.analysisRoot, params.repo, params.view)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const units = readReportLandscapeRepositoryUnitsView(found.analysisRoot, repo, params.view)
       if (!units) {
         return new Response(
           JSON.stringify({
@@ -2711,7 +2728,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const contributors = readReportLandscapeRepositoryContributorsSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const contributors = readReportLandscapeRepositoryContributorsSummary(found.analysisRoot, repo)
 
       return decodeReportContributorsResponse({
         contributors,
@@ -2753,7 +2771,9 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const contributor = readReportLandscapeRepositoryContributorDetail(found.analysisRoot, params.repo, params.email)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const email = decodeIngressSafePathParam(params.email)
+      const contributor = readReportLandscapeRepositoryContributorDetail(found.analysisRoot, repo, email)
       if (!contributor) {
         return new Response(
           JSON.stringify({
@@ -2808,7 +2828,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const topology = readReportLandscapeRepositoryTopologySummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const topology = readReportLandscapeRepositoryTopologySummary(found.analysisRoot, repo)
       if (!topology) {
         return new Response(
           JSON.stringify({
@@ -2863,7 +2884,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const impact = readReportLandscapeRepositoryImpactSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const impact = readReportLandscapeRepositoryImpactSummary(found.analysisRoot, repo)
       if (!impact) {
         return new Response(
           JSON.stringify({
@@ -2918,7 +2940,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const controls = readReportLandscapeRepositoryControlsSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const controls = readReportLandscapeRepositoryControlsSummary(found.analysisRoot, repo)
       if (!controls) {
         return new Response(
           JSON.stringify({
@@ -2973,7 +2996,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const components = readReportLandscapeRepositoryComponentsSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const components = readReportLandscapeRepositoryComponentsSummary(found.analysisRoot, repo)
       if (!components) {
         return new Response(
           JSON.stringify({
@@ -3028,7 +3052,8 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
         )
       }
 
-      const coupling = readReportLandscapeRepositoryCouplingSummary(found.analysisRoot, params.repo)
+      const repo = decodeIngressSafePathParam(params.repo)
+      const coupling = readReportLandscapeRepositoryCouplingSummary(found.analysisRoot, repo)
       if (!coupling) {
         return new Response(
           JSON.stringify({
