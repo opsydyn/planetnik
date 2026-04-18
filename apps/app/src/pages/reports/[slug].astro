@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../layouts/AppShell.astro";
+import SignOutButton from "../../components/auth/SignOutButton";
 import { buildHostedReportShellContext } from "../../lib/hosted-shell.js";
 import { getRuntimeReport } from "../../lib/runtime-client.js";
 import {
@@ -134,7 +135,7 @@ const isLandscapeReport = reportDetail.context?.reportMode === "landscape";
 						Open impact
 					</a>
 					<a class="button-secondary" href="/">Back to dashboard</a>
-					<a class="button" href="/sign-out" data-astro-reload>Sign out</a>
+					<SignOutButton className="button" client:load />
 				</div>
 			</article>
 

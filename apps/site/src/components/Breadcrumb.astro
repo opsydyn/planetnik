@@ -1,6 +1,7 @@
 ---
 import SharedBreadcrumb from "@planetnik/report-ui/shell/Breadcrumb";
 import type { BreadcrumbItem } from "@planetnik/report-ui/shell/Breadcrumb";
+import { getLandscapeRepositoryHref } from "../lib/landscapeRoutes";
 import { route } from "../lib/route";
 
 interface Props {
@@ -27,9 +28,7 @@ if (isLandscape) {
 		});
 		crumbs.push({
 			label: repoScope.repoName,
-			href: route(
-				`/landscape/repositories/${encodeURIComponent(repoScope.repoKey)}`,
-			),
+			href: getLandscapeRepositoryHref(repoScope.repoKey),
 		});
 	}
 } else {

@@ -91,10 +91,9 @@ afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
-const {
-  getRuntimeReportLandscapeRepository,
-  getRuntimeReportLandscapeRepositoryContributorDetail,
-} = await import("./runtime-client.js")
+const { getRuntimeReportLandscapeRepository, getRuntimeReportLandscapeRepositoryContributorDetail } = await import(
+  "./runtime-client.js"
+)
 
 describe("runtime client landscape repository paths", () => {
   test("encodes slash-containing repo keys in request URLs", async () => {

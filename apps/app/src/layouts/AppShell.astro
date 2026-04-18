@@ -7,6 +7,7 @@ import "@planetnik/report-ui/theme/dashboard-shell.css";
 import { ClientRouter } from "astro:transitions";
 import GlobalSearch from "../components/search/GlobalSearch";
 import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
+import SignOutButton from "../components/auth/SignOutButton";
 import { isHostedIntelligenceEnabled } from "../lib/feature-flags.js";
 import {
 	buildHostedShellModel,
@@ -199,7 +200,7 @@ const shell = buildHostedShellModel({
 									<span class="status-dot"></span>
 									{shell.sessionLabel}
 								</span>
-								<a class="button-secondary" href="/sign-out" data-astro-reload>Sign out</a>
+								<SignOutButton className="button-secondary" client:load />
 							</div>
 						</div>
 					) : shell.breadcrumbs.length > 0 ? (
