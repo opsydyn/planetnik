@@ -20,6 +20,9 @@ const CLEAR_AUTH_COOKIE_NAMES = [
   "__Host-better-auth.account_data",
 ] as const
 
+const SAME_SITE_LAX = "SameSite=Lax" as const
+const SAME_SITE_NONE = "SameSite=None" as const
+
 type HeadersWithSetCookie = Headers & {
   getSetCookie?: () => string[]
 }
@@ -67,22 +70,49 @@ function deriveParentDomain(hostname: string): string | undefined {
   return `.${labels.slice(1).join(".")}`
 }
 
+const isHostPrefixedCookie = (name: string): boolean => name.startsWith("__Host-")
+
+const isSecurePrefixedCookie = (name: string): boolean => name.startsWith("__Secure-") || isHostPrefixedCookie(name)
+
+function buildExpiredCookieHeader(name: string, secure: boolean, sameSite: string, domain?: string): string {
+  const parts = [`${name}=`, `Expires=${EXPIRED_COOKIE_DATE}`, "Max-Age=0", "Path=/", "HttpOnly", sameSite]
+
+  if (secure) {
+    parts.push("Secure")
+  }
+
+  if (domain) {
+    parts.push(`Domain=${domain}`)
+  }
+
+  return parts.join("; ")
+}
+
 function fallbackCookieHeaders(hostname: string): string[] {
   const parentDomain = deriveParentDomain(hostname)
-  const sameSiteNone = "SameSite=None"
-  const baseFlags = `Expires=${EXPIRED_COOKIE_DATE}; Max-Age=0; Path=/; HttpOnly`
 
   return CLEAR_AUTH_COOKIE_NAMES.flatMap((name) => {
-    const hostOnly = `${name}=; ${baseFlags}; ${sameSiteNone}`
-    const hostOnlySecure = `${name}=; ${baseFlags}; Secure; ${sameSiteNone}`
-    const domainVariants = parentDomain
-      ? [
-          `${name}=; ${baseFlags}; Domain=${parentDomain}; ${sameSiteNone}`,
-          `${name}=; ${baseFlags}; Domain=${parentDomain}; Secure; ${sameSiteNone}`,
-        ]
-      : []
+    if (isHostPrefixedCookie(name)) {
+      return [buildExpiredCookieHeader(name, true, SAME_SITE_NONE)]
+    }
 
-    return [hostOnly, hostOnlySecure, ...domainVariants]
+    if (isSecurePrefixedCookie(name)) {
+      return [
+        buildExpiredCookieHeader(name, true, SAME_SITE_NONE),
+        ...(parentDomain ? [buildExpiredCookieHeader(name, true, SAME_SITE_NONE, parentDomain)] : []),
+      ]
+    }
+
+    return [
+      buildExpiredCookieHeader(name, false, SAME_SITE_LAX),
+      buildExpiredCookieHeader(name, true, SAME_SITE_NONE),
+      ...(parentDomain
+        ? [
+            buildExpiredCookieHeader(name, false, SAME_SITE_LAX, parentDomain),
+            buildExpiredCookieHeader(name, true, SAME_SITE_NONE, parentDomain),
+          ]
+        : []),
+    ]
   })
 }
 

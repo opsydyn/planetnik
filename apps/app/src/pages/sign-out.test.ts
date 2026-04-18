@@ -9,6 +9,10 @@ function readSetCookieHeaders(headers: Headers): string[] {
   return (headers as HeadersWithSetCookie).getSetCookie?.() ?? []
 }
 
+function hasInvalidSameSiteNoneCookie(headers: Headers): boolean {
+  return readSetCookieHeaders(headers).some((value) => value.includes("SameSite=None") && !value.includes("Secure"))
+}
+
 describe("GET /sign-out", () => {
   const originalFetch = globalThis.fetch
   let fetchMock = mock(async () => new Response(null, { status: 200 }))
@@ -40,7 +44,9 @@ describe("GET /sign-out", () => {
     expect(setCookies.some((value) => value.startsWith("better-auth.session_data="))).toBe(true)
     expect(setCookies.every((value) => value.includes("Max-Age=0"))).toBe(true)
     expect(setCookies.every((value) => value.includes("Expires=Thu, 01 Jan 1970 00:00:00 GMT"))).toBe(true)
-    expect(setCookies.every((value) => value.includes("SameSite=None"))).toBe(true)
+    expect(setCookies.some((value) => value.includes("SameSite=Lax"))).toBe(true)
+    expect(setCookies.some((value) => value.includes("SameSite=None") && value.includes("Secure"))).toBe(true)
+    expect(hasInvalidSameSiteNoneCookie(response.headers)).toBe(false)
   })
 
   test("adds parent-domain cookie clearing variants for hosted subdomains", async () => {
@@ -61,6 +67,7 @@ describe("GET /sign-out", () => {
       ),
     ).toBe(true)
     expect(setCookies.some((value) => value.includes("Secure"))).toBe(true)
+    expect(hasInvalidSameSiteNoneCookie(response.headers)).toBe(false)
   })
 
   test("still redirects to sign-in and clears cookies when upstream sign-out fails", async () => {
@@ -88,5 +95,6 @@ describe("GET /sign-out", () => {
           value.includes("Domain=.orangeisland-647673db.uksouth.azurecontainerapps.io"),
       ),
     ).toBe(true)
+    expect(hasInvalidSameSiteNoneCookie(response.headers)).toBe(false)
   })
 })
