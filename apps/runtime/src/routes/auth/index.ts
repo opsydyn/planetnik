@@ -1,7 +1,11 @@
 import { Elysia } from "elysia"
+import { eq } from "drizzle-orm"
 import { appConfig } from "../../config.js"
 import { auth } from "../../lib/auth.js"
+import { db } from "../../db/index.js"
+import { session } from "../../db/schema/auth.js"
 import { appendExpiredAuthCookies } from "./cookies.js"
+import { cleanupFallbackSignOutSession } from "./fallback-sign-out.js"
 
 const HTTP_STATUS_METHOD_NOT_ALLOWED = 405 as const
 const HTTP_STATUS_OK = 200 as const
@@ -46,6 +50,17 @@ export const authRoutes = new Elysia({ name: "auth" }).all(
       } catch (error) {
         if (request.method === "POST" && isSignOutRequest(request)) {
           console.error("Auth sign-out failed, applying cookie-expire fallback", error)
+
+          await cleanupFallbackSignOutSession(request, {
+            getSession: ({ headers }) => auth.api.getSession({ headers }),
+            deleteSessionByToken: async (token) => {
+              await db.delete(session).where(eq(session.token, token))
+            },
+            logError: (message, cause) => {
+              console.error(message, cause)
+            },
+          })
+
           return signOutFallbackResponse()
         }
         throw error

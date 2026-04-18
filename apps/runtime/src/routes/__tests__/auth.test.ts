@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, mock, test } from "bun:test"
 
 process.env.NODE_ENV ??= "test"
 process.env.PORT ??= "1337"
@@ -41,5 +41,81 @@ describe("runtime auth sign-out cookie cleanup", () => {
         (value) => value.startsWith("__Secure-better-auth.session_token=") && value.includes("Domain=.example.com"),
       ),
     ).toBe(true)
+  })
+})
+
+describe("runtime auth sign-out fallback session cleanup", () => {
+  test("deletes the backing session row when the current session can be resolved", async () => {
+    const { cleanupFallbackSignOutSession } = await import("../auth/fallback-sign-out.js")
+    const getSession = mock(async () => ({
+      session: {
+        token: "session-token-123",
+      },
+    }))
+    const deleteSessionByToken = mock(async () => undefined)
+
+    const deleted = await cleanupFallbackSignOutSession(
+      new Request("http://localhost:1337/api/auth/sign-out", {
+        method: "POST",
+        headers: {
+          cookie: "better-auth.session_token=signed-cookie",
+        },
+      }),
+      {
+        getSession,
+        deleteSessionByToken,
+      },
+    )
+
+    expect(deleted).toBe(true)
+    expect(getSession).toHaveBeenCalledTimes(1)
+    expect(deleteSessionByToken).toHaveBeenCalledWith("session-token-123")
+  })
+
+  test("returns false without deleting anything when the current session cannot be resolved", async () => {
+    const { cleanupFallbackSignOutSession } = await import("../auth/fallback-sign-out.js")
+    const getSession = mock(async () => null)
+    const deleteSessionByToken = mock(async () => undefined)
+
+    const deleted = await cleanupFallbackSignOutSession(
+      new Request("http://localhost:1337/api/auth/sign-out", {
+        method: "POST",
+      }),
+      {
+        getSession,
+        deleteSessionByToken,
+      },
+    )
+
+    expect(deleted).toBe(false)
+    expect(deleteSessionByToken).not.toHaveBeenCalled()
+  })
+
+  test("swallows session lookup failures and logs them so cookie fallback can still proceed", async () => {
+    const { cleanupFallbackSignOutSession } = await import("../auth/fallback-sign-out.js")
+    const lookupError = new Error("lookup failed")
+    const getSession = mock(async () => {
+      throw lookupError
+    })
+    const deleteSessionByToken = mock(async () => undefined)
+    const logError = mock(() => undefined)
+
+    const deleted = await cleanupFallbackSignOutSession(
+      new Request("http://localhost:1337/api/auth/sign-out", {
+        method: "POST",
+      }),
+      {
+        getSession,
+        deleteSessionByToken,
+        logError,
+      },
+    )
+
+    expect(deleted).toBe(false)
+    expect(deleteSessionByToken).not.toHaveBeenCalled()
+    expect(logError).toHaveBeenCalledWith(
+      "Auth sign-out fallback could not delete session from database",
+      lookupError,
+    )
   })
 })
