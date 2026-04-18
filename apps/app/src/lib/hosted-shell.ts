@@ -1,9 +1,10 @@
-import type { RuntimeReportDetail } from "./runtime-client.js"
+import { isHostedIntelligenceEnabled } from "./feature-flags.js"
 import {
   getHostedReportRepositoriesHref,
   getHostedReportRepositoryHref,
   getHostedReportRepositoryPageHref,
 } from "./hosted-routes.js"
+import type { RuntimeReportDetail } from "./runtime-client.js"
 
 export type HostedNavItem = {
   readonly href: string
@@ -67,6 +68,7 @@ type BuildHostedShellModelInput = {
   readonly currentPath: string
   readonly userEmail: string | null
   readonly context?: HostedShellContext
+  readonly showIntelligence?: boolean
 }
 
 type RepositoryScope = {
@@ -126,6 +128,7 @@ export function isHostedNavItemActive(currentPath: string, href: string): boolea
 export function buildHostedShellModel(input: BuildHostedShellModelInput): HostedShellModel {
   const context = input.context ?? ({ kind: "public" } satisfies HostedShellContext)
   const sessionLabel = input.userEmail ? `Session: ${input.userEmail}` : "Planetnik Portal"
+  const showIntelligence = input.showIntelligence ?? isHostedIntelligenceEnabled()
 
   if (context.kind === "public") {
     return {
@@ -180,7 +183,7 @@ export function buildHostedShellModel(input: BuildHostedShellModelInput): Hosted
         href: "/",
         variant: "sidebar",
       }),
-      navSections: buildReportNavSections(context),
+      navSections: buildReportNavSections(context, showIntelligence),
       breadcrumbs: isLandscapeReport
         ? [
             {
@@ -210,7 +213,7 @@ export function buildHostedShellModel(input: BuildHostedShellModelInput): Hosted
       href: "/",
       variant: "sidebar",
     }),
-    navSections: buildRepositoryNavSections(context),
+    navSections: buildRepositoryNavSections(context, showIntelligence),
     breadcrumbs: [
       {
         label: "Landscape",
@@ -235,6 +238,7 @@ export function buildHostedShellModel(input: BuildHostedShellModelInput): Hosted
 
 export function buildReportNavSections(
   context: Extract<HostedShellContext, { kind: "report" }>,
+  showIntelligence: boolean,
 ): ReadonlyArray<HostedNavSection> {
   const baseHref = `/reports/${context.reportSlug}`
 
@@ -260,7 +264,7 @@ export function buildReportNavSections(
       },
       {
         label: "Intelligence",
-        items: [{ href: "/coming-soon", label: "Platform - Coming Soon" }],
+        items: buildHostedIntelligenceNavItems(baseHref, showIntelligence),
       },
     ]
   }
@@ -319,7 +323,7 @@ export function buildReportNavSections(
     },
     {
       label: "Intelligence",
-      items: [{ href: "/coming-soon", label: "Platform - Coming Soon" }],
+      items: buildHostedIntelligenceNavItems(baseHref, showIntelligence),
     },
   ]
 
@@ -328,6 +332,7 @@ export function buildReportNavSections(
 
 function buildRepositoryNavSections(
   context: Extract<HostedShellContext, { kind: "repository" }>,
+  showIntelligence: boolean,
 ): ReadonlyArray<HostedNavSection> {
   const reportHref = `/reports/${context.reportSlug}`
   const repoHref = getHostedReportRepositoryHref(context.reportSlug, context.repoKey)
@@ -439,9 +444,17 @@ function buildRepositoryNavSections(
     },
     {
       label: "Intelligence",
-      items: [{ href: "/coming-soon", label: "Platform - Coming Soon" }],
+      items: buildHostedIntelligenceNavItems(reportHref, showIntelligence),
     },
   ]
 
   return sections
+}
+
+function buildHostedIntelligenceNavItems(baseHref: string, showIntelligence: boolean): ReadonlyArray<HostedNavItem> {
+  if (showIntelligence) {
+    return [{ href: `${baseHref}/intelligence`, label: "Ask Płanetnik" }]
+  }
+
+  return [{ href: "/coming-soon", label: "Platform - Coming Soon" }]
 }

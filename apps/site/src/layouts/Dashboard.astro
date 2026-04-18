@@ -7,7 +7,6 @@ import { Image } from "astro:assets";
 import { getEntry } from "astro:content";
 import { ClientRouter } from "astro:transitions";
 import Breadcrumb from "../components/Breadcrumb.astro";
-import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
 import GlobalSearch from "../components/search/GlobalSearch";
 import {
 	getLandscapeRepositoryCommitsHref,
@@ -50,9 +49,6 @@ const intelligenceNavSection: NavSection = {
 	label: "Intelligence",
 	iconName: "chat-circle",
 	items: [
-		...(import.meta.env.DEV
-			? [{ href: route("/intelligence"), label: "Ask Płanetnik" }]
-			: []),
 		{ href: route("/coming-soon"), label: "Platform - Coming Soon" },
 	],
 };
@@ -405,10 +401,6 @@ function isActiveLink(href: string): boolean {
         })
       }
     </script>
-
-    <div transition:persist="intelligence-panel">
-      <IntelligencePanelLoader />
-    </div>
 
     <script>
       function setupDashboardNavigation() {

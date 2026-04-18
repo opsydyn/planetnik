@@ -284,6 +284,11 @@ resource "azurerm_container_app" "hosted_app" {
         name  = "PUBLIC_COPILOT_RUNTIME_URL"
         value = "${local.runtime_url}/api/copilotkit"
       }
+
+      env {
+        name  = "SHOW_INTELLIGENCE"
+        value = tostring(var.app_show_intelligence)
+      }
     }
   }
 

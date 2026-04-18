@@ -7,6 +7,7 @@ import "@planetnik/report-ui/theme/dashboard-shell.css";
 import { ClientRouter } from "astro:transitions";
 import GlobalSearch from "../components/search/GlobalSearch";
 import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
+import { isHostedIntelligenceEnabled } from "../lib/feature-flags.js";
 import {
 	buildHostedShellModel,
 	isHostedNavItemActive,
@@ -31,6 +32,7 @@ const panelIsLandscape =
 		? shellContext.reportMode === "landscape"
 		: false;
 const panelBaseHref = panelSlug ? `/reports/${panelSlug}` : null;
+const showIntelligence = isHostedIntelligenceEnabled();
 const userEmail =
 	typeof Astro.locals.user?.email === "string" ? Astro.locals.user.email : null;
 const shell = buildHostedShellModel({
@@ -39,6 +41,7 @@ const shell = buildHostedShellModel({
 	currentPath: Astro.url.pathname,
 	userEmail,
 	context: shellContext,
+	showIntelligence,
 });
 ---
 
@@ -372,7 +375,7 @@ const shell = buildHostedShellModel({
 			setupHostedSidebarToggle()
 		</script>
 		<div transition:persist="intelligence-panel">
-			{panelSlug && panelBaseHref && (
+			{showIntelligence && panelSlug && panelBaseHref && (
 				<IntelligencePanelLoader
 					slug={panelSlug}
 					isLandscape={panelIsLandscape}

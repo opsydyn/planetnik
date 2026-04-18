@@ -1,5 +1,6 @@
 ---
 import AppShell from "../../../layouts/AppShell.astro";
+import { isHostedIntelligenceEnabled } from "../../../lib/feature-flags.js";
 import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js";
 import { shouldRedirectReportDetail } from "../../../lib/report-detail-view-model.js";
 import {
@@ -19,6 +20,11 @@ import IntelligenceChat from "../../../components/intelligence/IntelligenceChat"
 
 const cookie = Astro.request.headers.get("cookie") ?? "";
 const slug = Astro.params.slug ?? "";
+
+if (!isHostedIntelligenceEnabled()) {
+	return Astro.redirect("/coming-soon");
+}
+
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
 
 if (shouldRedirectReportDetail(reportDetail)) {

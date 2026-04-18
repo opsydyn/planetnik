@@ -20,3 +20,6 @@ better_auth_secret = ""
 # Optional. If omitted, /api/copilotkit returns 503 until configured.
 openai_api_key = ""
 copilot_model  = "gpt-4o"
+
+# Hosted app feature flags.
+app_show_intelligence = true

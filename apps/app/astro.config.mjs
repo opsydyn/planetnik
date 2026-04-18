@@ -11,6 +11,12 @@ export default defineConfig({
 	}),
 	env: {
 		schema: {
+			SHOW_INTELLIGENCE: envField.string({
+				context: "server",
+				access: "secret",
+				optional: true,
+				default: "false",
+			}),
 			PUBLIC_SERVER_URL: envField.string({
 				context: "client",
 				access: "public",

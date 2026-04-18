@@ -131,3 +131,9 @@ variable "app_memory" {
   type        = string
   default     = "0.5Gi"
 }
+
+variable "app_show_intelligence" {
+  description = "Whether the hosted app exposes the intelligence page and side panel."
+  type        = bool
+  default     = false
+}

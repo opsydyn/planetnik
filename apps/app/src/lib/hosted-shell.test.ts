@@ -204,6 +204,49 @@ describe("hosted shell", () => {
     ])
   })
 
+  test("uses the hosted intelligence route when the feature flag is enabled", () => {
+    const shell = buildHostedShellModel({
+      title: "Overview",
+      subtitle: "Connected single repository report",
+      currentPath: "/reports/effect-ts/intelligence",
+      userEmail: "alan@example.com",
+      showIntelligence: true,
+      context: buildHostedReportShellContext({
+        report: {
+          id: "report-1",
+          workspaceId: "workspace-1",
+          slug: "effect-ts",
+          name: "Effect TS",
+          kind: "planetnik-report",
+          status: "connected",
+          analysisRoot: "/datasets/effect-ts/data",
+          createdAt: "2026-04-02T17:20:19.145Z",
+          updatedAt: "2026-04-02T17:20:19.145Z",
+          lastSyncedAt: "2026-04-02T17:20:19.145Z",
+        },
+        context: {
+          mode: "single_repository",
+          reportMode: "single_repository",
+          title: "Effect TS",
+          rootRoute: "/",
+          dataVersion: 1,
+          source: "analysisResults",
+          hasLandscape: false,
+          hasSingleRepositoryAnalysis: true,
+          primaryNavigation: ["overview", "files", "contributors"],
+        },
+        artifact: null,
+      }),
+    })
+
+    expect(shell.navSections[6]?.items).toEqual([
+      {
+        href: "/reports/effect-ts/intelligence",
+        label: "Ask Płanetnik",
+      },
+    ])
+  })
+
   test("keeps repo drilldown navigation anchored in the landscape inventory", () => {
     const shell = buildHostedShellModel({
       title: "Metrics",
@@ -415,6 +458,55 @@ describe("hosted shell", () => {
         href: "/reports/platform-landscape/repositories/catalog-api",
       },
       { label: "Metrics" },
+    ])
+  })
+
+  test("routes repository drilldown intelligence back through the report intelligence page when enabled", () => {
+    const shell = buildHostedShellModel({
+      title: "Metrics",
+      subtitle: "Repository metrics summary",
+      currentPath: "/reports/platform-landscape/repositories/catalog-api/metrics",
+      userEmail: "alan@example.com",
+      showIntelligence: true,
+      context: buildHostedRepositoryShellContext(
+        {
+          report: {
+            id: "report-2",
+            workspaceId: "workspace-1",
+            slug: "platform-landscape",
+            name: "Platform Landscape",
+            kind: "planetnik-report",
+            status: "connected",
+            analysisRoot: "/datasets/platform-landscape/data",
+            createdAt: "2026-04-02T17:20:19.145Z",
+            updatedAt: "2026-04-02T17:20:19.145Z",
+            lastSyncedAt: "2026-04-02T17:20:19.145Z",
+          },
+          context: {
+            mode: "landscape",
+            reportMode: "landscape",
+            title: "Platform Landscape",
+            rootRoute: "/landscape",
+            dataVersion: 1,
+            source: "landscape",
+            hasLandscape: true,
+            hasSingleRepositoryAnalysis: false,
+            primaryNavigation: ["overview", "repositories"],
+          },
+          artifact: null,
+        },
+        {
+          repoKey: "catalog-api",
+          name: "Catalog API",
+        },
+      ),
+    })
+
+    expect(shell.navSections[7]?.items).toEqual([
+      {
+        href: "/reports/platform-landscape/intelligence",
+        label: "Ask Płanetnik",
+      },
     ])
   })
 
