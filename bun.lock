@@ -41,6 +41,7 @@
         "@elysiajs/eden": "^1.4.1",
         "@phosphor-icons/react": "^2.1.10",
         "@planetnik/report-ui": "workspace:*",
+        "@tanstack/react-table": "^8.21.3",
         "astro": "^6.1.2",
         "better-auth": "^1.4.19",
         "fuse.js": "^7.1.0",
