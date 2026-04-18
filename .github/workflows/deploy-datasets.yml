@@ -175,8 +175,22 @@ jobs:
         if: steps.storage.outputs.storage_ready == 'true'
         shell: bash
         run: |
-          while IFS= read -r file; do
-            relative_path="${file#datasets/}"
+          # This step checks files in the Azure Files share, so paths must be
+          # relative to the `datasets` share root rather than runner-local paths
+          # like `${{ github.workspace }}/datasets/...`.
+          #
+          # upload-batch writes to:
+          #   share `datasets` / destination-path `${{ steps.landscape.outputs.dataset_name }}`
+          # so the remote report data root becomes:
+          #   <dataset_name>/_planetnik_landscape/reports/data
+          DATA_DIR="${{ steps.landscape.outputs.dataset_name }}/_planetnik_landscape/reports/data"
+          for relative_path in \
+            "$DATA_DIR/report_context.json" \
+            "$DATA_DIR/landscape_overview.json" \
+            "$DATA_DIR/landscapeAnalysisResults.json" \
+            "$DATA_DIR/landscape_dependency_health.json" \
+            "$DATA_DIR/landscape_dependency_alerts.json"
+          do
             az storage file exists \
               --account-name "${{ steps.storage.outputs.account_name }}" \
               --account-key "${{ steps.storage.outputs.account_key }}" \
@@ -184,7 +198,7 @@ jobs:
               --path "$relative_path" \
               --query exists \
               --output tsv | grep -qx true
-          done < <(find "datasets/${{ steps.landscape.outputs.dataset_name }}" -type f \( -name report_context.json -o -name landscape_overview.json -o -name analysisResults.json \))
+          done
 
       - name: Workflow summary
         if: steps.storage.outputs.storage_ready == 'true'

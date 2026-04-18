@@ -4443,6 +4443,63 @@ function getReportMode(context: Record<string, unknown> | null): string | null {
   return typeof reportMode === "string" && reportMode.trim().length > 0 ? reportMode : null
 }
 
+export function inferDatasetNameFromAnalysisRoot(analysisRoot: string): string | undefined {
+  const segments = resolve(analysisRoot)
+    .split(/[\\/]+/)
+    .filter((segment) => segment.length > 0)
+  const datasetsIndex = segments.lastIndexOf("datasets")
+
+  if (datasetsIndex < 0) {
+    return undefined
+  }
+
+  const datasetName = segments[datasetsIndex + 1]
+  return typeof datasetName === "string" && datasetName.length > 0 ? datasetName : undefined
+}
+
+export function resolvePersistedReportDataSource(input: {
+  readonly analysisRoot?: string | null
+  readonly datasetsRoot?: string
+  readonly fileExists?: (path: string) => boolean
+}): ResolvedReportDataSource | null {
+  const analysisRoot = input.analysisRoot?.trim()
+  if (!analysisRoot) {
+    return null
+  }
+
+  const fileExists = input.fileExists
+  const resolvedPath = resolve(analysisRoot)
+  const directDataDir = resolveRecognizedDataDir(getFlexibleDataDirCandidates(resolvedPath), fileExists)
+
+  if (directDataDir && isRecognizedDataDir(directDataDir, fileExists)) {
+    const context = readReportContext(directDataDir)
+    return {
+      dataDir: directDataDir,
+      title: getDatasetTitle(context, resolvedPath),
+      reportMode: getReportMode(context),
+    }
+  }
+
+  const datasetName = inferDatasetNameFromAnalysisRoot(resolvedPath)
+  if (!datasetName) {
+    return null
+  }
+
+  const fallbackDatasetsRoot = input.datasetsRoot ?? getConfiguredDatasetsRoot()
+  const fallbackDataDir = resolveNamedDatasetDataDir(datasetName, fallbackDatasetsRoot, fileExists)
+  if (!fallbackDataDir) {
+    return null
+  }
+
+  const context = readReportContext(fallbackDataDir)
+  return {
+    dataDir: fallbackDataDir,
+    datasetName,
+    title: getDatasetTitle(context, datasetName),
+    reportMode: getReportMode(context),
+  }
+}
+
 export function getConfiguredDatasetsRoot(): string {
   return appConfig.datasetsRoot ?? defaultDatasetsRoot
 }
@@ -4498,16 +4555,7 @@ export function resolveReportDataSource(input: {
     return null
   }
 
-  const resolvedPath = resolve(analysisRoot)
-  const dataDir = resolveRecognizedDataDir(getFlexibleDataDirCandidates(resolvedPath))
-  if (!dataDir || !isRecognizedDataDir(dataDir)) {
-    return null
-  }
-
-  const context = readReportContext(dataDir)
-  return {
-    dataDir,
-    title: getDatasetTitle(context, resolvedPath),
-    reportMode: getReportMode(context),
-  }
+  return resolvePersistedReportDataSource({
+    analysisRoot,
+  })
 }

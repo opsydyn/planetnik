@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { getDatasetCandidateDirs, isRecognizedDataDir, resolveNamedDatasetDataDir } from "../data-directories.js"
 
 process.env.NODE_ENV ??= "test"
@@ -11,6 +11,7 @@ process.env.DATABASE_URL ??= "postgresql://user:password@localhost:5432/planetni
 process.env.BETTER_AUTH_SECRET ??= "test-secret-with-at-least-32-characters"
 process.env.BETTER_AUTH_URL ??= "http://localhost:1337"
 const {
+  inferDatasetNameFromAnalysisRoot,
   readReportArtifactSummary,
   readReportContributorDetail,
   readReportContributorsSummary,
@@ -49,6 +50,7 @@ const {
   readReportCouplingSummary,
   readReportLandscapeRepositoryCouplingSummary,
   readReportUnitsView,
+  resolvePersistedReportDataSource,
   resolveReportDataSource,
   toISODateString,
 } = await import("../report-datasets.js")
@@ -186,6 +188,50 @@ describe("runtime report dataset helpers", () => {
       totalLinesOfCode: 91234,
       commits30d: 87,
       commits90d: 241,
+    })
+  })
+
+  test("falls back to the configured datasets root for persisted analysis roots from another machine", () => {
+    const datasetsRoot = makeTempRoot()
+    const dataDir = join(datasetsRoot, "alanpcurrie", "_planetnik_landscape", "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeJson(join(dataDir, "report_context.json"), {
+      mode: "landscape",
+      reportMode: "landscape",
+      title: "alanpcurrie Landscape",
+      rootRoute: "/landscape",
+      dataVersion: 1,
+      source: "landscape",
+      hasLandscape: true,
+      hasSingleRepositoryAnalysis: false,
+      primaryNavigation: ["overview", "repositories"],
+    })
+    writeJson(join(dataDir, "landscape_overview.json"), {
+      title: "alanpcurrie Landscape Overview",
+      landscapeName: "alanpcurrie Landscape",
+      repositoryCount: 3,
+      contributorCount: 5,
+      totals: {
+        totalLinesOfCode: 12345,
+        commits30d: 12,
+        commits90d: 34,
+      },
+    })
+
+    const staleAnalysisRoot =
+      "/Users/another-machine/Projects/planetnik/datasets/alanpcurrie/_planetnik_landscape/reports/data"
+
+    expect(inferDatasetNameFromAnalysisRoot(staleAnalysisRoot)).toBe("alanpcurrie")
+    expect(
+      resolvePersistedReportDataSource({
+        analysisRoot: staleAnalysisRoot,
+        datasetsRoot,
+      }),
+    ).toMatchObject({
+      dataDir,
+      datasetName: "alanpcurrie",
+      title: "alanpcurrie Landscape",
+      reportMode: "landscape",
     })
   })
 
