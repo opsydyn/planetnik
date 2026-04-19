@@ -1,5 +1,6 @@
 ---
 import { getEntry } from "astro:content";
+import { Font } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
 import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
 import PublicVideoToggle from "../components/public/PublicVideoToggle";
@@ -16,6 +17,8 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Planetnik Platform — Coming Soon</title>
+    <Font cssVariable="--font-body" />
+    <Font cssVariable="--font-heading" />
     <ClientRouter />
     <script is:inline data-astro-rerun>
       (() => {
@@ -37,7 +40,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  		font-family: var(--font-body, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace);
         min-height: 100vh;
         padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
         padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
@@ -163,7 +166,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
 
       .hero-panel h1 {
         margin: 0.6rem 0 0.8rem;
-        font-family: Georgia, "Times New Roman", serif;
+		font-family: var(--font-heading, "Space Grotesk", ui-sans-serif, system-ui, sans-serif);
         font-size: clamp(1.9rem, 3.3vw, 3.9rem);
         line-height: 0.94;
         max-width: 10ch;
@@ -292,7 +295,7 @@ const backHref = reportContext?.data.reportMode === "landscape" ? route("/landsc
         font-size: 1.35rem;
         font-weight: 700;
         color: #f8fafc;
-        font-family: Georgia, "Times New Roman", serif;
+		font-family: var(--font-heading, "Space Grotesk", ui-sans-serif, system-ui, sans-serif);
         line-height: 1.2;
       }
 

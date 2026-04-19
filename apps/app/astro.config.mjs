@@ -1,8 +1,7 @@
 // @ts-check
 import node from "@astrojs/node";
 import react from "@astrojs/react";
-import { defineConfig, envField } from "astro/config";
-import { memoryCache } from 'astro/config';
+import { defineConfig, envField, fontProviders, memoryCache } from "astro/config";
 
 export default defineConfig({
 	output: "server",
@@ -25,12 +24,32 @@ export default defineConfig({
 			}),
 		},
 	},
+	fonts: [
+		{
+			provider: fontProviders.google(),
+			name: "Atkinson Hyperlegible Mono",
+			cssVariable: "--font-body",
+			weights: [400, 500, 600, 700],
+			styles: ["normal"],
+			subsets: ["latin"],
+			fallbacks: ["monospace"],
+		},
+		{
+			provider: fontProviders.google(),
+			name: "Space Grotesk",
+			cssVariable: "--font-heading",
+			weights: [500, 600, 700],
+			styles: ["normal"],
+			subsets: ["latin"],
+			fallbacks: ["sans-serif"],
+		},
+	],
 	experimental: {
 		rustCompiler: true,
 		queuedRendering: {
 			enabled: true,
 		},
-		    cache: { provider: memoryCache() },
+		cache: { provider: memoryCache() },
 	},
 	integrations: [react()],
 });

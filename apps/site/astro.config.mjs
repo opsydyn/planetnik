@@ -40,12 +40,21 @@ export default defineConfig({
 	fonts: [
 		{
 			provider: fontProviders.google(),
-			name: "Roboto",
-			cssVariable: "--font-ui",
+			name: "Atkinson Hyperlegible Mono",
+			cssVariable: "--font-body",
 			weights: [400, 500, 600, 700],
 			styles: ["normal"],
 			subsets: ["latin"],
-			fallbacks: ["system-ui", "sans-serif"],
+			fallbacks: ["monospace"],
+		},
+		{
+			provider: fontProviders.google(),
+			name: "Space Grotesk",
+			cssVariable: "--font-heading",
+			weights: [500, 600, 700],
+			styles: ["normal"],
+			subsets: ["latin"],
+			fallbacks: ["sans-serif"],
 		},
 	],
 	security: {

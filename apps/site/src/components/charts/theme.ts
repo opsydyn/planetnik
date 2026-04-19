@@ -24,8 +24,8 @@ export const chartTheme = {
     ],
   },
   font: {
-    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    mono: '"SF Mono", "Fira Code", monospace',
+    family: 'var(--font-ui, var(--font-body, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace))',
+    mono: 'var(--font-mono, var(--font-body, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace))',
     labelSize: 11,
     tickSize: 10,
     valueSize: 12,

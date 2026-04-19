@@ -3,7 +3,7 @@ import "@planetnik/report-ui/theme/dashboard-shell.css";
 import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
 import type { SystemIconName } from "@planetnik/report-ui/icons/SystemIcon.react";
 import ThemeSwitcher from "@planetnik/report-ui/theme-switcher/ThemeSwitcher";
-import { Image } from "astro:assets";
+import { Font, Image } from "astro:assets";
 import { getEntry } from "astro:content";
 import { ClientRouter } from "astro:transitions";
 import Breadcrumb from "../components/Breadcrumb.astro";
@@ -285,6 +285,8 @@ function isActiveLink(href: string): boolean {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>{title} — {projectName}</title>
+		<Font cssVariable="--font-body" />
+		<Font cssVariable="--font-heading" />
     <script is:inline data-astro-rerun>
       (() => {
         const THEME_ATTR = "data-theme"

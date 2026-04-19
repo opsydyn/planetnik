@@ -44,14 +44,12 @@ select {
 		radial-gradient(circle at 82% 16%, rgba(249, 115, 22, 0.16), transparent 24%),
 		radial-gradient(circle at 72% 72%, rgba(132, 204, 22, 0.12), transparent 22%),
 		radial-gradient(circle at 18% 78%, rgba(59, 130, 246, 0.12), transparent 26%),
-		linear-gradient(
-			135deg,
+		linear-gradient(135deg,
 			rgba(54, 33, 11, 0.42) 0%,
 			rgba(116, 63, 17, 0.28) 22%,
 			rgba(74, 56, 24, 0.22) 46%,
 			rgba(24, 36, 62, 0.3) 70%,
-			rgba(2, 8, 23, 0.58) 100%
-		);
+			rgba(2, 8, 23, 0.58) 100%);
 }
 
 .shell-public-inner {
@@ -140,7 +138,7 @@ select {
 
 .hero-panel h1 {
 	margin: 0.6rem 0 0.8rem;
-	font-family: Georgia, "Times New Roman", serif;
+	font-family: var(--font-heading, "Space Grotesk", ui-sans-serif, system-ui, sans-serif);
 	font-size: clamp(2.6rem, 3.6vw, 4.4rem);
 	line-height: 0.94;
 	max-width: 8ch;
@@ -193,7 +191,7 @@ select {
 
 .app-page-title {
 	margin: 0;
-	font-family: Georgia, "Times New Roman", serif;
+	font-family: var(--font-heading, "Space Grotesk", ui-sans-serif, system-ui, sans-serif);
 	font-size: clamp(2rem, 5vw, 3.4rem);
 	line-height: 1.02;
 }
