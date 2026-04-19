@@ -9,6 +9,10 @@ import { buildTemporalForceGraph } from "../topology/forceGraph.js";
 import HorizontalBarChart from "../charts/HorizontalBarChart.js";
 import ForceGraph from "../topology/graphs/ForceGraph.js";
 import ReportDataGrid from "../tables/ReportDataGrid.js";
+import {
+	normalizeTemporalCommit,
+	type TemporalCommitValue,
+} from "./temporalCommit.js";
 import "./TemporalDependenciesExplorer.css";
 
 type TemporalDependencyRow = {
@@ -20,7 +24,7 @@ type TemporalDependencyRow = {
 	sameCommits: number;
 	commitsFile1: number;
 	commitsFile2: number;
-	latestCommit: string;
+	latestCommit: TemporalCommitValue;
 };
 
 type TemporalDependencySection = {
@@ -54,7 +58,7 @@ function matchesQuery(row: TemporalDependencyRow, query: string): boolean {
 		row.periodLabel,
 		row.file1,
 		row.file2,
-		row.latestCommit,
+		normalizeTemporalCommit(row.latestCommit),
 		String(row.sameCommits),
 		String(row.commitsFile1),
 		String(row.commitsFile2),
@@ -71,8 +75,11 @@ function sortRows(rows: TemporalDependencyRow[]): TemporalDependencyRow[] {
 			return right.sameCommits - left.sameCommits;
 		}
 
-		if (left.latestCommit !== right.latestCommit) {
-			return right.latestCommit.localeCompare(left.latestCommit);
+		const leftLatestCommit = normalizeTemporalCommit(left.latestCommit);
+		const rightLatestCommit = normalizeTemporalCommit(right.latestCommit);
+
+		if (leftLatestCommit !== rightLatestCommit) {
+			return rightLatestCommit.localeCompare(leftLatestCommit);
 		}
 
 		const file1Comparison = left.file1.localeCompare(right.file1);
@@ -129,7 +136,10 @@ export default function TemporalDependenciesExplorer({
 			: 0;
 	const latestCommit =
 		filteredRows.reduce(
-			(latest, row) => (row.latestCommit > latest ? row.latestCommit : latest),
+			(latest, row) => {
+				const normalizedLatestCommit = normalizeTemporalCommit(row.latestCommit);
+				return normalizedLatestCommit > latest ? normalizedLatestCommit : latest;
+			},
 			"",
 		) || "—";
 
@@ -360,7 +370,7 @@ export default function TemporalDependenciesExplorer({
 						overlap: getOverlapPercent(row),
 						commitsFile1: row.commitsFile1,
 						commitsFile2: row.commitsFile2,
-						latestCommit: row.latestCommit,
+						latestCommit: normalizeTemporalCommit(row.latestCommit),
 					}))}
 				/>
 			</section>
