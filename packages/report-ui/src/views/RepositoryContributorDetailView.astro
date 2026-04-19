@@ -4,6 +4,7 @@ import DonutChart from "../charts/DonutChart.js";
 import HorizontalBarChart from "../charts/HorizontalBarChart.js";
 import LineChart from "../charts/LineChart.js";
 import StaticReportTable from "../tables/StaticReportTable.astro";
+import { formatReportDate, normalizeReportDate } from "../utils/reportDates.js";
 
 type DailyActivityEntry = { date: string; commits: number };
 
@@ -101,6 +102,10 @@ const collaboratorBarData = collaborators
 	.map((entry) => ({ label: entry.displayName, value: entry.sharedFiles }));
 
 const dominantImpactLabel = impact?.dominantDimension.replace(/_/g, " ") ?? null;
+const formattedFirstCommitDate = formatReportDate(firstCommitDate, "Unknown")
+const formattedLatestCommitDate = formatReportDate(latestCommitDate, "Unknown")
+const heatmapEndDate = normalizeReportDate(latestCommitDate) || normalizeReportDate(firstCommitDate) || undefined
+const heatmapEndDateLabel = heatmapEndDate ?? "the latest available snapshot"
 ---
 
 <div class="contributor-detail">
@@ -141,11 +146,11 @@ const dominantImpactLabel = impact?.dominantDimension.replace(/_/g, " ") ?? null
 	<section class="detail-grid">
 		<article class="detail-card">
 			<div class="detail-label">First Commit</div>
-			<div class="detail-value">{firstCommitDate || "Unknown"}</div>
+			<div class="detail-value">{formattedFirstCommitDate}</div>
 		</article>
 		<article class="detail-card">
 			<div class="detail-label">Latest Commit</div>
-			<div class="detail-value">{latestCommitDate || "Unknown"}</div>
+			<div class="detail-value">{formattedLatestCommitDate}</div>
 		</article>
 		<article class="detail-card">
 			<div class="detail-label">30 / 90 / 180 / 365 Days</div>
@@ -201,11 +206,11 @@ const dominantImpactLabel = impact?.dominantDimension.replace(/_/g, " ") ?? null
 	{dailyActivity && dailyActivity.length > 0 && (
 		<section class="section">
 			<h3>Commit Heatmap</h3>
-			<p class="section-intro">Daily commit activity across the last 53 weeks ending on {latestCommitDate || firstCommitDate || "the latest available snapshot"}.</p>
+			<p class="section-intro">Daily commit activity across the last 53 weeks ending on {heatmapEndDateLabel}.</p>
 			<CommitHeatmap
 				client:load
 				data={dailyActivity}
-				endDate={latestCommitDate || firstCommitDate || undefined}
+				endDate={heatmapEndDate}
 				helpText="Shows when this contributor was active day by day. Look for long inactive periods, bursts, or sustained concentration that might affect ownership continuity."
 			/>
 		</section>

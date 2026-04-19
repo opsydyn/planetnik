@@ -24,6 +24,7 @@
 		"./tables/ReportDataGrid": "./src/tables/ReportDataGrid.tsx",
 		"./tables/ReportDataGrid.types": "./src/tables/ReportDataGrid.types.ts",
 		"./tables/StaticReportTable": "./src/tables/StaticReportTable.astro",
+		"./utils/reportDates": "./src/utils/reportDates.ts",
 		"./views/AboutView": "./src/views/AboutView.astro",
 		"./views/GuideView": "./src/views/GuideView.astro",
 		"./views/TechnologyView": "./src/views/TechnologyView.astro",

@@ -25,6 +25,7 @@ import type {
 	GridRow,
 	ReportDataGridProps,
 } from "./ReportDataGrid.types";
+import { formatReportDate, normalizeReportDate } from "../utils/reportDates.js";
 
 function normalizeSearchValue(value: unknown): string {
 	return value == null ? "" : String(value).toLowerCase().trim();
@@ -36,6 +37,18 @@ function formatNumber(value: GridCellValue): string {
 		: value == null
 			? "—"
 			: String(value);
+}
+
+function formatSearchTextValue(value: unknown): string {
+	return value == null ? "" : String(value);
+}
+
+function normalizeDateCellValue(value: GridCellValue): string {
+	return normalizeReportDate(typeof value === "boolean" ? null : value);
+}
+
+function formatDateCellValue(value: GridCellValue): string {
+	return formatReportDate(typeof value === "boolean" ? null : value);
 }
 
 function getStatusTone(value: GridCellValue): string {
@@ -78,19 +91,22 @@ function getStatusTone(value: GridCellValue): string {
 }
 
 function getColumnSearchText(row: GridRow, column: GridColumnConfig): string {
-	const values = [row[column.field]];
+	const values = [
+		(column.type ?? "text") === "date"
+			? normalizeDateCellValue(row[column.field])
+			: formatSearchTextValue(row[column.field]),
+	];
 
 	if (column.secondaryField) {
-		values.push(row[column.secondaryField]);
+		values.push(formatSearchTextValue(row[column.secondaryField]));
 	}
 
 	if (column.tooltipField) {
-		values.push(row[column.tooltipField]);
+		values.push(formatSearchTextValue(row[column.tooltipField]));
 	}
 
 	return values
-		.filter((value) => value != null && value !== "")
-		.map((value) => String(value))
+		.filter((value) => value !== "")
 		.join(" ")
 		.toLowerCase();
 }
@@ -112,6 +128,20 @@ function compareValues(left: GridCellValue, right: GridCellValue): number {
 	}
 
 	return String(left).localeCompare(String(right), undefined, {
+		numeric: true,
+		sensitivity: "base",
+	});
+}
+
+function compareDateValues(left: GridCellValue, right: GridCellValue): number {
+	const normalizedLeft = normalizeDateCellValue(left);
+	const normalizedRight = normalizeDateCellValue(right);
+
+	if (!normalizedLeft && !normalizedRight) return 0;
+	if (!normalizedLeft) return 1;
+	if (!normalizedRight) return -1;
+
+	return normalizedLeft.localeCompare(normalizedRight, undefined, {
 		numeric: true,
 		sensitivity: "base",
 	});
@@ -182,6 +212,8 @@ function renderCellValue(column: GridColumnConfig, row: GridRow) {
 		return value == null ? "—" : String(value);
 	}
 
+	if (type === "date") return formatDateCellValue(value);
+
 	return value == null ? "—" : String(value);
 }
 
@@ -220,7 +252,9 @@ function createColumnDef(column: GridColumnConfig): ColumnDef<GridRow> {
 		enableSorting: true,
 		enableColumnFilter: true,
 		sortingFn: (left, right) =>
-			compareValues(left.original[column.field], right.original[column.field]),
+			(column.type ?? "text") === "date"
+				? compareDateValues(left.original[column.field], right.original[column.field])
+				: compareValues(left.original[column.field], right.original[column.field]),
 		filterFn: (row, _columnId, filterValue) => {
 			const normalizedFilter = normalizeSearchValue(filterValue);
 			if (!normalizedFilter) return true;

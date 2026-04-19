@@ -1,3 +1,4 @@
+import { formatReportDate } from "@planetnik/report-ui/utils/reportDates"
 import { getHostedReportRepositoryContributorHref } from "./hosted-routes.js"
 import type { RuntimeReportLandscapeRepository } from "./runtime-client.js"
 
@@ -76,7 +77,7 @@ export function buildReportLandscapeRepositoryViewModel(input: {
       },
       {
         label: "Latest Commit",
-        value: input.repository.latestCommitDate,
+        value: formatReportDate(input.repository.latestCommitDate),
         detail: null,
       },
       ...(input.repository.duplicationPercentage === null
@@ -103,8 +104,8 @@ export function buildReportLandscapeRepositoryViewModel(input: {
       structuralImpact: contributor.structuralImpact,
       snackRisk: contributor.snackRisk,
       signal: contributor.signal,
-      firstCommitDate: contributor.firstCommitDate,
-      latestCommitDate: contributor.latestCommitDate,
+      firstCommitDate: formatReportDate(contributor.firstCommitDate),
+      latestCommitDate: formatReportDate(contributor.latestCommitDate),
     })),
   }
 }

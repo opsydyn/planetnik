@@ -4,6 +4,7 @@ import type { DonutItem } from "../charts/DonutChart";
 import HorizontalBarChart from "../charts/HorizontalBarChart";
 import type { HorizontalBarItem } from "../charts/HorizontalBarChart";
 import StaticReportTable from "../tables/StaticReportTable.astro";
+import { formatReportDate } from "../utils/reportDates.js";
 
 interface MetricCard {
 	readonly label: string;
@@ -116,7 +117,7 @@ const {
 					</td>
 					<td class="report-static-table__num">{repository.mainLinesOfCode}</td>
 					<td class="report-static-table__num">{repository.contributors}</td>
-					<td>{repository.latestCommitDate || "—"}</td>
+					<td>{formatReportDate(repository.latestCommitDate)}</td>
 				</tr>
 			))}
 		</tbody>
