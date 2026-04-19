@@ -452,7 +452,7 @@ export default function ForceGraphClient({
 					display: "grid",
 					placeItems: "center",
 					padding: "1rem",
-					borderRadius: "14px",
+					borderRadius: "var(--radius-card)",
 					border: `1px dashed ${theme.border}`,
 					background: theme.card,
 					color: theme.textMuted,
@@ -482,7 +482,7 @@ export default function ForceGraphClient({
 					width: "100%",
 					minWidth: 0,
 					height: `${graphHeight}px`,
-					borderRadius: "16px",
+					borderRadius: "var(--radius-card)",
 					overflow: "hidden",
 					border: `1px solid ${theme.border}`,
 					background:
@@ -570,7 +570,7 @@ const detailStyle = (theme: ForceGraphTheme): CSSProperties => ({
 const hintStyle = (theme: ForceGraphTheme): CSSProperties => ({
 	flexShrink: 0,
 	padding: "0.36rem 0.7rem",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-badge)",
 	background: theme.surfaceMuted,
 	color: theme.accentStrong,
 	fontSize: "0.78rem",

@@ -436,7 +436,7 @@ function SecurityBallInner({
 							border: `1px solid ${alertsEnabled ? chartTheme.colors.red : chartTheme.colors.border}`,
 							background: alertsEnabled ? "var(--color-danger-soft)" : chartTheme.colors.card,
 							color: alertsEnabled ? chartTheme.colors.red : chartTheme.colors.textMuted,
-							borderRadius: "999px",
+							borderRadius: "var(--radius-control)",
 							padding: "0.38rem 0.8rem",
 							fontSize: "0.75rem",
 							fontWeight: 700,
@@ -470,7 +470,7 @@ function SecurityBallInner({
 								key={item.label}
 								style={{
 									border: `1px solid ${chartTheme.colors.border}`,
-									borderRadius: "12px",
+									borderRadius: "var(--radius-card)",
 									padding: "0.6rem 0.75rem",
 									background: chartTheme.colors.card,
 								}}
@@ -510,7 +510,7 @@ function SecurityBallInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "8px 12px",
-						borderRadius: "8px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

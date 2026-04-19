@@ -98,7 +98,7 @@ function DonutInner({
 						data={pieData}
 						outerRadius={radius}
 						innerRadius={innerRadius}
-						cornerRadius={3}
+						cornerRadius={chartTheme.bar.radius}
 						padAngle={0.02}
 					>
 						{(pie) =>
@@ -178,7 +178,7 @@ function DonutInner({
 								style={{
 									width: 10,
 									height: 10,
-									borderRadius: 2,
+									borderRadius: "var(--radius-inline)",
 									background: colorScale[index % colorScale.length],
 									flexShrink: 0,
 								}}
@@ -227,7 +227,7 @@ function DonutInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

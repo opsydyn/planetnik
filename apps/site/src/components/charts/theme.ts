@@ -1,38 +1,38 @@
 export const chartTheme = {
-	colors: {
-		accent: "var(--chart-accent)",
-		accentLight: "var(--chart-accent-light)",
-		textMuted: "var(--chart-text-muted)",
-		border: "var(--chart-border)",
-		card: "var(--chart-card)",
-		bg: "var(--chart-bg)",
-		barBg: "var(--chart-bar-bg)",
-		text: "var(--chart-text)",
-		// Risk palette
-		green: "var(--chart-green)",
-		yellow: "var(--chart-yellow)",
-		orange: "var(--chart-orange)",
-		red: "var(--chart-red)",
-		// Extended palette for multi-series
-		palette: [
-			"var(--chart-palette-1)",
-			"var(--chart-palette-2)",
-			"var(--chart-palette-3)",
-			"var(--chart-palette-4)",
-			"var(--chart-palette-5)",
-			"var(--chart-palette-6)",
-		],
-	},
-	font: {
-		family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-		mono: '"SF Mono", "Fira Code", monospace',
-		labelSize: 11,
-		tickSize: 10,
-		valueSize: 12,
-	},
-	bar: {
-		radius: 3,
-		rowHeight: 32,
-		gap: 4,
-	},
-};
+  colors: {
+    accent: "var(--chart-accent)",
+    accentLight: "var(--chart-accent-light)",
+    textMuted: "var(--chart-text-muted)",
+    border: "var(--chart-border)",
+    card: "var(--chart-card)",
+    bg: "var(--chart-bg)",
+    barBg: "var(--chart-bar-bg)",
+    text: "var(--chart-text)",
+    // Risk palette
+    green: "var(--chart-green)",
+    yellow: "var(--chart-yellow)",
+    orange: "var(--chart-orange)",
+    red: "var(--chart-red)",
+    // Extended palette for multi-series
+    palette: [
+      "var(--chart-palette-1)",
+      "var(--chart-palette-2)",
+      "var(--chart-palette-3)",
+      "var(--chart-palette-4)",
+      "var(--chart-palette-5)",
+      "var(--chart-palette-6)",
+    ],
+  },
+  font: {
+    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    mono: '"SF Mono", "Fira Code", monospace',
+    labelSize: 11,
+    tickSize: 10,
+    valueSize: 12,
+  },
+  bar: {
+    radius: 0,
+    rowHeight: 32,
+    gap: 4,
+  },
+}

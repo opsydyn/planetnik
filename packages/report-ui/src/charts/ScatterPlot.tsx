@@ -13,7 +13,7 @@ interface ScatterPoint {
 }
 
 interface ScatterPlotProps {
-	data: ScatterPoint[];
+	data: ReadonlyArray<ScatterPoint>;
 	xLabel: string;
 	yLabel: string;
 	thresholds?: { x?: number; y?: number };
@@ -212,7 +212,7 @@ function ScatterInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

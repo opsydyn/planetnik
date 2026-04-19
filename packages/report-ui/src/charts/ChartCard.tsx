@@ -50,7 +50,7 @@ export default function ChartCard({
 			style={{
 				background: chartTheme.colors.card,
 				border: `1px solid ${chartTheme.colors.border}`,
-				borderRadius: "8px",
+				borderRadius: "var(--radius-card)",
 				padding: "1rem",
 			}}
 		>
@@ -113,7 +113,7 @@ export default function ChartCard({
 						<div
 							style={{
 								minHeight: `${Math.max(height - 28, 80)}px`,
-								borderRadius: "14px",
+								borderRadius: "var(--radius-overlay)",
 								border: `1px solid ${chartTheme.colors.border}`,
 								background:
 									"linear-gradient(110deg, var(--color-surface-subtle) 10%, var(--color-accent-soft) 28%, var(--color-surface-subtle) 44%, var(--color-accent-soft) 60%, var(--color-surface-subtle) 76%)",
@@ -136,7 +136,7 @@ export default function ChartCard({
 										style={{
 											width: "2.75rem",
 											height: "0.75rem",
-											borderRadius: "999px",
+											borderRadius: "var(--radius-badge)",
 											background:
 												index === 0
 													? "var(--color-accent-soft)"
@@ -149,7 +149,7 @@ export default function ChartCard({
 								style={{
 									width: "4.25rem",
 									height: "0.85rem",
-									borderRadius: "999px",
+									borderRadius: "var(--radius-badge)",
 									background: "var(--color-surface-muted)",
 								}}
 							/>

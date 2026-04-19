@@ -19,7 +19,7 @@ export interface LineSeries {
 }
 
 interface LineChartProps {
-	series: LineSeries[];
+	series: ReadonlyArray<LineSeries>;
 	xLabel?: string;
 	yLabel?: string;
 	height?: number;
@@ -223,7 +223,7 @@ function LineChartInner({
 								style={{
 									width: 10,
 									height: 10,
-									borderRadius: 2,
+									borderRadius: "var(--radius-inline)",
 									background: s.color ?? PALETTE[si % PALETTE.length],
 								}}
 							/>
@@ -241,7 +241,7 @@ function LineChartInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

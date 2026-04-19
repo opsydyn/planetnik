@@ -228,7 +228,7 @@ function HorizontalBarInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

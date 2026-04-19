@@ -340,7 +340,7 @@ function buildGraph(
 										style={{
 											background: pill.background,
 											color: pill.color,
-											borderRadius: "999px",
+											borderRadius: "var(--radius-badge)",
 											fontSize: "10px",
 											fontWeight: 700,
 											lineHeight: 1,
@@ -366,7 +366,7 @@ function buildGraph(
 					: contributorImpact?.is_snacking
 						? "2px solid var(--chart-orange)"
 						: "1px solid transparent",
-				borderRadius: "8px",
+				borderRadius: "var(--radius-card)",
 				padding: "8px 10px",
 				width: NODE_WIDTH,
 				minHeight: NODE_HEIGHT,
@@ -436,7 +436,7 @@ function SkeletonBlock({
 				width,
 				height,
 				background: "var(--color-surface-muted)",
-				borderRadius: "6px",
+				borderRadius: "var(--radius-overlay)",
 				animation: "skeleton-pulse 1.8s ease-in-out infinite",
 				...style,
 			}}
@@ -468,7 +468,7 @@ function GraphSkeleton() {
 				width: "100%",
 				height: "600px",
 				background: "var(--color-card)",
-				borderRadius: "8px",
+				borderRadius: "var(--radius-card)",
 				border: "1px solid var(--color-border)",
 				position: "relative",
 				overflow: "hidden",
@@ -512,7 +512,7 @@ function GraphSkeleton() {
 						width: NODE_WIDTH,
 						height: NODE_HEIGHT,
 						background: "var(--color-surface-muted)",
-						borderRadius: "8px",
+						borderRadius: "var(--radius-card)",
 						animation: "skeleton-pulse 1.8s ease-in-out infinite",
 						animationDelay: `${i * 0.12}s`,
 					}}
@@ -523,7 +523,7 @@ function GraphSkeleton() {
 }
 
 function TableSkeleton() {
-	const rows = 5;
+	const rowIds = ["alpha", "beta", "gamma", "delta", "epsilon"] as const;
 	return (
 		<table style={tableStyle}>
 			<thead>
@@ -534,8 +534,8 @@ function TableSkeleton() {
 				</tr>
 			</thead>
 			<tbody>
-				{Array.from({ length: rows }).map((_, i) => (
-					<tr key={`skeleton-row-${i}`}>
+				{rowIds.map((rowId, i) => (
+					<tr key={`skeleton-row-${rowId}`}>
 						<td style={tdBase}>
 							<SkeletonBlock
 								width={`${60 + (i % 3) * 20}%`}
@@ -1012,7 +1012,7 @@ function TopologyGraphContent({
 								width: "100%",
 								height: "600px",
 								background: "var(--color-card)",
-								borderRadius: "8px",
+										borderRadius: "var(--radius-card)",
 								border: "1px solid var(--color-border)",
 							}}
 						>
@@ -1406,7 +1406,7 @@ function TopologyGraphContent({
 const cardStyle: React.CSSProperties = {
 	background: "var(--color-card)",
 	border: "1px solid var(--color-border)",
-	borderRadius: "8px",
+	borderRadius: "var(--radius-card)",
 	padding: "1.25rem",
 };
 
@@ -1429,7 +1429,7 @@ const selectStyle: React.CSSProperties = {
 	padding: "0.4rem 0.75rem",
 	fontSize: "0.85rem",
 	border: "1px solid var(--color-border)",
-	borderRadius: "6px",
+	borderRadius: "var(--radius-input)",
 	background: "var(--color-card)",
 	color: "var(--color-text)",
 	cursor: "pointer",
@@ -1441,7 +1441,7 @@ const tableStyle: React.CSSProperties = {
 	borderCollapse: "collapse",
 	background: "var(--color-card)",
 	border: "1px solid var(--color-border)",
-	borderRadius: "8px",
+	borderRadius: "var(--radius-table)",
 	overflow: "hidden",
 };
 
@@ -1492,7 +1492,7 @@ const detailLinkStyle: React.CSSProperties = {
 	justifyContent: "center",
 	whiteSpace: "nowrap",
 	padding: "0.5rem 0.8rem",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-control)",
 	border: "1px solid var(--color-border)",
 	color: "var(--color-text)",
 	background: "var(--color-surface-subtle)",
@@ -1511,7 +1511,7 @@ const glueBadgeStyle: React.CSSProperties = {
 	background: "color-mix(in srgb, var(--chart-green) 22%, transparent)",
 	color: "var(--chart-green)",
 	border: "1px solid color-mix(in srgb, var(--chart-green) 42%, transparent)",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-badge)",
 	padding: "0.28rem 0.55rem",
 	fontSize: "0.72rem",
 	fontWeight: 700,
@@ -1523,7 +1523,7 @@ const snackingBadgeStyle: React.CSSProperties = {
 	background: "color-mix(in srgb, var(--chart-orange) 18%, transparent)",
 	color: "var(--chart-orange)",
 	border: "1px solid color-mix(in srgb, var(--chart-orange) 38%, transparent)",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-badge)",
 	padding: "0.28rem 0.55rem",
 	fontSize: "0.72rem",
 	fontWeight: 700,
@@ -1535,7 +1535,7 @@ const neutralBadgeStyle: React.CSSProperties = {
 	background: "var(--color-surface-subtle)",
 	color: "var(--color-text-muted)",
 	border: "1px solid var(--color-border)",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-badge)",
 	padding: "0.28rem 0.55rem",
 	fontSize: "0.72rem",
 	fontWeight: 700,
@@ -1546,7 +1546,7 @@ const neutralBadgeStyle: React.CSSProperties = {
 const miniMetricCardStyle: React.CSSProperties = {
 	background: "var(--color-surface-subtle)",
 	border: "1px solid var(--color-border)",
-	borderRadius: "8px",
+	borderRadius: "var(--radius-card)",
 	padding: "0.85rem 0.9rem",
 };
 
@@ -1572,7 +1572,7 @@ const componentRowStyle: React.CSSProperties = {
 	gap: "0.75rem",
 	background: "var(--color-surface-subtle)",
 	border: "1px solid var(--color-border)",
-	borderRadius: "8px",
+	borderRadius: "var(--radius-card)",
 	padding: "0.75rem 0.9rem",
 };
 

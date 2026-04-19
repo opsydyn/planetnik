@@ -17,7 +17,7 @@ interface TreemapItem {
 }
 
 interface TreemapChartProps {
-	data: TreemapItem[];
+	data: ReadonlyArray<TreemapItem>;
 	valueLabel?: string;
 	helpText?: string;
 }
@@ -143,7 +143,7 @@ function TreemapInner({
 							<rect
 								width={w}
 								height={h}
-								rx={3}
+								rx={0}
 								fill={color}
 								fillOpacity={0.85}
 								stroke={chartTheme.colors.card}
@@ -204,7 +204,7 @@ function TreemapInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

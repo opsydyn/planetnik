@@ -162,7 +162,7 @@ function CommitHeatmapInner({
 												y={cell.y}
 												width={cell.width}
 												height={cell.height}
-												rx={Math.min(4, cell.width / 3)}
+												rx={0}
 												fill={getCellColor(commitCount, heatmap.maxCommits)}
 												stroke={
 													commitCount > 0
@@ -280,7 +280,7 @@ function CommitHeatmapInner({
 							style={{
 								width: 12,
 								height: 12,
-								borderRadius: 3,
+								borderRadius: "var(--radius-inline)",
 								background: color,
 								border: `1px solid ${chartTheme.colors.border}`,
 								display: "inline-block",
@@ -299,7 +299,7 @@ function CommitHeatmapInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

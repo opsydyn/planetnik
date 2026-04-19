@@ -138,7 +138,7 @@ function MatrixInner({
 										y={1}
 										width={CELL_SIZE - 2}
 										height={CELL_SIZE - 2}
-										rx={3}
+										rx={0}
 										fill={
 											count > 0
 												? (colorScale(count) as string)
@@ -173,7 +173,7 @@ function MatrixInner({
 						background: chartTheme.colors.text,
 						color: "#fff",
 						padding: "6px 10px",
-						borderRadius: "4px",
+						borderRadius: "var(--radius-overlay)",
 						fontSize: "12px",
 						fontFamily: chartTheme.font.family,
 						pointerEvents: "none",

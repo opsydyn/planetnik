@@ -156,7 +156,7 @@ function ForceGraphPlaceholder({ height }: { height: number }) {
 const placeholderFrameStyle: CSSProperties = {
 	position: "relative",
 	overflow: "hidden",
-	borderRadius: "16px",
+	borderRadius: "var(--radius-card)",
 	border: "1px solid var(--color-border)",
 	background:
 		"radial-gradient(circle at top left, rgba(99, 102, 241, 0.1), transparent 28%), radial-gradient(circle at top right, rgba(168, 85, 247, 0.1), transparent 24%), var(--color-card)",
@@ -174,7 +174,7 @@ const placeholderGlowStyle: CSSProperties = {
 const placeholderNodeStyle: CSSProperties = {
 	position: "absolute",
 	height: "1.6rem",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-badge)",
 	background: "var(--color-accent-soft)",
 	animation: "force-graph-skeleton-pulse 1.8s ease-in-out infinite",
 };
@@ -187,7 +187,7 @@ const placeholderFooterStyle: CSSProperties = {
 
 const placeholderLineStyle: CSSProperties = {
 	height: "0.85rem",
-	borderRadius: "999px",
+	borderRadius: "var(--radius-badge)",
 	background: "var(--color-surface-muted)",
 };
 
