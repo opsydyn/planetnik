@@ -1,101 +1,338 @@
-import { CSharpAnalyzer } from "./CSharpAnalyzer.js";
-import { CStyleAnalyzer } from "./CStyleAnalyzer.js";
-import { DefaultLanguageAnalyzer } from "./DefaultLanguageAnalyzer.js";
-import { GoLangAnalyzer } from "./GoLangAnalyzer.js";
-import { JavaAnalyzer } from "./JavaAnalyzer.js";
-import { JavaScriptAnalyzer } from "./JavaScriptAnalyzer.js";
-import { KotlinAnalyzer } from "./KotlinAnalyzer.js";
-import type { LanguageAnalyzer } from "./LanguageAnalyzer.js";
-import { PythonAnalyzer } from "./PythonAnalyzer.js";
-import { RubyAnalyzer } from "./RubyAnalyzer.js";
-import { RustAnalyzer } from "./RustAnalyzer.js";
-import { TypeScriptAnalyzer } from "./TypeScriptAnalyzer.js";
+import { CSharpAnalyzer } from "./CSharpAnalyzer.js"
+import { CStyleAnalyzer } from "./CStyleAnalyzer.js"
+import { CssAnalyzer } from "./CssAnalyzer.js"
+import { DefaultLanguageAnalyzer } from "./DefaultLanguageAnalyzer.js"
+import { GoLangAnalyzer } from "./GoLangAnalyzer.js"
+import { HaskellAnalyzer } from "./HaskellAnalyzer.js"
+import { HtmlAnalyzer } from "./HtmlAnalyzer.js"
+import { JavaAnalyzer } from "./JavaAnalyzer.js"
+import { JavaScriptAnalyzer } from "./JavaScriptAnalyzer.js"
+import { JsonAnalyzer } from "./JsonAnalyzer.js"
+import { KotlinAnalyzer } from "./KotlinAnalyzer.js"
+import type { LanguageAnalyzer } from "./LanguageAnalyzer.js"
+import { PythonAnalyzer } from "./PythonAnalyzer.js"
+import { RubyAnalyzer } from "./RubyAnalyzer.js"
+import { RustAnalyzer } from "./RustAnalyzer.js"
+import { ShellAnalyzer } from "./ShellAnalyzer.js"
+import { SqlAnalyzer } from "./SqlAnalyzer.js"
+import { TypeScriptAnalyzer } from "./TypeScriptAnalyzer.js"
+import { XmlAnalyzer } from "./XmlAnalyzer.js"
+import { YamlAnalyzer } from "./YamlAnalyzer.js"
 
-type AnalyzerConstructor = new () => LanguageAnalyzer;
+type AnalyzerConstructor = new () => LanguageAnalyzer
 
-const analyzersMap = new Map<string, AnalyzerConstructor>();
+const analyzersMap = new Map<string, AnalyzerConstructor>()
 
-// Java
-for (const ext of ["java", "ck", "j", "uc"])
-	analyzersMap.set(ext, JavaAnalyzer);
+function registerExtensions(extensions: readonly string[], analyzer: AnalyzerConstructor) {
+  for (const extension of extensions) {
+    analyzersMap.set(extension, analyzer)
+  }
+}
 
-// JavaScript
-for (const ext of ["js", "jsx", "cjs", "mjs", "es", "es6", "jsm", "njs", "sjs"])
-	analyzersMap.set(ext, JavaScriptAnalyzer);
+registerExtensions(["java", "ck", "j", "uc"], JavaAnalyzer)
 
-// TypeScript
-for (const ext of ["ts", "tsx"]) analyzersMap.set(ext, TypeScriptAnalyzer);
+registerExtensions(
+  [
+    "js",
+    "cy",
+    "_js",
+    "bones",
+    "cjs",
+    "es",
+    "es6",
+    "gs",
+    "jake",
+    "jsb",
+    "jscad",
+    "jsfl",
+    "jsm",
+    "mjs",
+    "njs",
+    "pac",
+    "sjs",
+    "ssjs",
+    "xsjs",
+    "xsjslib",
+  ],
+  JavaScriptAnalyzer,
+)
 
-// Go
-for (const ext of ["go", "v"]) analyzersMap.set(ext, GoLangAnalyzer);
+registerExtensions(["ts", "tsx"], TypeScriptAnalyzer)
+registerExtensions(["go", "v"], GoLangAnalyzer)
+registerExtensions(["hs", "lhs", "hsc", "hsig", "chs"], HaskellAnalyzer)
+registerExtensions(["cs", "cake", "csx"], CSharpAnalyzer)
 
-// C#
-for (const ext of ["cs", "cake", "csx"]) analyzersMap.set(ext, CSharpAnalyzer);
+registerExtensions(
+  [
+    "c",
+    "cats",
+    "cpp",
+    "cc",
+    "cp",
+    "cxx",
+    "h",
+    "hh",
+    "hpp",
+    "hxx",
+    "inl",
+    "ino",
+    "ipp",
+    "tcc",
+    "tpp",
+    "m",
+    "mm",
+    "dart",
+  ],
+  CStyleAnalyzer,
+)
 
-// C/C++ (use CStyle base)
-for (const ext of [
-	"c",
-	"cpp",
-	"cc",
-	"cxx",
-	"h",
-	"hpp",
-	"hxx",
-	"m",
-	"mm",
-	"dart",
-])
-	analyzersMap.set(ext, CStyleAnalyzer);
+registerExtensions(
+  [
+    "py",
+    "gyp",
+    "gypi",
+    "lmi",
+    "py3",
+    "pyde",
+    "pyi",
+    "pyp",
+    "pyt",
+    "pyw",
+    "rpy",
+    "smk",
+    "tac",
+    "wsgi",
+    "xpy",
+    "eb",
+    "gn",
+    "pyx",
+    "pxd",
+    "pxi",
+    "numpy",
+    "numpyw",
+    "numsc",
+    "pytb",
+  ],
+  PythonAnalyzer,
+)
 
-// Python
-for (const ext of ["py", "py3", "pyw", "pyi", "pyx", "pxd"])
-	analyzersMap.set(ext, PythonAnalyzer);
+registerExtensions(["kt", "ktm", "kts"], KotlinAnalyzer)
+registerExtensions(["rs", "rlib"], RustAnalyzer)
 
-// Kotlin
-for (const ext of ["kt", "ktm", "kts"]) analyzersMap.set(ext, KotlinAnalyzer);
+registerExtensions(
+  [
+    "rb",
+    "builder",
+    "eye",
+    "gemspec",
+    "god",
+    "jbuilder",
+    "mspec",
+    "podspec",
+    "rabl",
+    "rake",
+    "rbi",
+    "rbuild",
+    "rbw",
+    "rbx",
+    "ru",
+    "ruby",
+    "thor",
+    "watchr",
+  ],
+  RubyAnalyzer,
+)
 
-// Rust
-for (const ext of ["rs", "rlib"]) analyzersMap.set(ext, RustAnalyzer);
+registerExtensions(
+  [
+    "html",
+    "htm",
+    "cshtml",
+    "vbhtml",
+    "razor",
+    "soy",
+    "st",
+    "xht",
+    "xhtml",
+    "jinja",
+    "jinja2",
+    "mustache",
+    "njk",
+    "ecr",
+    "eex",
+    "erb",
+    "deface",
+    "haml",
+    "mtml",
+    "rtml",
+    "vue",
+    "phtml",
+    "hhi",
+    "hbs",
+    "handlebars",
+    "asp",
+    "aspx",
+    "asax",
+    "ascx",
+    "ashx",
+    "asmx",
+    "axd",
+    "jsx",
+  ],
+  HtmlAnalyzer,
+)
 
-// Ruby
-for (const ext of ["rb", "rake", "gemspec", "ruby"])
-	analyzersMap.set(ext, RubyAnalyzer);
+registerExtensions(
+  [
+    "xml",
+    "xaml",
+    "owl",
+    "adml",
+    "admx",
+    "ant",
+    "axml",
+    "builds",
+    "ccproj",
+    "ccxml",
+    "clixml",
+    "cscfg",
+    "csdef",
+    "csl",
+    "csproj",
+    "ct",
+    "depproj",
+    "dita",
+    "ditamap",
+    "ditaval",
+    "dotsettings",
+    "filters",
+    "fsproj",
+    "fxml",
+    "glade",
+    "gmx",
+    "grxml",
+    "iml",
+    "ivy",
+    "jelly",
+    "jsproj",
+    "kml",
+    "launch",
+    "mdpolicy",
+    "mjml",
+    "mxml",
+    "natvis",
+    "ndproj",
+    "nproj",
+    "nuspec",
+    "odd",
+    "osm",
+    "pkgproj",
+    "pluginspec",
+    "proj",
+    "props",
+    "ps1xml",
+    "psc1",
+    "pt",
+    "rdf",
+    "resx",
+    "rss",
+    "scxml",
+    "sfproj",
+    "shproj",
+    "srdf",
+    "storyboard",
+    "targets",
+    "tml",
+    "ui",
+    "urdf",
+    "ux",
+    "vbproj",
+    "vcxproj",
+    "vsixmanifest",
+    "vssettings",
+    "vstemplate",
+    "vxml",
+    "wixproj",
+    "workflow",
+    "wsdl",
+    "wsf",
+    "wxi",
+    "wxl",
+    "wxs",
+    "x3d",
+    "xacro",
+    "xib",
+    "xlf",
+    "xliff",
+    "xmi",
+    "xproj",
+    "xsd",
+    "xspec",
+    "xul",
+    "zcml",
+    "plist",
+    "xpl",
+    "xproc",
+    "xquery",
+    "xq",
+    "xql",
+    "xqm",
+    "xqy",
+    "xsl",
+    "xslt",
+  ],
+  XmlAnalyzer,
+)
 
-// Scala (C-style)
-for (const ext of ["scala", "sc", "sbt"]) analyzersMap.set(ext, CStyleAnalyzer);
+registerExtensions(["css"], CssAnalyzer)
 
-// Swift (C-style)
-analyzersMap.set("swift", CStyleAnalyzer);
+registerExtensions(
+  [
+    "json",
+    "json5",
+    "jsonld",
+    "avsc",
+    "geojson",
+    "gltf",
+    "har",
+    "jsonl",
+    "mcmeta",
+    "tfstate",
+    "topojson",
+    "webapp",
+    "webmanifest",
+    "yy",
+    "yyp",
+    "jsonc",
+  ],
+  JsonAnalyzer,
+)
 
-// PHP (C-style)
-for (const ext of ["php", "inc", "php3", "php4", "php5"])
-	analyzersMap.set(ext, CStyleAnalyzer);
-
-// Groovy (C-style)
-for (const ext of ["groovy", "grt", "gvy"])
-	analyzersMap.set(ext, CStyleAnalyzer);
-
-// Shell / SQL / HTML / CSS / XML / JSON / YAML — use default
-// These have different comment styles but for now default is fine
+registerExtensions(["tf", "yml", "yaml", "mir", "reek", "rviz", "syntax", "sublime-syntax"], YamlAnalyzer)
+registerExtensions(["sh", "bash", "bats", "command", "ksh", "tmux", "tool", "zsh"], ShellAnalyzer)
+registerExtensions(
+  ["bdy", "fnc", "prc", "spc", "tpb", "tps", "trg", "vw", "sql", "cql", "ddl", "mysql", "tab", "udf", "viw"],
+  SqlAnalyzer,
+)
 
 export class LanguageAnalyzerFactory {
-	private static instance = new LanguageAnalyzerFactory();
+  private static instance = new LanguageAnalyzerFactory()
 
-	static getInstance(): LanguageAnalyzerFactory {
-		return LanguageAnalyzerFactory.instance;
-	}
+  static getInstance(): LanguageAnalyzerFactory {
+    return LanguageAnalyzerFactory.instance
+  }
 
-	getLanguageAnalyzerByExtension(extension: string): LanguageAnalyzer {
-		const Ctor = analyzersMap.get(extension.toLowerCase());
-		if (Ctor) return new Ctor();
-		return new DefaultLanguageAnalyzer();
-	}
+  getLanguageAnalyzerByExtension(extension: string): LanguageAnalyzer {
+    const Ctor = analyzersMap.get(extension.toLowerCase())
+    if (Ctor) return new Ctor()
+    return new DefaultLanguageAnalyzer()
+  }
 
-	getLanguageAnalyzer(extension: string): LanguageAnalyzer {
-		return this.getLanguageAnalyzerByExtension(extension);
-	}
+  getLanguageAnalyzer(extension: string): LanguageAnalyzer {
+    return this.getLanguageAnalyzerByExtension(extension)
+  }
 
-	getRegisteredExtensions(): string[] {
-		return Array.from(analyzersMap.keys());
-	}
+  getRegisteredExtensions(): string[] {
+    return Array.from(analyzersMap.keys())
+  }
 }
