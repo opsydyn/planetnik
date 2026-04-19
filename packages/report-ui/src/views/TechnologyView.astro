@@ -458,7 +458,7 @@ const { bannerSrc, conductBannerSrc } = Astro.props as Props;
 		background: var(--color-surface-muted, #f1f5f9);
 		color: var(--color-text, inherit);
 		padding: 0.15em 0.4em;
-		border-radius: 3px;
+		border-radius: var(--radius-inline);
 	}
 
 	.section-banner {
@@ -470,7 +470,7 @@ const { bannerSrc, conductBannerSrc } = Astro.props as Props;
 		display: block;
 		width: 100%;
 		height: auto;
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 	}
 
 	.comparison {
@@ -482,7 +482,7 @@ const { bannerSrc, conductBannerSrc } = Astro.props as Props;
 
 	.comparison-card {
 		border: 1px solid var(--color-border);
-		border-radius: 18px;
+		border-radius: var(--radius-card);
 		background: var(--color-card);
 		padding: 1.2rem 1.2rem 1.1rem;
 	}
@@ -515,7 +515,7 @@ const { bannerSrc, conductBannerSrc } = Astro.props as Props;
 
 	.benchmark {
 		border: 1px solid var(--color-accent);
-		border-radius: 18px;
+		border-radius: var(--radius-card);
 		background: var(--color-accent-soft, rgba(99, 102, 241, 0.06));
 		padding: 1.5rem 1.5rem 1.3rem;
 		margin: 1.5rem 0;

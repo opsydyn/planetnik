@@ -110,14 +110,14 @@ const topItemsHelpText =
 		{kindData.length > 0 && (
 			<section class="chart-section">
 				<h3>Hotspots by Kind</h3>
-				<DistributionChart client:visible data={kindData} helpText={byKindHelpText} />
+				<DistributionChart client:visible data={[...kindData]} helpText={byKindHelpText} />
 			</section>
 		)}
 
 		{dominantDimensionData.length > 0 && (
 			<section class="chart-section">
 				<h3>Dominant Risk Type</h3>
-				<DistributionChart client:visible data={dominantDimensionData} helpText={dominantRiskHelpText} />
+				<DistributionChart client:visible data={[...dominantDimensionData]} helpText={dominantRiskHelpText} />
 			</section>
 		)}
 
@@ -196,7 +196,7 @@ const topItemsHelpText =
 	.stat-card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 
@@ -234,7 +234,7 @@ const topItemsHelpText =
 	.empty {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 2rem;
 		text-align: center;
 	}
@@ -253,7 +253,7 @@ const topItemsHelpText =
 		font-size: 0.85em;
 		background: var(--color-surface-muted, #f1f5f9);
 		padding: 0.15em 0.4em;
-		border-radius: 3px;
+		border-radius: var(--radius-inline);
 	}
 
 	@media (max-width: 640px) {

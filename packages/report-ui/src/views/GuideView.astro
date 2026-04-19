@@ -258,7 +258,7 @@ const {
 		font-style: italic;
 		color: var(--color-text-muted);
 		background: var(--color-accent-soft, rgba(99, 102, 241, 0.04));
-		border-radius: 0 4px 4px 0;
+		border-radius: var(--radius-attached);
 	}
 
 	.guide-grid,
@@ -272,7 +272,7 @@ const {
 	.guide-card,
 	.reference-card {
 		border: 1px solid var(--color-border);
-		border-radius: 18px;
+		border-radius: var(--radius-card);
 		background: var(--color-card);
 		padding: 1.2rem 1.2rem 1.1rem;
 	}
@@ -331,7 +331,7 @@ const {
 		display: block;
 		width: 100%;
 		height: auto;
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 	}
 
 	@media (max-width: 720px) {

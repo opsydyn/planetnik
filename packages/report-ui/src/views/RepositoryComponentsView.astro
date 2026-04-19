@@ -42,6 +42,8 @@ interface Props {
 	componentRows: ReadonlyArray<GridRow>;
 }
 
+const props = Astro.props as Props;
+
 const {
 	heading,
 	subtitle,
@@ -53,10 +55,18 @@ const {
 	compBarData,
 	busFactorData,
 	componentRows,
-} = Astro.props;
+} = props;
 
 const hasComponents = componentRows.length > 0;
 const hasCoverage = componentCoverageData.length > 1;
+const treemapDataForChart: Array<{ label: string; value: number }> = Array.from(
+	treemapData,
+	(item: BarItem) => ({ ...item }),
+);
+const busFactorDataForChart: Array<{ x: number; y: number; label: string }> = Array.from(
+	busFactorData,
+	(item: ScatterItem) => ({ ...item }),
+);
 ---
 
 <div class="repo-components">
@@ -79,7 +89,7 @@ const hasCoverage = componentCoverageData.length > 1;
 	) : (
 		<>
 			<div class="cards">
-				{cards.map((card) => (
+				{cards.map((card: ComponentCard) => (
 					<div class="card">
 						<div
 							class="card-value"
@@ -107,7 +117,7 @@ const hasCoverage = componentCoverageData.length > 1;
 			{treemapData.length > 0 && (
 				<section class="section">
 					<h3>Component Size</h3>
-					<TreemapChart client:load data={treemapData} valueLabel="LOC" />
+					<TreemapChart client:load data={treemapDataForChart} valueLabel="LOC" />
 				</section>
 			)}
 
@@ -122,7 +132,7 @@ const hasCoverage = componentCoverageData.length > 1;
 					<h3>Bus Factor Risk (LOC vs Contributors)</h3>
 					<ScatterPlot
 						client:visible
-						data={busFactorData}
+						data={busFactorDataForChart}
 						xLabel="Lines of Code"
 						yLabel="Contributors"
 						thresholds={{ y: 3 }}
@@ -174,7 +184,7 @@ const hasCoverage = componentCoverageData.length > 1;
 	.empty {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 2rem;
 		text-align: center;
 	}
@@ -188,7 +198,7 @@ const hasCoverage = componentCoverageData.length > 1;
 	.card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 	.card-value {

@@ -39,6 +39,8 @@ interface Props {
 	couplingRows: ReadonlyArray<GridRow>;
 }
 
+const props = Astro.props as Props;
+
 const {
 	heading,
 	subtitle,
@@ -51,14 +53,19 @@ const {
 	topRiskData,
 	dominantDimensionData,
 	couplingRows,
-} = Astro.props;
+} = props;
 
 const hasData = model.snapshots.length > 0;
-const dimensionMixData = model.aggregate.dimensionMix.map((item) => ({
+const dimensionMix = model.aggregate.dimensionMix as ReadonlyArray<{
+	label: string;
+	value: number;
+	color: string;
+}>;
+const dimensionMixData = dimensionMix.map((item) => ({
 	label: item.label,
 	value: item.value,
 }));
-const dimensionMixColors = model.aggregate.dimensionMix.map((item) => item.color);
+const dimensionMixColors = dimensionMix.map((item) => item.color);
 const searchHint = `Decomposition: ${decompositionKey}${temporalWindowLabel ? ` • Temporal input: ${temporalWindowLabel}` : ""}`;
 ---
 
@@ -84,7 +91,7 @@ const searchHint = `Decomposition: ${decompositionKey}${temporalWindowLabel ? ` 
 	) : (
 		<>
 			<div class="cards">
-				{cards.map((card) => (
+				{cards.map((card: CouplingCard) => (
 					<div class="card">
 						<div
 							class="card-value"
@@ -119,7 +126,7 @@ const searchHint = `Decomposition: ${decompositionKey}${temporalWindowLabel ? ` 
 				{dominantDimensionData.length > 0 && (
 					<section class="section">
 						<h3>Dominant Dimension by Component</h3>
-						<DistributionChart client:visible data={dominantDimensionData} />
+						<DistributionChart client:visible data={[...dominantDimensionData]} />
 					</section>
 				)}
 			</div>
@@ -197,7 +204,7 @@ const searchHint = `Decomposition: ${decompositionKey}${temporalWindowLabel ? ` 
 	.empty {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 2rem;
 		text-align: center;
 	}
@@ -211,7 +218,7 @@ const searchHint = `Decomposition: ${decompositionKey}${temporalWindowLabel ? ` 
 	.card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 	.card-value {

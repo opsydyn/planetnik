@@ -73,7 +73,7 @@ const mostDuplicatedFilesHelpText =
 {blockSizeDistribution.length > 0 && (
 	<section class="chart-section">
 		<h3>Block Size Distribution</h3>
-		<DistributionChart client:visible data={blockSizeDistribution} helpText={blockDistributionHelpText} />
+		<DistributionChart client:visible data={[...blockSizeDistribution]} helpText={blockDistributionHelpText} />
 	</section>
 )}
 
@@ -145,7 +145,7 @@ const mostDuplicatedFilesHelpText =
 	.stat-card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 

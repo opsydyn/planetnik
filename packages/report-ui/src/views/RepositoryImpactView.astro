@@ -168,7 +168,7 @@ const snackingHelpText =
 			These are not necessarily bad changes. They are warnings that high visible activity is landing in places with weak
 			structural leverage, so teams should ask whether the work is shaping the system or only feeding local motion.
 		</p>
-		<DistributionChart client:visible data={snackingChartData} helpText={snackingHelpText} />
+			<DistributionChart client:visible data={[...snackingChartData]} helpText={snackingHelpText} />
 	</section>
 )}
 
@@ -270,7 +270,7 @@ const snackingHelpText =
 	.stat-card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 
@@ -305,7 +305,7 @@ const snackingHelpText =
 	.manifesto-card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 12px;
+		border-radius: var(--radius-card);
 		padding: 1.25rem;
 	}
 
@@ -358,7 +358,7 @@ const snackingHelpText =
 	.concept-card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 12px;
+		border-radius: var(--radius-card);
 		padding: 1rem;
 	}
 
@@ -405,7 +405,7 @@ const snackingHelpText =
 	.playbook-card {
 		background: var(--color-card);
 		border: 1px solid var(--color-border);
-		border-radius: 12px;
+		border-radius: var(--radius-card);
 		padding: 1rem;
 	}
 
