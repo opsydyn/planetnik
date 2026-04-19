@@ -1,13 +1,14 @@
-type SignOutSessionLike = {
-  readonly session?: {
-    readonly token?: string | null
-  } | null
-} | null | undefined
+type SignOutSessionLike =
+  | {
+      readonly session?: {
+        readonly token?: string | null
+      } | null
+    }
+  | null
+  | undefined
 
 export type SignOutFallbackCleanupDependencies = {
-  readonly getSession: (input: {
-    readonly headers: Headers
-  }) => Promise<SignOutSessionLike>
+  readonly getSession: (input: { readonly headers: Headers }) => Promise<SignOutSessionLike>
   readonly deleteSessionByToken: (token: string) => Promise<void>
   readonly logError?: (message: string, error: unknown) => void
 }

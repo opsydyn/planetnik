@@ -113,9 +113,6 @@ describe("runtime auth sign-out fallback session cleanup", () => {
 
     expect(deleted).toBe(false)
     expect(deleteSessionByToken).not.toHaveBeenCalled()
-    expect(logError).toHaveBeenCalledWith(
-      "Auth sign-out fallback could not delete session from database",
-      lookupError,
-    )
+    expect(logError).toHaveBeenCalledWith("Auth sign-out fallback could not delete session from database", lookupError)
   })
 })
