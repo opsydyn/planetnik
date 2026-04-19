@@ -13,6 +13,7 @@ This document complements:
 
 - `docs/tree-sitter-rust-pilot-checklist.md`
 - `docs/adr/0009-pilot-tree-sitter-for-rust-parser-parity.md`
+- `docs/rust-tree-sitter-migration-discovery.md`
 
 ## Scope
 
@@ -186,6 +187,7 @@ Goal: create a stable decision surface before adding parsers.
 ## Phase 1 — Rust Tree-sitter pilot
 
 Use `docs/tree-sitter-rust-pilot-checklist.md` as the execution checklist.
+Use `docs/rust-tree-sitter-migration-discovery.md` as the post-pilot outcome record.
 
 ### Goals
 
