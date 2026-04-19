@@ -11,7 +11,7 @@ interface Dependency {
 }
 
 interface DependencyMatrixProps {
-  data: Dependency[]
+  data: ReadonlyArray<Dependency>
   helpText?: string
 }
 
@@ -43,7 +43,7 @@ function MatrixInner({
   width,
   size,
 }: {
-  data: Dependency[]
+  data: ReadonlyArray<Dependency>
   names: string[]
   width: number
   size: number

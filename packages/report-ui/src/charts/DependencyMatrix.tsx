@@ -11,7 +11,7 @@ export interface DependencyLink {
 }
 
 interface DependencyMatrixProps {
-	data: DependencyLink[];
+	data: ReadonlyArray<DependencyLink>;
 	helpText?: string;
 }
 
@@ -54,7 +54,7 @@ function MatrixInner({
 	width,
 	size,
 }: {
-	data: DependencyLink[];
+	data: ReadonlyArray<DependencyLink>;
 	names: string[];
 	width: number;
 	size: number;
