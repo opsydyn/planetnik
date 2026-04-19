@@ -7,6 +7,7 @@ import { Font, Image } from "astro:assets";
 import { getEntry } from "astro:content";
 import { ClientRouter } from "astro:transitions";
 import Breadcrumb from "../components/Breadcrumb.astro";
+import IntelligencePanelLoader from "../components/intelligence/IntelligencePanelLoader.astro";
 import GlobalSearch from "../components/search/GlobalSearch";
 import {
 	getLandscapeRepositoryCommitsHref,
@@ -472,5 +473,9 @@ function isActiveLink(href: string): boolean {
       document.addEventListener("astro:page-load", setupSidebarToggle)
       setupSidebarToggle()
     </script>
+
+		<div transition:persist="intelligence-panel">
+			<IntelligencePanelLoader />
+		</div>
   </body>
 </html>
