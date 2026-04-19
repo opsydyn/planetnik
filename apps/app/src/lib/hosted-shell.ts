@@ -127,7 +127,7 @@ export function isHostedNavItemActive(currentPath: string, href: string): boolea
 
 export function buildHostedShellModel(input: BuildHostedShellModelInput): HostedShellModel {
   const context = input.context ?? ({ kind: "public" } satisfies HostedShellContext)
-  const sessionLabel = input.userEmail ? `Session: ${input.userEmail}` : "Planetnik Portal"
+  const sessionLabel = input.userEmail ? `Session: ${input.userEmail}` : "Płanetnik Platform"
   const showIntelligence = input.showIntelligence ?? isHostedIntelligenceEnabled()
 
   if (context.kind === "public") {

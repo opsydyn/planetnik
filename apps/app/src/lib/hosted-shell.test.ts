@@ -22,7 +22,7 @@ describe("hosted shell", () => {
     expect(shell.chrome).toBe("public")
     expect(shell.navSections).toEqual([])
     expect(shell.breadcrumbs).toEqual([])
-    expect(shell.sessionLabel).toBe("Planetnik Portal")
+    expect(shell.sessionLabel).toBe("Płanetnik Platform")
   })
 
   test("uses application chrome for the signed-in dashboard", () => {
