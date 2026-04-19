@@ -1,6 +1,6 @@
 .report-static-table__surface {
 	border: 1px solid var(--color-border);
-	border-radius: 18px;
+	border-radius: var(--radius-table);
 	background: var(--color-card);
 	overflow: hidden;
 }
@@ -64,7 +64,7 @@
 	background: var(--color-surface-muted);
 	color: var(--color-text);
 	padding: 0.15em 0.4em;
-	border-radius: 999px;
+	border-radius: var(--radius-inline);
 }
 
 .report-static-table__path {

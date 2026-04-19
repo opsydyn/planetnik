@@ -48,7 +48,7 @@
 .report-grid-panel__search input {
 	width: 100%;
 	border: 1px solid var(--color-border);
-	border-radius: 9999px;
+	border-radius: var(--radius-input);
 	padding: 0.7rem 0.95rem;
 	font-size: 0.95rem;
 	color: var(--color-text);
@@ -62,7 +62,7 @@
 
 .report-grid-panel__count {
 	border: 1px solid var(--color-border);
-	border-radius: 9999px;
+	border-radius: var(--radius-badge);
 	background: var(--color-card);
 	padding: 0.65rem 0.9rem;
 	font-size: 0.85rem;
@@ -72,7 +72,7 @@
 
 .report-grid-panel__toggle {
 	border: 1px solid var(--color-border);
-	border-radius: 9999px;
+	border-radius: var(--radius-control);
 	background: var(--color-card);
 	padding: 0.65rem 0.9rem;
 	font-size: 0.85rem;
@@ -96,7 +96,7 @@
 .report-grid-panel__surface,
 .report-grid-panel__empty {
 	border: 1px solid var(--color-border);
-	border-radius: 18px;
+	border-radius: var(--radius-table);
 	background: var(--color-card);
 	overflow: hidden;
 }
@@ -227,7 +227,7 @@
 .report-grid-table__filters input {
 	width: 100%;
 	border: 1px solid var(--color-border);
-	border-radius: 10px;
+	border-radius: var(--radius-input);
 	padding: 0.55rem 0.7rem;
 	font-size: 0.85rem;
 	background: var(--color-card);
@@ -265,7 +265,7 @@
 .report-grid-footer__controls button,
 .report-grid-footer__page-size select {
 	border: 1px solid var(--color-border);
-	border-radius: 10px;
+	border-radius: var(--radius-control);
 	background: var(--color-card);
 	padding: 0.5rem 0.75rem;
 	font-size: 0.85rem;
@@ -338,7 +338,7 @@ html[data-theme="dark"] .report-grid-panel__toggle[aria-pressed="true"] {
 	font-size: 0.85em;
 	background: var(--color-surface-muted);
 	padding: 0.15em 0.4em;
-	border-radius: 9999px;
+	border-radius: var(--radius-inline);
 }
 
 .report-grid__link-wrap {
@@ -387,7 +387,7 @@ html[data-theme="dark"] .report-grid-panel__toggle[aria-pressed="true"] {
 	align-items: center;
 	justify-content: center;
 	padding: 0.3rem 0.65rem;
-	border-radius: 9999px;
+	border-radius: var(--radius-badge);
 	border: 1px solid var(--color-border);
 	font-size: 0.72rem;
 	font-weight: 700;

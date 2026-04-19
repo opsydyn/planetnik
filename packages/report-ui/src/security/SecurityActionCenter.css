@@ -31,7 +31,7 @@
   border: 1px solid var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
   background: var(--color-card, var(--surface-secondary));
   color: var(--color-text, var(--text-primary));
-  border-radius: 9999px;
+  border-radius: var(--radius-control);
   padding: 0.55rem 0.85rem;
   font-size: 0.85rem;
   font-weight: 700;
@@ -61,7 +61,7 @@
   display: grid;
   gap: 0.9rem;
   border: 1px solid var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: var(--color-card, var(--surface-secondary));
   padding: 1rem;
   box-shadow: 0 14px 36px rgba(2, 6, 23, 0.18);
@@ -145,7 +145,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.28rem 0.6rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-badge);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -233,7 +233,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: color-mix(in srgb, var(--color-card, var(--surface-secondary)) 65%, #1d4ed8 12%);
   border: 1px solid rgba(59, 130, 246, 0.24);
   color: var(--color-text, var(--text-primary));
@@ -242,7 +242,7 @@
 
 .security-action-center__empty {
   border: 1px dashed var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   padding: 1.25rem;
   color: var(--color-text-muted, var(--text-secondary));
   background: color-mix(in srgb, var(--color-card, var(--surface-secondary)) 82%, transparent);
@@ -250,7 +250,7 @@
 
 .security-advisory-group {
   border: 1px solid var(--color-border, var(--border-primary, rgba(255, 255, 255, 0.08)));
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: var(--color-card, var(--surface-secondary));
   overflow: hidden;
 }
@@ -312,7 +312,7 @@
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
   align-items: center;
   padding: 0.8rem 0.9rem;
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: color-mix(in srgb, var(--color-card, var(--surface-secondary)) 86%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-border, rgba(255,255,255,0.08)) 82%, transparent);
 }

@@ -12,6 +12,15 @@
 	--color-yellow: #eab308;
 	--color-orange: #f97316;
 	--color-red: #ef4444;
+	--radius-inline: 2px;
+	--radius-badge: 2px;
+	--radius-control: 0;
+	--radius-input: 0;
+	--radius-card: 0;
+	--radius-table: 0;
+	--radius-overlay: 4px;
+	--radius-drawer: 6px;
+	--radius-attached: 0 4px 4px 0;
 }
 
 html[data-theme="light"] {
@@ -196,7 +205,7 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 6px;
+	border-radius: var(--radius-control);
 	transition: background 0.15s;
 }
 
@@ -312,7 +321,7 @@ body {
 	color: var(--color-sidebar-text);
 	cursor: pointer;
 	padding: 0.35rem;
-	border-radius: 6px;
+	border-radius: var(--radius-control);
 	display: flex;
 	align-items: center;
 	transition: background 0.15s, color 0.15s;
@@ -427,7 +436,7 @@ main h2 {
 		color: var(--color-sidebar-text);
 		cursor: pointer;
 		padding: 0.5rem 1.25rem;
-		border-radius: 6px;
+		border-radius: var(--radius-control);
 		margin: auto 0 0;
 		font-size: 0.75rem;
 		letter-spacing: 0.02em;
@@ -452,7 +461,7 @@ main h2 {
 		color: var(--color-sidebar-text);
 		border: 1px solid var(--color-sidebar-divider);
 		border-left: none;
-		border-radius: 0 8px 8px 0;
+		border-radius: var(--radius-attached);
 		cursor: pointer;
 		font-size: 0.75rem;
 		letter-spacing: 0.02em;
