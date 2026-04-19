@@ -42,6 +42,7 @@
       "apps/**/*.json",
       "apps/**/*.ts",
       "apps/**/*.tsx",
+      "!apps/**/*.open-api.json",
       "!apps/**/*.astro",
       "!apps/**/dist"
     ]
