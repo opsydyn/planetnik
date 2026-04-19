@@ -1,14 +1,16 @@
-import { CopilotKit } from "@copilotkit/react-core";
-import { CopilotChat } from "@copilotkit/react-ui";
-import "@copilotkit/react-ui/styles.css";
-import "./IntelligenceChat.css";
+import { CopilotKit } from "@copilotkit/react-core"
+import { CopilotChat } from "@copilotkit/react-ui"
+import "@copilotkit/react-ui/styles.css"
+import "./IntelligenceChat.css"
 import {
-	type AnalysisContextProps,
-	useAnalysisContext,
-} from "./useAnalysisContext";
-import { useChartActions } from "./useChartActions";
-import { useNavigationAction } from "./useNavigationAction";
-import { useSuggestions } from "./useSuggestions";
+  buildIntelligenceCapabilities,
+  buildIntelligencePromptPlaceholder,
+  buildIntelligenceWelcomeMessages,
+} from "./intelligenceUx"
+import { type AnalysisContextProps, useAnalysisContext } from "./useAnalysisContext"
+import { useChartActions } from "./useChartActions"
+import { useNavigationAction } from "./useNavigationAction"
+import { useSuggestions } from "./useSuggestions"
 
 const PLANETNIK_INSTRUCTIONS = `You are Płanetnik — a weather spirit from Polish folklore who commands storms, shapes winds, and reads the skies. In the codebase, you read structural weather: complexity pressure, coupling storms, knowledge fog, and change turbulence.
 
@@ -20,57 +22,64 @@ Personality:
 - You are concise. You lead with the insight, then support it with data. No filler.
 - When generating charts, briefly explain what the visualisation reveals — don't just present raw data.
 
-Tone: Think weathered mentor, not corporate assistant. Warm but no-nonsense. Occasionally dry.`;
+Tone: Think weathered mentor, not corporate assistant. Warm but no-nonsense. Occasionally dry.`
 
 interface Props extends AnalysisContextProps {
-	runtimeUrl: string;
-	basePath?: string;
+  runtimeUrl: string
+  basePath?: string
+  isLandscape?: boolean
 }
 
 interface InnerProps extends AnalysisContextProps {
-	basePath: string;
+  basePath: string
+  isLandscape: boolean
 }
 
-function IntelligenceChatInner({ basePath, ...props }: InnerProps) {
-	useAnalysisContext(props);
-	useChartActions();
-	useNavigationAction(basePath);
-	useSuggestions(props);
+function IntelligenceChatInner({ basePath, isLandscape, ...props }: InnerProps) {
+  useAnalysisContext(props)
+  useChartActions()
+  useNavigationAction(basePath)
+  useSuggestions(props)
 
-	return (
-		<CopilotChat
-			className="planetnik-chat"
-			instructions={PLANETNIK_INSTRUCTIONS}
-			labels={{
-				title: "Płanetnik",
-				placeholder: "Ask about your codebase weather...",
-				initial:
-					"I am Płanetnik. I read the structural weather of your codebase — where pressure builds, where fog gathers, where the skies are clear. Ask me anything about your analysis.",
-			}}
-		/>
-	);
+  const capabilities = buildIntelligenceCapabilities(props, isLandscape)
+  const placeholder = buildIntelligencePromptPlaceholder(capabilities)
+  const initialMessages = buildIntelligenceWelcomeMessages(props, isLandscape)
+
+  return (
+    <CopilotChat
+      className="planetnik-chat"
+      instructions={PLANETNIK_INSTRUCTIONS}
+      labels={{
+        title: "Płanetnik",
+        placeholder,
+        initial: initialMessages,
+        error: "The weather station hit turbulence. Please try again.",
+        stopGenerating: "Stop response",
+        regenerateResponse: "Try another forecast",
+        copyToClipboard: "Copy answer",
+        thumbsUp: "Helpful",
+        thumbsDown: "Needs work",
+        copied: "Copied answer",
+      }}
+    />
+  )
 }
 
-export default function IntelligenceChat({
-	runtimeUrl,
-	basePath = "",
-	...dataProps
-}: Props) {
-	if (!runtimeUrl) {
-		return (
-			<div className="intelligence-unconfigured">
-				<p>Intelligence is not configured for this deployment.</p>
-				<p>
-					Set <code>PUBLIC_COPILOT_RUNTIME_URL</code> to enable AI-powered
-					analysis.
-				</p>
-			</div>
-		);
-	}
+export default function IntelligenceChat({ runtimeUrl, basePath = "", isLandscape = false, ...dataProps }: Props) {
+  if (!runtimeUrl) {
+    return (
+      <div className="intelligence-unconfigured">
+        <p>Intelligence is not configured for this deployment.</p>
+        <p>
+          Set <code>PUBLIC_COPILOT_RUNTIME_URL</code> to enable AI-powered analysis.
+        </p>
+      </div>
+    )
+  }
 
-	return (
-		<CopilotKit runtimeUrl={runtimeUrl} showDevConsole={false}>
-			<IntelligenceChatInner basePath={basePath} {...dataProps} />
-		</CopilotKit>
-	);
+  return (
+    <CopilotKit runtimeUrl={runtimeUrl} showDevConsole={false}>
+      <IntelligenceChatInner basePath={basePath} isLandscape={isLandscape} {...dataProps} />
+    </CopilotKit>
+  )
 }

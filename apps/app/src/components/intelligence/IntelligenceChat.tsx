@@ -3,9 +3,11 @@ import { CopilotChat } from "@copilotkit/react-ui"
 import "@copilotkit/react-ui/styles.css"
 import "./IntelligenceChat.css"
 import {
-  type AnalysisContextProps,
-  useAnalysisContext,
-} from "./useAnalysisContext"
+  buildIntelligenceCapabilities,
+  buildIntelligencePromptPlaceholder,
+  buildIntelligenceWelcomeMessages,
+} from "./intelligenceUx"
+import { type AnalysisContextProps, useAnalysisContext } from "./useAnalysisContext"
 import { useChartActions } from "./useChartActions"
 import { useNavigationAction } from "./useNavigationAction"
 import { useSuggestions } from "./useSuggestions"
@@ -39,15 +41,25 @@ function IntelligenceChatInner({ baseHref, isLandscape, ...props }: InnerProps) 
   useNavigationAction(baseHref, isLandscape)
   useSuggestions(props)
 
+  const capabilities = buildIntelligenceCapabilities(props, isLandscape)
+  const placeholder = buildIntelligencePromptPlaceholder(capabilities)
+  const initialMessages = buildIntelligenceWelcomeMessages(props, isLandscape)
+
   return (
     <CopilotChat
       className="planetnik-chat"
       instructions={PLANETNIK_INSTRUCTIONS}
       labels={{
         title: "Płanetnik",
-        placeholder: "Ask about your codebase weather...",
-        initial:
-          "I am Płanetnik. I read the structural weather of your codebase — where pressure builds, where fog gathers, where the skies are clear. Ask me anything about your analysis.",
+        placeholder,
+        initial: initialMessages,
+        error: "The weather station hit turbulence. Please try again.",
+        stopGenerating: "Stop response",
+        regenerateResponse: "Try another forecast",
+        copyToClipboard: "Copy answer",
+        thumbsUp: "Helpful",
+        thumbsDown: "Needs work",
+        copied: "Copied answer",
       }}
     />
   )

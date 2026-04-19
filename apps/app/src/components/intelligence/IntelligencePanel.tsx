@@ -1,12 +1,43 @@
-import { useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import IntelligenceChat from "./IntelligenceChat"
 import "./IntelligencePanel.css"
+import { buildIntelligenceCapabilities, buildIntelligenceHeaderHint } from "./intelligenceUx"
 import type { AnalysisContextProps } from "./useAnalysisContext"
 
 interface Props extends AnalysisContextProps {
   runtimeUrl: string
   baseHref: string
   isLandscape: boolean
+}
+
+const OPEN_STORAGE_KEY = "planetnik.intelligence.open"
+const EXPANDED_STORAGE_KEY = "planetnik.intelligence.expanded"
+
+function readStoredBoolean(key: string, fallback: boolean) {
+  if (typeof window === "undefined") return fallback
+
+  const storedValue = window.sessionStorage.getItem(key)
+  if (storedValue === "true") return true
+  if (storedValue === "false") return false
+  return fallback
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement)
+  )
+}
+
+function getShortcutLabel() {
+  if (typeof navigator !== "undefined" && /mac/i.test(navigator.platform)) {
+    return "⌘I"
+  }
+
+  return "Ctrl+I"
 }
 
 function ChatIcon() {
@@ -74,11 +105,14 @@ function ShrinkIcon() {
 }
 
 export default function IntelligencePanel({ runtimeUrl, baseHref, isLandscape, ...dataProps }: Props) {
-  const [open, setOpen] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+  const [open, setOpen] = useState(() => readStoredBoolean(OPEN_STORAGE_KEY, false))
+  const [expanded, setExpanded] = useState(() => readStoredBoolean(EXPANDED_STORAGE_KEY, false))
   const mounted = useRef(false)
+  const panelRef = useRef<HTMLDivElement>(null)
 
-  if (!runtimeUrl) return null
+  const capabilities = buildIntelligenceCapabilities(dataProps, isLandscape)
+  const headerHint = buildIntelligenceHeaderHint(capabilities)
+  const shortcutLabel = useMemo(() => getShortcutLabel(), [])
 
   if (open && !mounted.current) {
     mounted.current = true
@@ -92,6 +126,50 @@ export default function IntelligencePanel({ runtimeUrl, baseHref, isLandscape, .
     .filter(Boolean)
     .join(" ")
 
+  useEffect(() => {
+    window.sessionStorage.setItem(OPEN_STORAGE_KEY, String(open))
+  }, [open])
+
+  useEffect(() => {
+    window.sessionStorage.setItem(EXPANDED_STORAGE_KEY, String(expanded))
+  }, [expanded])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) return
+      if (isEditableTarget(event.target)) return
+
+      const isToggleShortcut =
+        (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "i"
+
+      if (isToggleShortcut) {
+        event.preventDefault()
+        setOpen((current) => !current)
+        return
+      }
+
+      if (event.key === "Escape") {
+        setOpen(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+
+    const rafId = window.requestAnimationFrame(() => {
+      const input = panelRef.current?.querySelector<HTMLTextAreaElement | HTMLInputElement>("textarea, input")
+      input?.focus()
+    })
+
+    return () => window.cancelAnimationFrame(rafId)
+  }, [open])
+
+  if (!runtimeUrl) return null
+
   return (
     <>
       <button
@@ -99,14 +177,18 @@ export default function IntelligencePanel({ runtimeUrl, baseHref, isLandscape, .
         className={`intelligence-fab ${open ? "intelligence-fab--hidden" : ""}`}
         onClick={() => setOpen(true)}
         aria-label="Ask Płanetnik"
-        title="Ask Płanetnik"
+        aria-keyshortcuts="Meta+I Control+I"
+        title={`Ask Płanetnik (${shortcutLabel})`}
       >
         <ChatIcon />
       </button>
 
-      <div className={panelClasses}>
+      <div className={panelClasses} ref={panelRef}>
         <div className="intelligence-panel-header">
-          <span className="intelligence-panel-title">Płanetnik</span>
+          <div className="intelligence-panel-brand">
+            <span className="intelligence-panel-title">Płanetnik</span>
+            <span className="intelligence-panel-subtitle">{headerHint}</span>
+          </div>
           <div className="intelligence-panel-actions">
             <button
               type="button"
@@ -122,23 +204,26 @@ export default function IntelligencePanel({ runtimeUrl, baseHref, isLandscape, .
               className="intelligence-panel-action"
               onClick={() => setOpen(false)}
               aria-label="Close chat"
+              aria-keyshortcuts="Escape"
               title="Close"
             >
               <CloseIcon />
             </button>
           </div>
         </div>
-        <div
-          className="intelligence-panel-body"
-          style={{ display: open ? undefined : "none" }}
-        >
+        {capabilities.length > 0 && (
+          <div className="intelligence-panel-context">
+            {capabilities.map((capability) => (
+              <span key={capability} className="intelligence-panel-context-pill">
+                {capability}
+              </span>
+            ))}
+            <span className="intelligence-panel-shortcut">{shortcutLabel}</span>
+          </div>
+        )}
+        <div className="intelligence-panel-body" style={{ display: open ? undefined : "none" }}>
           {mounted.current && (
-            <IntelligenceChat
-              runtimeUrl={runtimeUrl}
-              baseHref={baseHref}
-              isLandscape={isLandscape}
-              {...dataProps}
-            />
+            <IntelligenceChat runtimeUrl={runtimeUrl} baseHref={baseHref} isLandscape={isLandscape} {...dataProps} />
           )}
         </div>
       </div>
