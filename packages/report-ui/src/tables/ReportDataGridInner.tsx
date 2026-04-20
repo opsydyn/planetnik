@@ -307,19 +307,25 @@ export default function ReportDataGridInner({
 	}, [initialSorting]);
 
 	useEffect(() => {
-		setPagination((current) => ({
-			pageIndex: 0,
-			pageSize: paginationPageSize || current.pageSize,
-		}));
+		setPagination((current) =>
+			current.pageIndex === 0 && current.pageSize === paginationPageSize
+				? current
+				: {
+					pageIndex: 0,
+					pageSize: paginationPageSize || current.pageSize,
+				},
+		);
 	}, [paginationPageSize]);
 
 	useEffect(() => {
-		setPagination((current) => ({ ...current, pageIndex: 0 }));
-	}, []);
+		setPagination((current) =>
+			current.pageIndex === 0 ? current : { ...current, pageIndex: 0 },
+		);
+	}, [columnFilters, deferredQuery]);
 
 	const searchedRows = useMemo(() => {
 		const normalizedQuery = normalizeSearchValue(deferredQuery);
-		if (!searchEnabled || !normalizedQuery) return rows;
+		if (!searchEnabled || !normalizedQuery) return Array.from(rows);
 
 		return rows.filter((row) =>
 			getGlobalSearchText(row, columns).includes(normalizedQuery),
@@ -338,13 +344,14 @@ export default function ReportDataGridInner({
 	};
 
 	const table = useReactTable<GridRow>({
-		data: [...searchedRows],
+		data: searchedRows,
 		columns: columnDefs,
 		state: {
 			sorting,
 			columnFilters,
 			pagination,
 		},
+		autoResetPageIndex: false,
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
 		onPaginationChange: handlePaginationChange,
@@ -367,6 +374,16 @@ export default function ReportDataGridInner({
 	const pageSizeOptions = [...new Set([10, 25, 50, 100, paginationPageSize])].sort(
 		(a, b) => a - b,
 	);
+
+	useEffect(() => {
+		const maxPageIndex = Math.max(0, Math.ceil(filteredRowCount / pageSize) - 1);
+
+		setPagination((current) =>
+			current.pageIndex > maxPageIndex
+				? { ...current, pageIndex: maxPageIndex }
+				: current,
+		);
+	}, [filteredRowCount, pageSize]);
 
 	return (
 		<section className="report-grid-panel">

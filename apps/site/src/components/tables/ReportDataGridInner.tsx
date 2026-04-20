@@ -6,6 +6,8 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type OnChangeFn,
+  type PaginationState,
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table"
@@ -221,7 +223,7 @@ export default function ReportDataGridInner({
     [columns],
   )
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
-  const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: paginationPageSize,
   })
@@ -232,15 +234,21 @@ export default function ReportDataGridInner({
   }, [initialSorting])
 
   useEffect(() => {
-    setPagination((current) => ({
-      pageIndex: 0,
-      pageSize: paginationPageSize || current.pageSize,
-    }))
+    setPagination((current) =>
+      current.pageIndex === 0 && current.pageSize === paginationPageSize
+        ? current
+        : {
+            pageIndex: 0,
+            pageSize: paginationPageSize || current.pageSize,
+          },
+    )
   }, [paginationPageSize])
 
   useEffect(() => {
-    setPagination((current) => ({ ...current, pageIndex: 0 }))
-  }, [])
+    void columnFilters
+    void deferredQuery
+    setPagination((current) => (current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }))
+  }, [columnFilters, deferredQuery])
 
   const searchedRows = useMemo(() => {
     const normalizedQuery = normalizeSearchValue(deferredQuery)
@@ -251,6 +259,10 @@ export default function ReportDataGridInner({
 
   const columnDefs = useMemo(() => columns.map(createColumnDef), [columns])
 
+  const handlePaginationChange: OnChangeFn<PaginationState> = (updater) => {
+    setPagination((current) => (typeof updater === "function" ? updater(current) : updater))
+  }
+
   const table = useReactTable({
     data: searchedRows,
     columns: columnDefs,
@@ -259,9 +271,10 @@ export default function ReportDataGridInner({
       columnFilters,
       pagination,
     },
+    autoResetPageIndex: false,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onPaginationChange: setPagination,
+    onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -276,6 +289,12 @@ export default function ReportDataGridInner({
   const fromRow = filteredRowCount === 0 ? 0 : pageIndex * pageSize + 1
   const toRow = filteredRowCount === 0 ? 0 : Math.min((pageIndex + 1) * pageSize, filteredRowCount)
   const pageSizeOptions = [...new Set([10, 25, 50, 100, paginationPageSize])].sort((a, b) => a - b)
+
+  useEffect(() => {
+    const maxPageIndex = Math.max(0, Math.ceil(filteredRowCount / pageSize) - 1)
+
+    setPagination((current) => (current.pageIndex > maxPageIndex ? { ...current, pageIndex: maxPageIndex } : current))
+  }, [filteredRowCount, pageSize])
 
   return (
     <section className="report-grid-panel">

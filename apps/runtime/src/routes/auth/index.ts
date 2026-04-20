@@ -1,14 +1,15 @@
-import { Elysia } from "elysia"
 import { eq } from "drizzle-orm"
+import { Elysia } from "elysia"
 import { appConfig } from "../../config.js"
-import { auth } from "../../lib/auth.js"
 import { db } from "../../db/index.js"
 import { session } from "../../db/schema/auth.js"
+import { auth } from "../../lib/auth.js"
 import { appendExpiredAuthCookies } from "./cookies.js"
 import { cleanupFallbackSignOutSession } from "./fallback-sign-out.js"
 
 const HTTP_STATUS_METHOD_NOT_ALLOWED = 405 as const
 const HTTP_STATUS_OK = 200 as const
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500 as const
 const SIGN_OUT_PATH = "/api/auth/sign-out" as const
 
 const isSignOutRequest = (request: Request): boolean => {
@@ -41,12 +42,53 @@ const signOutFallbackResponse = (): Response => {
   )
 }
 
+const getResponseLogPayload = async (response: Response) => {
+  const headers = Object.fromEntries(response.headers.entries())
+
+  try {
+    const body = (await response.clone().text()).trim()
+
+    return body.length > 0 ? { headers, body } : { headers }
+  } catch (error) {
+    return {
+      headers,
+      bodyReadError: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+const logServerErrorResponse = async (request: Request, response: Response) => {
+  if (response.status < HTTP_STATUS_INTERNAL_SERVER_ERROR) {
+    return
+  }
+
+  console.error(
+    `[auth] handler returned ${response.status}: ${request.method} ${request.url}`,
+    await getResponseLogPayload(response),
+  )
+}
+
+const logAuthRequest = (request: Request) => {
+  console.info(`[auth] request ${request.method} ${request.url}`)
+}
+
+const logAuthResponse = (request: Request, response: Response) => {
+  console.info(`[auth] response ${response.status} ${request.method} ${request.url}`)
+}
+
 export const authRoutes = new Elysia({ name: "auth" }).all(
   "/api/auth/*",
   async ({ request }) => {
     if (["POST", "GET"].includes(request.method)) {
+      logAuthRequest(request)
+
       try {
-        return await auth.handler(request)
+        const response = await auth.handler(request)
+
+        logAuthResponse(request, response)
+        await logServerErrorResponse(request, response)
+
+        return response
       } catch (error) {
         if (request.method === "POST" && isSignOutRequest(request)) {
           console.error("Auth sign-out failed, applying cookie-expire fallback", error)
@@ -63,6 +105,7 @@ export const authRoutes = new Elysia({ name: "auth" }).all(
 
           return signOutFallbackResponse()
         }
+        console.error(`[auth] handler failed: ${request.method} ${request.url}`, error)
         throw error
       }
     }

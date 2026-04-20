@@ -2,7 +2,6 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { cors } from "@elysiajs/cors"
 import { openapi } from "@elysiajs/openapi"
-import { spectralPlugin } from "@opsydyn/elysia-spectral"
 import { JSONSchema } from "effect"
 import { Elysia } from "elysia"
 import { appConfig } from "./config.js"
@@ -14,12 +13,34 @@ import { reportRoutes } from "./routes/reports/index.js"
 import { workspaceRoutes } from "./routes/workspaces/index.js"
 
 const runtimeRoot = fileURLToPath(new URL("../", import.meta.url))
-const openApiLintStartupMode = appConfig.nodeEnv === "test" ? "off" : "report"
+const shouldEnableOpenApiLint = appConfig.nodeEnv === "development"
+const openApiLintModuleName = ["@opsydyn", "elysia-spectral"].join("/")
 const openApiLintJsonReportPath = join(runtimeRoot, "artifacts", "openapi-lint.json")
 const openApiLintSpecSnapshotPath = join(runtimeRoot, "planetnik-runtime.open-api.json")
 
-export function createApp() {
-  return new Elysia({ name: "planetnik-runtime" })
+type SpectralModule = typeof import("@opsydyn/elysia-spectral")
+
+function logOpenApiLintUnavailable(error: unknown) {
+  const detail = error instanceof Error ? error.message : String(error)
+  console.warn(`OpenAPI linting unavailable; continuing without Spectral. ${detail}`)
+}
+
+export async function createApp() {
+  const app = new Elysia({ name: "planetnik-runtime" })
+    .onError(({ code, error, request, path, set }) => {
+      const message = error instanceof Error ? error.message : String(error)
+      const stack = error instanceof Error ? error.stack : undefined
+      console.error(`[runtime] unhandled error code=${code} ${request.method} ${path}: ${message}`, stack ?? error)
+      if (code === "NOT_FOUND" || code === "VALIDATION") {
+        return
+      }
+      set.status = 500
+      return {
+        error: "internal_error",
+        code,
+        ...(appConfig.nodeEnv === "production" ? {} : { detail: message }),
+      }
+    })
     .use(
       cors({
         origin: appConfig.corsOrigins,
@@ -48,14 +69,22 @@ export function createApp() {
         },
       }),
     )
-    .use(
+
+  if (!shouldEnableOpenApiLint) {
+    return app
+  }
+
+  try {
+    const { spectralPlugin } = (await import(openApiLintModuleName)) as SpectralModule
+
+    return app.use(
       spectralPlugin({
         preset: "recommended",
         startup: {
-          mode: openApiLintStartupMode,
+          mode: "report",
         },
         output: {
-          console: appConfig.nodeEnv !== "test",
+          console: true,
           jsonReportPath: openApiLintJsonReportPath,
           specSnapshotPath: openApiLintSpecSnapshotPath,
           artifactWriteFailures: process.env.CI ? "error" : "warn",
@@ -65,6 +94,10 @@ export function createApp() {
         },
       }),
     )
+  } catch (error) {
+    logOpenApiLintUnavailable(error)
+    return app
+  }
 }
 
-export type PlanetnikRuntimeApp = ReturnType<typeof createApp>
+export type PlanetnikRuntimeApp = Awaited<ReturnType<typeof createApp>>

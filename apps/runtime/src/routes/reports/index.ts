@@ -143,6 +143,24 @@ function decodeIngressSafePathParam(value: string): string {
   }
 }
 
+function createInternalErrorResponse(errorCode: string, error: unknown) {
+  const detail = error instanceof Error ? error.message : String(error)
+  console.error(`[reports] ${errorCode}`, error)
+
+  return new Response(
+    JSON.stringify({
+      error: errorCode,
+      ...(process.env.NODE_ENV === "production" ? {} : { detail }),
+    }),
+    {
+      status: 500,
+      headers: {
+        "content-type": "application/json",
+      },
+    },
+  )
+}
+
 function toGenUiBetaTone(value: string | null | undefined) {
   switch ((value ?? "").toLowerCase()) {
     case "critical":
@@ -3480,66 +3498,70 @@ export const createReportRoutes = (overrides: Partial<ReportRouteDependencies> =
     .post(
       "/api/reports",
       async ({ request, body }) => {
-        const session = await auth.api.getSession({
-          headers: request.headers,
-        })
+        try {
+          const session = await auth.api.getSession({
+            headers: request.headers,
+          })
 
-        if (!session?.session || !session.user) {
-          return new Response(
-            JSON.stringify({
-              error: "unauthorized",
-            }),
-            {
-              status: 401,
-              headers: {
-                "content-type": "application/json",
+          if (!session?.session || !session.user) {
+            return new Response(
+              JSON.stringify({
+                error: "unauthorized",
+              }),
+              {
+                status: 401,
+                headers: {
+                  "content-type": "application/json",
+                },
               },
-            },
-          )
-        }
+            )
+          }
 
-        const personalWorkspace = await ensurePersonalWorkspace(session)
-        const resolvedSource = resolveReportDataSource({
-          ...(body.datasetName ? { datasetName: body.datasetName } : {}),
-          ...(body.analysisRoot ? { analysisRoot: body.analysisRoot } : {}),
-        })
-        const reportName = body.name?.trim() || resolvedSource?.title || "Imported report"
+          const personalWorkspace = await ensurePersonalWorkspace(session)
+          const resolvedSource = resolveReportDataSource({
+            ...(body.datasetName ? { datasetName: body.datasetName } : {}),
+            ...(body.analysisRoot ? { analysisRoot: body.analysisRoot } : {}),
+          })
+          const reportName = body.name?.trim() || resolvedSource?.title || "Imported report"
 
-        if ((body.datasetName || body.analysisRoot) && !resolvedSource) {
-          return new Response(
-            JSON.stringify({
-              error: "invalid_dataset_source",
-            }),
-            {
-              status: 400,
-              headers: {
-                "content-type": "application/json",
+          if ((body.datasetName || body.analysisRoot) && !resolvedSource) {
+            return new Response(
+              JSON.stringify({
+                error: "invalid_dataset_source",
+              }),
+              {
+                status: 400,
+                headers: {
+                  "content-type": "application/json",
+                },
               },
+            )
+          }
+
+          const created = await createWorkspaceReport({
+            workspaceId: personalWorkspace.id,
+            name: reportName,
+            datasetName: body.datasetName?.trim() || null,
+            analysisRoot: resolvedSource?.dataDir ?? null,
+          })
+
+          return decodeCreateReportResponse({
+            report: {
+              id: created.id,
+              workspaceId: created.workspaceId,
+              slug: created.slug,
+              name: created.name,
+              kind: created.kind,
+              status: created.status,
+              analysisRoot: created.analysisRoot ?? null,
+              createdAt: created.createdAt.toISOString(),
+              updatedAt: created.updatedAt.toISOString(),
+              lastSyncedAt: created.lastSyncedAt?.toISOString() ?? null,
             },
-          )
+          })
+        } catch (error) {
+          return createInternalErrorResponse("report_create_failed", error)
         }
-
-        const created = await createWorkspaceReport({
-          workspaceId: personalWorkspace.id,
-          name: reportName,
-          datasetName: body.datasetName?.trim() || null,
-          analysisRoot: resolvedSource?.dataDir ?? null,
-        })
-
-        return decodeCreateReportResponse({
-          report: {
-            id: created.id,
-            workspaceId: created.workspaceId,
-            slug: created.slug,
-            name: created.name,
-            kind: created.kind,
-            status: created.status,
-            analysisRoot: created.analysisRoot ?? null,
-            createdAt: created.createdAt.toISOString(),
-            updatedAt: created.updatedAt.toISOString(),
-            lastSyncedAt: created.lastSyncedAt?.toISOString() ?? null,
-          },
-        })
       },
       {
         body: CreateReportBodySchema,
