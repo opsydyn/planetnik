@@ -87,13 +87,13 @@ variable "log_retention_days" {
 variable "runtime_min_replicas" {
   description = "Minimum runtime replicas."
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "runtime_max_replicas" {
   description = "Maximum runtime replicas."
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "runtime_cpu" {
