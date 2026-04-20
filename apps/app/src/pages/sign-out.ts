@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro"
-import { SERVER_BASE_URL } from "../lib/constants.js"
+import { signOutRuntimeAuthSession } from "../lib/runtime-client.js"
 
-const AUTH_SIGN_OUT_PATH = "/api/auth/sign-out" as const
 const SIGN_IN_PATH = "/sign-in" as const
 const REDIRECT_STATUS = 302 as const
 const EXPIRED_COOKIE_DATE = "Thu, 01 Jan 1970 00:00:00 GMT" as const
@@ -22,21 +21,6 @@ const CLEAR_AUTH_COOKIE_NAMES = [
 
 const SAME_SITE_LAX = "SameSite=Lax" as const
 const SAME_SITE_NONE = "SameSite=None" as const
-
-type HeadersWithSetCookie = Headers & {
-  getSetCookie?: () => string[]
-}
-
-function readSetCookieHeaders(headers: Headers): string[] {
-  const cookies = (headers as HeadersWithSetCookie).getSetCookie?.().filter(Boolean) ?? []
-
-  if (cookies.length > 0) {
-    return cookies
-  }
-
-  const single = headers.get("set-cookie")
-  return single ? [single] : []
-}
 
 const redirectToSignIn = (setCookies: string[] = []): Response => {
   const headers = new Headers({
@@ -122,16 +106,7 @@ export const GET: APIRoute = async ({ request }) => {
   const forcedClearCookies = fallbackCookieHeaders(hostname)
 
   try {
-    const response = await fetch(`${SERVER_BASE_URL}${AUTH_SIGN_OUT_PATH}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...(cookie ? { cookie } : {}),
-      },
-      body: JSON.stringify({}),
-    })
-
-    const forwardedCookies = readSetCookieHeaders(response.headers)
+    const forwardedCookies = await signOutRuntimeAuthSession(cookie)
     return redirectToSignIn([...forwardedCookies, ...forcedClearCookies])
   } catch {
     return redirectToSignIn(forcedClearCookies)

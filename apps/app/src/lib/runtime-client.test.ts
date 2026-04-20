@@ -9,6 +9,62 @@ const originalFetch = globalThis.fetch
 const fetchMock = mock(async (input: string | URL | Request) => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
 
+  if (url.endsWith("/api/auth/get-session")) {
+    return new Response(
+      JSON.stringify({
+        user: {
+          id: "user_123",
+          email: "alan@example.com",
+          name: "Alan",
+          role: "admin",
+        },
+        session: {
+          id: "session_123",
+          userId: "user_123",
+          expiresAt: "2026-04-30T00:00:00.000Z",
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    )
+  }
+
+  if (url.endsWith("/api/auth/sign-out")) {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "set-cookie": "better-auth.session_token=; Path=/; Max-Age=0; HttpOnly",
+      },
+    })
+  }
+
+  if (url.endsWith("/gen-ui-beta-surface")) {
+    return new Response(
+      JSON.stringify({
+        surface: {
+          root: "surface-root",
+          components: [
+            {
+              id: "pressure-card",
+              component: {
+                type: "Card",
+              },
+            },
+          ],
+          data: {
+            title: "Pressure summary",
+          },
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    )
+  }
+
   if (url.includes("/contributors/")) {
     return new Response(
       JSON.stringify({
@@ -92,10 +148,44 @@ afterEach(() => {
 })
 
 const {
+  getRuntimeAuthSession,
+  getRuntimeReportGenUiBetaSurface,
   getRuntimeReportContributorDetail,
   getRuntimeReportLandscapeRepository,
   getRuntimeReportLandscapeRepositoryContributorDetail,
+  signOutRuntimeAuthSession,
 } = await import("./runtime-client.js")
+
+describe("runtime client auth and surface helpers", () => {
+  test("resolves auth session data through the shared runtime client", async () => {
+    const session = await getRuntimeAuthSession("better-auth.session_token=abc")
+
+    expect(session.user?.email).toBe("alan@example.com")
+    expect(session.session?.id).toBe("session_123")
+    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "http://example.test/api/auth/get-session",
+    )
+  })
+
+  test("forwards sign-out to the runtime and returns forwarded cookies", async () => {
+    const cookies = await signOutRuntimeAuthSession("better-auth.session_token=abc")
+
+    expect(cookies).toEqual(["better-auth.session_token=; Path=/; Max-Age=0; HttpOnly"])
+    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "http://example.test/api/auth/sign-out",
+    )
+  })
+
+  test("loads the beta A2UI surface through the shared runtime client helper", async () => {
+    const surface = await getRuntimeReportGenUiBetaSurface("alanpcurrie-landscape")
+
+    expect(surface?.root).toBe("surface-root")
+    expect(surface?.data.title).toBe("Pressure summary")
+    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "http://example.test/api/reports/alanpcurrie-landscape/gen-ui-beta-surface",
+    )
+  })
+})
 
 describe("runtime client landscape repository paths", () => {
   test("encodes contributor emails with ingress-safe route segments", async () => {

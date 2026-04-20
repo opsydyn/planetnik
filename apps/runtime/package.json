@@ -18,7 +18,7 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
-		"@copilotkit/runtime": "^1.8.0",
+		"@copilotkit/runtime": "^1.54.1",
 		"@effect/schema": "catalog:",
 		"@elysiajs/cors": "^1.4.0",
 		"@elysiajs/openapi": "^1.4.14",

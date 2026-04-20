@@ -367,6 +367,21 @@
         "operationId": "getApiReportsBySlug"
       }
     },
+    "/api/reports/{slug}/gen-ui-beta-surface": {
+      "get": {
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "getApiReportsBySlugGen-ui-beta-surface"
+      }
+    },
     "/api/reports/{slug}/landscape-overview": {
       "get": {
         "parameters": [

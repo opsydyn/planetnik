@@ -1,0 +1,229 @@
+---
+import AppShell from "../../../layouts/AppShell.astro"
+import GenUiBetaA2ui from "../../../components/intelligence-beta/GenUiBetaA2ui"
+import GenUiBetaBoard from "../../../components/intelligence-beta/GenUiBetaBoard"
+import type { GenUiBetaBoardProps, GenUiBetaTone } from "../../../components/intelligence-beta/GenUiBetaBoard"
+import { isHostedIntelligenceEnabled } from "../../../lib/feature-flags.js"
+import { buildHostedReportShellContext } from "../../../lib/hosted-shell.js"
+import { getHostedReportRepositoryHref } from "../../../lib/hosted-routes.js"
+import { shouldRedirectReportDetail } from "../../../lib/report-detail-view-model.js"
+import {
+  getRuntimeReport,
+  getRuntimeReportContributors,
+  getRuntimeReportHotspots,
+  getRuntimeReportImpact,
+  getRuntimeReportLandscapeOverview,
+  getRuntimeReportLandscapeRepositories,
+  getRuntimeReportSecurity,
+} from "../../../lib/runtime-client.js"
+
+const cookie = Astro.request.headers.get("cookie") ?? ""
+const slug = Astro.params.slug ?? ""
+
+if (!isHostedIntelligenceEnabled()) {
+  return Astro.redirect("/coming-soon")
+}
+
+const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null
+
+if (shouldRedirectReportDetail(reportDetail)) {
+  return Astro.redirect("/")
+}
+
+const isLandscape = reportDetail.context?.reportMode === "landscape"
+const baseHref = `/reports/${slug}`
+
+const [contributors, hotspots, impact, security, landscapeOverview, landscapeRepositories] = await Promise.all([
+  getRuntimeReportContributors(cookie, slug),
+  isLandscape ? null : getRuntimeReportHotspots(cookie, slug),
+  isLandscape ? null : getRuntimeReportImpact(cookie, slug),
+  getRuntimeReportSecurity(cookie, slug),
+  isLandscape ? getRuntimeReportLandscapeOverview(cookie, slug) : null,
+  isLandscape ? getRuntimeReportLandscapeRepositories(cookie, slug) : null,
+])
+
+const topContributor = contributors[0] ?? null
+const sortedLandscapeRepos = landscapeRepositories
+  ? [...landscapeRepositories.repositories].sort((left, right) => right.mainLinesOfCode - left.mainLinesOfCode)
+  : []
+const leadLandscapeRepo = sortedLandscapeRepos[0] ?? null
+const topHotspot = hotspots?.rows[0] ?? null
+
+function toTone(value: string | null | undefined): GenUiBetaTone {
+  switch ((value ?? "").toLowerCase()) {
+    case "critical":
+    case "high":
+      return "alert"
+    case "medium":
+      return "watch"
+    default:
+      return "calm"
+  }
+}
+
+const landscapeTone: GenUiBetaTone =
+  leadLandscapeRepo && leadLandscapeRepo.mainLinesOfCode > 50000
+    ? "alert"
+    : leadLandscapeRepo && leadLandscapeRepo.mainLinesOfCode > 15000
+      ? "watch"
+      : "calm"
+
+const pressureSummary: GenUiBetaBoardProps["pressureSummary"] = isLandscape
+  ? {
+      eyebrow: "Pressure summary",
+      title: leadLandscapeRepo?.name ?? (landscapeOverview?.landscapeName ?? reportDetail.report.name),
+      metric: leadLandscapeRepo
+        ? `${leadLandscapeRepo.mainLinesOfCode.toLocaleString("en-GB")} LOC`
+        : `${landscapeOverview?.totals.totalLinesOfCode.toLocaleString("en-GB") ?? 0} LOC`,
+      tone: landscapeTone,
+      details: [
+        leadLandscapeRepo
+          ? `${leadLandscapeRepo.commits30d.toLocaleString("en-GB")} commits in the last 30 days`
+          : "No repository pressure leader could be derived yet.",
+        leadLandscapeRepo
+          ? `${leadLandscapeRepo.contributorsCount.toLocaleString("en-GB")} contributors currently touching the lead repository`
+          : `${landscapeOverview?.contributorCount.toLocaleString("en-GB") ?? 0} contributors are represented in this landscape`,
+        topContributor
+          ? `Top visible contributor in this snapshot: ${topContributor.displayName || topContributor.email}`
+          : "Contributor context will appear here once activity data is available.",
+      ],
+    }
+  : {
+      eyebrow: "Pressure summary",
+      title: topHotspot?.name ?? reportDetail.report.name,
+      metric: topHotspot ? `${Math.round(topHotspot.score).toLocaleString("en-GB")} score` : "No hotspot score yet",
+      tone: toTone(topHotspot?.severity),
+      details: topHotspot
+        ? [
+            `${topHotspot.severity} severity driven by ${topHotspot.dominantDimension}`,
+            ...(topHotspot.reasons.slice(0, 2) ?? []),
+            topHotspot.suggestedAction,
+          ]
+        : [
+            "No hotspot rows are available yet.",
+            topContributor
+              ? `Visible ownership lead: ${topContributor.displayName || topContributor.email}`
+              : "Contributor detail will appear here when available.",
+          ],
+    }
+
+const rankingItems = isLandscape
+  ? sortedLandscapeRepos.slice(0, 8).map((repo) => ({
+      label: repo.name,
+      value: repo.mainLinesOfCode,
+      href: getHostedReportRepositoryHref(slug, repo.repoKey),
+    }))
+  : hotspots?.rows.slice(0, 8).map((item) => ({
+      label: item.name,
+      value: Math.round(item.score),
+    })) ?? []
+
+const severityTitle = isLandscape ? "Security severity breakdown" : "Hotspot severity breakdown"
+const severityItems = isLandscape
+  ? [
+      { label: "Critical", value: security?.severityCounts.critical ?? 0 },
+      { label: "High", value: security?.severityCounts.high ?? 0 },
+      { label: "Medium", value: security?.severityCounts.medium ?? 0 },
+      { label: "Low", value: security?.severityCounts.low ?? 0 },
+    ].filter((item) => item.value > 0)
+  : [
+      { label: "Critical", value: hotspots?.severityCounts.critical ?? 0 },
+      { label: "High", value: hotspots?.severityCounts.high ?? 0 },
+      { label: "Medium", value: hotspots?.severityCounts.medium ?? 0 },
+      { label: "Low", value: hotspots?.severityCounts.low ?? 0 },
+    ].filter((item) => item.value > 0)
+
+const distributionTitle = isLandscape ? "Repository pressure opportunities" : "Impact opportunities"
+const distributionItems = isLandscape
+  ? sortedLandscapeRepos.slice(0, 6).map((repo) => ({
+      label: repo.name,
+      value: repo.mainLinesOfCode,
+      detail: `${repo.commits30d.toLocaleString("en-GB")} commits`,
+      detailSecondary: `${repo.contributorsCount.toLocaleString("en-GB")} contributors`,
+    }))
+  : impact?.topOpportunities.slice(0, 6).map((item) => ({
+      label: item.name,
+      value: item.impactScore,
+      detail: `${item.impactScore.toFixed(1)} score`,
+      detailSecondary: item.dominantDimension,
+    })) ?? []
+
+const navigationCards = [
+  {
+    label: "Ask Płanetnik",
+    href: `${baseHref}/intelligence`,
+    description: "Compare this beta surface against the current hosted intelligence chat.",
+  },
+  {
+    label: isLandscape ? "Repositories" : "Hotspots",
+    href: `${baseHref}/${isLandscape ? "repositories" : "hotspots"}`,
+    description: isLandscape
+      ? "Drop back into the current repo inventory and drill down into one candidate."
+      : "Jump into the existing ranked hotspot queue and validate the beta prioritisation."
+  },
+  {
+    label: isLandscape ? "Security" : "Impact",
+    href: `${baseHref}/${isLandscape ? "security" : "impact"}`,
+    description: isLandscape
+      ? "Inspect vulnerability severity and supply-chain risk from the current production view."
+      : "Compare future opportunity surfaces against the current impact report."
+  },
+  {
+    label: "Contributors",
+    href: `${baseHref}/contributors`,
+    description: "Use contributor context to test ownership and knowledge-flow follow-up actions.",
+  },
+]
+
+const tableTitle = isLandscape ? "Report-specific candidate table" : "Hotspot candidate table"
+const tableRows = isLandscape
+  ? sortedLandscapeRepos.slice(0, 6).map((repo) => ({
+      name: repo.name,
+      context: `${repo.mainFilesCount.toLocaleString("en-GB")} files`,
+      signal: `${repo.commits30d.toLocaleString("en-GB")} commits · ${repo.contributorsCount.toLocaleString("en-GB")} contributors`,
+      recommendedAction: "Trial a compare flow or drill into the repository hotspot surface next.",
+    }))
+  : hotspots?.rows.slice(0, 6).map((item) => ({
+      name: item.name,
+      context: `${item.kind} • ${item.parent || "project"}`,
+      signal: `${item.severity} · ${item.dominantDimension}`,
+      recommendedAction: item.suggestedAction,
+    })) ?? []
+
+const betaProps: GenUiBetaBoardProps = {
+  reportName: reportDetail.report.name,
+  reportMode: isLandscape ? "landscape" : "single_repository",
+  betaMessage:
+    "Runtime-backed trail for Gen UI concepts. This page now renders a fetched beta A2UI surface while still leaving the main intelligence route isolated.",
+  readinessTitle: "CopilotKit is good enough for a contract-driven beta",
+  readinessDetail:
+    "The renderer trail now pulls a small surface contract from the runtime instead of synthesising the tree entirely on the client. The next leap is to have the main Copilot runtime emit and update these surfaces in-thread.",
+  vocabulary: [
+    "Pressure summaries",
+    "Hotspot rankings",
+    "Severity breakdowns",
+    "Impact opportunities",
+    "Suggested navigation cards",
+    "Report-specific charts and tables",
+  ],
+  pressureSummary,
+  rankingTitle: isLandscape ? "Top repository pressure zones" : "Top hotspot rankings",
+  rankingItems,
+  severityTitle,
+  severityItems,
+  distributionTitle,
+  distributionItems,
+  navigationCards,
+  tableTitle,
+  tableRows,
+}
+---
+
+<AppShell
+  title="Gen UI Beta"
+  subtitle="Planetnik-specific component vocabulary trail"
+  shellContext={buildHostedReportShellContext(reportDetail)}
+>
+  <GenUiBetaA2ui client:load slug={slug} baseHref={baseHref} />
+  <GenUiBetaBoard client:load {...betaProps} />
+</AppShell>

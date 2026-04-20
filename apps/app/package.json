@@ -17,6 +17,7 @@
   "dependencies": {
     "@astrojs/node": "^10.0.4",
     "@astrojs/react": "^5.0.2",
+    "@copilotkit/a2ui-renderer": "^1.54.1",
     "@copilotkit/react-core": "^1.54.1",
     "@copilotkit/react-ui": "^1.54.1",
     "@effect-atom/atom-react": "^0.5.0",

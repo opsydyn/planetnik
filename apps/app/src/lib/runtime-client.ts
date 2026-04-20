@@ -4,6 +4,40 @@ import { SERVER_BASE_URL } from "./constants.js"
 
 const runtimeClient = treaty<PlanetnikRuntimeApp>(SERVER_BASE_URL)
 
+const RUNTIME_AUTH_GET_SESSION_URL = `${SERVER_BASE_URL}/api/auth/get-session`
+const RUNTIME_AUTH_SIGN_OUT_URL = `${SERVER_BASE_URL}/api/auth/sign-out`
+
+type HeadersWithSetCookie = Headers & {
+  getSetCookie?: () => string[]
+}
+
+export type RuntimeAuthUser = {
+  readonly id: string
+  readonly email: string
+  readonly name?: string | null
+  readonly image?: string | null
+  readonly role?: string | null
+  readonly [key: string]: unknown
+}
+
+export type RuntimeAuthSession = {
+  readonly id?: string
+  readonly userId?: string
+  readonly expiresAt?: string
+  readonly token?: string
+  readonly [key: string]: unknown
+}
+
+export type RuntimeResolvedSession = {
+  readonly user: RuntimeAuthUser | null
+  readonly session: RuntimeAuthSession | null
+}
+
+type RuntimeAuthSessionResponse = {
+  readonly user?: RuntimeAuthUser | null
+  readonly session?: RuntimeAuthSession | null
+}
+
 export type RuntimeMe = {
   readonly user: {
     readonly id: string
@@ -877,6 +911,17 @@ type RuntimeHeaders = {
   }
 }
 
+function readSetCookieHeaders(headers: Headers): string[] {
+  const cookies = (headers as HeadersWithSetCookie).getSetCookie?.().filter(Boolean) ?? []
+
+  if (cookies.length > 0) {
+    return cookies
+  }
+
+  const single = headers.get("set-cookie")
+  return single ? [single] : []
+}
+
 function withRuntimeCookie(cookie: string): RuntimeHeaders {
   return {
     headers: {
@@ -891,6 +936,57 @@ function encodeRuntimePathParam(value: string): string {
 
 function isTransportResponse(value: unknown): value is Response {
   return value instanceof Response
+}
+
+// Better Auth is mounted as a wildcard passthrough (`/api/auth/*`), so these
+// edge helpers stay on raw fetch until the auth surface is explicitly modeled.
+export async function getRuntimeAuthSession(cookie: string | null | undefined): Promise<RuntimeResolvedSession> {
+  if (!cookie) {
+    return {
+      user: null,
+      session: null,
+    }
+  }
+
+  try {
+    const response = await fetch(RUNTIME_AUTH_GET_SESSION_URL, {
+      headers: {
+        cookie,
+      },
+    })
+
+    if (!response.ok) {
+      return {
+        user: null,
+        session: null,
+      }
+    }
+
+    const data = (await response.json()) as RuntimeAuthSessionResponse
+
+    return {
+      user: data.user ?? null,
+      session: data.session ?? null,
+    }
+  } catch {
+    return {
+      user: null,
+      session: null,
+    }
+  }
+}
+
+export async function signOutRuntimeAuthSession(cookie: string | null | undefined): Promise<ReadonlyArray<string>> {
+  const response = await fetch(RUNTIME_AUTH_SIGN_OUT_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(cookie ? { cookie } : {}),
+    },
+    body: JSON.stringify({}),
+  })
+
+  return readSetCookieHeaders(response.headers)
 }
 
 export async function getRuntimeMe(cookie: string): Promise<RuntimeMe | null> {
@@ -1046,6 +1142,30 @@ export async function getRuntimeReportHotspots(cookie: string, slug: string): Pr
 
   return data.hotspots
 }
+
+export async function getRuntimeReportGenUiBetaSurface(slug: string, signal?: AbortSignal) {
+  const { data, error, status } = await runtimeClient.api.reports({ slug })["gen-ui-beta-surface"].get({
+    fetch: {
+      credentials: "include",
+      headers: {
+        accept: "application/json",
+      },
+      signal,
+    },
+  })
+
+  if (error) {
+    throw new Error(`Surface request failed with ${status}`)
+  }
+
+  if (!data || isTransportResponse(data)) {
+    return null
+  }
+
+  return data.surface
+}
+
+export type RuntimeReportGenUiBetaSurface = NonNullable<Awaited<ReturnType<typeof getRuntimeReportGenUiBetaSurface>>>
 
 export async function getRuntimeReportCommits(cookie: string, slug: string): Promise<RuntimeReportCommits | null> {
   const { data } = await runtimeClient.api.reports({ slug }).commits.get(withRuntimeCookie(cookie))

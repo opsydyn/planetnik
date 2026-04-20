@@ -2,6 +2,7 @@ import { CopilotKit } from "@copilotkit/react-core"
 import { CopilotChat } from "@copilotkit/react-ui"
 import "@copilotkit/react-ui/styles.css"
 import "./IntelligenceChat.css"
+import IntelligenceUserMessage from "./IntelligenceUserMessage"
 import {
   buildIntelligenceCapabilities,
   buildIntelligencePromptPlaceholder,
@@ -9,6 +10,7 @@ import {
 } from "./intelligenceUx"
 import { type AnalysisContextProps, useAnalysisContext } from "./useAnalysisContext"
 import { useChartActions } from "./useChartActions"
+import { useInvestigationSurfaceAction } from "./useInvestigationSurfaceAction"
 import { useNavigationAction } from "./useNavigationAction"
 import { useSuggestions } from "./useSuggestions"
 
@@ -21,6 +23,7 @@ Personality:
 - You care about the craft. You want teams to build systems that endure, not just ship features.
 - You are concise. You lead with the insight, then support it with data. No filler.
 - When generating charts, briefly explain what the visualisation reveals — don't just present raw data.
+- When a structured, navigable summary would help more than prose alone, render the investigation surface so the user can inspect pressure, signals, controls, and next moves directly in the conversation.
 
 Tone: Think weathered mentor, not corporate assistant. Warm but no-nonsense. Occasionally dry.`
 
@@ -38,6 +41,7 @@ interface InnerProps extends AnalysisContextProps {
 function IntelligenceChatInner({ baseHref, isLandscape, ...props }: InnerProps) {
   useAnalysisContext(props)
   useChartActions()
+  useInvestigationSurfaceAction(baseHref)
   useNavigationAction(baseHref, isLandscape)
   useSuggestions(props)
 
@@ -49,6 +53,7 @@ function IntelligenceChatInner({ baseHref, isLandscape, ...props }: InnerProps) 
     <CopilotChat
       className="planetnik-chat"
       instructions={PLANETNIK_INSTRUCTIONS}
+      UserMessage={IntelligenceUserMessage}
       labels={{
         title: "Płanetnik",
         placeholder,

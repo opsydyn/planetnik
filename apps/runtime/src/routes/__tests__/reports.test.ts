@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { Elysia } from "elysia"
-import { createReportRoutes, type ReportRouteDependencies } from "../reports/index.js"
 
 process.env.NODE_ENV ??= "test"
 process.env.PORT ??= "1337"
@@ -10,6 +9,9 @@ process.env.BETTER_AUTH_SECRET ??= "test-secret-with-at-least-32-characters"
 process.env.BETTER_AUTH_URL ??= "http://localhost:1337"
 process.env.AUTH_COOKIE_SECURE ??= "false"
 process.env.AUTH_COOKIE_SAME_SITE ??= "lax"
+
+const { createReportRoutes } = await import("../reports/index.js")
+type ReportRouteDependencies = import("../reports/index.js").ReportRouteDependencies
 
 const authorizedSession = {
   user: {
@@ -2423,6 +2425,58 @@ describe("runtime report routes", () => {
     expect(readReportHotspotsSummary).toHaveBeenCalledWith("/datasets/effect-ts/data")
   })
 
+  test("returns a beta A2UI surface contract for a connected report", async () => {
+    storedReports = [
+      {
+        id: "report-1",
+        workspaceId: personalWorkspace.id,
+        slug: "effect-ts",
+        name: "Effect TS",
+        kind: "planetnik-report",
+        status: "connected",
+        analysisRoot: "/datasets/effect-ts/data",
+        createdAt: new Date("2026-04-02T17:20:19.145Z"),
+        updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+        lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+      },
+    ]
+    const app = createApp()
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/reports/effect-ts/gen-ui-beta-surface", {
+        headers: {
+          cookie: "better-auth.session_token=test",
+        },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      surface: {
+        root: string
+        components: Array<{ id: string }>
+        data: {
+          intro: { reportLabel: string }
+          navigationCards: Array<{ path: string }>
+          rankingItems: Array<{ label: string; metric: string }>
+        }
+      }
+    }
+
+    expect(body.surface.root).toBe("root")
+    expect(body.surface.components.some((component) => component.id === "navigation-item-button")).toBe(true)
+    expect(body.surface.data.intro.reportLabel).toBe("Single repository report · Effect TS")
+    expect(body.surface.data.navigationCards[0]).toMatchObject({
+      path: "/intelligence",
+    })
+    expect(body.surface.data.rankingItems[0]).toMatchObject({
+      label: "src/runtime/index.ts",
+      metric: "9 score",
+    })
+    expect(readReportHotspotsSummary).toHaveBeenCalledWith("/datasets/effect-ts/data")
+    expect(readReportImpactSummary).toHaveBeenCalledWith("/datasets/effect-ts/data")
+  })
+
   test("returns commit summary for a connected report", async () => {
     storedReports = [
       {
@@ -2610,6 +2664,59 @@ describe("runtime report routes", () => {
       name: "web-app",
     })
     expect(readReportLandscapeOverviewSummary).toHaveBeenCalledWith("/datasets/platform-landscape/data")
+  })
+
+  test("returns a beta A2UI surface contract for a connected landscape report", async () => {
+    storedReports = [
+      {
+        id: "report-2",
+        workspaceId: personalWorkspace.id,
+        slug: "platform-landscape",
+        name: "Platform Landscape",
+        kind: "planetnik-report",
+        status: "connected",
+        analysisRoot: "/datasets/platform-landscape/data",
+        createdAt: new Date("2026-04-02T17:20:19.145Z"),
+        updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+        lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+      },
+    ]
+    const app = createApp()
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/reports/platform-landscape/gen-ui-beta-surface", {
+        headers: {
+          cookie: "better-auth.session_token=test",
+        },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      surface: {
+        data: {
+          intro: { reportLabel: string }
+          navigationCards: Array<{ path: string }>
+          severityItems: Array<{ label: string; metric: string }>
+          rankingItems: Array<{ label: string; metric: string }>
+        }
+      }
+    }
+
+    expect(body.surface.data.intro.reportLabel).toBe("Landscape report · Platform Landscape")
+    expect(body.surface.data.navigationCards[1]).toMatchObject({
+      path: "/repositories",
+    })
+    expect(body.surface.data.severityItems[0]).toMatchObject({
+      label: "Critical",
+      metric: "1 signals",
+    })
+    expect(body.surface.data.rankingItems[0]).toMatchObject({
+      label: "web-app",
+      metric: "18,450 LOC",
+    })
+    expect(readReportLandscapeRepositoriesSummary).toHaveBeenCalledWith("/datasets/platform-landscape/data")
+    expect(readReportSecuritySummary).toHaveBeenCalledWith("/datasets/platform-landscape/data")
   })
 
   test("returns a landscape tags summary for a connected landscape report", async () => {
