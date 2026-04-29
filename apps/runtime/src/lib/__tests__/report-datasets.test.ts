@@ -1248,6 +1248,32 @@ describe("runtime report dataset helpers", () => {
     })
   })
 
+  test("returns an empty temporal view when landscape repository temporal data is missing", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "data")
+    const repoDataDir = join(root, "acme__web-app", "data")
+    mkdirSync(dataDir, { recursive: true })
+    mkdirSync(repoDataDir, { recursive: true })
+    writeJson(join(repoDataDir, "files_main.json"), {
+      files: [
+        {
+          relativePath: "src/index.ts",
+          extension: "ts",
+          linesOfCode: 1100,
+          commitsCount: 18,
+          contributorsCount: 4,
+          firstDate: "2024-01-03",
+          latestDate: "2026-03-31",
+        },
+      ],
+    })
+
+    expect(readReportLandscapeRepositoryFilesView(dataDir, "acme__web-app", "temporal")).toEqual({
+      view: "temporal",
+      sections: [],
+    })
+  })
+
   test("reads a landscape repository unit size view from the repo export folder", () => {
     const root = makeTempRoot()
     const dataDir = join(root, "data")

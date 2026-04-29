@@ -5,6 +5,7 @@ import {
 	getHostedReportRepoKeyFromParam,
 	getHostedReportRepositoryPageHref,
 } from "../../../../../../lib/hosted-routes.js";
+import type { RuntimeReportFilesView } from "../../../../../../lib/runtime-client.js";
 import {
 	shouldRedirectReportDetail,
 } from "../../../../../../lib/report-detail-view-model.js";
@@ -21,7 +22,7 @@ const repo = getHostedReportRepoKeyFromParam(Astro.params.repo ?? "");
 const view = Astro.params.view;
 
 if (view !== "size" && view !== "age" && view !== "churn" && view !== "temporal") {
-	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
+	return Astro.redirect(getHostedReportRepositoryPageHref(slug, repo));
 }
 
 const reportDetail = slug ? await getRuntimeReport(cookie, slug) : null;
@@ -41,14 +42,21 @@ if (!repository) {
 	return Astro.redirect(`/reports/${slug}/overview`);
 }
 
-const files = await getRuntimeReportLandscapeRepositoryFilesView(
+let files: RuntimeReportFilesView | null = await getRuntimeReportLandscapeRepositoryFilesView(
 	cookie,
 	slug,
 	repo,
 	view,
 );
 if (!files) {
-	return Astro.redirect(getHostedReportRepositoryHref(slug, repo));
+	if (view !== "temporal") {
+		return Astro.redirect(getHostedReportRepositoryPageHref(slug, repo));
+	}
+
+	files = {
+		view: "temporal",
+		sections: [],
+	};
 }
 
 const routeBase = getHostedReportRepositoryPageHref(slug, repo, "/files");

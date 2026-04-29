@@ -2536,10 +2536,6 @@ export function readReportFilesView(dataDir: string, view: ReportFileViewName): 
     ? raw.dependencies.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
     : []
   if (view === "temporal") {
-    if (dependencies.length === 0) {
-      return null
-    }
-
     const grouped = new Map<string, Array<Record<string, unknown>>>()
     for (const dependency of dependencies) {
       const key = typeof dependency.periodKey === "string" ? dependency.periodKey : ""
@@ -2579,12 +2575,10 @@ export function readReportFilesView(dataDir: string, view: ReportFileViewName): 
       .filter((section): section is NonNullable<typeof section> => section !== null)
       .sort((left, right) => left.periodDays - right.periodDays)
 
-    return sections.length === 0
-      ? null
-      : {
-          view: "temporal",
-          sections,
-        }
+    return {
+      view: "temporal",
+      sections,
+    }
   }
 
   return null

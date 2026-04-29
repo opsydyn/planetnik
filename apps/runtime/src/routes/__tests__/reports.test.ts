@@ -1227,7 +1227,18 @@ const readReportLandscapeRepositoryDuplicationSummary = mock((analysisRoot: stri
   }
 })
 const readReportLandscapeRepositoryFilesView = mock((analysisRoot: string, repoKey: string, view: string) => {
-  if (analysisRoot !== "/datasets/platform-landscape/data" || repoKey !== "acme__web-app" || view !== "size") {
+  if (analysisRoot !== "/datasets/platform-landscape/data" || repoKey !== "acme__web-app") {
+    return null
+  }
+
+  if (view === "temporal") {
+    return {
+      view: "temporal" as const,
+      sections: [],
+    }
+  }
+
+  if (view !== "size") {
     return null
   }
 
@@ -3238,6 +3249,51 @@ describe("runtime report routes", () => {
       "/datasets/platform-landscape/data",
       "acme__web-app",
       "size",
+    )
+  })
+
+  test("returns an empty landscape repository temporal view when temporal data is unavailable", async () => {
+    storedReports = [
+      {
+        id: "report-1",
+        workspaceId: personalWorkspace.id,
+        slug: "platform-landscape",
+        name: "Platform Landscape",
+        kind: "planetnik-report",
+        status: "connected",
+        analysisRoot: "/datasets/platform-landscape/data",
+        createdAt: new Date("2026-04-02T17:20:19.145Z"),
+        updatedAt: new Date("2026-04-02T17:20:19.145Z"),
+        lastSyncedAt: new Date("2026-04-02T17:20:19.145Z"),
+      },
+    ]
+
+    const app = createApp()
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/reports/platform-landscape/repositories/acme__web-app/files/temporal", {
+        headers: {
+          cookie: "better-auth.session_token=test",
+        },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      files: {
+        view: string
+        sections: Array<unknown>
+      }
+    }
+
+    expect(body.files).toEqual({
+      view: "temporal",
+      sections: [],
+    })
+    expect(readReportLandscapeRepositoryFilesView).toHaveBeenCalledWith(
+      "/datasets/platform-landscape/data",
+      "acme__web-app",
+      "temporal",
     )
   })
 
