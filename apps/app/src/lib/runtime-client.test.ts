@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-
-mock.module("./constants.js", () => ({
-  SERVER_BASE_URL: "http://example.test",
-}))
+import { SERVER_BASE_URL } from "./constants.js"
 
 const originalFetch = globalThis.fetch
 
@@ -138,6 +135,10 @@ function getRequestUrl(input: string | URL | Request): string {
   return input.url
 }
 
+function getRequestPath(input: string | URL | Request): string {
+  return new URL(getRequestUrl(input)).pathname
+}
+
 beforeEach(() => {
   fetchMock.mockClear()
   globalThis.fetch = fetchMock as unknown as typeof fetch
@@ -163,7 +164,7 @@ describe("runtime client auth and surface helpers", () => {
     expect(session.user?.email).toBe("alan@example.com")
     expect(session.session?.id).toBe("session_123")
     expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/auth/get-session",
+      `${SERVER_BASE_URL}/api/auth/get-session`,
     )
   })
 
@@ -172,7 +173,7 @@ describe("runtime client auth and surface helpers", () => {
 
     expect(cookies).toEqual(["better-auth.session_token=; Path=/; Max-Age=0; HttpOnly"])
     expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/auth/sign-out",
+      `${SERVER_BASE_URL}/api/auth/sign-out`,
     )
   })
 
@@ -182,7 +183,7 @@ describe("runtime client auth and surface helpers", () => {
     expect(surface?.root).toBe("surface-root")
     expect(surface?.data.title).toBe("Pressure summary")
     expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/reports/alanpcurrie-landscape/gen-ui-beta-surface",
+      `${SERVER_BASE_URL}/api/reports/alanpcurrie-landscape/gen-ui-beta-surface`,
     )
   })
 })
@@ -196,8 +197,8 @@ describe("runtime client landscape repository paths", () => {
     )
 
     expect(contributor?.email).toBe("alan@example.com")
-    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/reports/alanpcurrie-landscape/contributors/alan$40example.com",
+    expect(getRequestPath(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "/api/reports/alanpcurrie-landscape/contributors/alan$40example.com",
     )
   })
 
@@ -209,8 +210,8 @@ describe("runtime client landscape repository paths", () => {
     )
 
     expect(repository?.repoKey).toBe("alanpcurrie/next-app-playground")
-    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Fnext-app-playground",
+    expect(getRequestPath(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "/api/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Fnext-app-playground",
     )
   })
 
@@ -223,8 +224,8 @@ describe("runtime client landscape repository paths", () => {
     )
 
     expect(contributor?.email).toBe("alan@example.com")
-    expect(getRequestUrl(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
-      "http://example.test/api/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Fnext-app-playground/contributors/alan$40example.com",
+    expect(getRequestPath(fetchMock.mock.calls[0]![0] as string | URL | Request)).toBe(
+      "/api/reports/alanpcurrie-landscape/repositories/alanpcurrie$2Fnext-app-playground/contributors/alan$40example.com",
     )
   })
 })

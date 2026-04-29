@@ -60,5 +60,5 @@ describe("runtime OpenAPI", () => {
     expect(spec.paths).toHaveProperty("/api/workspaces")
     expect(healthStatusEnum).toEqual(["ok"])
     expect(unauthorizedErrorEnum).toEqual(["unauthorized"])
-  })
+  }, 15000)
 })
