@@ -2,6 +2,8 @@
 
 > read the weather of the machine
 
+![Płanetnik graphic showing a storm-weather figure](./repo-graphic.png)
+
 **Płanetnik** is a tool for documenting and analysing the architecture of complex software systems.
 
 Built in the spirit of pragmatic architectural analytics, **Płanetnik** helps teams understand large codebases directly from the source. No long workshops. No endless interviews. Just show the code.
