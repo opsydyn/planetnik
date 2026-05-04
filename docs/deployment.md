@@ -1,249 +1,58 @@
-# Deployment Guide
+# Deployment
 
-Planetnik generates static sites from source code analysis. No JVM, no runtime server — just Bun, Astro, and GitHub Pages.
+This section now follows the [Diátaxis](https://diataxis.fr/) framework so deployment information is easier to navigate by need instead of being packed into one mega-page.
 
-## Architecture
+Planetnik deployment has a few moving parts:
 
-```
-┌─────────────────────────────────────────────────┐
-│  GitHub Actions                                 │
-│                                                 │
-│  ┌──────────┐   ┌──────────┐   ┌────────────┐  │
-│  │ Clone    │──▶│ Analyze  │──▶│ Build Astro│  │
-│  │ target   │   │ (Bun CLI)│   │ static site│  │
-│  └──────────┘   └──────────┘   └────────────┘  │
-│                      │                │         │
-│                      ▼                ▼         │
-│                  data/*.json     dist/*.html    │
-│                                       │         │
-│                                       ▼         │
-│                              GitHub Pages       │
-└─────────────────────────────────────────────────┘
-```
+- `.github/workflows/deploy.yml` publishes the site with GitHub Actions
+- `planetnik.config.json` chooses the default deploy mode
+- `landscape-config.json` defines the landscape analysis inputs when landscape mode is used
+- `apps/site` builds a static Astro site from generated analysis data
 
-The pipeline has three stages:
+## Choose the page that matches your need
 
-1. **Analyze** — `analyzeRemote` clones a repo, runs the analysis engine, and outputs JSON/text data
-2. **Build** — Astro's content loader reads the data directory and builds a static site
-3. **Deploy** — GitHub Pages serves the static HTML
+### Learn by doing
 
-No runtime dependencies. No database. No server.
+- [`Tutorial: Deploy a landscape site to GitHub Pages`](./deployment/tutorial-deploy-a-landscape-site-to-github-pages.md)
 
-## GitHub Pages Setup
+Use the tutorial if you want one reliable, end-to-end path that gets a landscape deployment working.
 
-### 1. Enable GitHub Pages
+### Get a specific deployment task done
 
-In your Planetnik repository settings:
+- [`How to deploy the site with GitHub Actions`](./deployment/how-to-deploy-the-site-with-github-actions.md)
+- [`How to configure planetnik.config.json and landscape-config.json for deployment`](./deployment/how-to-configure-planetnik-and-landscape-config-for-deployment.md)
 
-1. Go to **Settings → Pages**
-2. Set **Source** to **GitHub Actions**
+Use the how-to guides when you already know the outcome you want and need the shortest route to it.
 
-### 2. The workflow
+### Look up exact behavior or config details
 
-The workflow at `.github/workflows/analyze-and-deploy.yml` handles everything.
+- [`GitHub Actions deployment reference`](./deployment/reference-github-actions-deployment.md)
 
-**Automatic** — push to `main` to analyze the Planetnik repo itself:
+Use the reference when you need precise workflow inputs, mode resolution rules, secrets, paths, or config keys.
 
-```yaml
-on:
-  push:
-    branches: [main]
-```
+### Understand why deployment is designed this way
 
-**Manual** — trigger via GitHub UI or CLI to analyze any public repo:
+- [`Why deployment is split between mode, analysis config, and secrets`](./deployment/explanation-deployment-model.md)
 
-```bash
-gh workflow run "Analyze & Deploy" \
-  -f repo=facebook/react \
-  -f ref=main \
-  -f name=React
-```
+Use the explanation when you want the architectural reasoning behind the split between `planetnik.config.json`, `landscape-config.json`, workflow inputs, and GitHub secrets.
 
-### 3. Workflow inputs
+## Quick orientation
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `repo` | No | current repo | `owner/name` or full git URL |
-| `ref` | No | `main` | Branch, tag, or commit |
-| `name` | No | auto-detected | Project name for reports |
+Planetnik does not deploy a long-running server. It deploys a **static site generated from analysis data**.
 
-### 4. What happens
+The high-level flow is:
 
-```
-1. Checkout Planetnik source
-2. Setup Bun
-3. bun install
-4. analyzeRemote --repo <target> --outputFolder _reports
-5. PLANETNIK_DATA_DIR=_reports/data bun run build (Astro)
-6. Upload dist/ as Pages artifact
-7. Deploy to GitHub Pages
-```
+1. analyze repositories with the Bun CLI
+2. export report data
+3. point Astro at the generated data directory
+4. build `apps/site`
+5. publish the resulting static site to GitHub Pages
 
-Total: ~2-5 minutes depending on target repo size.
+That is why deployment docs in this project need to cover both **GitHub Actions** and **analysis configuration**.
 
-## Local Development
+## The two config files in one sentence each
 
-### Analyze and preview locally
+- `planetnik.config.json`: **Which deploy mode should this repository use by default?**
+- `landscape-config.json`: **What landscape should be discovered, analyzed, filtered, and enriched?**
 
-```bash
-# Analyze a remote repo
-bun run apps/cli/src/index.ts analyzeRemote \
-  --repo owner/repo \
-  --outputFolder ./my-report
-
-# Start the Astro dev server with that data
-PLANETNIK_DATA_DIR=./my-report/data bun run --cwd apps/site dev
-```
-
-### Use a local repo
-
-```bash
-# Init + extract + generate
-bun run apps/cli/src/index.ts init --srcRoot /path/to/project
-bun run apps/cli/src/index.ts extractGitHistory --srcRoot /path/to/project
-bun run apps/cli/src/index.ts generateReports \
-  --confFile /path/to/project/_planetnik/config.json \
-  --outputFolder ./my-report
-
-# Dev server
-PLANETNIK_DATA_DIR=./my-report/data bun run --cwd apps/site dev
-```
-
-### Dev data setup
-
-Create `apps/site/.env.local` to avoid typing the env var each time:
-
-```env
-# Prefer an absolute path to avoid cwd ambiguity
-PLANETNIK_DATA_DIR=/absolute/path/to/report/data
-```
-
-The site reads this file using Astro/Vite-style env loading.
-
-## Analyzing Private Repositories
-
-### In GitHub Actions
-
-For private repos in the same org, add a `token` to the checkout step. Fork the workflow and modify the `Analyze repository` step:
-
-```yaml
-- name: Analyze repository
-  env:
-    GIT_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
-  run: |
-    bun run apps/cli/src/index.ts analyzeRemote \
-      --repo https://${GIT_TOKEN}@github.com/owner/private-repo.git \
-      --outputFolder _reports
-```
-
-### Locally
-
-Private repos work out of the box if your local git credentials have access:
-
-```bash
-bun run apps/cli/src/index.ts analyzeRemote --repo git@github.com:owner/private-repo.git
-```
-
-## Scheduled Analysis
-
-Add a cron trigger to the workflow for regular re-analysis:
-
-```yaml
-on:
-  schedule:
-    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
-  workflow_dispatch:
-    inputs:
-      repo:
-        description: "Repository to analyze"
-        required: false
-        type: string
-```
-
-## Landscape Analysis (Multi-Repository)
-
-The `analyzeLandscape` command replaces the Java-era `sokrates-oss-landscape-analysis` pipeline. It discovers all repos in GitHub org(s), analyzes each, and generates a landscape overview — no JVM, no bash scripts, no Node.js scripts.
-
-### Setup
-
-1. Copy `landscape-config.example.json` to `landscape-config.json`
-2. Add your GitHub token and org name(s)
-3. Set `reposUpdatedAfter` to filter inactive repos
-
-### Run locally
-
-```bash
-bun run apps/cli/src/index.ts analyzeLandscape \
-  --config ./landscape-config.json \
-  --outputFolder ./my-landscape \
-  --name "My Org Landscape"
-```
-
-### Run via GitHub Actions
-
-The `landscape.yml` workflow automates this:
-
-```bash
-gh workflow run "Landscape Analysis" \
-  -f config=landscape-config.json \
-  -f name="My Org Landscape" \
-  -f concurrency=8
-```
-
-It runs weekly by default (Monday 06:00 UTC) and deploys to GitHub Pages.
-
-### Incremental analysis
-
-By default, `--skipExisting` is enabled. Re-running the command only analyzes repos that don't already have results. To force re-analysis of everything, pass `--no-skipExisting` or delete the output folder.
-
-### What it replaces
-
-| Java Sokrates pipeline | Planetnik |
-|------------------------|-----------|
-| `get-repos.js` (Node.js) | Built-in GitHub API discovery |
-| `generate-sh-scripts.js` (Node.js) | Not needed — no bash scripts |
-| `clone-and-zip.sh` (bash) | Built-in clone + analyze |
-| `run-analysis-from-zip.sh` (bash + JVM) | Built-in analysis (Bun) |
-| `sokrates updateLandscape` (JVM) | Built-in landscape aggregation |
-| Java + Node.js + bash + Graphviz | Just Bun |
-
-## Multiple Repositories (Individual)
-
-To analyze several repos individually and deploy as separate sites, use a matrix workflow:
-
-```yaml
-jobs:
-  analyze:
-    strategy:
-      matrix:
-        repo:
-          - { name: "api", repo: "org/api", ref: "main" }
-          - { name: "web", repo: "org/web", ref: "main" }
-          - { name: "mobile", repo: "org/mobile", ref: "main" }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: |
-          bun run apps/cli/src/index.ts analyzeRemote \
-            --repo ${{ matrix.repo.repo }} \
-            --ref ${{ matrix.repo.ref }} \
-            --name ${{ matrix.repo.name }} \
-            --outputFolder _reports/${{ matrix.repo.name }}
-```
-
-## Troubleshooting
-
-### "Data directory not found"
-The Astro content loader can't find analysis results. Set `PLANETNIK_DATA_DIR` to the absolute path of the `data/` directory from your report output.
-
-### "Clone failed"
-The target repository may be private or the ref may not exist. Check:
-- The repo is accessible (public, or credentials configured)
-- The `--ref` branch/tag exists
-
-### Empty reports
-Run `extractGitHistory` before `generateReports` if using the step-by-step approach. The `analyzeRemote` command handles this automatically.
-
-### Build warnings about empty collections
-Some collections (dependencies, temporal deps) may be empty for small repos. This is normal — the pages render gracefully with no data.
+If you only need the exact field-level details, go straight to the [deployment reference](./deployment/reference-github-actions-deployment.md).

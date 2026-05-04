@@ -407,6 +407,11 @@ The included GitHub Actions workflow ([deploy.yml](/Users/alan/Projects/planetni
 2. Or push to `main` to analyze the repository itself
 3. The workflow runs `analyzeRemote`, builds the Astro site, and deploys to GitHub Pages
 
+For the Diátaxis deployment set, see:
+
+- [`docs/deployment.md`](/Users/alan/Projects/planetnik/docs/deployment.md)
+- [`docs/deployment/reference-github-actions-deployment.md`](/Users/alan/Projects/planetnik/docs/deployment/reference-github-actions-deployment.md)
+
 ```yaml
 # Manual trigger example — analyze React
 repo: facebook/react
