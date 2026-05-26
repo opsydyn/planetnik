@@ -75,6 +75,20 @@ select {
 	flex-shrink: 0;
 }
 
+.nav-badge {
+	display: inline-block;
+	padding: 0.1em 0.45em;
+	border-radius: var(--radius-badge);
+	background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+	color: var(--color-accent);
+	font-size: 0.65rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	vertical-align: middle;
+	margin-left: 0.4rem;
+}
+
 .status-pill {
 	display: inline-flex;
 	align-items: center;

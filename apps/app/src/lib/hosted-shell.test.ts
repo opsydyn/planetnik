@@ -244,6 +244,11 @@ describe("hosted shell", () => {
         href: "/reports/effect-ts/intelligence",
         label: "Ask Płanetnik",
       },
+      {
+        href: "/reports/effect-ts/gen-ui-beta",
+        label: "Gen UI",
+        badge: "beta",
+      },
     ])
   })
 
@@ -506,6 +511,11 @@ describe("hosted shell", () => {
       {
         href: "/reports/platform-landscape/intelligence",
         label: "Ask Płanetnik",
+      },
+      {
+        href: "/reports/platform-landscape/gen-ui-beta",
+        label: "Gen UI",
+        badge: "beta",
       },
     ])
   })

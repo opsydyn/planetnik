@@ -168,6 +168,7 @@ const shell = buildHostedShellModel({
 											href={item.href}
 										>
 											{item.label}
+											{item.badge && <span class="nav-badge">{item.badge}</span>}
 										</a>
 									))}
 								</div>

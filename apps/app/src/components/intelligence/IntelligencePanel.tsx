@@ -14,8 +14,6 @@ const OPEN_STORAGE_KEY = "planetnik.intelligence.open"
 const EXPANDED_STORAGE_KEY = "planetnik.intelligence.expanded"
 
 function readStoredBoolean(key: string, fallback: boolean) {
-  if (typeof window === "undefined") return fallback
-
   const storedValue = window.sessionStorage.getItem(key)
   if (storedValue === "true") return true
   if (storedValue === "false") return false

@@ -9,6 +9,7 @@ import type { RuntimeReportDetail } from "./runtime-client.js"
 export type HostedNavItem = {
   readonly href: string
   readonly label: string
+  readonly badge?: string
 }
 
 export type HostedNavSection = {
@@ -453,7 +454,10 @@ function buildRepositoryNavSections(
 
 function buildHostedIntelligenceNavItems(baseHref: string, showIntelligence: boolean): ReadonlyArray<HostedNavItem> {
   if (showIntelligence) {
-    return [{ href: `${baseHref}/intelligence`, label: "Ask Płanetnik" }]
+    return [
+      { href: `${baseHref}/intelligence`, label: "Ask Płanetnik" },
+      { href: `${baseHref}/gen-ui-beta`, label: "Gen UI", badge: "beta" },
+    ]
   }
 
   return [{ href: "/coming-soon", label: "Platform - Coming Soon" }]
