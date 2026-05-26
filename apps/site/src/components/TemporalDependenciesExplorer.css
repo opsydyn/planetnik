@@ -48,19 +48,19 @@
 }
 
 .temporal-period-pill:hover {
-	border-color: #a5b4fc;
+	border-color: var(--color-accent-strong);
 	transform: translateY(-1px);
 }
 
 .temporal-period-pill.is-active {
-	border-color: #6366f1;
+	border-color: var(--color-accent);
 	background: linear-gradient(
 		135deg,
 		var(--color-accent-soft) 0%,
 		var(--color-card) 100%
 	);
 	color: var(--color-text);
-	box-shadow: 0 10px 24px rgba(99, 102, 241, 0.12);
+	box-shadow: 0 10px 24px color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .temporal-search {
@@ -72,7 +72,7 @@
 	background:
 		radial-gradient(
 			circle at top right,
-			rgba(99, 102, 241, 0.08),
+			var(--color-accent-soft),
 			transparent 32%
 		),
 		var(--color-card);
@@ -97,9 +97,9 @@
 }
 
 .temporal-search input:focus {
-	outline: 2px solid rgba(99, 102, 241, 0.22);
+	outline: 2px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
 	outline-offset: 1px;
-	border-color: #818cf8;
+	border-color: var(--color-accent-strong);
 }
 
 .temporal-search p {

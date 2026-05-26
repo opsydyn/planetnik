@@ -25,12 +25,12 @@ const CELL_GAP = 4;
 const MIN_CELL_SIZE = 9;
 const MAX_CELL_SIZE = 14;
 const CELL_COLORS = [
-	"#e0e7ff",
-	"#c7d2fe",
-	"#a5b4fc",
-	"#818cf8",
-	"#6366f1",
-	"#4338ca",
+	"#dbeafe",
+	"#bfdbfe",
+	"#93c5fd",
+	"#58A6FF",
+	"#2B7FD4",
+	"#1656A8",
 ];
 const VISIBLE_WEEKDAY_INDICES = new Set([0, 2, 4]);
 

@@ -1126,7 +1126,7 @@ const COUPLING_DIMENSION_LABELS: Record<CouplingDimensionId, string> = {
 }
 
 const COUPLING_DIMENSION_COLORS: Record<string, string> = {
-  Static: "#6366f1",
+  Static: "#58A6FF",
   Temporal: "#8b5cf6",
   Coordination: "#06b6d4",
   Knowledge: "#ef4444",
@@ -3896,7 +3896,7 @@ export function readReportCouplingSummary(dataDir: string): ReportCouplingSummar
         id: "staticCoupling",
         label: COUPLING_DIMENSION_LABELS.staticCoupling,
         value: round1(average(snapshots.map((snapshot) => snapshot.staticCoupling))),
-        color: "#6366f1",
+        color: "#58A6FF",
       },
       {
         id: "temporalCoupling",
@@ -3921,7 +3921,7 @@ export function readReportCouplingSummary(dataDir: string): ReportCouplingSummar
       label,
       value,
       detail: `${value} components`,
-      color: COUPLING_DIMENSION_COLORS[label] ?? "#6366f1",
+      color: COUPLING_DIMENSION_COLORS[label] ?? "#58A6FF",
     })),
     topRiskComponents: snapshots.slice(0, 12).map((snapshot) => ({
       component: snapshot.component,

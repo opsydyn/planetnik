@@ -80,20 +80,20 @@
 }
 
 html[data-theme="dark"] .report-static-table__surface {
-	background: #0f172a;
+	background: var(--color-bg);
 }
 
 html[data-theme="dark"] .report-static-table thead th {
-	background: #111c2f;
+	background: var(--color-surface-subtle);
 }
 
 html[data-theme="dark"] .report-static-table thead th > span {
-	color: #94a3b8;
+	color: var(--color-text-secondary);
 }
 
 html[data-theme="dark"] .report-static-table__code {
-	background: #182334;
-	color: #e2e8f0;
+	background: var(--color-surface-muted);
+	color: var(--color-text);
 }
 
 @media (max-width: 900px) {

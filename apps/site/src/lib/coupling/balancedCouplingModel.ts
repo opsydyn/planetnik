@@ -107,7 +107,7 @@ const DIMENSION_LABELS: Record<CouplingDimensionId, string> = {
 };
 
 const DIMENSION_COLORS: Record<CouplingDimensionId, string> = {
-	staticCoupling: "#6366f1",
+	staticCoupling: "#58A6FF",
 	temporalCoupling: "#8b5cf6",
 	coordinationCoupling: "#06b6d4",
 	knowledgeRisk: "#ef4444",

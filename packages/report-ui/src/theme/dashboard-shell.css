@@ -5,17 +5,23 @@
 }
 
 :root {
+	/* layout */
 	--sidebar-width: 260px;
 	--topbar-height: 56px;
+
+	/* typography */
 	--font-ui: var(--font-body, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace);
 	--font-sans: var(--font-ui);
 	--font-mono: var(--font-ui);
 	--font-heading-stack: var(--font-heading, "Space Grotesk", ui-sans-serif, system-ui, sans-serif);
-	--color-accent: #6366f1;
+
+	/* semantic status — theme-independent */
 	--color-green: #22c55e;
 	--color-yellow: #eab308;
 	--color-orange: #f97316;
 	--color-red: #ef4444;
+
+	/* radii */
 	--radius-inline: 2px;
 	--radius-badge: 2px;
 	--radius-control: 0;
@@ -27,86 +33,130 @@
 	--radius-attached: 0 4px 4px 0;
 }
 
-html[data-theme="light"] {
-	color-scheme: light;
-	--color-bg: #fafafa;
-	--color-sidebar: #1a1a2e;
-	--color-sidebar-text: #c4c4d4;
-	--color-sidebar-active: #e2e8f0;
-	--color-sidebar-strong: #ffffff;
-	--color-sidebar-hover: rgba(255, 255, 255, 0.08);
-	--color-sidebar-divider: rgba(255, 255, 255, 0.1);
-	--color-sidebar-section-label: rgba(255, 255, 255, 0.35);
-	--color-sidebar-active-bg: rgba(99, 102, 241, 0.2);
-	--color-text: #1e293b;
-	--color-text-muted: #64748b;
-	--color-border: #e2e8f0;
-	--color-card: #ffffff;
-	--color-surface-subtle: #f8fafc;
-	--color-surface-muted: #f1f5f9;
-	--color-accent-soft: #eef2ff;
-	--color-accent-strong: #4338ca;
-	--color-danger-soft: #fee2e2;
-	--color-overlay: rgba(0, 0, 0, 0.4);
-	--chart-accent: var(--color-accent);
-	--chart-accent-light: #818cf8;
-	--chart-text: var(--color-text);
-	--chart-text-muted: var(--color-text-muted);
-	--chart-border: var(--color-border);
-	--chart-card: var(--color-card);
-	--chart-bg: var(--color-bg);
-	--chart-bar-bg: #f1f5f9;
-	--chart-green: var(--color-green);
-	--chart-yellow: var(--color-yellow);
-	--chart-orange: var(--color-orange);
-	--chart-red: var(--color-red);
-	--chart-palette-1: #6366f1;
-	--chart-palette-2: #8b5cf6;
-	--chart-palette-3: #06b6d4;
-	--chart-palette-4: #10b981;
-	--chart-palette-5: #f59e0b;
-	--chart-palette-6: #ef4444;
-}
-
+/* ─── Storm Forged — dark ─────────────────────────────────── */
 html[data-theme="dark"] {
 	color-scheme: dark;
-	--color-bg: #020817;
-	--color-sidebar: #020617;
-	--color-sidebar-text: #94a3b8;
-	--color-sidebar-active: #f8fafc;
-	--color-sidebar-strong: #ffffff;
-	--color-sidebar-hover: rgba(148, 163, 184, 0.14);
-	--color-sidebar-divider: rgba(148, 163, 184, 0.16);
-	--color-sidebar-section-label: rgba(226, 232, 240, 0.42);
-	--color-sidebar-active-bg: rgba(129, 140, 248, 0.22);
-	--color-text: #e2e8f0;
-	--color-text-muted: #94a3b8;
-	--color-border: #1e293b;
-	--color-card: #0f172a;
-	--color-surface-subtle: #111c2f;
-	--color-surface-muted: #182334;
-	--color-accent-soft: rgba(129, 140, 248, 0.18);
-	--color-accent-strong: #a5b4fc;
-	--color-danger-soft: rgba(248, 113, 113, 0.16);
-	--color-overlay: rgba(2, 6, 23, 0.7);
-	--chart-accent: #818cf8;
-	--chart-accent-light: #a5b4fc;
+
+	/* environment */
+	--color-bg: #070B14;
+	--color-card: #0E1525;
+	--color-surface-subtle: #131D33;
+	--color-surface-muted: #0A1020;
+
+	/* text */
+	--color-text: #E8EDF7;
+	--color-text-secondary: #97A3BF;
+	--color-text-muted: #66738F;
+
+	/* borders */
+	--color-border: #1F2A44;
+	--color-border-strong: #2B3A5F;
+
+	/* primary signal — electric blue */
+	--color-accent: #58A6FF;
+	--color-accent-soft: rgba(88, 166, 255, 0.14);
+	--color-accent-strong: #79BAFF;
+
+	/* importance — aged bronze */
+	--color-warm: #C1A36A;
+	--color-warm-soft: rgba(193, 163, 106, 0.14);
+
+	/* semantic */
+	--color-danger-soft: rgba(200, 100, 100, 0.18);
+	--color-overlay: rgba(7, 11, 20, 0.75);
+
+	/* sidebar */
+	--color-sidebar: #0E1525;
+	--color-sidebar-text: #97A3BF;
+	--color-sidebar-active: #E8EDF7;
+	--color-sidebar-strong: #E8EDF7;
+	--color-sidebar-hover: rgba(88, 166, 255, 0.10);
+	--color-sidebar-divider: rgba(88, 166, 255, 0.12);
+	--color-sidebar-section-label: rgba(232, 237, 247, 0.30);
+	--color-sidebar-active-bg: rgba(88, 166, 255, 0.18);
+
+	/* charts — saturated for dark */
+	--chart-accent: #58A6FF;
+	--chart-accent-light: #C1A36A;
 	--chart-text: var(--color-text);
 	--chart-text-muted: var(--color-text-muted);
-	--chart-border: #243244;
+	--chart-border: #1F2A44;
 	--chart-card: var(--color-card);
 	--chart-bg: var(--color-bg);
-	--chart-bar-bg: #182334;
-	--chart-green: #4ade80;
-	--chart-yellow: #facc15;
-	--chart-orange: #fb923c;
-	--chart-red: #f87171;
-	--chart-palette-1: #818cf8;
-	--chart-palette-2: #a78bfa;
-	--chart-palette-3: #22d3ee;
-	--chart-palette-4: #34d399;
-	--chart-palette-5: #fbbf24;
-	--chart-palette-6: #f87171;
+	--chart-bar-bg: rgba(255, 255, 255, 0.08);
+	--chart-green: #5BAD80;
+	--chart-yellow: #D4A847;
+	--chart-orange: #C87A3A;
+	--chart-red: #C86464;
+	--chart-palette-1: #58A6FF;
+	--chart-palette-2: #C1A36A;
+	--chart-palette-3: #3CB5C5;
+	--chart-palette-4: #5F9F7A;
+	--chart-palette-5: #E8A455;
+	--chart-palette-6: #C86464;
+}
+
+/* ─── Weathered Parchment — light ────────────────────────── */
+html[data-theme="light"] {
+	color-scheme: light;
+
+	/* environment */
+	--color-bg: #F4F2EC;
+	--color-card: #FCFBF7;
+	--color-surface-subtle: #FFFFFF;
+	--color-surface-muted: #EDE9E0;
+
+	/* text */
+	--color-text: #1C2433;
+	--color-text-secondary: #5E6A83;
+	--color-text-muted: #79849B;
+
+	/* borders */
+	--color-border: #D9DFEA;
+	--color-border-strong: #C9D0DD;
+
+	/* primary signal — clear storm blue */
+	--color-accent: #0969DA;
+	--color-accent-soft: rgba(9, 105, 218, 0.10);
+	--color-accent-strong: #0550AE;
+
+	/* importance — aged bronze */
+	--color-warm: #A67C45;
+	--color-warm-soft: rgba(166, 124, 69, 0.12);
+
+	/* semantic */
+	--color-danger-soft: rgba(177, 92, 92, 0.12);
+	--color-overlay: rgba(28, 36, 51, 0.50);
+
+	/* sidebar — dark contrast panel, same soul in both modes */
+	--color-sidebar: #1C2433;
+	--color-sidebar-text: #8899B5;
+	--color-sidebar-active: #E8EDF7;
+	--color-sidebar-strong: #F0F4FF;
+	--color-sidebar-hover: rgba(232, 237, 247, 0.08);
+	--color-sidebar-divider: rgba(88, 166, 255, 0.14);
+	--color-sidebar-section-label: rgba(232, 237, 247, 0.35);
+	--color-sidebar-active-bg: rgba(9, 105, 218, 0.22);
+
+	/* charts — slightly muted for parchment */
+	--chart-accent: #0969DA;
+	--chart-accent-light: #A67C45;
+	--chart-text: var(--color-text);
+	--chart-text-muted: var(--color-text-muted);
+	--chart-border: #D9DFEA;
+	--chart-card: var(--color-card);
+	--chart-bg: var(--color-bg);
+	--chart-bar-bg: rgba(28, 36, 51, 0.08);
+	--chart-green: #558565;
+	--chart-yellow: #B8942E;
+	--chart-orange: #B56C2A;
+	--chart-red: #B15C5C;
+	--chart-palette-1: #0969DA;
+	--chart-palette-2: #A67C45;
+	--chart-palette-3: #2B95A5;
+	--chart-palette-4: #4A8A6A;
+	--chart-palette-5: #C8903A;
+	--chart-palette-6: #B15C5C;
 }
 
 html,

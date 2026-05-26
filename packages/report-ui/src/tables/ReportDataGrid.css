@@ -83,7 +83,7 @@
 
 .report-grid-panel__toggle[aria-pressed="true"] {
 	background: var(--color-accent-soft);
-	border-color: rgba(99, 102, 241, 0.24);
+	border-color: var(--color-border-strong);
 	color: var(--color-accent);
 }
 

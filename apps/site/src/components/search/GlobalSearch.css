@@ -23,7 +23,7 @@
 }
 
 .global-search-trigger:hover {
-	border-color: rgba(99, 102, 241, 0.45);
+	border-color: var(--color-border-strong);
 	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 	transform: translateY(-1px);
 }

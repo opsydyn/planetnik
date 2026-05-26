@@ -144,8 +144,8 @@ function readForceGraphTheme(): ForceGraphTheme {
       textMuted: "#64748b",
       surfaceSubtle: "#f8fafc",
       surfaceMuted: "#f1f5f9",
-      accent: "#6366f1",
-      accentStrong: "#4338ca",
+      accent: "#58A6FF",
+      accentStrong: "#79BAFF",
     }
   }
 
@@ -157,8 +157,8 @@ function readForceGraphTheme(): ForceGraphTheme {
     textMuted: getCssVar("--color-text-muted", "#64748b"),
     surfaceSubtle: getCssVar("--color-surface-subtle", "#f8fafc"),
     surfaceMuted: getCssVar("--color-surface-muted", "#f1f5f9"),
-    accent: getCssVar("--color-accent", "#6366f1"),
-    accentStrong: getCssVar("--color-accent-strong", "#4338ca"),
+    accent: getCssVar("--color-accent", "#58A6FF"),
+    accentStrong: getCssVar("--color-accent-strong", "#79BAFF"),
   }
 }
 
@@ -483,7 +483,7 @@ export default function ForceGraphClient({
             labelWeight: "600",
             labelColor: { color: theme.text },
             defaultEdgeColor: theme.theme === "dark" ? "rgba(167, 139, 250, 0.44)" : "rgba(67, 56, 202, 0.38)",
-            defaultNodeColor: "#6366f1",
+            defaultNodeColor: "#58A6FF",
             defaultDrawNodeHover: drawNodeHoverDarkAware as never,
           }}
         >

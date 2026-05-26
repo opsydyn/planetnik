@@ -383,10 +383,10 @@ const donutAgeData = (age?.distribution ?? []).map((item) => ({
 	}
 
 	.view-tab.is-active {
-		border-color: #6366f1;
+		border-color: var(--color-accent);
 		background: linear-gradient(135deg, var(--color-accent-soft) 0%, var(--color-card) 100%);
 		color: var(--color-text);
-		box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+		box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent) 12%, transparent);
 	}
 
 	.view-content {

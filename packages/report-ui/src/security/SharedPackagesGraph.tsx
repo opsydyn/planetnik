@@ -35,7 +35,7 @@ const SEVERITY_PRIORITY: Record<string, number> = {
 	low: 1,
 }
 
-const REPO_NODE_COLOR = "#818cf8"
+const REPO_NODE_COLOR = "#58A6FF"
 const MAX_PACKAGES = 40
 
 export default function SharedPackagesGraph({

@@ -21,7 +21,7 @@ const baseCoupling = {
 		low: 0,
 	},
 	dimensionMix: [
-		{ id: "staticCoupling", label: "Static", value: 5.2, color: "#6366f1" },
+		{ id: "staticCoupling", label: "Static", value: 5.2, color: "#58A6FF" },
 		{ id: "temporalCoupling", label: "Temporal", value: 4.0, color: "#8b5cf6" },
 	],
 	dominantBreakdown: [
@@ -90,7 +90,7 @@ describe("report coupling view model", () => {
 			id: "staticCoupling",
 			label: "Static",
 			value: 5.2,
-			color: "#6366f1",
+			color: "#58A6FF",
 		});
 
 		// Snapshot mapping

@@ -41,9 +41,9 @@
 }
 
 .security-action-center__chip[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--color-accent, #6366f1) 18%, var(--color-card, var(--surface-secondary)));
-  border-color: color-mix(in srgb, var(--color-accent, #6366f1) 40%, var(--color-border, rgba(255, 255, 255, 0.08)));
-  color: var(--color-accent, #818cf8);
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-card));
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  color: var(--color-accent);
 }
 
 .security-action-center__chip-count {
@@ -106,7 +106,7 @@
 }
 
 .security-action-card__title a:hover {
-  color: var(--color-accent, #818cf8);
+  color: var(--color-accent);
 }
 
 .security-action-card__repo {
@@ -123,7 +123,7 @@
 
 .security-action-card__repo a:hover,
 .security-advisory-group__repo-link:hover {
-  color: var(--color-accent, #818cf8);
+  color: var(--color-accent);
 }
 
 .security-action-card__path,
@@ -289,7 +289,7 @@
 }
 
 .security-advisory-group__title a:hover {
-  color: var(--color-accent, #818cf8);
+  color: var(--color-accent);
 }
 
 .security-advisory-group__counts {
