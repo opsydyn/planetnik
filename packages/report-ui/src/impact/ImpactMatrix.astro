@@ -107,10 +107,10 @@ const detailStacks = [
       </linearGradient>
     </defs>
 
-    <rect x="32" y="32" width="896" height="576" rx="28" fill="url(#impact-grid-bg)" stroke="var(--impact-border)" stroke-width="2" />
+    <rect x="32" y="32" width="896" height="576" rx="0" fill="url(#impact-grid-bg)" stroke="var(--impact-border)" stroke-width="2" />
 
     <rect x="32" y="320" width="896" height="288" rx="0" fill="var(--impact-surface-muted)" opacity="0.18" />
-    <rect x="32" y="32" width="448" height="576" rx="28" fill="var(--impact-surface-muted)" opacity="0.12" />
+    <rect x="32" y="32" width="448" height="576" rx="0" fill="var(--impact-surface-muted)" opacity="0.12" />
 
     <line x1="480" y1="104" x2="480" y2="548" stroke="var(--impact-axis)" stroke-width="3" stroke-linecap="round" />
     <line x1="132" y1="320" x2="828" y2="320" stroke="var(--impact-axis)" stroke-width="3" stroke-linecap="round" />
@@ -123,8 +123,8 @@ const detailStacks = [
     <text x="480" y="68" text-anchor="middle" class="axis-label">Impact</text>
     <text x="880" y="312" text-anchor="end" class="axis-label">Effort</text>
 
-    <rect x="72" y="356" width="336" height="192" rx="24" fill="url(#impact-snack-fill)" opacity="0.55" />
-    <rect x="552" y="92" width="336" height="192" rx="24" fill="url(#impact-strategic-fill)" opacity="0.55" />
+    <rect x="72" y="356" width="336" height="192" rx="0" fill="url(#impact-snack-fill)" opacity="0.55" />
+    <rect x="552" y="92" width="336" height="192" rx="0" fill="url(#impact-strategic-fill)" opacity="0.55" />
 
     {quadrants.map((quadrant) => (
       <g>
@@ -150,7 +150,7 @@ const detailStacks = [
                 y={item.y}
                 width={item.width}
                 height={item.height}
-                rx="18"
+                rx="0"
                 class:list={[
                   "callout-card",
                   stack.tone === "warning" ? "callout-card--warning" : "callout-card--accent",
@@ -241,7 +241,7 @@ const detailStacks = [
   }
 
   .callout-card--accent {
-    fill: rgba(129, 140, 248, 0.09);
+    fill: var(--color-accent-soft);
   }
 
   .impact-matrix figcaption {
