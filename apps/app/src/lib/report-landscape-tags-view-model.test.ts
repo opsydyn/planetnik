@@ -48,6 +48,6 @@ describe("report landscape tags view model", () => {
 			totalMainLinesOfCode: 18450,
 			repositories: "web-app • marketing-site",
 		});
-		expect(viewModel.untaggedRepositories).toBe("legacy-tool");
+		expect(viewModel.untaggedRepositories).toEqual(["legacy-tool"]);
 	});
 });

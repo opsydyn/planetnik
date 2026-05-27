@@ -13,7 +13,7 @@ export type ReportLandscapeTagsViewModel = {
 	readonly cards: ReadonlyArray<ReportLandscapeTagsCard>;
 	readonly topTagBars: ReadonlyArray<HorizontalBarItem>;
 	readonly rows: ReadonlyArray<GridRow>;
-	readonly untaggedRepositories: string;
+	readonly untaggedRepositories: ReadonlyArray<string>;
 };
 
 function formatCount(value: number): string {
@@ -54,6 +54,6 @@ export function buildReportLandscapeTagsViewModel(input: {
 			totalMainLinesOfCode: tag.totalMainLinesOfCode,
 			repositories: tag.repositories.join(" • ") || "—",
 		})),
-		untaggedRepositories: input.tags.untaggedRepositories.join(" • ") || "—",
+		untaggedRepositories: input.tags.untaggedRepositories,
 	};
 }
