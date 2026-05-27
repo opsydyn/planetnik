@@ -28,7 +28,9 @@ export class CloneError extends Data.TaggedError("CloneError")<{
 	readonly title: "Repository clone failed";
 	readonly detail: string;
 	readonly repoKey: string;
-}> {}
+}> {
+	get message() { return `${this.title} [${this.repoKey}]: ${this.detail}` }
+}
 
 /** Git history extraction failed for a repository. */
 export class GitHistoryError extends Data.TaggedError("GitHistoryError")<{
@@ -36,7 +38,9 @@ export class GitHistoryError extends Data.TaggedError("GitHistoryError")<{
 	readonly title: "Git history extraction failed";
 	readonly detail: string;
 	readonly repoKey: string;
-}> {}
+}> {
+	get message() { return `${this.title} [${this.repoKey}]: ${this.detail}` }
+}
 
 /** Analysis config was not created after scope initialisation. */
 export class ConfigNotFoundError extends Data.TaggedError(
@@ -46,7 +50,9 @@ export class ConfigNotFoundError extends Data.TaggedError(
 	readonly title: "Analysis config file not created";
 	readonly detail: string;
 	readonly repoKey: string;
-}> {}
+}> {
+	get message() { return `${this.title} [${this.repoKey}]: ${this.detail}` }
+}
 
 /** GitHub API discovery call failed. */
 export class GitHubDiscoveryError extends Data.TaggedError(
@@ -56,7 +62,9 @@ export class GitHubDiscoveryError extends Data.TaggedError(
 	readonly title: "GitHub API discovery failed";
 	readonly detail: string;
 	readonly org: string;
-}> {}
+}> {
+	get message() { return `${this.title}: ${this.detail}` }
+}
 
 /** Catch-all for unexpected errors inside a repo worker. */
 export class UnknownWorkerError extends Data.TaggedError("UnknownWorkerError")<{
@@ -64,7 +72,9 @@ export class UnknownWorkerError extends Data.TaggedError("UnknownWorkerError")<{
 	readonly title: "Unexpected worker error";
 	readonly detail: string;
 	readonly repoKey: string;
-}> {}
+}> {
+	get message() { return `${this.title} [${this.repoKey}]: ${this.detail}` }
+}
 
 /** Dependabot alert fetch failed for an org/repo. */
 export class DependabotFetchError extends Data.TaggedError(
@@ -74,7 +84,9 @@ export class DependabotFetchError extends Data.TaggedError(
 	readonly title: "Dependabot alert fetch failed";
 	readonly detail: string;
 	readonly repoKey: string;
-}> {}
+}> {
+	get message() { return `${this.title} [${this.repoKey}]: ${this.detail}` }
+}
 
 /** Union of all landscape domain errors. */
 export type LandscapeError =

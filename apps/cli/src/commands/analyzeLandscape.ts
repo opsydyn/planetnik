@@ -93,6 +93,7 @@ export function analyzeRepoWorker(
     Effect.gen(function* () {
       const cloneDir = yield* acquireTempDir("planetnik")
 
+      yield* Effect.logDebug("Cloning...").pipe(withPhase("clone"))
       const cloneResult = yield* Effect.tryPromise({
         try: () => simpleGit().clone(cloneUrl, cloneDir, ["--single-branch"]),
         catch: (error) =>
@@ -105,6 +106,7 @@ export function analyzeRepoWorker(
       }).pipe(Effect.either)
 
       if (cloneResult._tag === "Left") {
+        yield* Effect.logWarning(`Clone failed: ${cloneResult.left.detail}`).pipe(withPhase("clone"))
         return new RepoAnalysisFailed({
           repoKey,
           name: repo.name,
@@ -115,6 +117,7 @@ export function analyzeRepoWorker(
       const creator = new ScopeCreator(cloneDir)
       creator.createScopeFromConventions(repo.name, repo.description ?? undefined)
 
+      yield* Effect.logDebug("Extracting git history...").pipe(withPhase("githistory"))
       yield* Effect.tryPromise({
         try: () => extractGitHistory(cloneDir),
         catch: (error) =>
@@ -128,6 +131,7 @@ export function analyzeRepoWorker(
 
       const confFile = join(cloneDir, "_planetnik", "config.json")
       if (!existsSync(confFile)) {
+        yield* Effect.logWarning(`Config not created at ${confFile}`).pipe(withPhase("analysis"))
         return new RepoAnalysisFailed({
           repoKey,
           name: repo.name,
@@ -140,6 +144,7 @@ export function analyzeRepoWorker(
         })
       }
 
+      yield* Effect.logDebug("Running analysis...").pipe(withPhase("analysis"))
       yield* runAnalysis(confFile, repoOutputDir)
 
       return new RepoAnalysisDone({ repoKey, name: repo.name })
@@ -201,7 +206,14 @@ export const analyzeLandscapeCommand = Command.make(
             detail: String(error),
             org: "",
           }),
-      })
+      }).pipe(
+        Effect.tapError((e) =>
+          Effect.logError(e.detail).pipe(
+            withPhase("discovery"),
+            Effect.annotateLogs("errorType", e._tag),
+          ),
+        ),
+      )
 
       let totalRepos = 0
       for (const [org, repos] of orgRepos) {
@@ -233,8 +245,13 @@ export const analyzeLandscapeCommand = Command.make(
         mkdirSync(orgDir, { recursive: true })
 
         // Process in batches for concurrency control
+        const totalBatches = Math.ceil(repos.length / args.concurrency)
         for (let i = 0; i < repos.length; i += args.concurrency) {
           const batch = repos.slice(i, i + args.concurrency)
+          const batchNum = Math.floor(i / args.concurrency) + 1
+          yield* Effect.logDebug(
+            `Batch ${batchNum}/${totalBatches}: ${batch.map((r) => r.name).join(", ")}`,
+          ).pipe(withPhase("analysis"), Effect.annotateLogs("org", org))
 
           const batchEffects = batch.map((repo) => {
             const repoOutputDir = join(orgDir, repo.name)
@@ -269,8 +286,8 @@ export const analyzeLandscapeCommand = Command.make(
           case "RepoAnalysisDone":
             return Effect.logDebug(`[done] ${outcome.name}`).pipe(withPhase("analysis"))
           case "RepoAnalysisFailed":
-            return Effect.logWarning(`[fail] ${outcome.name}: ${outcome.error.detail}`).pipe(
-              Effect.annotateLogs({ errorType: outcome.error._tag }),
+            return Effect.logError(`[fail] ${outcome.name}: ${outcome.error.detail}`).pipe(
+              Effect.annotateLogs({ errorType: outcome.error._tag, repoKey: outcome.repoKey }),
               withPhase("analysis"),
             )
         }
