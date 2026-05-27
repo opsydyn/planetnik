@@ -915,7 +915,7 @@ const securityBallRepos = repoHealth.map((r) => ({
       --metric-surface: color-mix(in srgb, var(--metric-shell) 92%, var(--metric-accent) 8%);
     background: var(--metric-surface);
     border: 1px solid var(--metric-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     padding: 1rem 1.25rem;
     text-align: center;
     display: grid;
@@ -932,7 +932,7 @@ const securityBallRepos = repoHealth.map((r) => ({
     justify-content: center;
     width: 2.1rem;
     height: 2.1rem;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
       background: color-mix(in srgb, var(--metric-accent) 14%, var(--metric-shell));
     color: var(--metric-ink);
   }
@@ -988,7 +988,7 @@ const securityBallRepos = repoHealth.map((r) => ({
     flex-direction: column;
     gap: 0.35rem;
     padding: 0.9rem 1rem;
-    border-radius: 10px;
+    border-radius: var(--radius-overlay);
     background: var(--metric-surface);
     border: 1px solid var(--metric-border);
      color: var(--color-text, var(--text-primary));
@@ -1001,7 +1001,7 @@ const securityBallRepos = repoHealth.map((r) => ({
     justify-content: center;
     width: 1.85rem;
     height: 1.85rem;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     background: color-mix(in srgb, var(--metric-accent) 14%, var(--metric-shell));
     color: var(--metric-ink);
     margin-bottom: 0.1rem;
@@ -1082,7 +1082,7 @@ const securityBallRepos = repoHealth.map((r) => ({
     align-items: center;
     gap: 0.35rem;
     padding: 0.28rem 0.65rem;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     border: 1px solid var(--color-border, var(--border-primary, rgba(255,255,255,0.08)));
     font-size: 0.78rem;
     font-weight: 600;
@@ -1140,7 +1140,7 @@ const securityBallRepos = repoHealth.map((r) => ({
   .empty-state code {
     background: var(--surface-secondary);
     padding: 0.15rem 0.4rem;
-    border-radius: 4px;
+    border-radius: var(--radius-overlay);
     font-size: 0.85rem;
   }
 </style>

@@ -15,7 +15,7 @@ interface Props {
 	cards: ReadonlyArray<MetricCard>;
 	topTagBars: ReadonlyArray<HorizontalBarItem>;
 	rows: ReadonlyArray<GridRow>;
-	untaggedRepositories: string;
+	untaggedRepositories: ReadonlyArray<string>;
 	chartHelpText?: string;
 	searchPlaceholder?: string;
 	emptyHint?: string;
@@ -86,8 +86,20 @@ const {
 }
 
 <section class="section section-muted">
-	<h3>Untagged Repositories</h3>
-	<p>{untaggedRepositories}</p>
+	<h3>Untagged Repositories
+		{untaggedRepositories.length > 0 && (
+			<span class="untagged-count">{untaggedRepositories.length}</span>
+		)}
+	</h3>
+	{untaggedRepositories.length > 0 ? (
+		<div class="untagged-chips">
+			{untaggedRepositories.map((name) => (
+				<span class="untagged-chip">{name}</span>
+			))}
+		</div>
+	) : (
+		<p class="untagged-empty">All repositories are tagged.</p>
+	)}
 </section>
 
 <style>
@@ -131,6 +143,9 @@ const {
 	}
 
 	.section h3 {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
 		font-size: 1.1rem;
 		font-weight: 700;
 		margin-bottom: 0.8rem;
@@ -138,6 +153,42 @@ const {
 
 	.section-muted p,
 	.hint {
+		color: var(--color-text-muted);
+	}
+
+	.untagged-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.1em 0.5em;
+		border-radius: var(--radius-badge);
+		background: var(--color-surface-subtle);
+		color: var(--color-text-muted);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+	}
+
+	.untagged-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.untagged-chip {
+		display: inline-block;
+		padding: 0.3em 0.65em;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-badge);
+		background: var(--color-card);
+		color: var(--color-text-muted);
+		font-size: 0.8rem;
+		font-family: var(--font-mono);
+		line-height: 1.4;
+		white-space: nowrap;
+	}
+
+	.untagged-empty {
 		color: var(--color-text-muted);
 	}
 

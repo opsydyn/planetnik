@@ -286,7 +286,7 @@ const couplingRows = model.snapshots.map((snapshot) => ({
     align-items: center;
     margin-left: 0.5rem;
     padding: 0.15rem 0.5rem;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: #fef2f2;
     color: #b91c1c;
     font-size: 0.8rem;
@@ -297,7 +297,7 @@ const couplingRows = model.snapshots.map((snapshot) => ({
   .empty {
     background: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     padding: 2rem;
     text-align: center;
   }
@@ -321,7 +321,7 @@ const couplingRows = model.snapshots.map((snapshot) => ({
   .card {
     background: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     padding: 1.25rem;
   }
 

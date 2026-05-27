@@ -91,7 +91,7 @@ const sections = (topology?.data.periods ?? [])
   .empty {
     background: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: var(--radius-card);
     padding: 1.1rem 1.2rem;
   }
 
@@ -107,7 +107,7 @@ const sections = (topology?.data.periods ?? [])
     align-items: center;
     gap: 0.75rem;
     padding: 0.8rem 1.1rem;
-    border-radius: 999px;
+    border-radius: var(--radius-control);
     border: 1px solid var(--color-border);
     background: var(--color-card);
     color: var(--color-text);
@@ -128,7 +128,7 @@ const sections = (topology?.data.periods ?? [])
     justify-content: center;
     min-width: 2rem;
     padding: 0.15rem 0.45rem;
-    border-radius: 999px;
+    border-radius: var(--radius-badge);
     background: var(--color-accent-soft);
     color: var(--color-accent);
   }
@@ -148,15 +148,20 @@ const sections = (topology?.data.periods ?? [])
   :global(.topo-card) {
     background: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: var(--radius-card);
     padding: 1.1rem 1.2rem;
+    min-width: 0;
+    overflow: hidden;
   }
 
   :global(.topo-card-value) {
-    font-size: 1.9rem;
+    font-size: clamp(1.1rem, 3.5vw, 1.9rem);
     font-weight: 700;
     color: var(--color-accent);
-    line-height: 1;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :global(.topo-card-label) {
@@ -164,6 +169,9 @@ const sections = (topology?.data.periods ?? [])
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :global(.topo-section) {
@@ -185,7 +193,7 @@ const sections = (topology?.data.periods ?? [])
   :global(.topo-empty) {
     background: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: var(--radius-card);
     padding: 1.1rem 1.2rem;
   }
 

@@ -201,7 +201,7 @@ if (unassigned.length > 0) {
 </Dashboard>
 
 <style>
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 8px; padding: 2rem; text-align: center; }
+  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 2rem; text-align: center; }
   .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
   .hint { font-size: 0.85rem; }
   .section { margin-bottom: 2rem; }
@@ -215,7 +215,7 @@ if (unassigned.length > 0) {
   .card {
     background: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     padding: 1.25rem;
   }
   .card-value {
@@ -234,5 +234,5 @@ if (unassigned.length > 0) {
   .card-failed .card-value { color: #dc2626; }
   .card-tolerant .card-value { color: #d97706; }
   .card-ok .card-value { color: #16a34a; }
-  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: var(--color-surface-muted, #f1f5f9); color: var(--color-text, inherit); padding: 0.15em 0.4em; border-radius: 3px; }
+  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: var(--color-surface-muted, #f1f5f9); color: var(--color-text, inherit); padding: 0.15em 0.4em; border-radius: var(--radius-inline); }
 </style>

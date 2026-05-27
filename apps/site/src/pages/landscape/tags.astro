@@ -37,8 +37,7 @@ const topTagBars = flatTags
 const untaggedRows =
 	tagMatrix?.data.repositories
 		.filter((repository) => repository.isUntagged)
-		.map((repository) => repository.name)
-		.join(" • ") ?? "—";
+		.map((repository) => repository.name) ?? [];
 ---
 
 <Dashboard title="Landscape Tags" projectName={projectName}>

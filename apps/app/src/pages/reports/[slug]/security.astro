@@ -686,7 +686,7 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		--metric-surface: color-mix(in srgb, var(--metric-shell) 92%, var(--metric-accent) 8%);
 		background: var(--metric-surface);
 		border: 1px solid var(--metric-border);
-		border-radius: 8px;
+		border-radius: var(--radius-card);
 		padding: 1rem 1.25rem;
 		text-align: center;
 		display: grid;
@@ -703,7 +703,7 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		justify-content: center;
 		width: 2.1rem;
 		height: 2.1rem;
-		border-radius: 9999px;
+		border-radius: var(--radius-pill);
 		background: color-mix(in srgb, var(--metric-accent) 14%, var(--metric-shell));
 		color: var(--metric-ink);
 	}
@@ -770,7 +770,7 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		align-items: center;
 		gap: 0.35rem;
 		padding: 0.28rem 0.65rem;
-		border-radius: 9999px;
+		border-radius: var(--radius-pill);
 		border: 1px solid var(--color-border);
 		font-size: 0.78rem;
 		font-weight: 600;
@@ -813,7 +813,7 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		flex-direction: column;
 		gap: 0.35rem;
 		padding: 0.9rem 1rem;
-		border-radius: 10px;
+		border-radius: var(--radius-overlay);
 		background: var(--metric-surface);
 		border: 1px solid var(--metric-border);
 		color: var(--color-text);
@@ -826,7 +826,7 @@ const sharedRows = security.sharedVulnerablePackages.map((p, i) => ({
 		justify-content: center;
 		width: 1.85rem;
 		height: 1.85rem;
-		border-radius: 9999px;
+		border-radius: var(--radius-pill);
 		background: color-mix(in srgb, var(--metric-accent) 14%, var(--metric-shell));
 		color: var(--metric-ink);
 		margin-bottom: 0.1rem;
