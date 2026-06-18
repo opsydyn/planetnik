@@ -105,10 +105,18 @@ function ShrinkIcon() {
 }
 
 export default function IntelligencePanel({ runtimeUrl, baseHref, isLandscape, ...dataProps }: Props) {
-  const [open, setOpen] = useState(() => readStoredBoolean(OPEN_STORAGE_KEY, false))
-  const [expanded, setExpanded] = useState(() => readStoredBoolean(EXPANDED_STORAGE_KEY, false))
+  const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const mounted = useRef(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const restoredFromStorage = useRef(false)
+
+  useEffect(() => {
+    if (restoredFromStorage.current) return
+    restoredFromStorage.current = true
+    setOpen(readStoredBoolean(OPEN_STORAGE_KEY, false))
+    setExpanded(readStoredBoolean(EXPANDED_STORAGE_KEY, false))
+  }, [])
 
   const capabilities = buildIntelligenceCapabilities(dataProps, isLandscape)
   const headerHint = buildIntelligenceHeaderHint(capabilities)
