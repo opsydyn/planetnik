@@ -3,6 +3,7 @@ import { GridColumns, GridRows } from "@visx/grid"
 import { Group } from "@visx/group"
 import { scaleLinear } from "@visx/scale"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
+import { maxOf } from "../../lib/arrayMath"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 
@@ -49,8 +50,14 @@ function ScatterInner({
   const innerWidth = width - MARGIN.left - MARGIN.right
   const innerHeight = height - MARGIN.top - MARGIN.bottom
 
-  const maxX = Math.max(...data.map((d) => d.x), 1)
-  const maxY = Math.max(...data.map((d) => d.y), 1)
+  const maxX = maxOf(
+    data.map((d) => d.x),
+    1,
+  )
+  const maxY = maxOf(
+    data.map((d) => d.y),
+    1,
+  )
 
   const xScale = scaleLinear({
     domain: [0, maxX * 1.05],

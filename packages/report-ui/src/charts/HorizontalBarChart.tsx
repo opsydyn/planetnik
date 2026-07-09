@@ -1,3 +1,4 @@
+import { maxOf } from "../utils/arrayMath.js";
 import { Group } from "@visx/group";
 import { scaleLinear } from "@visx/scale";
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip";
@@ -59,7 +60,7 @@ export default function HorizontalBarChart({
 		<ChartCard {...chartCardProps}>
 			{(width) => {
 				const barAreaWidth = Math.max(width - labelWidth - VALUE_WIDTH - 16, 40);
-				const maxValue = Math.max(...items.map((d) => d.value), 1);
+				const maxValue = maxOf(items.map((d) => d.value), 1);
 				const xScale = scaleLinear({
 					domain: [0, maxValue],
 					range: [0, barAreaWidth],

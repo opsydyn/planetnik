@@ -1,3 +1,4 @@
+import { maxOf } from "../utils/arrayMath.js";
 import { Group } from "@visx/group";
 import { scaleLinear } from "@visx/scale";
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip";
@@ -45,7 +46,7 @@ export default function DistributionChart({
 					40,
 				);
 
-				const maxValue = Math.max(...data.map((d) => d.value), 1);
+				const maxValue = maxOf(data.map((d) => d.value), 1);
 				const xScale = scaleLinear({
 					domain: [0, maxValue],
 					range: [0, barAreaWidth],

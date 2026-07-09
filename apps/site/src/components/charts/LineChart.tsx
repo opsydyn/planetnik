@@ -4,6 +4,7 @@ import { Group } from "@visx/group"
 import { scaleLinear, scalePoint } from "@visx/scale"
 import { LinePath } from "@visx/shape"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
+import { maxOf } from "../../lib/arrayMath"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 
@@ -61,7 +62,10 @@ function LineChartInner({ series, xLabel, yLabel, width, height }: LineChartProp
     padding: 0.1,
   })
 
-  const maxValue = Math.max(...series.flatMap((s) => s.data.map((d) => d.value)), 1)
+  const maxValue = maxOf(
+    series.flatMap((s) => s.data.map((d) => d.value)),
+    1,
+  )
   const yScale = scaleLinear({
     domain: [0, maxValue * 1.1],
     range: [innerHeight, 0],
