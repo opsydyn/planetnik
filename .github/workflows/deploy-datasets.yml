@@ -38,7 +38,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.11
+          bun-version: fc865b398 # Bun 1.4.0-canary.1 (Rust rewrite preview)
 
       - name: Cache Bun download cache
         uses: actions/cache@v5
