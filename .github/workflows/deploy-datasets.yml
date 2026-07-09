@@ -38,7 +38,11 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: fc865b398 # Bun 1.4.0-canary.1 (Rust rewrite preview)
+          # Bun Rust rewrite (1.4.0-canary line). setup-bun@v2 rejects commit
+          # SHAs (semver-only), and there is no stable 1.4 release, so we fetch
+          # the rolling canary asset directly. The analyze step echoes the exact
+          # resolved version into the run summary.
+          bun-download-url: https://github.com/oven-sh/bun/releases/download/canary/bun-linux-x64.zip
 
       - name: Cache Bun download cache
         uses: actions/cache@v5
