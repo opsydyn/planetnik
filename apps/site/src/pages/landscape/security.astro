@@ -1,4 +1,5 @@
 ---
+import { maxOf } from "../../lib/arrayMath";
 import { getCollection, getEntry } from "astro:content";
 import DonutChart from "../../components/charts/DonutChart";
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
@@ -530,7 +531,7 @@ const latestAdvisoryPublished = getLatestDate(
 );
 const oldestOpenAlertDays =
   topActionableRows.length > 0
-    ? Math.max(...topActionableRows.map((alert) => alert.ageDays))
+    ? maxOf(topActionableRows.map((alert) => alert.ageDays))
     : null;
 const alertReposWithRecords = new Set(flattenedAlerts.map((alert) => alert.repo))
   .size;

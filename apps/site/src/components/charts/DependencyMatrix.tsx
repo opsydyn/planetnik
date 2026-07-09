@@ -1,6 +1,7 @@
 import { Group } from "@visx/group"
 import { scaleLinear } from "@visx/scale"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
+import { maxOf } from "../../lib/arrayMath"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 
@@ -71,7 +72,10 @@ function MatrixInner({
     }
   }
 
-  const maxCount = Math.max(...data.map((d) => d.count), 1)
+  const maxCount = maxOf(
+    data.map((d) => d.count),
+    1,
+  )
   const colorScale = scaleLinear({
     domain: [0, maxCount * 0.33, maxCount],
     range: ["#f1f5f9", "#58A6FF", "#1656A8"],

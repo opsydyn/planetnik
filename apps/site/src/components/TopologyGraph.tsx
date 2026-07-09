@@ -1,6 +1,7 @@
 import dagre from "@dagrejs/dagre"
 import { RegistryProvider, useAtom, useAtomValue } from "@effect-atom/atom-react"
 import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesState } from "@xyflow/react"
+import { maxOf } from "../lib/arrayMath"
 import "@xyflow/react/dist/style.css"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { chartHelp } from "../lib/chartHelp"
@@ -250,7 +251,7 @@ function buildGraph(
     connectionCounts.set(e.to, (connectionCounts.get(e.to) ?? 0) + e.count)
   }
 
-  const maxConn = Math.max(...connectionCounts.values(), 1)
+  const maxConn = maxOf(connectionCounts.values(), 1)
 
   const nodeIds = new Set<string>()
   for (const e of rawEdges) {
@@ -353,7 +354,10 @@ function buildGraph(
     }
   })
 
-  const maxCount = Math.max(...rawEdges.map((e) => e.count), 1)
+  const maxCount = maxOf(
+    rawEdges.map((e) => e.count),
+    1,
+  )
   const edgeList: Edge[] = rawEdges.map((e, i) => {
     const thickness = Math.max(1, Math.min(6, (e.count / maxCount) * 6))
     const isSelectedEdge = selectedContributorEmail === e.from || selectedContributorEmail === e.to

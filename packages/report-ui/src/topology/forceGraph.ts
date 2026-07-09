@@ -1,4 +1,5 @@
 import { normalizeTemporalCommit, type TemporalCommitValue } from "../temporal/temporalCommit.js"
+import { map, minMax } from "../utils/arrayMath.js"
 import { getContributorDisplayName } from "./contributors"
 
 export interface ForceGraphNode {
@@ -116,13 +117,13 @@ export function buildContributorForceGraph(
     }
   }
 
-  const weightValues = [...nodeWeights.values()]
-  const maxNodeWeight = Math.max(...weightValues, 1)
-  const minNodeWeight = Math.min(...weightValues, maxNodeWeight)
+  const nodeStats = minMax(nodeWeights.values())
+  const maxNodeWeight = Math.max(nodeStats.max, 1)
+  const minNodeWeight = Math.min(nodeStats.min, maxNodeWeight)
 
-  const edgeWeights = [...aggregatedEdges.values()].map((edge) => edge.weight)
-  const maxEdgeWeight = Math.max(...edgeWeights, 1)
-  const minEdgeWeight = Math.min(...edgeWeights, maxEdgeWeight)
+  const edgeStats = minMax(map(aggregatedEdges.values(), (edge) => edge.weight))
+  const maxEdgeWeight = Math.max(edgeStats.max, 1)
+  const minEdgeWeight = Math.min(edgeStats.min, maxEdgeWeight)
 
   const nodes = [...nodeWeights.entries()]
     .sort((left, right) => left[0].localeCompare(right[0]))
@@ -201,13 +202,13 @@ export function buildTemporalForceGraph(rows: TemporalDependencyRow[]): ForceGra
     }
   }
 
-  const weightValues = [...nodeWeights.values()]
-  const maxNodeWeight = Math.max(...weightValues, 1)
-  const minNodeWeight = Math.min(...weightValues, maxNodeWeight)
+  const nodeStats = minMax(nodeWeights.values())
+  const maxNodeWeight = Math.max(nodeStats.max, 1)
+  const minNodeWeight = Math.min(nodeStats.min, maxNodeWeight)
 
-  const edgeWeights = [...aggregatedEdges.values()].map((edge) => edge.weight)
-  const maxEdgeWeight = Math.max(...edgeWeights, 1)
-  const minEdgeWeight = Math.min(...edgeWeights, maxEdgeWeight)
+  const edgeStats = minMax(map(aggregatedEdges.values(), (edge) => edge.weight))
+  const maxEdgeWeight = Math.max(edgeStats.max, 1)
+  const minEdgeWeight = Math.min(edgeStats.min, maxEdgeWeight)
 
   const nodes = [...nodeWeights.entries()]
     .sort((left, right) => left[0].localeCompare(right[0]))

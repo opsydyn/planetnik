@@ -1,6 +1,7 @@
 import { Group } from "@visx/group"
 import { scaleLinear } from "@visx/scale"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
+import { maxOf } from "../../lib/arrayMath"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 
@@ -35,7 +36,10 @@ export default function DistributionChart({ data, barColor, helpText }: Distribu
       {(width) => {
         const barAreaWidth = Math.max(width - LABEL_WIDTH - totalDetailWidth - 16, 40)
 
-        const maxValue = Math.max(...data.map((d) => d.value), 1)
+        const maxValue = maxOf(
+          data.map((d) => d.value),
+          1,
+        )
         const xScale = scaleLinear({
           domain: [0, maxValue],
           range: [0, barAreaWidth],

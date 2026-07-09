@@ -1,3 +1,4 @@
+import { maxOf } from "../utils/arrayMath.js";
 import dagre from "@dagrejs/dagre";
 import {
 	RegistryProvider,
@@ -280,7 +281,7 @@ function buildGraph(
 		connectionCounts.set(e.to, (connectionCounts.get(e.to) ?? 0) + e.count);
 	}
 
-	const maxConn = Math.max(...connectionCounts.values(), 1);
+	const maxConn = maxOf(connectionCounts.values(), 1);
 
 	const nodeIds = new Set<string>();
 	for (const e of rawEdges) {
@@ -383,7 +384,7 @@ function buildGraph(
 		};
 	});
 
-	const maxCount = Math.max(...rawEdges.map((e) => e.count), 1);
+	const maxCount = maxOf(rawEdges.map((e) => e.count), 1);
 	const edgeList: Edge[] = rawEdges.map((e, i) => {
 		const thickness = Math.max(1, Math.min(6, (e.count / maxCount) * 6));
 		const isSelectedEdge =
