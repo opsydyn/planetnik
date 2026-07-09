@@ -44,12 +44,6 @@ export default defineConfig({
 			fallbacks: ["sans-serif"],
 		},
 	],
-	experimental: {
-		rustCompiler: true,
-		queuedRendering: {
-			enabled: true,
-		},
-		cache: { provider: memoryCache() },
-	},
+	cache: { provider: memoryCache() },
 	integrations: [react()],
 });

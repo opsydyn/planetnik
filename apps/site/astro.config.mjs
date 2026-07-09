@@ -60,13 +60,6 @@ export default defineConfig({
 	security: {
 		csp: false,
 	},
-	experimental: {
-		rustCompiler: true,
-		queuedRendering: {
-			enabled: true,
-			contentCache: true,
-		},
-	},
 	vite: {
 		optimizeDeps: {
 			include: [
