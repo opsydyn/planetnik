@@ -102,7 +102,7 @@ describe("LandscapeConfigSchema", () => {
 		const raw = JSON.parse(readFileSync("./landscape-config.json", "utf-8"));
 		const result = decode(raw);
 
-		expect(result.githubOrgs).toContain("effect-TS");
+		expect(result.githubOrgs).toContain("alanpcurrie");
 		expect(result.githubCloneUrl).toBe("https://github.com");
 		expect(result.reposUpdatedAfter).toBe("2024-01-01");
 		expect(result.mergeExtensions).toHaveLength(1);
