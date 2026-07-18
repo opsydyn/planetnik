@@ -1,10 +1,8 @@
+/// <reference path="./wasm-assets.d.ts" />
 import { readFileSync } from "node:fs"
-import { createRequire } from "node:module"
+import rustGrammarWasmPath from "tree-sitter-rust/tree-sitter-rust.wasm" with { type: "file" }
 import { Language, Parser, type Tree } from "web-tree-sitter"
-
-const require = createRequire(import.meta.url)
-const webTreeSitterWasmPath = require.resolve("web-tree-sitter/web-tree-sitter.wasm")
-const rustGrammarWasmPath = require.resolve("tree-sitter-rust/tree-sitter-rust.wasm")
+import webTreeSitterWasmPath from "web-tree-sitter/web-tree-sitter.wasm" with { type: "file" }
 
 await Parser.init({
   locateFile(scriptName: string) {
