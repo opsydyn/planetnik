@@ -62,3 +62,29 @@ provisional configuration values; Task 8 is responsible for measuring and
 documenting that transition against representative datasets. Automated tests
 and package typecheck do not constitute direct browser, WebGL, keyboard,
 reduced-motion, or print evidence; those checks remain for Tasks 7–9.
+
+## Review fix round 1: keyboard-reachable table view
+
+Review found that the fallback's keyboard-native Inspect actions and evidence
+links were hidden during normal WebGL operation while the canvas selection
+boundary remained pointer-only. The view now renders an accessibility-tree-
+visible Map view/Table view button group before the canvas. Both controls are
+native buttons with `aria-pressed` and `aria-controls`; selecting Table view
+switches to the complete fallback without requiring renderer failure or a
+dense dataset. Map view remains available for an explicit return while WebGL
+is healthy and is disabled when dense data or renderer failure forces the
+fallback.
+
+Added a pure view-mode contract and a direct component regression. RED was
+observed because `CodeCityViewControls.js` did not exist. GREEN verifies that:
+
+- an explicit table request wins during healthy WebGL operation;
+- dense data and renderer failure still force table mode; and
+- the real Table view control is a native `type="button"`, names the fallback
+  with `aria-controls`, exposes its pressed state, and emits the table request.
+
+Fix-round verification:
+
+- `bun test packages/report-ui/src/code-city/__tests__/viewModel.test.ts packages/report-ui/src/code-city/__tests__/viewMode.test.tsx`
+  — 8 pass, 0 fail, 20 assertions.
+- `bun run --cwd packages/report-ui typecheck` — passed with exit code 0.

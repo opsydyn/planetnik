@@ -7,6 +7,7 @@ import {
 } from "./CodeCityCanvas.js";
 import { CodeCityFallback } from "./CodeCityFallback.js";
 import { CodeCityInspector } from "./CodeCityInspector.js";
+import { CodeCityViewControls } from "./CodeCityViewControls.js";
 import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
 import { resolveCodeCityLens } from "./lens.js";
 import { buildCodeCityScene } from "./sceneAdapter.js";
@@ -16,6 +17,10 @@ import {
 	buildCodeCityFallbackRows,
 	buildCodeCityInspectorModel,
 } from "./viewModel.js";
+import {
+	resolveCodeCityViewMode,
+	type CodeCityViewMode,
+} from "./viewMode.js";
 import "./CodeCityView.css";
 
 export type CodeCityViewProps = {
@@ -52,6 +57,7 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 	const canvasRef = useRef<CodeCityCanvasHandle | null>(null);
 	const [activeLens, setActiveLens] = useState<CodeCityLensId>("health");
 	const [selection, setSelection] = useState<CodeCitySelection>(null);
+	const [requestedView, setRequestedView] = useState<CodeCityViewMode>("map");
 	const [rendererUnavailable, setRendererUnavailable] =
 		useState<CodeCityCanvasUnavailableReason | null>(null);
 	const [focusAnnouncement, setFocusAnnouncement] = useState("");
@@ -78,12 +84,19 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 
 	const denseDataMode =
 		scene.nodes.length > DENSE_NODE_LIMIT || scene.edges.length > DENSE_EDGE_LIMIT;
-	const fallbackPrimary = denseDataMode || rendererUnavailable !== null;
+	const mapAvailable = !denseDataMode && rendererUnavailable === null;
+	const viewMode = resolveCodeCityViewMode(requestedView, {
+		denseDataMode,
+		rendererUnavailable: rendererUnavailable !== null,
+	});
+	const fallbackPrimary = viewMode === "table";
 	const fallbackStatus = denseDataMode
 		? "This snapshot is too dense for the interactive map. The complete Code City table is shown instead."
 		: rendererUnavailable
 			? rendererUnavailableMessage(rendererUnavailable)
-			: null;
+			: requestedView === "table"
+				? "Table view selected. Every building and available evidence link remains accessible below."
+				: null;
 	const activeLegend = model.legend.channels.find((channel) => channel.id === activeLens);
 	const activeLensLabel = activeLegend?.label ?? LENSES.find(({ id }) => id === activeLens)?.label;
 
@@ -114,6 +127,11 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 						{activeLensLabel}
 					</p>
 				</div>
+				<CodeCityViewControls
+					mode={viewMode}
+					mapAvailable={mapAvailable}
+					onChange={setRequestedView}
+				/>
 				<div className="code-city__lens-buttons" role="toolbar" aria-label="Code City lenses">
 					{LENSES.map((lens) => (
 						<button
@@ -142,7 +160,7 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 
 			{fallbackPrimary ? null : (
 				<div className="code-city__workspace">
-					<div className="code-city__map">
+					<div id="code-city-map" className="code-city__map">
 						<CodeCityCanvas
 							ref={canvasRef}
 							scene={scene}

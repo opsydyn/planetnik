@@ -17,6 +17,7 @@ export function CodeCityFallback({
 }: CodeCityFallbackProps) {
 	return (
 		<section
+			id="code-city-fallback"
 			className={`code-city-fallback${primary ? " code-city-fallback--primary" : " code-city-fallback--supplemental"}`}
 			aria-labelledby="code-city-fallback-title"
 		>

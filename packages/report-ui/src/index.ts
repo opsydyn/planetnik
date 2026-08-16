@@ -9,6 +9,7 @@ export type {
   CodeCityScenePoint,
   CodeCitySelection,
   CodeCitySelectionResult,
+  CodeCityViewMode,
   CodeCityViewProps,
 } from "./code-city/index"
 export {
@@ -19,6 +20,7 @@ export {
   resolveCodeCityEvidenceHref,
   resolveCodeCityLens,
   resolveCodeCitySelection,
+  resolveCodeCityViewMode,
 } from "./code-city/index"
 export { default as SecurityActionCenter } from "./security/SecurityActionCenter"
 export { formatReportDate, normalizeReportDate } from "./utils/reportDates"

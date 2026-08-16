@@ -44,7 +44,13 @@
 	gap: 0.45rem;
 }
 
+.code-city__view-buttons {
+	display: inline-flex;
+	gap: 0.35rem;
+}
+
 .code-city__lens-buttons button,
+.code-city__view-buttons button,
 .code-city-inspector__actions button,
 .code-city-fallback__actions button {
 	appearance: none;
@@ -64,6 +70,7 @@
 }
 
 .code-city__lens-buttons button:hover,
+.code-city__view-buttons button:hover,
 .code-city-inspector__actions button:hover,
 .code-city-fallback__actions button:hover {
 	border-color: var(--color-accent, #58a6ff);
@@ -75,7 +82,19 @@
 	color: var(--color-accent-strong, var(--color-accent, #58a6ff));
 }
 
+.code-city__view-buttons button[aria-pressed="true"] {
+	border-color: var(--color-accent, #58a6ff);
+	background: var(--color-accent-soft, rgba(88, 166, 255, 0.14));
+	color: var(--color-accent-strong, var(--color-accent, #58a6ff));
+}
+
+.code-city__view-buttons button:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
 .code-city__lens-buttons button:focus-visible,
+.code-city__view-buttons button:focus-visible,
 .code-city-inspector a:focus-visible,
 .code-city-inspector button:focus-visible,
 .code-city-fallback a:focus-visible,
@@ -356,6 +375,14 @@
 
 	.code-city__lens-buttons {
 		justify-content: flex-start;
+	}
+
+	.code-city__view-buttons {
+		align-self: stretch;
+	}
+
+	.code-city__view-buttons button {
+		flex: 1;
 	}
 
 	.code-city__legend ul {
