@@ -3,6 +3,8 @@ import type {
 	CodeCityModel,
 	CodeCitySnapshotInput,
 } from "../CodeCityModel.js";
+import { CodeCityInputError } from "../CodeCityModel.js";
+import { buildCodeCityModel } from "../CodeCityModelBuilder.js";
 
 const minimalInput = (): CodeCitySnapshotInput => ({
 	context: {
@@ -75,5 +77,48 @@ describe("CodeCityModel public contract", () => {
 	test("model values round-trip through JSON", () => {
 		const model = emptyModel();
 		expect(JSON.parse(JSON.stringify(model))).toEqual(model);
+	});
+});
+
+describe("buildCodeCityModel base contract", () => {
+	test("rejects a non-v2 context", () => {
+		expect(() =>
+			buildCodeCityModel({
+				...minimalInput(),
+				context: { ...minimalInput().context, dataVersion: 1 },
+			}),
+		).toThrowError(CodeCityInputError);
+	});
+
+	test("rejects missing repository identity and files main", () => {
+		expect(() =>
+			buildCodeCityModel({
+				...minimalInput(),
+				context: { ...minimalInput().context, repositoryId: "" },
+			}),
+		).toThrowError(CodeCityInputError);
+		expect(() =>
+			buildCodeCityModel({
+				...minimalInput(),
+				filesMain: undefined as never,
+			}),
+		).toThrowError(CodeCityInputError);
+	});
+
+	test("builds a file building and a root path district", () => {
+		const model = buildCodeCityModel(minimalInput());
+		expect(model.snapshot.repositoryId).toBe("repo:fixture");
+		expect(model.buildings).toHaveLength(1);
+		expect(model.buildings[0]).toMatchObject({
+			id: "file:src/index.ts",
+			relativePath: "src/index.ts",
+			primaryDistrictId: "path:src",
+		});
+		expect(model.districts[0]).toMatchObject({
+			id: "path:src",
+			kind: "path",
+			buildingIds: ["file:src/index.ts"],
+			derived: true,
+		});
 	});
 });

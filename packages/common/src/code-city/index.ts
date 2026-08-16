@@ -29,3 +29,5 @@ export {
 	type CodeCitySourceSet,
 	type CodeCityUnit,
 } from "./CodeCityModel.js";
+
+export { buildCodeCityModel } from "./CodeCityModelBuilder.js";
