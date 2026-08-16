@@ -18,6 +18,12 @@ export type {
 } from "./sceneTypes"
 export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
 export { resolveCodeCitySelection } from "./selection"
+export type {
+  CodeCityRouteResolution,
+  CodeCityRouteState,
+  CodeCityRouteStateInput,
+} from "./routeState"
+export { resolveCodeCityRouteState } from "./routeState"
 export type { CodeCityViewAvailability, CodeCityViewMode } from "./viewMode"
 export { resolveCodeCityViewMode } from "./viewMode"
 export type { CodeCityInspectorModel } from "./viewModel"

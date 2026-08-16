@@ -2,18 +2,16 @@
 import {
 	buildCodeCityModel,
 	CodeCityInputError,
-	type CodeCityModel,
 } from "@planetnik/common";
-import { CodeCityView } from "@planetnik/report-ui";
+import {
+	CodeCityView,
+	resolveCodeCityRouteState,
+	type CodeCityRouteResolution,
+} from "@planetnik/report-ui";
 import { getCollection, getEntry } from "astro:content";
 import Dashboard from "../layouts/Dashboard.astro";
 import { toCodeCitySnapshotInput } from "../lib/codeCitySnapshot";
 import { route } from "../lib/route";
-
-type CodeCityPageState =
-	| { readonly tag: "ready"; readonly model: CodeCityModel }
-	| { readonly tag: "unsupported-landscape" }
-	| { readonly tag: "invalid"; readonly message: string };
 
 const [
 	reportContext,
@@ -35,7 +33,7 @@ const [
 
 const projectName = reportContext?.data.title ?? "Planetnik";
 
-function resolvePageState(): CodeCityPageState {
+function resolveModel(): CodeCityRouteResolution {
 	if (!reportContext) {
 		return {
 			tag: "invalid",
@@ -43,13 +41,9 @@ function resolvePageState(): CodeCityPageState {
 		};
 	}
 
-	if (reportContext.data.reportMode === "landscape") {
-		return { tag: "unsupported-landscape" };
-	}
-
 	try {
 		return {
-			tag: "ready",
+			tag: "model",
 			model: buildCodeCityModel(
 				toCodeCitySnapshotInput({
 					context: reportContext.data,
@@ -71,16 +65,56 @@ function resolvePageState(): CodeCityPageState {
 	}
 }
 
-const pageState = resolvePageState();
+const pageState = resolveCodeCityRouteState({
+	title: projectName,
+	reportMode: reportContext?.data.reportMode,
+	resolution:
+		reportContext?.data.reportMode === "landscape"
+			? {
+					tag: "invalid",
+					message: "Code City does not build a single-repository model for landscapes.",
+				}
+			: resolveModel(),
+});
+
+const cityModel =
+	pageState.tag === "ready" || pageState.tag === "partial"
+		? pageState.model
+		: null;
+const invalidMessage = pageState.tag === "invalid" ? pageState.message : "";
 ---
 
 <Dashboard title="Code City" projectName={projectName}>
-	{pageState.tag === "ready" ? (
-		<CodeCityView
-			client:load
-			model={pageState.model}
-			evidenceBasePath={route("/")}
-		/>
+	{cityModel ? (
+		<>
+			<section class="code-city-state code-city-state--summary" aria-labelledby="code-city-state-title">
+				<h2 id="code-city-state-title">{cityModel.snapshot.title} Code City</h2>
+				<p>
+					Snapshot <code>{cityModel.snapshot.snapshotId ?? "current"}</code> contains{" "}
+					{cityModel.coverage.counts.files} files, {cityModel.coverage.counts.districts} contexts,
+					and {cityModel.coverage.counts.diagnostics} diagnostics.
+				</p>
+				{pageState.tag === "partial" ? (
+					<>
+						<p>
+							Optional canonical shards are unavailable: {" "}
+							<code>{cityModel.coverage.missingOptionalShards.join(", ")}</code>.
+						</p>
+						<p>
+							Use the table view for the complete accessible record list, or inspect the available
+							<a href={route("/files/size")}> file evidence</a>.
+						</p>
+					</>
+				) : (
+					<p>All optional Code City shards are available. Select a parcel or building to inspect its evidence.</p>
+				)}
+			</section>
+			<CodeCityView
+				client:load
+				model={cityModel}
+				evidenceBasePath={route("/")}
+			/>
+		</>
 	) : pageState.tag === "unsupported-landscape" ? (
 		<section class="code-city-state" aria-labelledby="code-city-state-title">
 			<h2 id="code-city-state-title">Code City is not available for landscapes yet</h2>
@@ -90,10 +124,21 @@ const pageState = resolvePageState();
 			</p>
 			<a href={route("/landscape/repositories")}>Browse repositories</a>
 		</section>
+	) : pageState.tag === "empty" ? (
+		<section class="code-city-state" aria-labelledby="code-city-state-title">
+			<h2 id="code-city-state-title">{pageState.model.snapshot.title} has no buildings to map</h2>
+			<p>
+				The canonical v2 snapshot is valid but its <code>files_main</code> shard contains no files.
+			</p>
+			<p>
+				Generate the report from a repository with analysed source files, then reload this page.
+			</p>
+			<a href={route("/overview")}>Review the report overview</a>
+		</section>
 	) : (
 		<section class="code-city-state" aria-labelledby="code-city-state-title">
 			<h2 id="code-city-state-title">Code City could not use this report</h2>
-			<p>{pageState.message}</p>
+			<p>{invalidMessage}</p>
 			<p>
 				Generate a canonical v2 single-repository report, then reload this page.
 			</p>
@@ -116,5 +161,14 @@ const pageState = resolvePageState();
 
 	.code-city-state p {
 		color: var(--color-text-muted);
+	}
+
+	.code-city-state--summary {
+		display: grid;
+		gap: 0.25rem;
+	}
+
+	.code-city-state--summary a {
+		margin-left: 0.25rem;
 	}
 </style>

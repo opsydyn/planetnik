@@ -310,6 +310,35 @@
 	line-height: 1.5;
 }
 
+.code-city-fallback__filter {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.code-city-fallback__filter p {
+	flex: 1 1 18rem;
+}
+
+.code-city-fallback__filter button {
+	appearance: none;
+	border: 1px solid var(--color-border-strong, var(--color-border, #1f2a44));
+	border-radius: var(--radius-control, 0);
+	background: var(--color-surface-muted, var(--color-card, #0e1525));
+	color: var(--color-text, #e8edf7);
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 700;
+	padding: 0.5rem 0.7rem;
+}
+
+.code-city-fallback__filter button:focus-visible {
+	outline: 3px solid var(--color-accent, #58a6ff);
+	outline-offset: 2px;
+}
+
 .code-city-fallback__scroll {
 	overflow-x: auto;
 }

@@ -1,4 +1,5 @@
 import type { buildCodeCityFallbackRows } from "./viewModel.js";
+import { useState } from "react";
 
 export type CodeCityFallbackRow = ReturnType<typeof buildCodeCityFallbackRows>[number];
 
@@ -6,6 +7,8 @@ export type CodeCityFallbackProps = {
 	readonly rows: readonly CodeCityFallbackRow[];
 	readonly status: string | null;
 	readonly primary: boolean;
+	readonly selectionLabel: string | null;
+	readonly selectedRowIds: readonly string[];
 	readonly onSelect: (id: string) => void;
 };
 
@@ -13,8 +16,18 @@ export function CodeCityFallback({
 	rows,
 	status,
 	primary,
+	selectionLabel,
+	selectedRowIds,
 	onSelect,
 }: CodeCityFallbackProps) {
+	const [selectionFilterEnabled, setSelectionFilterEnabled] = useState(false);
+	const selectedIds = new Set(selectedRowIds);
+	const hasSelectionFilter = selectionLabel !== null && selectedIds.size > 0;
+	const visibleRows =
+		selectionFilterEnabled && hasSelectionFilter
+			? rows.filter((row) => selectedIds.has(row.id))
+			: rows;
+
 	return (
 		<section
 			id="code-city-fallback"
@@ -24,6 +37,22 @@ export function CodeCityFallback({
 			<div className="code-city-fallback__heading">
 				<h2 id="code-city-fallback-title">Code City table</h2>
 				{status ? <p role="status">{status}</p> : null}
+				{hasSelectionFilter ? (
+					<div className="code-city-fallback__filter">
+						<p>
+							Selection filter: <strong>{selectionLabel}</strong>. {selectionFilterEnabled
+								? `Showing ${visibleRows.length} selected ${visibleRows.length === 1 ? "building" : "buildings"}.`
+								: `All ${rows.length} buildings remain visible.`}
+						</p>
+						<button
+							type="button"
+							aria-pressed={selectionFilterEnabled}
+							onClick={() => setSelectionFilterEnabled((enabled) => !enabled)}
+						>
+							{selectionFilterEnabled ? "Show all buildings" : "Show selected buildings"}
+						</button>
+					</div>
+				) : null}
 			</div>
 			<div className="code-city-fallback__scroll">
 				<table>
@@ -39,7 +68,7 @@ export function CodeCityFallback({
 						</tr>
 					</thead>
 					<tbody>
-						{rows.map((row) => (
+						{visibleRows.map((row) => (
 							<tr key={row.id}>
 								<td>{row.district}</td>
 								<th scope="row">

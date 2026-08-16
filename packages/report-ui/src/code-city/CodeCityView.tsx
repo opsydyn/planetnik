@@ -99,6 +99,14 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 				: null;
 	const activeLegend = model.legend.channels.find((channel) => channel.id === activeLens);
 	const activeLensLabel = activeLegend?.label ?? LENSES.find(({ id }) => id === activeLens)?.label;
+	const selectionLabel = inspector?.title ?? null;
+	const selectedRowIds = useMemo(() => {
+		if (!selection) return [];
+		if (selection.kind === "building") return [selection.id];
+		return model.buildings
+			.filter((building) => building.primaryDistrictId === selection.id)
+			.map((building) => building.id);
+	}, [model.buildings, selection]);
 
 	const selectEntity = (id: string) => {
 		const node = scene.nodes.find((candidate) => candidate.id === id);
@@ -174,7 +182,11 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 							}
 							onRendererUnavailable={setRendererUnavailable}
 						/>
-						<p className="code-city__map-status" aria-live="polite">
+						<p
+							className="code-city__map-status"
+							role="status"
+							tabIndex={0}
+						>
 							{selectionResult.selection
 								? `${selectionResult.incidentEdgeIds.length} connected dependency ${selectionResult.incidentEdgeIds.length === 1 ? "route" : "routes"}.`
 								: "Select a district or building to inspect it. Selection does not move the camera."}
@@ -202,6 +214,8 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 				rows={fallbackRows}
 				status={fallbackStatus}
 				primary={fallbackPrimary}
+				selectionLabel={selectionLabel}
+				selectedRowIds={selectedRowIds}
 				onSelect={selectEntity}
 			/>
 			<p className="code-city__sr-status" aria-live="polite">
