@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted with a narrowed evidence boundary
+Provisional — initial browser-render boundary only
 
 ## Date
 
@@ -41,8 +41,9 @@ preserves its canonical JSON and hosted/static application boundaries.
 
 ## Decision
 
-Planetnik will adopt the first Code City as a single-repository, progressively
-enhanced decision surface in `apps/site`.
+Planetnik will provisionally adopt the first Code City as a single-repository,
+progressively enhanced decision surface in `apps/site`. Final acceptance is
+pending the direct interaction matrix defined in this ADR's follow-up.
 
 The canonical boundary is v2 JSON to `CodeCityModel`. Astro content collections
 adapt existing files, units, component dependencies, hotspots, and impact
@@ -70,7 +71,7 @@ does not adopt or port Draxul's native renderer, code, or assets.
 
 ## Evidence Boundary
 
-The adoption is deliberately narrow.
+The provisional evidence boundary is deliberately narrow.
 
 Automated evidence on 2026-08-16 covered the canonical model, deterministic
 layout, lenses, selection paths, safe evidence links, route states, fallback
@@ -87,8 +88,13 @@ orbit/pan/zoom, camera preservation and restore, Focus behaviour, forced
 renderer failure, print preview, reduced motion, partial snapshots, dense
 fallback, or a reliable first-usable interaction time.
 
-Those checks remain a release-confidence follow-on. They do not broaden this
-ADR into a native renderer commitment or permit removing the HTML fallback.
+Those checks remain a release-confidence follow-on. Until they are recorded,
+this ADR establishes only that the canonical fixture can reach and render the
+initial WebGL view; it does not accept the interaction contract. In particular,
+orbit/pan/zoom, selection/focus/restore, renderer fallback, keyboard and print
+behaviour, reduced motion, partial and dense snapshots, and first-usable timing
+remain pending. This boundary does not broaden the ADR into a native renderer
+commitment or permit removing the HTML fallback.
 
 ## Alternatives Considered
 
@@ -139,7 +145,7 @@ exists.
 
 ## Follow-up
 
-1. Repeat the direct interaction matrix in a reliable browser harness,
+1. Complete the direct interaction matrix in a reliable browser harness,
    including orbit limits, selection/focus/restore, lens geometry stability,
    no-WebGL fallback, keyboard flow, print, and reduced motion.
 2. Run the partial and 1,501-building dense fixtures directly and record table

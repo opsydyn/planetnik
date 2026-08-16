@@ -64,4 +64,30 @@ describe("toCodeCitySnapshotInput", () => {
 		expect(input.hotspots).toBeUndefined();
 		expect(input.impact).toBeUndefined();
 	});
+
+	test("preserves optional shards declared by the v2 manifest when their records are empty", () => {
+		const input = toCodeCitySnapshotInput({
+			...fixtureCollections(),
+			context: {
+				...fixtureCollections().context,
+				canonicalShards: {
+					filesMain: "files_main.json",
+					units: "units.json",
+					componentDependencies: "component_dependencies.json",
+					hotspots: "hotspots.json",
+				},
+			},
+			filesTest: [],
+			units: [],
+			dependencies: [],
+			hotspots: [],
+			impact: undefined,
+		});
+
+		expect(input.filesTest).toBeUndefined();
+		expect(input.units).toEqual({ units: [] });
+		expect(input.componentDependencies).toEqual({ dependencies: [] });
+		expect(input.hotspots).toEqual({});
+		expect(input.impact).toBeUndefined();
+	});
 });

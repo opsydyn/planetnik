@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { CodeCityLensVisual } from "./lens.js";
 import type { CodeCityScene } from "./sceneTypes.js";
+import type { CodeCitySelectionResult } from "./selection.js";
 import type {
 	CodeCityRendererController,
 	CodeCityRendererStatus,
@@ -25,7 +26,7 @@ export type CodeCityCanvasHandle = {
 export type CodeCityCanvasProps = {
 	readonly scene: CodeCityScene;
 	readonly lensVisuals: Readonly<Record<string, CodeCityLensVisual>>;
-	readonly selectedId: string | null;
+	readonly selectionResult: CodeCitySelectionResult;
 	readonly onSelect: (id: string) => void;
 	readonly onFocusComplete: () => void;
 	readonly onRendererUnavailable: (
@@ -38,7 +39,7 @@ function CodeCityCanvasInner(
 	{
 		scene,
 		lensVisuals,
-		selectedId,
+		selectionResult,
 		onSelect,
 		onFocusComplete,
 		onRendererUnavailable,
@@ -49,7 +50,7 @@ function CodeCityCanvasInner(
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const controllerRef = useRef<CodeCityRendererController | null>(null);
 	const lensVisualsRef = useRef(lensVisuals);
-	const selectedIdRef = useRef(selectedId);
+	const selectionResultRef = useRef(selectionResult);
 	const callbacksRef = useRef({
 		onSelect,
 		onFocusComplete,
@@ -58,7 +59,7 @@ function CodeCityCanvasInner(
 	const [status, setStatus] = useState<CodeCityRendererStatus>("pending");
 
 	lensVisualsRef.current = lensVisuals;
-	selectedIdRef.current = selectedId;
+	selectionResultRef.current = selectionResult;
 	callbacksRef.current = {
 		onSelect,
 		onFocusComplete,
@@ -87,7 +88,7 @@ function CodeCityCanvasInner(
 					canvas: canvasRef.current,
 					scene,
 					lensVisuals: lensVisualsRef.current,
-					selectedId: selectedIdRef.current,
+					selectionResult: selectionResultRef.current,
 					onSelect: (id) => callbacksRef.current.onSelect(id),
 					onFocusComplete: () => callbacksRef.current.onFocusComplete(),
 					onRendererUnavailable: (reason) => {
@@ -118,8 +119,8 @@ function CodeCityCanvasInner(
 	}, [lensVisuals]);
 
 	useEffect(() => {
-		controllerRef.current?.setSelectedId(selectedId);
-	}, [selectedId]);
+		controllerRef.current?.setSelectionResult(selectionResult);
+	}, [selectionResult]);
 
 	return (
 		<canvas

@@ -1,12 +1,16 @@
 import {
   AmbientLight,
   BoxGeometry,
+  CanvasTexture,
   Color,
   DirectionalLight,
   Mesh,
   MeshStandardMaterial,
   OrthographicCamera,
   Raycaster,
+  Sprite,
+  SpriteMaterial,
+  SRGBColorSpace,
   Scene as ThreeScene,
   Vector2,
   Vector3,
@@ -15,6 +19,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import type { CodeCityLensVisual } from "./lens.js"
 import type { CodeCityScene, CodeCitySceneEdge, CodeCitySceneNode } from "./sceneTypes.js"
+import type { CodeCitySelectionResult } from "./selection.js"
 
 export type CodeCityRendererStatus = "pending" | "ready" | "unavailable"
 
@@ -40,13 +45,37 @@ export function resolveCodeCityRouteSelectionId(scene: CodeCityScene, selectedId
   return selectedNode?.kind === "building" ? selectedNode.parentId : selectedId
 }
 
+export function resolveCodeCityHighlightedRouteIds(
+  scene: CodeCityScene,
+  selectionResult: CodeCitySelectionResult,
+): readonly string[] {
+  const incidentEdgeIds = new Set(selectionResult.incidentEdgeIds)
+  return scene.edges.filter((edge) => edge.renderable && incidentEdgeIds.has(edge.id)).map((edge) => edge.id)
+}
+
+export function resolveCodeCityVisibleLabelIds(
+  scene: CodeCityScene,
+  selectionResult: CodeCitySelectionResult,
+): readonly string[] {
+  const selectedDistrictIds = new Set(selectionResult.districtIds)
+  return scene.nodes
+    .filter((node) => {
+      if (node.kind === "district") return true
+      if (selectionResult.selection === null) return false
+      return (
+        node.id === selectionResult.selection.id || (node.parentId !== null && selectedDistrictIds.has(node.parentId))
+      )
+    })
+    .map((node) => node.id)
+}
+
 export type CodeCityLensVisuals = Readonly<Record<string, CodeCityLensVisual>>
 
 export type CodeCityRendererOptions = {
   readonly canvas: HTMLCanvasElement
   readonly scene: CodeCityScene
   readonly lensVisuals: CodeCityLensVisuals
-  readonly selectedId: string | null
+  readonly selectionResult: CodeCitySelectionResult
   readonly onSelect: (id: string) => void
   readonly onFocusComplete: () => void
   readonly onRendererUnavailable: (reason: CodeCityRendererUnavailableReason) => void
@@ -54,7 +83,7 @@ export type CodeCityRendererOptions = {
 
 export type CodeCityRendererController = {
   readonly setLensVisuals: (lensVisuals: CodeCityLensVisuals) => void
-  readonly setSelectedId: (id: string | null) => void
+  readonly setSelectionResult: (selectionResult: CodeCitySelectionResult) => void
   readonly focusEntity: (id: string | null) => void
   readonly dispose: () => void
 }
@@ -74,6 +103,13 @@ type NodeRenderRecord = {
 type RouteRenderRecord = {
   readonly edge: CodeCitySceneEdge
   readonly material: MeshStandardMaterial
+}
+
+type LabelRenderRecord = {
+  readonly node: CodeCitySceneNode
+  readonly sprite: Sprite
+  readonly material: SpriteMaterial
+  readonly texture: CanvasTexture
 }
 
 const FALLBACK_FILL = "#64748b"
@@ -128,6 +164,49 @@ const createNodeRecord = (
   return { node, mesh, material }
 }
 
+const createLabelRecord = (
+  node: CodeCitySceneNode,
+  nodesById: ReadonlyMap<string, CodeCitySceneNode>,
+): LabelRenderRecord | null => {
+  if (typeof document === "undefined") return null
+  const canvas = document.createElement("canvas")
+  canvas.width = 512
+  canvas.height = 96
+  const context = canvas.getContext("2d")
+  if (!context) return null
+
+  const text = node.label.length > 48 ? `${node.label.slice(0, 45)}…` : node.label
+  context.clearRect(0, 0, canvas.width, canvas.height)
+  context.fillStyle = "rgba(15, 23, 42, 0.88)"
+  context.fillRect(0, 8, canvas.width, 80)
+  context.strokeStyle = node.kind === "district" ? "#7dd3fc" : "#cbd5e1"
+  context.lineWidth = 3
+  context.strokeRect(1.5, 9.5, canvas.width - 3, 77)
+  context.fillStyle = "#f8fafc"
+  context.font = node.kind === "district" ? "700 34px system-ui, sans-serif" : "600 28px system-ui, sans-serif"
+  context.textAlign = "center"
+  context.textBaseline = "middle"
+  context.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 32)
+
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  const material = new SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  })
+  const sprite = new Sprite(material)
+  const top = nodePositionY(node, nodesById) + node.size.height / 2
+  sprite.position.set(node.center.x, top + (node.kind === "district" ? 1.1 : 0.8), node.center.z)
+  sprite.scale.set(node.kind === "district" ? 6.4 : 5.6, node.kind === "district" ? 1.2 : 1, 1)
+  sprite.renderOrder = 20
+  sprite.name = `${node.label} label`
+  sprite.visible = false
+
+  return { node, sprite, material, texture }
+}
+
 const createRouteRecords = (edge: CodeCitySceneEdge, threeScene: ThreeScene): RouteRenderRecord[] => {
   if (!edge.renderable) return []
 
@@ -160,14 +239,16 @@ const createRouteRecords = (edge: CodeCitySceneEdge, threeScene: ThreeScene): Ro
   return records
 }
 
-const disposeSceneMeshes = (scene: ThreeScene) => {
+const disposeSceneObjects = (scene: ThreeScene, labelRecords: readonly LabelRenderRecord[]) => {
+  for (const record of labelRecords) record.texture.dispose()
   scene.traverse((child) => {
-    if (!(child instanceof Mesh)) return
-    child.geometry.dispose()
-    if (Array.isArray(child.material)) {
-      for (const material of child.material) material.dispose()
-    } else {
-      child.material.dispose()
+    if (child instanceof Mesh) child.geometry.dispose()
+    if (child instanceof Mesh || child instanceof Sprite) {
+      if (Array.isArray(child.material)) {
+        for (const material of child.material) material.dispose()
+      } else {
+        child.material.dispose()
+      }
     }
   })
   scene.clear()
@@ -209,7 +290,6 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
     cleanupActions.push(() => renderer.dispose())
 
     const threeScene = new ThreeScene()
-    cleanupActions.push(() => disposeSceneMeshes(threeScene))
     threeScene.background = new Color("#0f172a")
     threeScene.add(new AmbientLight("#ffffff", 1.45))
     const directionalLight = new DirectionalLight("#ffffff", 2.1)
@@ -218,12 +298,21 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
 
     const nodesById = new Map(options.scene.nodes.map((node) => [node.id, node]))
     const nodeRecords = new Map<string, NodeRenderRecord>()
+    const labelRecords = new Map<string, LabelRenderRecord>()
+    cleanupActions.push(() => disposeSceneObjects(threeScene, [...labelRecords.values()]))
     const pickableMeshes: Mesh[] = []
     for (const node of options.scene.nodes) {
       const record = createNodeRecord(node, nodesById, options.lensVisuals)
       nodeRecords.set(node.id, record)
       pickableMeshes.push(record.mesh)
       threeScene.add(record.mesh)
+      if (node.kind === "district") {
+        const labelRecord = createLabelRecord(node, nodesById)
+        if (labelRecord) {
+          labelRecords.set(node.id, labelRecord)
+          threeScene.add(labelRecord.sprite)
+        }
+      }
     }
     const routeRecords = options.scene.edges.flatMap((edge) => createRouteRecords(edge, threeScene))
 
@@ -248,13 +337,14 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
     controls.update()
 
     let lensVisuals = options.lensVisuals
-    let selectedId = options.selectedId
+    let selectionResult = options.selectionResult
     let preservedCameraState: CameraState | null = null
     const render = () => {
       if (!disposed) renderer.render(threeScene, camera)
     }
 
     const updateMaterials = () => {
+      const selectedId = selectionResult.selection?.id ?? null
       for (const [id, record] of nodeRecords) {
         const visual = lensVisuals[id]
         const selected = selectedId === id
@@ -262,14 +352,23 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
         record.material.emissive.set(selected ? "#172554" : "#000000")
         record.material.emissiveIntensity = selected ? 0.55 : 0
       }
-      const routeSelectionId = resolveCodeCityRouteSelectionId(options.scene, selectedId)
+      const highlightedRouteIds = new Set(resolveCodeCityHighlightedRouteIds(options.scene, selectionResult))
       for (const record of routeRecords) {
-        const selected =
-          routeSelectionId !== null &&
-          (record.edge.sourceId === routeSelectionId || record.edge.targetId === routeSelectionId)
+        const selected = highlightedRouteIds.has(record.edge.id)
         record.material.color.set(selected ? ROUTE_SELECTED_COLOR : ROUTE_COLOR)
         record.material.opacity = selected ? 0.78 : 0.34
       }
+      const visibleLabelIds = new Set(resolveCodeCityVisibleLabelIds(options.scene, selectionResult))
+      for (const id of visibleLabelIds) {
+        if (labelRecords.has(id)) continue
+        const node = nodesById.get(id)
+        if (!node) continue
+        const labelRecord = createLabelRecord(node, nodesById)
+        if (!labelRecord) continue
+        labelRecords.set(id, labelRecord)
+        threeScene.add(labelRecord.sprite)
+      }
+      for (const [id, record] of labelRecords) record.sprite.visible = visibleLabelIds.has(id)
       render()
     }
 
@@ -336,8 +435,8 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
         lensVisuals = nextLensVisuals
         updateMaterials()
       },
-      setSelectedId(id) {
-        selectedId = id
+      setSelectionResult(nextSelectionResult) {
+        selectionResult = nextSelectionResult
         updateMaterials()
       },
       focusEntity(id) {

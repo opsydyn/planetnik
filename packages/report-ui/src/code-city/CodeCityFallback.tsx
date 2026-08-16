@@ -12,6 +12,14 @@ export type CodeCityFallbackProps = {
 	readonly onSelect: (id: string) => void;
 };
 
+export function formatCodeCityFallbackInspectLabel(
+	row: CodeCityFallbackRow,
+): string {
+	return row.kind === "district"
+		? `Inspect district ${row.entity}`
+		: `Inspect file ${row.entity}`;
+}
+
 export function CodeCityFallback({
 	rows,
 	status,
@@ -41,26 +49,27 @@ export function CodeCityFallback({
 					<div className="code-city-fallback__filter">
 						<p>
 							Selection filter: <strong>{selectionLabel}</strong>. {selectionFilterEnabled
-								? `Showing ${visibleRows.length} selected ${visibleRows.length === 1 ? "building" : "buildings"}.`
-								: `All ${rows.length} buildings remain visible.`}
+								? `Showing ${visibleRows.length} selected ${visibleRows.length === 1 ? "entity" : "entities"}.`
+								: `All ${rows.length} entities remain visible.`}
 						</p>
 						<button
 							type="button"
 							aria-pressed={selectionFilterEnabled}
 							onClick={() => setSelectionFilterEnabled((enabled) => !enabled)}
 						>
-							{selectionFilterEnabled ? "Show all buildings" : "Show selected buildings"}
+							{selectionFilterEnabled ? "Show all entities" : "Show selected entities"}
 						</button>
 					</div>
 				) : null}
 			</div>
 			<div className="code-city-fallback__scroll">
 				<table>
-					<caption>Every building in the Code City snapshot</caption>
+					<caption>Every district and building in the Code City snapshot</caption>
 					<thead>
 						<tr>
+							<th scope="col">Entity</th>
 							<th scope="col">District</th>
-							<th scope="col">File path</th>
+							<th scope="col">Path / kind</th>
 							<th scope="col">LOC</th>
 							<th scope="col">Health</th>
 							<th scope="col">Impact</th>
@@ -70,10 +79,11 @@ export function CodeCityFallback({
 					<tbody>
 						{visibleRows.map((row) => (
 							<tr key={row.id}>
+								<th scope="row">{row.entity}</th>
 								<td>{row.district}</td>
-								<th scope="row">
+								<td>
 									<code>{row.path}</code>
-								</th>
+								</td>
 								<td>{row.loc}</td>
 								<td>{row.health}</td>
 								<td>{row.impact}</td>
@@ -83,7 +93,7 @@ export function CodeCityFallback({
 										<button
 											type="button"
 											onClick={() => onSelect(row.id)}
-											aria-label={`Inspect ${row.path}`}
+											aria-label={formatCodeCityFallbackInspectLabel(row)}
 										>
 											Inspect
 										</button>

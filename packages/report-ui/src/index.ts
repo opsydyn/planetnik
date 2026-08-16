@@ -1,8 +1,10 @@
 export type {
   CodeCityFallbackProps,
   CodeCityFallbackRow,
-  CodeCityInspectorProps,
+  CodeCityFallbackRowModel,
   CodeCityInspectorModel,
+  CodeCityInspectorProps,
+  CodeCityInspectorUnitModel,
   CodeCityLensEntity,
   CodeCityLensId,
   CodeCityLensVisual,

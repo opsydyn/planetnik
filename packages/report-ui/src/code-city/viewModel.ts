@@ -1,4 +1,11 @@
-import type { CodeCityBuilding, CodeCityDistrict, CodeCityModel, CodeCitySignals } from "@planetnik/common"
+import type {
+  CodeCityBuilding,
+  CodeCityDistrict,
+  CodeCityEvidenceRef,
+  CodeCityModel,
+  CodeCitySignals,
+  CodeCityUnit,
+} from "@planetnik/common"
 import { resolveCodeCityEvidenceHref } from "./evidence.js"
 import { type CodeCitySelection, resolveCodeCitySelection } from "./selection.js"
 
@@ -10,6 +17,16 @@ export type CodeCityInspectorModel = {
   readonly districtLabel: string | null
   readonly sourceSets: readonly string[]
   readonly metrics: ReadonlyArray<{ readonly label: string; readonly value: string }>
+  readonly evidence: readonly { readonly label: string; readonly href: string }[]
+  readonly units: readonly CodeCityInspectorUnitModel[]
+}
+
+export type CodeCityInspectorUnitModel = {
+  readonly id: string
+  readonly label: string
+  readonly range: string
+  readonly loc: string
+  readonly complexity: string
   readonly evidence: readonly { readonly label: string; readonly href: string }[]
 }
 
@@ -82,6 +99,35 @@ const sourceSetsForDistrict = (model: CodeCityModel, district: CodeCityDistrict)
 
 const evidenceLabel = (kind: string, id: string): string => `${kind.charAt(0).toUpperCase()}${kind.slice(1)}: ${id}`
 
+const evidenceLinks = (
+  references: readonly CodeCityEvidenceRef[],
+  basePath: string,
+): Array<{ readonly label: string; readonly href: string }> =>
+  references.flatMap((reference) => {
+    const href = resolveCodeCityEvidenceHref(basePath, reference.route)
+    return href === null ? [] : [{ label: evidenceLabel(reference.kind, reference.id), href }]
+  })
+
+const unitsInLayoutOrder = (model: CodeCityModel, buildingId: string): CodeCityUnit[] => {
+  const positions = new Map(model.layout.unitOrder.map((id, index) => [id, index]))
+  return model.units
+    .filter((unit) => unit.fileId === buildingId)
+    .sort((left, right) => {
+      const leftPosition = positions.get(left.id) ?? Number.MAX_SAFE_INTEGER
+      const rightPosition = positions.get(right.id) ?? Number.MAX_SAFE_INTEGER
+      return leftPosition - rightPosition || compareText(left.id, right.id)
+    })
+}
+
+const inspectorUnit = (unit: CodeCityUnit, basePath: string): CodeCityInspectorUnitModel => ({
+  id: unit.id,
+  label: unit.longName || unit.shortName || unit.id,
+  range: `Lines ${unit.startLine}–${unit.endLine}`,
+  loc: String(unit.linesOfCode),
+  complexity: `McCabe ${unit.mcCabeIndex}`,
+  evidence: evidenceLinks(unit.evidence, basePath),
+})
+
 export function buildCodeCityInspectorModel(
   model: CodeCityModel,
   selection: CodeCitySelection,
@@ -98,10 +144,7 @@ export function buildCodeCityInspectorModel(
   const building = selection.kind === "building" ? (entity as CodeCityBuilding) : null
   const district = building ? districtForBuilding(model, building) : (entity as CodeCityDistrict)
   const selectionResult = resolveCodeCitySelection(model, selection)
-  const evidence = selectionResult.evidence.flatMap((reference) => {
-    const href = resolveCodeCityEvidenceHref(basePath, reference.route)
-    return href === null ? [] : [{ label: evidenceLabel(reference.kind, reference.id), href }]
-  })
+  const evidence = evidenceLinks(selectionResult.evidence, basePath)
 
   return {
     title: building?.relativePath ?? district?.label ?? selection.id,
@@ -110,6 +153,7 @@ export function buildCodeCityInspectorModel(
     sourceSets: building ? building.sourceSets : district ? sourceSetsForDistrict(model, district) : [],
     metrics: metricsFor(model, entity.metrics),
     evidence,
+    units: building ? unitsInLayoutOrder(model, building.id).map((unit) => inspectorUnit(unit, basePath)) : [],
   }
 }
 
@@ -124,28 +168,63 @@ const buildingsInLayoutOrder = (model: CodeCityModel): CodeCityBuilding[] => {
   })
 }
 
-export function buildCodeCityFallbackRows(
-  model: CodeCityModel,
-  basePath: string,
-): ReadonlyArray<{
+const districtsInLayoutOrder = (model: CodeCityModel): CodeCityDistrict[] => {
+  const positions = new Map(model.layout.districtOrder.map((id, index) => [id, index]))
+  return [...model.districts].sort((left, right) => {
+    const leftPosition = positions.get(left.id) ?? Number.MAX_SAFE_INTEGER
+    const rightPosition = positions.get(right.id) ?? Number.MAX_SAFE_INTEGER
+    return leftPosition - rightPosition || compareText(left.id, right.id)
+  })
+}
+
+const firstEvidenceHref = (references: readonly CodeCityEvidenceRef[], basePath: string): string | null =>
+  references
+    .map((reference) => resolveCodeCityEvidenceHref(basePath, reference.route))
+    .find((href): href is string => href !== null) ?? null
+
+export type CodeCityFallbackRowModel = {
+  readonly kind: "district" | "building"
   readonly id: string
+  readonly entity: string
   readonly district: string
   readonly path: string
   readonly loc: string
   readonly health: string
   readonly impact: string
   readonly href: string | null
-}> {
-  return buildingsInLayoutOrder(model).map((building) => ({
-    id: building.id,
-    district: districtForBuilding(model, building)?.label ?? UNAVAILABLE,
-    path: building.relativePath,
-    loc: String(building.metrics.footprint.loc),
-    health: formatHealth(building.metrics),
-    impact: formatImpact(building.metrics),
-    href:
-      building.evidence
-        .map((reference) => resolveCodeCityEvidenceHref(basePath, reference.route))
-        .find((href): href is string => href !== null) ?? null,
-  }))
+}
+
+export function buildCodeCityFallbackRows(model: CodeCityModel, basePath: string): readonly CodeCityFallbackRowModel[] {
+  const districtRows = districtsInLayoutOrder(model).map((district): CodeCityFallbackRowModel => {
+    const selectionEvidence = resolveCodeCitySelection(model, {
+      kind: "district",
+      id: district.id,
+    }).evidence
+    return {
+      kind: "district",
+      id: district.id,
+      entity: district.label,
+      district: district.label,
+      path: district.pathPrefix ?? (district.kind === "component" ? "Component district" : "Path district"),
+      loc: String(district.metrics.footprint.loc),
+      health: formatHealth(district.metrics),
+      impact: formatImpact(district.metrics),
+      href: firstEvidenceHref(district.evidence, basePath) ?? firstEvidenceHref(selectionEvidence, basePath),
+    }
+  })
+  const buildingRows = buildingsInLayoutOrder(model).map(
+    (building): CodeCityFallbackRowModel => ({
+      kind: "building",
+      id: building.id,
+      entity: building.relativePath,
+      district: districtForBuilding(model, building)?.label ?? UNAVAILABLE,
+      path: building.relativePath,
+      loc: String(building.metrics.footprint.loc),
+      health: formatHealth(building.metrics),
+      impact: formatImpact(building.metrics),
+      href: firstEvidenceHref(building.evidence, basePath),
+    }),
+  )
+
+  return [...districtRows, ...buildingRows]
 }

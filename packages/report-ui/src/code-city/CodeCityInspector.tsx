@@ -62,6 +62,34 @@ export function CodeCityInspector({
 						<p className="code-city-inspector__empty">No linked evidence is available.</p>
 					)}
 
+					{inspector.units.length > 0 ? (
+						<section className="code-city-inspector__units" aria-labelledby="code-city-units-title">
+							<h3 id="code-city-units-title">Units</h3>
+							<ol>
+								{inspector.units.map((unit) => (
+									<li key={unit.id}>
+										<strong>{unit.label}</strong>
+										<code>{unit.id}</code>
+										<p>
+											{unit.range} · {unit.loc} LOC · {unit.complexity}
+										</p>
+										{unit.evidence.length > 0 ? (
+											<ul>
+												{unit.evidence.map((evidence) => (
+													<li key={`${evidence.label}:${evidence.href}`}>
+														<a href={evidence.href}>{evidence.label}</a>
+													</li>
+												))}
+											</ul>
+										) : (
+											<span>Unit evidence unavailable</span>
+										)}
+									</li>
+								))}
+							</ol>
+						</section>
+					) : null}
+
 					<div className="code-city-inspector__actions">
 						<button type="button" onClick={onFocus} disabled={!canFocus}>
 							Focus

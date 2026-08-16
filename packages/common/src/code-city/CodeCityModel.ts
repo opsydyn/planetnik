@@ -8,6 +8,7 @@ export type CanonicalReportContext = {
 	readonly repositoryId?: string;
 	readonly snapshotId?: string;
 	readonly generatedAt?: string;
+	readonly canonicalShards?: Readonly<Record<string, string>>;
 };
 
 export type CanonicalFileRecord = {

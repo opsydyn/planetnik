@@ -95,18 +95,23 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 		: rendererUnavailable
 			? rendererUnavailableMessage(rendererUnavailable)
 			: requestedView === "table"
-				? "Table view selected. Every building and available evidence link remains accessible below."
+				? "Table view selected. Every district, building, and available evidence link remains accessible below."
 				: null;
 	const activeLegend = model.legend.channels.find((channel) => channel.id === activeLens);
 	const activeLensLabel = activeLegend?.label ?? LENSES.find(({ id }) => id === activeLens)?.label;
 	const selectionLabel = inspector?.title ?? null;
 	const selectedRowIds = useMemo(() => {
 		if (!selection) return [];
-		if (selection.kind === "building") return [selection.id];
-		return model.buildings
-			.filter((building) => building.primaryDistrictId === selection.id)
-			.map((building) => building.id);
-	}, [model.buildings, selection]);
+		if (selection.kind === "building") {
+			return [selection.id, ...selectionResult.districtIds];
+		}
+		return [
+			selection.id,
+			...model.buildings
+				.filter((building) => building.districtIds.includes(selection.id))
+				.map((building) => building.id),
+		];
+	}, [model.buildings, selection, selectionResult.districtIds]);
 
 	const selectEntity = (id: string) => {
 		const node = scene.nodes.find((candidate) => candidate.id === id);
@@ -173,7 +178,7 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 							ref={canvasRef}
 							scene={scene}
 							lensVisuals={lensVisuals}
-							selectedId={selection?.id ?? null}
+							selectionResult={selectionResult}
 							onSelect={selectEntity}
 							onFocusComplete={() =>
 								setFocusAnnouncement(

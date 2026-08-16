@@ -85,7 +85,38 @@ const modelFixture = (): CodeCityModel => ({
       ],
     },
   ],
-  units: [],
+  units: [
+    {
+      id: "unit:runtime-helper",
+      fileId: "file:runtime",
+      shortName: "helper",
+      longName: "Runtime.helper",
+      relativeFileName: "src/runtime.ts",
+      linesOfCode: 18,
+      mcCabeIndex: 7,
+      numberOfParameters: 2,
+      startLine: 40,
+      endLine: 57,
+      districtIds: ["district:runtime"],
+      metrics: signals({ footprint: { loc: 18, buildingCount: 0 } }),
+      evidence: [{ kind: "unit", id: "unit:runtime-helper", route: "/units/complexity#helper" }],
+    },
+    {
+      id: "unit:runtime-start",
+      fileId: "file:runtime",
+      shortName: "start",
+      longName: "Runtime.start",
+      relativeFileName: "src/runtime.ts",
+      linesOfCode: 22,
+      mcCabeIndex: 11,
+      numberOfParameters: 1,
+      startLine: 10,
+      endLine: 31,
+      districtIds: ["district:runtime"],
+      metrics: signals({ footprint: { loc: 22, buildingCount: 0 } }),
+      evidence: [{ kind: "unit", id: "unit:runtime-start", route: null }],
+    },
+  ],
   edges: [
     {
       id: "edge:runtime-web",
@@ -105,14 +136,14 @@ const modelFixture = (): CodeCityModel => ({
     missingOptionalShards: [],
     diagnostics: [],
     derivedDistrictIds: [],
-    counts: { files: 3, districts: 2, units: 0, edges: 1, diagnostics: 0 },
+    counts: { files: 3, districts: 2, units: 2, edges: 1, diagnostics: 0 },
   },
   layout: {
     contractVersion: 1,
     seed: "code-city-v1:fixture",
     districtOrder: ["district:runtime", "district:web"],
     buildingOrder: ["file:runtime", "file:web", "file:missing"],
-    unitOrder: [],
+    unitOrder: ["unit:runtime-start", "unit:runtime-helper"],
   },
   legend: { channels: [] },
 })
@@ -148,6 +179,24 @@ describe("buildCodeCityInspectorModel", () => {
       { label: "Component: edge:runtime-web", href: "/planetnik/topology#runtime-web" },
       { label: "File: file:runtime", href: "/planetnik/files/size#runtime" },
       { label: "Impact: impact:runtime", href: "/planetnik/impact#runtime" },
+    ])
+    expect(inspector?.units).toEqual([
+      {
+        id: "unit:runtime-start",
+        label: "Runtime.start",
+        range: "Lines 10–31",
+        loc: "22",
+        complexity: "McCabe 11",
+        evidence: [],
+      },
+      {
+        id: "unit:runtime-helper",
+        label: "Runtime.helper",
+        range: "Lines 40–57",
+        loc: "18",
+        complexity: "McCabe 7",
+        evidence: [{ label: "Unit: unit:runtime-helper", href: "/planetnik/units/complexity#helper" }],
+      },
     ])
   })
 
@@ -195,12 +244,27 @@ describe("buildCodeCityInspectorModel", () => {
 })
 
 describe("buildCodeCityFallbackRows", () => {
-  test("preserves model building order and leaves missing evidence and signals unavailable", () => {
+  test("preserves deterministic district and building order and leaves missing values unavailable", () => {
     const rows = buildCodeCityFallbackRows(modelFixture(), "/planetnik/")
 
-    expect(rows.map(({ id }) => id)).toEqual(["file:runtime", "file:web", "file:missing"])
-    expect(rows[0]).toEqual({
+    expect(rows.map(({ id }) => id)).toEqual([
+      "district:runtime",
+      "district:web",
+      "file:runtime",
+      "file:web",
+      "file:missing",
+    ])
+    expect(rows[0]).toMatchObject({
+      kind: "district",
+      id: "district:runtime",
+      entity: "Runtime",
+      district: "Runtime",
+      loc: "240",
+    })
+    expect(rows[2]).toEqual({
+      kind: "building",
       id: "file:runtime",
+      entity: "src/runtime.ts",
       district: "Runtime",
       path: "src/runtime.ts",
       loc: "240",
@@ -208,7 +272,7 @@ describe("buildCodeCityFallbackRows", () => {
       impact: "73 (coupling)",
       href: "/planetnik/files/size#runtime",
     })
-    expect(rows[2]).toMatchObject({
+    expect(rows[4]).toMatchObject({
       health: "Unavailable",
       impact: "Unavailable",
       href: null,

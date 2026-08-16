@@ -1,6 +1,107 @@
 import { describe, expect, test } from "bun:test"
 import type { CodeCityScene } from "../sceneTypes.js"
-import { CODE_CITY_CAMERA_CONFIG, canCreateWebGLRenderer, resolveCodeCityRouteSelectionId } from "../threeRenderer.js"
+import type { CodeCitySelectionResult } from "../selection.js"
+import {
+  CODE_CITY_CAMERA_CONFIG,
+  canCreateWebGLRenderer,
+  resolveCodeCityHighlightedRouteIds,
+  resolveCodeCityRouteSelectionId,
+  resolveCodeCityVisibleLabelIds,
+} from "../threeRenderer.js"
+
+const multiDistrictScene = (): CodeCityScene => ({
+  contractVersion: 1,
+  nodes: [
+    {
+      id: "district:core",
+      kind: "district",
+      label: "Core",
+      parentId: null,
+      center: { x: 0, z: 0 },
+      size: { width: 8, depth: 8, height: 0.5 },
+      districtKey: "district:core",
+    },
+    {
+      id: "district:web",
+      kind: "district",
+      label: "Web",
+      parentId: null,
+      center: { x: 12, z: 0 },
+      size: { width: 8, depth: 8, height: 0.5 },
+      districtKey: "district:web",
+    },
+    {
+      id: "district:other",
+      kind: "district",
+      label: "Other",
+      parentId: null,
+      center: { x: 24, z: 0 },
+      size: { width: 8, depth: 8, height: 0.5 },
+      districtKey: "district:other",
+    },
+    {
+      id: "file:shared",
+      kind: "building",
+      label: "src/shared.ts",
+      parentId: "district:core",
+      center: { x: 0, z: 0 },
+      size: { width: 2, depth: 2, height: 4 },
+      districtKey: "district:core",
+    },
+    {
+      id: "file:web",
+      kind: "building",
+      label: "src/web.ts",
+      parentId: "district:web",
+      center: { x: 12, z: 0 },
+      size: { width: 2, depth: 2, height: 3 },
+      districtKey: "district:web",
+    },
+    {
+      id: "file:other",
+      kind: "building",
+      label: "src/other.ts",
+      parentId: "district:other",
+      center: { x: 24, z: 0 },
+      size: { width: 2, depth: 2, height: 2 },
+      districtKey: "district:other",
+    },
+  ],
+  edges: [
+    {
+      id: "edge:core-web",
+      sourceId: "district:core",
+      targetId: "district:web",
+      renderable: true,
+      points: [],
+      weight: 1,
+    },
+    {
+      id: "edge:web-other",
+      sourceId: "district:web",
+      targetId: "district:other",
+      renderable: true,
+      points: [],
+      weight: 1,
+    },
+    {
+      id: "edge:unrelated",
+      sourceId: "district:other",
+      targetId: "district:missing",
+      renderable: false,
+      points: [],
+      weight: 1,
+    },
+  ],
+  bounds: { width: 32, depth: 8, height: 4 },
+})
+
+const multiDistrictSelection: CodeCitySelectionResult = {
+  selection: { kind: "building", id: "file:shared" },
+  districtIds: ["district:core", "district:web"],
+  incidentEdgeIds: ["edge:core-web", "edge:web-other"],
+  evidence: [],
+}
 
 describe("canCreateWebGLRenderer", () => {
   test("rejects a missing WebGL context", () => {
@@ -58,5 +159,24 @@ describe("resolveCodeCityRouteSelectionId", () => {
     }
 
     expect(resolveCodeCityRouteSelectionId(scene, "file:alpha")).toBe("district:core")
+  })
+})
+
+describe("Code City renderer selection contracts", () => {
+  test("highlights every incident route for a multi-affiliated building", () => {
+    expect(resolveCodeCityHighlightedRouteIds(multiDistrictScene(), multiDistrictSelection)).toEqual([
+      "edge:core-web",
+      "edge:web-other",
+    ])
+  })
+
+  test("shows overview district labels plus selected and nearby building labels", () => {
+    expect(resolveCodeCityVisibleLabelIds(multiDistrictScene(), multiDistrictSelection)).toEqual([
+      "district:core",
+      "district:web",
+      "district:other",
+      "file:shared",
+      "file:web",
+    ])
   })
 })

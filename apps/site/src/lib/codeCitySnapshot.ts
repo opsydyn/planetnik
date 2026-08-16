@@ -23,6 +23,20 @@ export type CodeCitySnapshotCollections = {
 const records = <T>(entries: readonly CodeCityCollectionEntry<T>[]): T[] =>
 	entries.map((entry) => entry.data);
 
+const hasCanonicalShard = (
+	context: CanonicalReportContext,
+	fileName: string,
+): boolean | null => {
+	if (!context.canonicalShards) return null;
+	return Object.values(context.canonicalShards).includes(fileName);
+};
+
+const optionalShardIsPresent = (
+	context: CanonicalReportContext,
+	fileName: string,
+	legacyEvidence: boolean,
+): boolean => hasCanonicalShard(context, fileName) ?? legacyEvidence;
+
 export function toCodeCitySnapshotInput(
 	collections: CodeCitySnapshotCollections,
 ): CodeCitySnapshotInput {
@@ -46,16 +60,39 @@ export function toCodeCitySnapshotInput(
 				break;
 		}
 	}
+	const hotspotsPresent = optionalShardIsPresent(
+		collections.context,
+		"hotspots.json",
+		fileHotspots.length > 0 ||
+			unitHotspots.length > 0 ||
+			componentHotspots.length > 0,
+	);
 
 	return {
 		context: collections.context,
 		filesMain: { files: records(collections.filesMain) },
-		...(filesTest.length > 0 ? { filesTest: { files: filesTest } } : {}),
-		...(units.length > 0 ? { units: { units } } : {}),
-		...(dependencies.length > 0
+		...(optionalShardIsPresent(
+			collections.context,
+			"files_test.json",
+			filesTest.length > 0,
+		)
+			? { filesTest: { files: filesTest } }
+			: {}),
+		...(optionalShardIsPresent(
+			collections.context,
+			"units.json",
+			units.length > 0,
+		)
+			? { units: { units } }
+			: {}),
+		...(optionalShardIsPresent(
+			collections.context,
+			"component_dependencies.json",
+			dependencies.length > 0,
+		)
 			? { componentDependencies: { dependencies } }
 			: {}),
-		...(fileHotspots.length > 0 || unitHotspots.length > 0 || componentHotspots.length > 0
+		...(hotspotsPresent
 			? {
 					hotspots: {
 						...(fileHotspots.length > 0 ? { fileHotspots } : {}),
@@ -64,6 +101,12 @@ export function toCodeCitySnapshotInput(
 					},
 				}
 			: {}),
-		...(collections.impact ? { impact: collections.impact } : {}),
+		...(optionalShardIsPresent(
+			collections.context,
+			"impact.json",
+			collections.impact !== undefined,
+		)
+			? { impact: collections.impact ?? {} }
+			: {}),
 	};
 }
