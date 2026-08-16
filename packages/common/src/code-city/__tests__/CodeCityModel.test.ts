@@ -105,6 +105,60 @@ const relationshipInput = (): CodeCitySnapshotInput => ({
 	},
 });
 
+const signalInput = (): CodeCitySnapshotInput => ({
+	...relationshipInput(),
+	hotspots: {
+		fileHotspots: [
+			{
+				id: "file:src/runtime.ts",
+				kind: "file",
+				name: "src/runtime.ts",
+				route: "/files/churn",
+				score: 72,
+				severity: "high",
+				temporalLinks: 6,
+				dominantDimension: "changePressure",
+			},
+		],
+		unitHotspots: [
+			{
+				id: "unit:src/runtime.ts:1",
+				kind: "unit",
+				name: "run",
+				route: "/units/complexity",
+				score: 88,
+				severity: "critical",
+				temporalLinks: 3,
+				dominantDimension: "structuralRisk",
+			},
+		],
+		componentHotspots: [
+			{
+				id: "component:primary:runtime",
+				kind: "component",
+				name: "runtime",
+				route: "/components",
+				score: 64,
+				severity: "medium",
+				temporalLinks: 9,
+				dominantDimension: "coordinationCost",
+			},
+		],
+	},
+	impact: {
+		impact_opportunities: [
+			{
+				id: "file:src/runtime.ts",
+				kind: "file",
+				name: "src/runtime.ts",
+				route: "/impact",
+				impact_score: 81,
+				dominant_dimension: "change_enablement",
+			},
+		],
+	},
+});
+
 const emptyModel = (): CodeCityModel => ({
 	contractVersion: 1,
 	snapshot: {
@@ -228,6 +282,91 @@ describe("buildCodeCityModel relationships", () => {
 					entityId: "unit:src/missing.ts:1",
 				}),
 				expect.objectContaining({ code: "unresolved_edge" }),
+			]),
+		);
+	});
+});
+
+describe("buildCodeCityModel signals", () => {
+	test("joins hotspot and impact evidence to matching entities", () => {
+		const model = buildCodeCityModel(signalInput());
+		const building = model.buildings.find(
+			({ id }) => id === "file:src/runtime.ts",
+		);
+		const unit = model.units.find(({ id }) => id === "unit:src/runtime.ts:1");
+		const district = model.districts.find(
+			({ id }) => id === "component:primary:runtime",
+		);
+		expect(building?.metrics).toMatchObject({
+			health: {
+				score: 72,
+				severity: "high",
+				dominantDimension: "changePressure",
+			},
+			change: { temporalLinks: 6 },
+			impact: {
+				score: 81,
+				dimension: "change_enablement",
+				sourceId: "file:src/runtime.ts",
+			},
+		});
+		expect(building?.evidence).toContainEqual({
+			kind: "file",
+			id: "file:src/runtime.ts",
+			route: "/files/churn",
+		});
+		expect(unit?.metrics.health).toMatchObject({
+			score: 88,
+			severity: "critical",
+			dominantDimension: "structuralRisk",
+		});
+		expect(unit?.evidence).toContainEqual({
+			kind: "unit",
+			id: "unit:src/runtime.ts:1",
+			route: "/units/complexity",
+		});
+		expect(district?.metrics.health).toMatchObject({
+			score: 64,
+			severity: "medium",
+			dominantDimension: "coordinationCost",
+		});
+		expect(district?.derived).toBe(false);
+	});
+
+	test("keeps missing optional shards explicit", () => {
+		const model = buildCodeCityModel(minimalInput());
+		expect(model.buildings[0]?.metrics.health.score).toBeNull();
+		expect(model.coverage.missingOptionalShards).toEqual([
+			"files_test.json",
+			"units.json",
+			"component_dependencies.json",
+			"hotspots.json",
+			"impact.json",
+		]);
+	});
+
+	test("reports signal records that cannot be joined", () => {
+		const model = buildCodeCityModel({
+			...minimalInput(),
+			hotspots: {
+				fileHotspots: [{ id: "file:missing.ts", kind: "file" }],
+			},
+			impact: {
+				impact_opportunities: [
+					{ id: "file:missing.ts", kind: "file", impact_score: 30 },
+				],
+			},
+		});
+		expect(model.coverage.diagnostics).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					code: "orphan_hotspot",
+					entityId: "file:missing.ts",
+				}),
+				expect.objectContaining({
+					code: "orphan_impact",
+					entityId: "file:missing.ts",
+				}),
 			]),
 		);
 	});

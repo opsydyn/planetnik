@@ -2,6 +2,8 @@ import {
 	CodeCityInputError,
 	type CanonicalComponentDependencyRecord,
 	type CanonicalFileRecord,
+	type CanonicalHotspotRecord,
+	type CanonicalImpactOpportunityRecord,
 	type CanonicalUnitRecord,
 	type CodeCityDependencyEdge,
 	type CanonicalReportContext,
@@ -9,6 +11,8 @@ import {
 	type CodeCityCoverage,
 	type CodeCityDiagnostic,
 	type CodeCityDistrict,
+	type CodeCityEvidenceKind,
+	type CodeCityEvidenceRef,
 	type CodeCityLegend,
 	type CodeCityModel,
 	type CodeCitySignals,
@@ -42,6 +46,11 @@ type DistrictDraft = {
 	unitCount: number;
 	maxMcCabe: number | null;
 	derived: boolean;
+};
+
+type HotspotEntry = {
+	readonly record: CanonicalHotspotRecord;
+	readonly kind: CodeCityEvidenceKind;
 };
 
 const LEGEND: CodeCityLegend = {
@@ -427,6 +436,16 @@ function rebuildDistrictMetrics(
 	}
 }
 
+function signalsForUnit(record: CanonicalUnitRecord): CodeCitySignals {
+	return {
+		...emptySignals(),
+		footprint: {
+			loc: finiteNonNegative(record.linesOfCode),
+			buildingCount: 0,
+		},
+	};
+}
+
 function unitFromRecord(
 	record: CanonicalUnitRecord,
 	file: CodeCityBuilding,
@@ -445,6 +464,7 @@ function unitFromRecord(
 		startLine: finiteNonNegative(record.startLine),
 		endLine: finiteNonNegative(record.endLine),
 		districtIds: file.districtIds,
+		metrics: signalsForUnit(record),
 		evidence: [],
 	};
 }
@@ -568,6 +588,296 @@ function dependencyEdge(
 						? "target"
 						: "none",
 		evidence: [],
+	};
+}
+
+function evidenceRef(
+	kind: CodeCityEvidenceKind,
+	id: string,
+	route: string | undefined,
+): CodeCityEvidenceRef {
+	return {
+		kind,
+		id,
+		route: route?.trim() || null,
+	};
+}
+
+function indexHotspots(
+	shard: CodeCitySnapshotInput["hotspots"],
+	diagnostics: CodeCityDiagnostic[],
+): Map<string, HotspotEntry> {
+	const hotspotIndex = new Map<string, HotspotEntry>();
+	const collections: readonly [
+		CodeCityEvidenceKind,
+		readonly CanonicalHotspotRecord[] | undefined,
+		string,
+	][] = [
+		["file", shard?.fileHotspots, "fileHotspots"],
+		["unit", shard?.unitHotspots, "unitHotspots"],
+		["component", shard?.componentHotspots, "componentHotspots"],
+	];
+	for (const [kind, records, collection] of collections) {
+		for (const [position, record] of (records ?? []).entries()) {
+			const id = typeof record.id === "string" ? record.id.trim() : "";
+			if (!id) {
+				diagnostics.push({
+					code: "malformed_record",
+					severity: "warning",
+					shard: "hotspots.json",
+					entityId: `hotspot:${collection}:${position}`,
+					detail: "Hotspot records require a stable id",
+				});
+				continue;
+			}
+			hotspotIndex.set(id, { record, kind });
+		}
+	}
+	return hotspotIndex;
+}
+
+function indexImpact(
+	shard: CodeCitySnapshotInput["impact"],
+	diagnostics: CodeCityDiagnostic[],
+): Map<string, CanonicalImpactOpportunityRecord> {
+	const index = new Map<string, CanonicalImpactOpportunityRecord>();
+	for (const [position, record] of (
+		shard?.impact_opportunities ?? []
+	).entries()) {
+		const id = typeof record.id === "string" ? record.id.trim() : "";
+		if (!id) {
+			diagnostics.push({
+				code: "malformed_record",
+				severity: "warning",
+				shard: "impact.json",
+				entityId: `impact:${position}`,
+				detail: "Impact opportunities require a stable id",
+			});
+			continue;
+		}
+		index.set(id, record);
+	}
+	return index;
+}
+
+function hotspotDimension(record: CanonicalHotspotRecord): string | null {
+	if (record.dominantDimension?.trim()) return record.dominantDimension.trim();
+	const dimensions = record.dimensions;
+	if (!dimensions) return null;
+	const strongest = Object.entries(dimensions)
+		.filter(([, value]) => typeof value === "number" && Number.isFinite(value))
+		.sort((left, right) => (right[1] as number) - (left[1] as number));
+	return strongest[0]?.[0] ?? null;
+}
+
+function applyHotspot(
+	metrics: CodeCitySignals,
+	record: CanonicalHotspotRecord,
+): CodeCitySignals {
+	return {
+		...metrics,
+		health: {
+			score: optionalCount(record.score),
+			severity: record.severity?.trim() || null,
+			dominantDimension: hotspotDimension(record),
+		},
+		change: {
+			...metrics.change,
+			temporalLinks: optionalCount(record.temporalLinks),
+		},
+	};
+}
+
+function applyImpact(
+	metrics: CodeCitySignals,
+	record: CanonicalImpactOpportunityRecord,
+): CodeCitySignals {
+	return {
+		...metrics,
+		impact: {
+			score: optionalCount(record.impact_score),
+			dimension: record.dominant_dimension?.trim() || null,
+			sourceId: record.id?.trim() || null,
+		},
+	};
+}
+
+function highestHotspot(
+	entries: Iterable<HotspotEntry | undefined>,
+): HotspotEntry | null {
+	return (
+		[...entries]
+			.filter(
+				(entry): entry is HotspotEntry =>
+					entry !== undefined && optionalCount(entry.record.score) !== null,
+			)
+			.sort((left, right) => {
+				const scoreDelta =
+					optionalCount(right.record.score)! - optionalCount(left.record.score)!;
+				return scoreDelta || (left.record.id ?? "").localeCompare(right.record.id ?? "");
+			})[0] ?? null
+	);
+}
+
+function highestImpact(
+	entries: Iterable<CanonicalImpactOpportunityRecord | undefined>,
+): CanonicalImpactOpportunityRecord | null {
+	return (
+		[...entries]
+			.filter(
+				(entry): entry is CanonicalImpactOpportunityRecord =>
+					entry !== undefined && optionalCount(entry.impact_score) !== null,
+			)
+			.sort((left, right) => {
+				const scoreDelta =
+					optionalCount(right.impact_score)! - optionalCount(left.impact_score)!;
+				return scoreDelta || (left.id ?? "").localeCompare(right.id ?? "");
+			})[0] ?? null
+	);
+}
+
+function addOrphanSignalDiagnostics(
+	hotspots: ReadonlyMap<string, HotspotEntry>,
+	impact: ReadonlyMap<string, CanonicalImpactOpportunityRecord>,
+	buildingById: ReadonlyMap<string, CodeCityBuilding>,
+	units: ReadonlyMap<string, CodeCityUnit>,
+	districtDrafts: ReadonlyMap<string, DistrictDraft>,
+	diagnostics: CodeCityDiagnostic[],
+): void {
+	for (const [id, entry] of hotspots) {
+		const exists =
+			entry.kind === "file"
+				? buildingById.has(id)
+				: entry.kind === "unit"
+					? units.has(id)
+					: districtDrafts.has(id);
+		if (!exists) {
+			diagnostics.push({
+				code: "orphan_hotspot",
+				severity: "warning",
+				shard: "hotspots.json",
+				entityId: id,
+				detail: `Hotspot ${id} does not match a ${entry.kind} entity`,
+			});
+		}
+	}
+	for (const [id, record] of impact) {
+		if (
+			!buildingById.has(id) &&
+			!units.has(id) &&
+			!districtDrafts.has(id)
+		) {
+			diagnostics.push({
+				code: "orphan_impact",
+				severity: "warning",
+				shard: "impact.json",
+				entityId: id,
+				detail: `Impact opportunity ${record.id ?? id} does not match a model entity`,
+			});
+		}
+	}
+}
+
+function addUnitMetricsToBuildings(
+	buildingById: Map<string, CodeCityBuilding>,
+	units: ReadonlyMap<string, CodeCityUnit>,
+): void {
+	const unitsByBuilding = new Map<string, CodeCityUnit[]>();
+	for (const unit of units.values()) {
+		if (!unit.fileId) continue;
+		const list = unitsByBuilding.get(unit.fileId) ?? [];
+		list.push(unit);
+		unitsByBuilding.set(unit.fileId, list);
+	}
+	for (const [buildingId, building] of buildingById) {
+		const childUnits = unitsByBuilding.get(buildingId) ?? [];
+		const maxMcCabe = childUnits.reduce<number | null>(
+			(max, unit) =>
+				max === null ? unit.mcCabeIndex : Math.max(max, unit.mcCabeIndex),
+			null,
+		);
+		buildingById.set(buildingId, {
+			...building,
+			metrics: {
+				...building.metrics,
+				complexity: {
+					maxMcCabe,
+					unitCount: childUnits.length,
+				},
+			},
+		});
+	}
+}
+
+function districtPresentation(
+	district: DistrictDraft,
+	buildingById: ReadonlyMap<string, CodeCityBuilding>,
+	units: ReadonlyMap<string, CodeCityUnit>,
+	hotspots: ReadonlyMap<string, HotspotEntry>,
+	impact: ReadonlyMap<string, CanonicalImpactOpportunityRecord>,
+): {
+	readonly metrics: CodeCitySignals;
+	readonly evidence: readonly CodeCityEvidenceRef[];
+	readonly derived: boolean;
+} {
+	const baseMetrics = signalsForDistrict(district);
+	const childHotspots: HotspotEntry[] = [];
+	for (const buildingId of district.buildingIds) {
+		const hotspot = hotspots.get(buildingId);
+		if (hotspot) childHotspots.push(hotspot);
+	}
+	for (const unit of units.values()) {
+		if (!unit.districtIds.includes(district.id)) continue;
+		const hotspot = hotspots.get(unit.id);
+		if (hotspot) childHotspots.push(hotspot);
+	}
+	const directHotspot =
+		district.kind === "component" ? hotspots.get(district.id) : undefined;
+	const healthSource = directHotspot ?? highestHotspot(childHotspots);
+	const childImpacts = [
+		...[...district.buildingIds].map((buildingId) => impact.get(buildingId)),
+		...([...units.values()]
+			.filter((unit) => unit.districtIds.includes(district.id))
+			.map((unit) => impact.get(unit.id))),
+	];
+	const directImpact = district.kind === "component" ? impact.get(district.id) : undefined;
+	const impactSource = directImpact ?? highestImpact(childImpacts);
+	let metrics = baseMetrics;
+	const evidence: CodeCityEvidenceRef[] = [];
+	if (healthSource) {
+		metrics = applyHotspot(metrics, healthSource.record);
+		if (healthSource.record.id) {
+			evidence.push(
+				evidenceRef(
+					healthSource.kind,
+					healthSource.record.id,
+					healthSource.record.route,
+				),
+			);
+		}
+	}
+	if (impactSource) {
+		metrics = applyImpact(metrics, impactSource);
+		evidence.push(
+			evidenceRef("impact", impactSource.id ?? "", impactSource.route),
+		);
+	}
+	if (!healthSource) {
+		const temporalLinks = childHotspots
+			.map((entry) => optionalCount(entry.record.temporalLinks))
+			.filter((value): value is number => value !== null)
+			.sort((left, right) => right - left)[0];
+		if (temporalLinks !== undefined) {
+			metrics = {
+				...metrics,
+				change: { ...metrics.change, temporalLinks },
+			};
+		}
+	}
+	return {
+		metrics,
+		evidence,
+		derived: !(directHotspot || directImpact),
 	};
 }
 
@@ -704,6 +1014,51 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 		(dependency, index) =>
 			dependencyEdge(dependency, districtDrafts, diagnostics, index),
 	);
+	const hotspots = indexHotspots(input.hotspots, diagnostics);
+	const impact = indexImpact(input.impact, diagnostics);
+	addOrphanSignalDiagnostics(
+		hotspots,
+		impact,
+		buildingById,
+		units,
+		districtDrafts,
+		diagnostics,
+	);
+	for (const [buildingId, building] of buildingById) {
+		const hotspot = hotspots.get(buildingId);
+		const opportunity = impact.get(buildingId);
+		let metrics = building.metrics;
+		const evidence: CodeCityEvidenceRef[] = [];
+		if (hotspot?.kind === "file") {
+			metrics = applyHotspot(metrics, hotspot.record);
+			evidence.push(evidenceRef("file", buildingId, hotspot.record.route));
+		}
+		if (opportunity) {
+			metrics = applyImpact(metrics, opportunity);
+			evidence.push(evidenceRef("impact", buildingId, opportunity.route));
+		}
+		if (hotspot || opportunity) {
+			buildingById.set(buildingId, { ...building, metrics, evidence });
+		}
+	}
+	for (const [unitId, unit] of units) {
+		const hotspot = hotspots.get(unitId);
+		const opportunity = impact.get(unitId);
+		let metrics = unit.metrics;
+		const evidence: CodeCityEvidenceRef[] = [];
+		if (hotspot?.kind === "unit") {
+			metrics = applyHotspot(metrics, hotspot.record);
+			evidence.push(evidenceRef("unit", unitId, hotspot.record.route));
+		}
+		if (opportunity) {
+			metrics = applyImpact(metrics, opportunity);
+			evidence.push(evidenceRef("impact", unitId, opportunity.route));
+		}
+		if (hotspot || opportunity) {
+			units.set(unitId, { ...unit, metrics, evidence });
+		}
+	}
+	addUnitMetricsToBuildings(buildingById, units);
 	rebuildDistrictMetrics(districtDrafts, buildingById, units);
 
 	const sortedBuildings = [...buildingById.values()].sort((left, right) =>
@@ -717,19 +1072,29 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 	);
 	const sortedDistricts: CodeCityDistrict[] = [...districtDrafts.values()]
 		.filter((district) => district.kind !== "path" || district.buildingIds.size > 0)
-		.map((district) => ({
-			id: district.id,
-			kind: district.kind,
-			label: district.label,
-			decompositionKey: district.decompositionKey,
-			pathPrefix: district.pathPrefix,
-			buildingIds: [...district.buildingIds].sort((left, right) =>
-				left.localeCompare(right),
-			),
-			metrics: signalsForDistrict(district),
-			evidence: [],
-			derived: district.derived,
-		}))
+		.map((district) => {
+			const presentation = districtPresentation(
+				district,
+				buildingById,
+				units,
+				hotspots,
+				impact,
+			);
+			district.derived = presentation.derived;
+			return {
+				id: district.id,
+				kind: district.kind,
+				label: district.label,
+				decompositionKey: district.decompositionKey,
+				pathPrefix: district.pathPrefix,
+				buildingIds: [...district.buildingIds].sort((left, right) =>
+					left.localeCompare(right),
+				),
+				metrics: presentation.metrics,
+				evidence: presentation.evidence,
+				derived: presentation.derived,
+			};
+		})
 		.sort((left, right) => left.id.localeCompare(right.id));
 	const derivedDistrictIds = sortedDistricts
 		.filter(({ derived }) => derived)

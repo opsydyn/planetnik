@@ -73,6 +73,7 @@ export type CanonicalHotspotRecord = {
 	readonly contributorsCount?: number;
 	readonly temporalLinks?: number;
 	readonly complexity?: number;
+	readonly dominantDimension?: string;
 	readonly dimensions?: Readonly<Record<string, unknown>>;
 };
 
@@ -194,6 +195,7 @@ export type CodeCityUnit = {
 	readonly startLine: number;
 	readonly endLine: number;
 	readonly districtIds: readonly string[];
+	readonly metrics: CodeCitySignals;
 	readonly evidence: readonly CodeCityEvidenceRef[];
 };
 
