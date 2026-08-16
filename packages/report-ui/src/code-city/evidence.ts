@@ -5,9 +5,15 @@ const splitRoute = (route: string): { readonly path: string; readonly suffix: st
 		: { path: route.slice(0, suffixIndex), suffix: route.slice(suffixIndex) };
 };
 
+const normaliseUrlPath = (path: string): string =>
+	path
+		.replace(/%2e/gi, ".")
+		.replace(/%2f|%5c/gi, "/")
+		.replaceAll("\\", "/");
+
 const normaliseBaseSegments = (basePath: string): string[] => {
 	const segments: string[] = [];
-	for (const segment of basePath.split("/")) {
+	for (const segment of normaliseUrlPath(basePath).split("/")) {
 		if (!segment || segment === ".") continue;
 		if (segment === "..") {
 			segments.pop();
@@ -20,7 +26,7 @@ const normaliseBaseSegments = (basePath: string): string[] => {
 
 const normaliseRouteSegments = (routePath: string): string[] => {
 	const segments: string[] = [];
-	for (const segment of routePath.split("/")) {
+	for (const segment of normaliseUrlPath(routePath).split("/")) {
 		if (!segment || segment === ".") continue;
 		if (segment === "..") {
 			segments.pop();

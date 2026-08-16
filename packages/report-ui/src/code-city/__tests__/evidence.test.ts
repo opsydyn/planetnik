@@ -20,7 +20,19 @@ describe("resolveCodeCityEvidenceHref", () => {
 
 	test("does not allow a route to escape the report base", () => {
 		expect(resolveCodeCityEvidenceHref("/planetnik/", "../../outside#evidence")).toBe(
-		"/planetnik/outside#evidence",
+			"/planetnik/outside#evidence",
+		);
+	});
+
+	test("normalises percent-encoded dot segments before joining the report base", () => {
+		expect(resolveCodeCityEvidenceHref("/planetnik/", "%2e%2e/outside#evidence")).toBe(
+			"/planetnik/outside#evidence",
+		);
+	});
+
+	test("normalises backslash-delimited traversal before joining the report base", () => {
+		expect(resolveCodeCityEvidenceHref("/planetnik/", "..\\outside#evidence")).toBe(
+			"/planetnik/outside#evidence",
 		);
 	});
 });

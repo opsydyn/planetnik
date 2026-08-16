@@ -52,3 +52,32 @@ compatibility/snapshot worktree changes were preserved.
 No blocking concerns remain. The palettes are stable semantic material tokens;
 Task 5's renderer may consume them without changing scene coordinates or
 evidence resolution.
+
+## Review fix round 1: URL-equivalent traversal normalisation
+
+Review found that path-only normalisation did not recognise percent-encoded dot
+segments or backslash-delimited traversal. `normaliseUrlPath` now canonicalises
+`%2e`, `%2f`, `%5c`, and literal backslashes before base and route segments are
+processed. This keeps traversal route-local, so neither `%2e%2e/outside` nor
+`..\\outside` can escape `/planetnik/` when a browser resolves the returned
+relative href.
+
+Added the two focused regression cases. Exact verification command and output:
+
+```text
+$ bun test packages/report-ui/src/code-city/__tests__/evidence.test.ts
+bun test v1.3.11 (af24e281)
+
+packages/report-ui/src/code-city/__tests__/evidence.test.ts:
+(pass) resolveCodeCityEvidenceHref > returns null for a missing evidence route
+(pass) resolveCodeCityEvidenceHref > joins a deployment base and relative report route without an origin or double slash [0.14ms]
+(pass) resolveCodeCityEvidenceHref > normalises redundant path separators and removes traversal segments [0.21ms]
+(pass) resolveCodeCityEvidenceHref > does not allow a route to escape the report base [0.02ms]
+(pass) resolveCodeCityEvidenceHref > normalises percent-encoded dot segments before joining the report base [0.01ms]
+(pass) resolveCodeCityEvidenceHref > normalises backslash-delimited traversal before joining the report base
+
+ 6 pass
+ 0 fail
+ 6 expect() calls
+Ran 6 tests across 1 file. [20.00ms]
+```
