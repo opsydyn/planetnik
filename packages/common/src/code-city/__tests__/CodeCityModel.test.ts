@@ -32,6 +32,79 @@ const minimalInput = (): CodeCitySnapshotInput => ({
 	},
 });
 
+const relationshipInput = (): CodeCitySnapshotInput => ({
+	...minimalInput(),
+	filesMain: {
+		files: [
+			{
+				id: "file:src/runtime.ts",
+				relativePath: "src/runtime.ts",
+				extension: "ts",
+				linesOfCode: 120,
+				components: ["runtime"],
+				commitsCount: 8,
+				contributors: ["alan@example.com"],
+			},
+			{
+				id: "file:src/reports.ts",
+				relativePath: "src/reports.ts",
+				extension: "ts",
+				linesOfCode: 80,
+				components: ["reports"],
+				commitsCount: 3,
+				contributors: ["sam@example.com"],
+			},
+		],
+	},
+	units: {
+		units: [
+			{
+				id: "unit:src/runtime.ts:1",
+				shortName: "run",
+				longName: "runtime.run",
+				relativeFileName: "src/runtime.ts",
+				linesOfCode: 24,
+				mcCabeIndex: 7,
+				numberOfParameters: 2,
+				startLine: 1,
+				endLine: 24,
+				components: ["runtime"],
+			},
+			{
+				id: "unit:src/missing.ts:1",
+				shortName: "missing",
+				longName: "missing",
+				relativeFileName: "src/missing.ts",
+				linesOfCode: 1,
+				mcCabeIndex: 1,
+				numberOfParameters: 0,
+				startLine: 1,
+				endLine: 1,
+			},
+		],
+	},
+	componentDependencies: {
+		dependencies: [
+			{
+				decompositionKey: "primary",
+				fromComponent: "runtime",
+				toComponent: "reports",
+				fromComponentId: "component:primary:runtime",
+				toComponentId: "component:primary:reports",
+				count: 5,
+				locFrom: 120,
+				evidenceCount: 2,
+			},
+			{
+				decompositionKey: "primary",
+				fromComponent: "",
+				toComponent: "reports",
+				count: 1,
+			},
+		],
+	},
+});
+
 const emptyModel = (): CodeCityModel => ({
 	contractVersion: 1,
 	snapshot: {
@@ -120,5 +193,42 @@ describe("buildCodeCityModel base contract", () => {
 			buildingIds: ["file:src/index.ts"],
 			derived: true,
 		});
+	});
+});
+
+describe("buildCodeCityModel relationships", () => {
+	test("derives component districts and attaches units and edges", () => {
+		const model = buildCodeCityModel(relationshipInput());
+		expect(model.districts.map(({ id }) => id)).toEqual([
+			"component:primary:reports",
+			"component:primary:runtime",
+		]);
+		expect(
+			model.buildings.find((building) => building.id === "file:src/runtime.ts")
+				?.districtIds,
+		).toEqual(["component:primary:runtime"]);
+		expect(model.units[0]).toMatchObject({
+			id: "unit:src/runtime.ts:1",
+			fileId: "file:src/runtime.ts",
+		});
+		expect(model.edges[0]).toMatchObject({
+			kind: "component_dependency",
+			sourceDistrictId: "component:primary:runtime",
+			targetDistrictId: "component:primary:reports",
+			count: 5,
+		});
+	});
+
+	test("reports orphan units and unresolved dependency endpoints", () => {
+		const model = buildCodeCityModel(relationshipInput());
+		expect(model.coverage.diagnostics).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					code: "orphan_unit",
+					entityId: "unit:src/missing.ts:1",
+				}),
+				expect.objectContaining({ code: "unresolved_edge" }),
+			]),
+		);
 	});
 });

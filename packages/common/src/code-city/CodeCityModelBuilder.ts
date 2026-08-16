@@ -1,6 +1,9 @@
 import {
 	CodeCityInputError,
+	type CanonicalComponentDependencyRecord,
 	type CanonicalFileRecord,
+	type CanonicalUnitRecord,
+	type CodeCityDependencyEdge,
 	type CanonicalReportContext,
 	type CodeCityBuilding,
 	type CodeCityCoverage,
@@ -11,6 +14,7 @@ import {
 	type CodeCitySignals,
 	type CodeCitySnapshotInput,
 	type CodeCitySourceSet,
+	type CodeCityUnit,
 } from "./CodeCityModel.js";
 
 type FileDraft = {
@@ -27,21 +31,18 @@ type FileDraft = {
 
 type DistrictDraft = {
 	readonly id: string;
+	readonly kind: "component" | "path";
 	readonly label: string;
-	readonly pathPrefix: string;
+	readonly decompositionKey: string | null;
+	readonly pathPrefix: string | null;
 	readonly buildingIds: Set<string>;
 	loc: number;
 	commits: number | null;
 	contributorIds: Set<string>;
+	unitCount: number;
+	maxMcCabe: number | null;
+	derived: boolean;
 };
-
-const OPTIONAL_SHARDS = [
-	"files_test.json",
-	"units.json",
-	"component_dependencies.json",
-	"hotspots.json",
-	"impact.json",
-] as const;
 
 const LEGEND: CodeCityLegend = {
 	channels: [
@@ -181,6 +182,10 @@ function signalsForDistrict(district: DistrictDraft): CodeCitySignals {
 			loc: district.loc,
 			buildingCount: district.buildingIds.size,
 		},
+		complexity: {
+			maxMcCabe: district.maxMcCabe,
+			unitCount: district.unitCount,
+		},
 		change: {
 			commits: district.commits,
 			temporalLinks: null,
@@ -285,6 +290,287 @@ function collectFiles(input: CodeCitySnapshotInput): {
 	return { files, diagnostics };
 }
 
+function normaliseComponentPart(value: string): string {
+	return value.trim().replace(/\s+/g, "-");
+}
+
+function componentId(decompositionKey: string, name: string): string {
+	return `component:${normaliseComponentPart(decompositionKey)}:${name.trim()}`;
+}
+
+function componentNameFromId(id: string): string {
+	const parts = id.split(":");
+	return parts.at(-1)?.trim() ?? id;
+}
+
+function componentKeyFromId(id: string): string | null {
+	const parts = id.split(":");
+	return parts.length >= 3 ? parts[1]!.trim() || null : null;
+}
+
+function componentEndpointId(
+	decompositionKey: string | undefined,
+	name: string | undefined,
+	canonicalId: string | undefined,
+): string | null {
+	const explicitId = canonicalId?.trim();
+	if (explicitId) return explicitId;
+	const normalisedKey = decompositionKey?.trim();
+	const normalisedName = name?.trim();
+	if (!normalisedKey || !normalisedName) return null;
+	return componentId(normalisedKey, normalisedName);
+}
+
+function ensureComponentDraft(
+	districtDrafts: Map<string, DistrictDraft>,
+	id: string,
+	decompositionKey?: string,
+	name?: string,
+): DistrictDraft {
+	let district = districtDrafts.get(id);
+	if (district) return district;
+	const parsedKey = componentKeyFromId(id);
+	const label = name?.trim() || componentNameFromId(id);
+	const key = decompositionKey?.trim() || parsedKey;
+	district = {
+		id,
+		kind: "component",
+		label,
+		decompositionKey: key,
+		pathPrefix: null,
+		buildingIds: new Set<string>(),
+		loc: 0,
+		commits: null,
+		contributorIds: new Set<string>(),
+		unitCount: 0,
+		maxMcCabe: null,
+		derived: true,
+	};
+	districtDrafts.set(id, district);
+	return district;
+}
+
+function collectComponentCandidates(
+	input: CodeCitySnapshotInput,
+	districtDrafts: Map<string, DistrictDraft>,
+): Map<string, string[]> {
+	const componentIdsByName = new Map<string, Set<string>>();
+	for (const dependency of input.componentDependencies?.dependencies ?? []) {
+		for (const [name, canonicalId] of [
+			[dependency.fromComponent, dependency.fromComponentId],
+			[dependency.toComponent, dependency.toComponentId],
+		] as const) {
+			const id = componentEndpointId(
+				dependency.decompositionKey,
+				name,
+				canonicalId,
+			);
+			if (!id) continue;
+			const key = name?.trim() || componentNameFromId(id);
+			const candidates = componentIdsByName.get(key) ?? new Set<string>();
+			candidates.add(id);
+			componentIdsByName.set(key, candidates);
+			ensureComponentDraft(
+				districtDrafts,
+				id,
+				dependency.decompositionKey,
+				name,
+			);
+		}
+	}
+
+	return new Map(
+		[...componentIdsByName.entries()].map(([name, ids]) => [
+			name,
+			sortedUnique(ids),
+		]),
+	);
+}
+
+function rebuildDistrictMetrics(
+	districtDrafts: ReadonlyMap<string, DistrictDraft>,
+	buildingById: ReadonlyMap<string, CodeCityBuilding>,
+	unitById: ReadonlyMap<string, CodeCityUnit>,
+): void {
+	for (const district of districtDrafts.values()) {
+		district.loc = 0;
+		district.commits = null;
+		district.contributorIds.clear();
+		district.unitCount = 0;
+		district.maxMcCabe = null;
+	}
+	for (const building of buildingById.values()) {
+		for (const districtId of building.districtIds) {
+			const district = districtDrafts.get(districtId);
+			if (!district) continue;
+			district.loc += building.metrics.footprint.loc;
+			const commits = building.metrics.change.commits;
+			if (commits !== null) {
+				district.commits =
+					district.commits === null ? commits : district.commits + commits;
+			}
+			for (const contributor of building.metrics.ownership.contributorIds) {
+				district.contributorIds.add(contributor);
+			}
+		}
+	}
+	for (const unit of unitById.values()) {
+		for (const districtId of unit.districtIds) {
+			const district = districtDrafts.get(districtId);
+			if (!district) continue;
+			district.unitCount += 1;
+			district.maxMcCabe =
+				district.maxMcCabe === null
+					? unit.mcCabeIndex
+					: Math.max(district.maxMcCabe, unit.mcCabeIndex);
+		}
+	}
+}
+
+function unitFromRecord(
+	record: CanonicalUnitRecord,
+	file: CodeCityBuilding,
+): CodeCityUnit | null {
+	const id = typeof record.id === "string" ? record.id.trim() : "";
+	if (!id) return null;
+	return {
+		id,
+		fileId: file.id,
+		shortName: record.shortName?.trim() || id,
+		longName: record.longName?.trim() || record.shortName?.trim() || id,
+		relativeFileName: file.relativePath,
+		linesOfCode: finiteNonNegative(record.linesOfCode),
+		mcCabeIndex: finiteNonNegative(record.mcCabeIndex),
+		numberOfParameters: finiteNonNegative(record.numberOfParameters),
+		startLine: finiteNonNegative(record.startLine),
+		endLine: finiteNonNegative(record.endLine),
+		districtIds: file.districtIds,
+		evidence: [],
+	};
+}
+
+function collectUnits(
+	input: CodeCitySnapshotInput,
+	buildingById: ReadonlyMap<string, CodeCityBuilding>,
+	districtDrafts: ReadonlyMap<string, DistrictDraft>,
+	diagnostics: CodeCityDiagnostic[],
+): Map<string, CodeCityUnit> {
+	const filesByPath = new Map<string, CodeCityBuilding>();
+	for (const building of buildingById.values()) {
+		if (!filesByPath.has(building.relativePath)) {
+			filesByPath.set(building.relativePath, building);
+		}
+	}
+	const units = new Map<string, CodeCityUnit>();
+	for (const [index, record] of (input.units?.units ?? []).entries()) {
+		const id = typeof record.id === "string" ? record.id.trim() : "";
+		const relativeFileName =
+			typeof record.relativeFileName === "string"
+				? normalisePath(record.relativeFileName)
+				: "";
+		if (!id) {
+			diagnostics.push({
+				code: "malformed_record",
+				severity: "warning",
+				shard: "units.json",
+				entityId: `record:${index}`,
+				detail: "Unit records require a stable id",
+			});
+			continue;
+		}
+		const building = filesByPath.get(relativeFileName);
+		if (!building) {
+			diagnostics.push({
+				code: "orphan_unit",
+				severity: "warning",
+				shard: "units.json",
+				entityId: id,
+				detail: `No file building matches ${relativeFileName || "the unit file"}`,
+			});
+			continue;
+		}
+		const unit = unitFromRecord(record, building);
+		if (unit) units.set(unit.id, unit);
+	}
+	for (const unit of units.values()) {
+		for (const districtId of unit.districtIds) {
+			if (!districtDrafts.has(districtId)) {
+				diagnostics.push({
+					code: "orphan_unit",
+					severity: "warning",
+					shard: "units.json",
+					entityId: unit.id,
+					detail: `Unit district ${districtId} is not present`,
+				});
+			}
+		}
+	}
+	return units;
+}
+
+function dependencyEdge(
+	dependency: CanonicalComponentDependencyRecord,
+	districtDrafts: Map<string, DistrictDraft>,
+	diagnostics: CodeCityDiagnostic[],
+	index: number,
+): CodeCityDependencyEdge {
+	const decompositionKey = dependency.decompositionKey?.trim() || "unknown";
+	const sourceDistrictId = componentEndpointId(
+		dependency.decompositionKey,
+		dependency.fromComponent,
+		dependency.fromComponentId,
+	);
+	const targetDistrictId = componentEndpointId(
+		dependency.decompositionKey,
+		dependency.toComponent,
+		dependency.toComponentId,
+	);
+	if (sourceDistrictId) {
+		ensureComponentDraft(
+			districtDrafts,
+			sourceDistrictId,
+			dependency.decompositionKey,
+			dependency.fromComponent,
+		);
+	}
+	if (targetDistrictId) {
+		ensureComponentDraft(
+			districtDrafts,
+			targetDistrictId,
+			dependency.decompositionKey,
+			dependency.toComponent,
+		);
+	}
+	if (!sourceDistrictId || !targetDistrictId) {
+		diagnostics.push({
+			code: "unresolved_edge",
+			severity: "warning",
+			shard: "component_dependencies.json",
+			entityId: `edge:${index}`,
+			detail: "Dependency endpoints require a component id or decomposition/name pair",
+		});
+	}
+	return {
+		id: `${decompositionKey}:${sourceDistrictId ?? "null"}->${targetDistrictId ?? "null"}`,
+		kind: "component_dependency",
+		decompositionKey,
+		sourceDistrictId,
+		targetDistrictId,
+		count: finiteNonNegative(dependency.count),
+		locFrom: optionalCount(dependency.locFrom),
+		evidenceCount: optionalCount(dependency.evidenceCount),
+		resolution:
+			sourceDistrictId && targetDistrictId
+				? "both"
+				: sourceDistrictId
+					? "source"
+					: targetDistrictId
+						? "target"
+						: "none",
+		evidence: [],
+	};
+}
+
 function createCoverage(
 	input: CodeCitySnapshotInput,
 	diagnostics: readonly CodeCityDiagnostic[],
@@ -334,7 +620,7 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 	const { context } = assertValidInput(input);
 	const { files, diagnostics } = collectFiles(input);
 	const districtDrafts = new Map<string, DistrictDraft>();
-	const buildings: CodeCityBuilding[] = [];
+	const buildingById = new Map<string, CodeCityBuilding>();
 
 	for (const file of files.values()) {
 		const districtId = pathDistrictId(file.relativePath);
@@ -343,27 +629,22 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 		if (!district) {
 			district = {
 				id: districtId,
+				kind: "path",
 				label: pathPrefix,
+				decompositionKey: null,
 				pathPrefix,
 				buildingIds: new Set<string>(),
 				loc: 0,
 				commits: null,
 				contributorIds: new Set<string>(),
+				unitCount: 0,
+				maxMcCabe: null,
+				derived: true,
 			};
 			districtDrafts.set(districtId, district);
 		}
 		district.buildingIds.add(file.id);
-		district.loc += file.linesOfCode;
-		if (file.commitsCount !== null) {
-			district.commits =
-				district.commits === null
-					? file.commitsCount
-					: district.commits + file.commitsCount;
-		}
-		for (const contributor of file.contributorIds) {
-			district.contributorIds.add(contributor);
-		}
-		buildings.push({
+		buildingById.set(file.id, {
 			id: file.id,
 			relativePath: file.relativePath,
 			extension: file.extension,
@@ -376,33 +657,88 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 		});
 	}
 
-	const districts: CodeCityDistrict[] = [...districtDrafts.values()].map(
-		(district) => ({
+	const componentIdsByName = collectComponentCandidates(input, districtDrafts);
+	for (const [buildingId, building] of buildingById) {
+		const pathDistrictIdForBuilding = building.primaryDistrictId;
+		const affiliations = new Set<string>();
+		let hasAmbiguousComponent = false;
+		for (const componentName of building.components) {
+			const candidates = componentIdsByName.get(componentName) ?? [];
+			if (candidates.length === 1) affiliations.add(candidates[0]!);
+			if (candidates.length > 1) {
+				hasAmbiguousComponent = true;
+				diagnostics.push({
+					code: "ambiguous_component",
+					severity: "warning",
+					shard: "component_dependencies.json",
+					entityId: buildingId,
+					detail: `Component ${componentName} resolves to multiple districts`,
+				});
+			}
+		}
+		if (affiliations.size === 0) continue;
+
+		const districtIds = sortedUnique([
+			...affiliations,
+			...(hasAmbiguousComponent ? [pathDistrictIdForBuilding] : []),
+		]);
+		const primaryDistrictId = hasAmbiguousComponent
+			? pathDistrictIdForBuilding
+			: districtIds[0]!;
+		buildingById.set(buildingId, {
+			...building,
+			districtIds,
+			primaryDistrictId,
+		});
+		for (const districtId of districtIds) {
+			const district = districtDrafts.get(districtId);
+			if (district) district.buildingIds.add(buildingId);
+		}
+		if (!hasAmbiguousComponent) {
+			districtDrafts.get(pathDistrictIdForBuilding)?.buildingIds.delete(buildingId);
+		}
+	}
+
+	const units = collectUnits(input, buildingById, districtDrafts, diagnostics);
+	const edges = (input.componentDependencies?.dependencies ?? []).map(
+		(dependency, index) =>
+			dependencyEdge(dependency, districtDrafts, diagnostics, index),
+	);
+	rebuildDistrictMetrics(districtDrafts, buildingById, units);
+
+	const sortedBuildings = [...buildingById.values()].sort((left, right) =>
+		left.id.localeCompare(right.id),
+	);
+	const sortedUnits = [...units.values()].sort((left, right) =>
+		left.id.localeCompare(right.id),
+	);
+	const sortedEdges = [...edges].sort((left, right) =>
+		left.id.localeCompare(right.id),
+	);
+	const sortedDistricts: CodeCityDistrict[] = [...districtDrafts.values()]
+		.filter((district) => district.kind !== "path" || district.buildingIds.size > 0)
+		.map((district) => ({
 			id: district.id,
-			kind: "path",
+			kind: district.kind,
 			label: district.label,
-			decompositionKey: null,
+			decompositionKey: district.decompositionKey,
 			pathPrefix: district.pathPrefix,
 			buildingIds: [...district.buildingIds].sort((left, right) =>
 				left.localeCompare(right),
 			),
 			metrics: signalsForDistrict(district),
 			evidence: [],
-			derived: true,
-		}),
-	);
-	const sortedBuildings = buildings.sort((left, right) =>
-		left.id.localeCompare(right.id),
-	);
-	const sortedDistricts = districts.sort((left, right) =>
-		left.id.localeCompare(right.id),
-	);
-	const derivedDistrictIds = sortedDistricts.map(({ id }) => id);
+			derived: district.derived,
+		}))
+		.sort((left, right) => left.id.localeCompare(right.id));
+	const derivedDistrictIds = sortedDistricts
+		.filter(({ derived }) => derived)
+		.map(({ id }) => id);
 	const counts = {
 		files: sortedBuildings.length,
 		districts: sortedDistricts.length,
-		units: 0,
-		edges: 0,
+		units: sortedUnits.length,
+		edges: sortedEdges.length,
 		diagnostics: diagnostics.length,
 	};
 
@@ -411,15 +747,15 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 		snapshot: snapshotFromContext(context),
 		districts: sortedDistricts,
 		buildings: sortedBuildings,
-		units: [],
-		edges: [],
+		units: sortedUnits,
+		edges: sortedEdges,
 		coverage: createCoverage(input, diagnostics, derivedDistrictIds, counts),
 		layout: {
 			contractVersion: 1,
 			seed: `code-city-v1:${context.repositoryId!.trim()}`,
 			districtOrder: sortedDistricts.map(({ id }) => id),
 			buildingOrder: sortedBuildings.map(({ id }) => id),
-			unitOrder: [],
+			unitOrder: sortedUnits.map(({ id }) => id),
 		},
 		legend: LEGEND,
 	};
