@@ -74,6 +74,8 @@ const reportContextSchema = z.object({
   title: z.string(),
   rootRoute: z.string(),
   dataVersion: z.number(),
+  repositoryId: z.string().optional(),
+  canonicalShards: z.record(z.string(), z.string()).optional(),
   source: z.string(),
   hasLandscape: z.boolean(),
   hasSingleRepositoryAnalysis: z.boolean(),

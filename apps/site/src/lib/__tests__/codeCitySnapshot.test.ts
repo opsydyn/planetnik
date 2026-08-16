@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import type { CodeCitySnapshotCollections } from "../codeCitySnapshot.js";
 import { toCodeCitySnapshotInput } from "../codeCitySnapshot.js";
 
@@ -89,5 +89,45 @@ describe("toCodeCitySnapshotInput", () => {
 		expect(input.componentDependencies).toEqual({ dependencies: [] });
 		expect(input.hotspots).toEqual({});
 		expect(input.impact).toBeUndefined();
+	});
+
+	test("preserves repository identity and empty shard presence after Astro content parsing", async () => {
+		mock.module("astro:content", () => ({
+			defineCollection: <T>(definition: T): T => definition,
+		}));
+		const { collections } = await import("../../content.config.js");
+		const reportContextCollection = collections.reportContext as unknown as {
+			readonly schema: {
+				readonly parse: (value: unknown) => CodeCitySnapshotCollections["context"];
+			};
+		};
+		const context = reportContextCollection.schema.parse({
+			mode: "single_repository",
+			reportMode: "single_repository",
+			title: "Parsed fixture",
+			rootRoute: "/",
+			dataVersion: 2,
+			repositoryId: "repo:parsed-fixture",
+			canonicalShards: {
+				filesMain: "files_main.json",
+				units: "units.json",
+			},
+			source: "test",
+			hasLandscape: false,
+			hasSingleRepositoryAnalysis: true,
+			primaryNavigation: [],
+		});
+		const input = toCodeCitySnapshotInput({
+			...fixtureCollections(),
+			context,
+			units: [],
+		});
+
+		expect(input.context.repositoryId).toBe("repo:parsed-fixture");
+		expect(input.context.canonicalShards).toEqual({
+			filesMain: "files_main.json",
+			units: "units.json",
+		});
+		expect(input.units).toEqual({ units: [] });
 	});
 });
