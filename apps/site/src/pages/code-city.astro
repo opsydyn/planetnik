@@ -1,0 +1,120 @@
+---
+import {
+	buildCodeCityModel,
+	CodeCityInputError,
+	type CodeCityModel,
+} from "@planetnik/common";
+import { CodeCityView } from "@planetnik/report-ui";
+import { getCollection, getEntry } from "astro:content";
+import Dashboard from "../layouts/Dashboard.astro";
+import { toCodeCitySnapshotInput } from "../lib/codeCitySnapshot";
+import { route } from "../lib/route";
+
+type CodeCityPageState =
+	| { readonly tag: "ready"; readonly model: CodeCityModel }
+	| { readonly tag: "unsupported-landscape" }
+	| { readonly tag: "invalid"; readonly message: string };
+
+const [
+	reportContext,
+	filesMain,
+	filesTest,
+	units,
+	dependencies,
+	hotspots,
+	impact,
+] = await Promise.all([
+	getEntry("reportContext", "context"),
+	getCollection("filesMain"),
+	getCollection("filesTest"),
+	getCollection("units"),
+	getCollection("dependencies"),
+	getCollection("hotspots"),
+	getEntry("impact", "impact"),
+]);
+
+const projectName = reportContext?.data.title ?? "Planetnik";
+
+function resolvePageState(): CodeCityPageState {
+	if (!reportContext) {
+		return {
+			tag: "invalid",
+			message: "Code City requires a canonical v2 report context.",
+		};
+	}
+
+	if (reportContext.data.reportMode === "landscape") {
+		return { tag: "unsupported-landscape" };
+	}
+
+	try {
+		return {
+			tag: "ready",
+			model: buildCodeCityModel(
+				toCodeCitySnapshotInput({
+					context: reportContext.data,
+					filesMain,
+					filesTest,
+					units,
+					dependencies,
+					hotspots,
+					impact: impact?.data,
+				}),
+			),
+		};
+	} catch (error) {
+		if (error instanceof CodeCityInputError) {
+			return { tag: "invalid", message: error.message };
+		}
+
+		throw error;
+	}
+}
+
+const pageState = resolvePageState();
+---
+
+<Dashboard title="Code City" projectName={projectName}>
+	{pageState.tag === "ready" ? (
+		<CodeCityView
+			client:load
+			model={pageState.model}
+			evidenceBasePath={route("/")}
+		/>
+	) : pageState.tag === "unsupported-landscape" ? (
+		<section class="code-city-state" aria-labelledby="code-city-state-title">
+			<h2 id="code-city-state-title">Code City is not available for landscapes yet</h2>
+			<p>
+				Code City currently maps one repository at a time. Open a repository report to
+					inspect its bounded contexts and evidence.
+			</p>
+			<a href={route("/landscape/repositories")}>Browse repositories</a>
+		</section>
+	) : (
+		<section class="code-city-state" aria-labelledby="code-city-state-title">
+			<h2 id="code-city-state-title">Code City could not use this report</h2>
+			<p>{pageState.message}</p>
+			<p>
+				Generate a canonical v2 single-repository report, then reload this page.
+			</p>
+		</section>
+	)}
+</Dashboard>
+
+<style>
+	.code-city-state {
+		max-width: 48rem;
+		padding: 1.5rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		background: var(--color-card);
+	}
+
+	.code-city-state h2 {
+		margin-top: 0;
+	}
+
+	.code-city-state p {
+		color: var(--color-text-muted);
+	}
+</style>

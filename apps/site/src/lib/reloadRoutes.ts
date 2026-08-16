@@ -7,6 +7,7 @@ const basePattern = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const reloadRouteMatchers: ReloadRouteMatcher[] = [
 	route("/topology"),
+	route("/code-city"),
 	route("/files/temporal"),
 	route("/landscape/topology"),
 	new RegExp(`^${basePattern}\\/landscape\\/repositories\\/[^/]+\\/topology$`),

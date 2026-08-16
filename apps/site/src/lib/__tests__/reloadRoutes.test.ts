@@ -7,6 +7,11 @@ describe("reload route helpers", () => {
 		expect(shouldBypassClientRouter("/files/temporal")).toBe(true);
 	});
 
+	test("bypasses the client router for the WebGL Code City route", () => {
+		expect(shouldBypassClientRouter("/code-city")).toBe(true);
+		expect(shouldBypassClientRouter("/code-city?lens=health")).toBe(true);
+	});
+
 	test("bypasses the client router for landscape graph routes", () => {
 		expect(shouldBypassClientRouter("/landscape/topology")).toBe(true);
 		expect(
