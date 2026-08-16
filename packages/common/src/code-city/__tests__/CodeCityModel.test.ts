@@ -159,6 +159,46 @@ const signalInput = (): CodeCitySnapshotInput => ({
 	},
 });
 
+const permutedInput = (): CodeCitySnapshotInput => {
+	const input = signalInput();
+	return {
+		...input,
+		filesMain: { files: [...(input.filesMain.files ?? [])].reverse() },
+		...(input.units
+			? { units: { units: [...(input.units.units ?? [])].reverse() } }
+			: {}),
+		...(input.componentDependencies
+			? {
+					componentDependencies: {
+						dependencies: [
+							...(input.componentDependencies.dependencies ?? []),
+						].reverse(),
+					},
+				}
+			: {}),
+		...(input.hotspots
+			? {
+					hotspots: {
+						fileHotspots: [...(input.hotspots.fileHotspots ?? [])].reverse(),
+						unitHotspots: [...(input.hotspots.unitHotspots ?? [])].reverse(),
+						componentHotspots: [
+							...(input.hotspots.componentHotspots ?? []),
+						].reverse(),
+					},
+				}
+			: {}),
+		...(input.impact
+			? {
+					impact: {
+						impact_opportunities: [
+							...(input.impact.impact_opportunities ?? []),
+						].reverse(),
+					},
+				}
+			: {}),
+	};
+};
+
 const emptyModel = (): CodeCityModel => ({
 	contractVersion: 1,
 	snapshot: {
@@ -369,5 +409,90 @@ describe("buildCodeCityModel signals", () => {
 				}),
 			]),
 		);
+	});
+});
+
+describe("buildCodeCityModel determinism", () => {
+	test("is invariant to input array order and round-trips through JSON", () => {
+		const model = buildCodeCityModel(signalInput());
+		const permuted = buildCodeCityModel(permutedInput());
+		expect(model).toEqual(permuted);
+		expect(JSON.parse(JSON.stringify(model))).toEqual(model);
+	});
+
+	test("uses a stable repository seed independent of snapshot id", () => {
+		const first = buildCodeCityModel(minimalInput());
+		const second = buildCodeCityModel({
+			...minimalInput(),
+			context: { ...minimalInput().context, snapshotId: "snapshot-2" },
+		});
+		expect(first.layout.seed).toMatch(/^code-city-v1:[0-9a-f]{8}$/);
+		expect(first.layout.seed).toBe(second.layout.seed);
+	});
+
+	test("keeps entity collections and layout orders sorted by stable id", () => {
+		const model = buildCodeCityModel(signalInput());
+		for (const collection of [
+			model.districts,
+			model.buildings,
+			model.units,
+			model.edges,
+		]) {
+			expect(collection.map(({ id }) => id)).toEqual(
+				[...collection].map(({ id }) => id).sort(),
+			);
+		}
+		expect(model.layout.districtOrder).toEqual(
+			model.districts.map(({ id }) => id),
+		);
+		expect(model.layout.buildingOrder).toEqual(
+			model.buildings.map(({ id }) => id),
+		);
+		expect(model.layout.unitOrder).toEqual(model.units.map(({ id }) => id));
+	});
+
+	test("unions main and test files by stable id", () => {
+		const model = buildCodeCityModel({
+			...minimalInput(),
+			filesTest: {
+				files: [
+					{
+						id: "file:src/index.ts",
+						relativePath: "./src\\index.ts",
+						extension: "ts",
+						linesOfCode: 120,
+					},
+					{
+						id: "file:test/index.test.ts",
+						relativePath: "test/index.test.ts",
+						extension: "ts",
+						linesOfCode: 20,
+					},
+				],
+			},
+		});
+		expect(model.buildings).toHaveLength(2);
+		expect(model.buildings.find(({ id }) => id === "file:src/index.ts")?.sourceSets)
+			.toEqual(["main", "test"]);
+		expect(model.coverage.presentShards).toContain("files_test.json");
+	});
+
+	test("keeps malformed records structured and shard-scoped", () => {
+		const model = buildCodeCityModel({
+			...minimalInput(),
+			filesMain: {
+				files: [
+					...(minimalInput().filesMain.files ?? []),
+					{ id: "file:broken", relativePath: "" },
+				],
+			},
+		});
+		expect(model.coverage.diagnostics).toContainEqual({
+			code: "malformed_record",
+			severity: "warning",
+			shard: "files_main.json",
+			entityId: "file:broken",
+			detail: "File records require a stable id and relativePath",
+		});
 	});
 });

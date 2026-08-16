@@ -151,8 +151,41 @@ function optionalCount(value: number | undefined): number | null {
 		: null;
 }
 
+function stableCompare(left: string, right: string): number {
+	return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function sortedUnique(values: Iterable<string>): string[] {
-	return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+	return [...new Set(values)].sort(stableCompare);
+}
+
+function stableHash(value: string): string {
+	let hash = 0x811c9dc5;
+	for (let index = 0; index < value.length; index += 1) {
+		hash ^= value.charCodeAt(index);
+		hash = Math.imul(hash, 0x01000193);
+	}
+	return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function sortEvidence(evidence: readonly CodeCityEvidenceRef[]): CodeCityEvidenceRef[] {
+	return [...evidence].sort((left, right) =>
+		stableCompare(
+			`${left.kind}:${left.id}:${left.route ?? ""}`,
+			`${right.kind}:${right.id}:${right.route ?? ""}`,
+		),
+	);
+}
+
+function sortDiagnostics(
+	diagnostics: readonly CodeCityDiagnostic[],
+): CodeCityDiagnostic[] {
+	return [...diagnostics].sort((left, right) =>
+		stableCompare(
+			`${left.code}:${left.shard}:${left.entityId ?? ""}:${left.detail}`,
+			`${right.code}:${right.shard}:${right.entityId ?? ""}:${right.detail}`,
+		),
+	);
 }
 
 function emptySignals(): CodeCitySignals {
@@ -532,7 +565,6 @@ function dependencyEdge(
 	dependency: CanonicalComponentDependencyRecord,
 	districtDrafts: Map<string, DistrictDraft>,
 	diagnostics: CodeCityDiagnostic[],
-	index: number,
 ): CodeCityDependencyEdge {
 	const decompositionKey = dependency.decompositionKey?.trim() || "unknown";
 	const sourceDistrictId = componentEndpointId(
@@ -561,17 +593,18 @@ function dependencyEdge(
 			dependency.toComponent,
 		);
 	}
+	const edgeId = `${decompositionKey}:${sourceDistrictId ?? "null"}->${targetDistrictId ?? "null"}`;
 	if (!sourceDistrictId || !targetDistrictId) {
 		diagnostics.push({
 			code: "unresolved_edge",
 			severity: "warning",
 			shard: "component_dependencies.json",
-			entityId: `edge:${index}`,
+			entityId: edgeId,
 			detail: "Dependency endpoints require a component id or decomposition/name pair",
 		});
 	}
 	return {
-		id: `${decompositionKey}:${sourceDistrictId ?? "null"}->${targetDistrictId ?? "null"}`,
+		id: edgeId,
 		kind: "component_dependency",
 		decompositionKey,
 		sourceDistrictId,
@@ -714,7 +747,7 @@ function highestHotspot(
 			.sort((left, right) => {
 				const scoreDelta =
 					optionalCount(right.record.score)! - optionalCount(left.record.score)!;
-				return scoreDelta || (left.record.id ?? "").localeCompare(right.record.id ?? "");
+				return scoreDelta || stableCompare(left.record.id ?? "", right.record.id ?? "");
 			})[0] ?? null
 	);
 }
@@ -731,7 +764,7 @@ function highestImpact(
 			.sort((left, right) => {
 				const scoreDelta =
 					optionalCount(right.impact_score)! - optionalCount(left.impact_score)!;
-				return scoreDelta || (left.id ?? "").localeCompare(right.id ?? "");
+				return scoreDelta || stableCompare(left.id ?? "", right.id ?? "");
 			})[0] ?? null
 	);
 }
@@ -1011,8 +1044,7 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 
 	const units = collectUnits(input, buildingById, districtDrafts, diagnostics);
 	const edges = (input.componentDependencies?.dependencies ?? []).map(
-		(dependency, index) =>
-			dependencyEdge(dependency, districtDrafts, diagnostics, index),
+		(dependency) => dependencyEdge(dependency, districtDrafts, diagnostics),
 	);
 	const hotspots = indexHotspots(input.hotspots, diagnostics);
 	const impact = indexImpact(input.impact, diagnostics);
@@ -1038,7 +1070,11 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 			evidence.push(evidenceRef("impact", buildingId, opportunity.route));
 		}
 		if (hotspot || opportunity) {
-			buildingById.set(buildingId, { ...building, metrics, evidence });
+			buildingById.set(buildingId, {
+				...building,
+				metrics,
+				evidence: sortEvidence(evidence),
+			});
 		}
 	}
 	for (const [unitId, unit] of units) {
@@ -1055,20 +1091,24 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 			evidence.push(evidenceRef("impact", unitId, opportunity.route));
 		}
 		if (hotspot || opportunity) {
-			units.set(unitId, { ...unit, metrics, evidence });
+			units.set(unitId, {
+				...unit,
+				metrics,
+				evidence: sortEvidence(evidence),
+			});
 		}
 	}
 	addUnitMetricsToBuildings(buildingById, units);
 	rebuildDistrictMetrics(districtDrafts, buildingById, units);
 
 	const sortedBuildings = [...buildingById.values()].sort((left, right) =>
-		left.id.localeCompare(right.id),
+		stableCompare(left.id, right.id),
 	);
 	const sortedUnits = [...units.values()].sort((left, right) =>
-		left.id.localeCompare(right.id),
+		stableCompare(left.id, right.id),
 	);
 	const sortedEdges = [...edges].sort((left, right) =>
-		left.id.localeCompare(right.id),
+		stableCompare(left.id, right.id),
 	);
 	const sortedDistricts: CodeCityDistrict[] = [...districtDrafts.values()]
 		.filter((district) => district.kind !== "path" || district.buildingIds.size > 0)
@@ -1087,15 +1127,14 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 				label: district.label,
 				decompositionKey: district.decompositionKey,
 				pathPrefix: district.pathPrefix,
-				buildingIds: [...district.buildingIds].sort((left, right) =>
-					left.localeCompare(right),
-				),
+				buildingIds: [...district.buildingIds].sort(stableCompare),
 				metrics: presentation.metrics,
-				evidence: presentation.evidence,
+				evidence: sortEvidence(presentation.evidence),
 				derived: presentation.derived,
 			};
 		})
-		.sort((left, right) => left.id.localeCompare(right.id));
+		.sort((left, right) => stableCompare(left.id, right.id));
+	const sortedDiagnostics = sortDiagnostics(diagnostics);
 	const derivedDistrictIds = sortedDistricts
 		.filter(({ derived }) => derived)
 		.map(({ id }) => id);
@@ -1104,7 +1143,7 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 		districts: sortedDistricts.length,
 		units: sortedUnits.length,
 		edges: sortedEdges.length,
-		diagnostics: diagnostics.length,
+		diagnostics: sortedDiagnostics.length,
 	};
 
 	return {
@@ -1114,10 +1153,15 @@ export function buildCodeCityModel(input: CodeCitySnapshotInput): CodeCityModel 
 		buildings: sortedBuildings,
 		units: sortedUnits,
 		edges: sortedEdges,
-		coverage: createCoverage(input, diagnostics, derivedDistrictIds, counts),
+		coverage: createCoverage(
+			input,
+			sortedDiagnostics,
+			derivedDistrictIds,
+			counts,
+		),
 		layout: {
 			contractVersion: 1,
-			seed: `code-city-v1:${context.repositoryId!.trim()}`,
+			seed: `code-city-v1:${stableHash(context.repositoryId!.trim())}`,
 			districtOrder: sortedDistricts.map(({ id }) => id),
 			buildingOrder: sortedBuildings.map(({ id }) => id),
 			unitOrder: sortedUnits.map(({ id }) => id),
