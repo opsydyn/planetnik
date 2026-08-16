@@ -1,13 +1,23 @@
-export { default as CodeCityView } from "./CodeCityView";
-export { resolveCodeCityEvidenceHref } from "./evidence";
-export { resolveCodeCityLens } from "./lens";
-export { buildCodeCityScene } from "./sceneAdapter";
-export { resolveCodeCitySelection } from "./selection";
-export type { CodeCityLensEntity, CodeCityLensId, CodeCityLensVisual } from "./lens";
-export type { CodeCitySelection, CodeCitySelectionResult } from "./selection";
+export type { CodeCityFallbackProps, CodeCityFallbackRow } from "./CodeCityFallback"
+export { CodeCityFallback } from "./CodeCityFallback"
+export type { CodeCityInspectorProps } from "./CodeCityInspector"
+export { CodeCityInspector } from "./CodeCityInspector"
+export type { CodeCityViewProps } from "./CodeCityView"
+export { default as CodeCityView } from "./CodeCityView"
+export { resolveCodeCityEvidenceHref } from "./evidence"
+export type { CodeCityLensEntity, CodeCityLensId, CodeCityLensVisual } from "./lens"
+export { resolveCodeCityLens } from "./lens"
+export { buildCodeCityScene } from "./sceneAdapter"
 export type {
-	CodeCityScene,
-	CodeCitySceneEdge,
-	CodeCitySceneNode,
-	CodeCityScenePoint,
-} from "./sceneTypes";
+  CodeCityScene,
+  CodeCitySceneEdge,
+  CodeCitySceneNode,
+  CodeCityScenePoint,
+} from "./sceneTypes"
+export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
+export { resolveCodeCitySelection } from "./selection"
+export type { CodeCityInspectorModel } from "./viewModel"
+export {
+  buildCodeCityFallbackRows,
+  buildCodeCityInspectorModel,
+} from "./viewModel"

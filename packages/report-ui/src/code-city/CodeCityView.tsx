@@ -1,3 +1,194 @@
-export default function CodeCityView() {
-	return null;
+import type { CodeCityModel } from "@planetnik/common";
+import { useMemo, useRef, useState } from "react";
+import {
+	CodeCityCanvas,
+	type CodeCityCanvasHandle,
+	type CodeCityCanvasUnavailableReason,
+} from "./CodeCityCanvas.js";
+import { CodeCityFallback } from "./CodeCityFallback.js";
+import { CodeCityInspector } from "./CodeCityInspector.js";
+import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
+import { resolveCodeCityLens } from "./lens.js";
+import { buildCodeCityScene } from "./sceneAdapter.js";
+import type { CodeCitySelection } from "./selection.js";
+import { resolveCodeCitySelection } from "./selection.js";
+import {
+	buildCodeCityFallbackRows,
+	buildCodeCityInspectorModel,
+} from "./viewModel.js";
+import "./CodeCityView.css";
+
+export type CodeCityViewProps = {
+	readonly model: CodeCityModel;
+	readonly evidenceBasePath: string;
+};
+
+const LENSES: ReadonlyArray<{ readonly id: CodeCityLensId; readonly label: string }> = [
+	{ id: "footprint", label: "Footprint" },
+	{ id: "health", label: "Health" },
+	{ id: "impact", label: "Impact" },
+	{ id: "change_pressure", label: "Change" },
+	{ id: "ownership", label: "Ownership" },
+	{ id: "complexity", label: "Complexity" },
+];
+
+const DENSE_NODE_LIMIT = 1_500;
+const DENSE_EDGE_LIMIT = 1_000;
+
+const rendererUnavailableMessage = (
+	reason: CodeCityCanvasUnavailableReason,
+): string => {
+	switch (reason) {
+		case "webgl-context-unavailable":
+			return "WebGL is unavailable in this browser. The complete Code City table is shown instead.";
+		case "renderer-initialisation-failed":
+			return "The interactive map could not start. The complete Code City table is shown instead.";
+		case "renderer-module-unavailable":
+			return "The interactive map could not be loaded. The complete Code City table is shown instead.";
+	}
+};
+
+export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewProps) {
+	const canvasRef = useRef<CodeCityCanvasHandle | null>(null);
+	const [activeLens, setActiveLens] = useState<CodeCityLensId>("health");
+	const [selection, setSelection] = useState<CodeCitySelection>(null);
+	const [rendererUnavailable, setRendererUnavailable] =
+		useState<CodeCityCanvasUnavailableReason | null>(null);
+	const [focusAnnouncement, setFocusAnnouncement] = useState("");
+
+	const scene = useMemo(() => buildCodeCityScene(model), [model]);
+	const selectionResult = useMemo(
+		() => resolveCodeCitySelection(model, selection),
+		[model, selection],
+	);
+	const inspector = useMemo(
+		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath),
+		[model, selection, evidenceBasePath],
+	);
+	const fallbackRows = useMemo(
+		() => buildCodeCityFallbackRows(model, evidenceBasePath),
+		[model, evidenceBasePath],
+	);
+	const lensVisuals = useMemo<Readonly<Record<string, CodeCityLensVisual>>>(() => {
+		const entities = [...model.districts, ...model.buildings];
+		return Object.fromEntries(
+			entities.map((entity) => [entity.id, resolveCodeCityLens(entity, activeLens)]),
+		);
+	}, [model, activeLens]);
+
+	const denseDataMode =
+		scene.nodes.length > DENSE_NODE_LIMIT || scene.edges.length > DENSE_EDGE_LIMIT;
+	const fallbackPrimary = denseDataMode || rendererUnavailable !== null;
+	const fallbackStatus = denseDataMode
+		? "This snapshot is too dense for the interactive map. The complete Code City table is shown instead."
+		: rendererUnavailable
+			? rendererUnavailableMessage(rendererUnavailable)
+			: null;
+	const activeLegend = model.legend.channels.find((channel) => channel.id === activeLens);
+	const activeLensLabel = activeLegend?.label ?? LENSES.find(({ id }) => id === activeLens)?.label;
+
+	const selectEntity = (id: string) => {
+		const node = scene.nodes.find((candidate) => candidate.id === id);
+		if (!node) return;
+		setSelection({ kind: node.kind, id: node.id });
+		setFocusAnnouncement(`Selected ${node.label}. Camera position unchanged.`);
+	};
+
+	const focusSelection = () => {
+		if (!selection) return;
+		canvasRef.current?.focusEntity(selection.id);
+	};
+
+	const clearSelection = () => {
+		canvasRef.current?.focusEntity(null);
+		setSelection(null);
+		setFocusAnnouncement("Selection cleared. Map view restored if it was focused.");
+	};
+
+	return (
+		<section className="code-city" aria-label="Code City">
+			<header className="code-city__controls">
+				<div>
+					<p className="code-city__eyebrow">Active lens</p>
+					<p className="code-city__active-lens" aria-live="polite">
+						{activeLensLabel}
+					</p>
+				</div>
+				<div className="code-city__lens-buttons" role="toolbar" aria-label="Code City lenses">
+					{LENSES.map((lens) => (
+						<button
+							key={lens.id}
+							type="button"
+							aria-pressed={activeLens === lens.id}
+							onClick={() => setActiveLens(lens.id)}
+						>
+							{lens.label}
+						</button>
+					))}
+				</div>
+			</header>
+
+			<div className="code-city__legend" aria-label="Lens legend">
+				<ul>
+					{model.legend.channels.map((channel) => (
+						<li key={channel.id} data-active={channel.id === activeLens ? "true" : "false"}>
+							<strong>{channel.label}</strong>
+							<span>{channel.unit}</span>
+							<small>{channel.source}</small>
+						</li>
+					))}
+				</ul>
+			</div>
+
+			{fallbackPrimary ? null : (
+				<div className="code-city__workspace">
+					<div className="code-city__map">
+						<CodeCityCanvas
+							ref={canvasRef}
+							scene={scene}
+							lensVisuals={lensVisuals}
+							selectedId={selection?.id ?? null}
+							onSelect={selectEntity}
+							onFocusComplete={() =>
+								setFocusAnnouncement(
+									selection ? `Focused on ${inspector?.title ?? selection.id}.` : "Map view restored.",
+								)
+							}
+							onRendererUnavailable={setRendererUnavailable}
+						/>
+						<p className="code-city__map-status" aria-live="polite">
+							{selectionResult.selection
+								? `${selectionResult.incidentEdgeIds.length} connected dependency ${selectionResult.incidentEdgeIds.length === 1 ? "route" : "routes"}.`
+								: "Select a district or building to inspect it. Selection does not move the camera."}
+						</p>
+					</div>
+					<CodeCityInspector
+						inspector={inspector}
+						canFocus={selection !== null}
+						onFocus={focusSelection}
+						onClear={clearSelection}
+					/>
+				</div>
+			)}
+
+			{fallbackPrimary && inspector ? (
+				<CodeCityInspector
+					inspector={inspector}
+					canFocus={false}
+					onFocus={focusSelection}
+					onClear={clearSelection}
+				/>
+			) : null}
+
+			<CodeCityFallback
+				rows={fallbackRows}
+				status={fallbackStatus}
+				primary={fallbackPrimary}
+				onSelect={selectEntity}
+			/>
+			<p className="code-city__sr-status" aria-live="polite">
+				{focusAnnouncement}
+			</p>
+		</section>
+	);
 }
