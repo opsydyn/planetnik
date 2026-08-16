@@ -1,421 +1,467 @@
-# Product Roadmap
+# Planetnik Product Roadmap
+
+> **Status: Canonical**
+>
+> **Last reconciled: 2026-08-16**
+>
+> This is the sole source of truth for product sequencing. Specialist plans and
+> discovery documents provide implementation history or evidence, but they do
+> not override this roadmap.
 
 ## Goal
 
-Make Planetnik competitive with CodeScene by moving from descriptive architecture reporting to actionable engineering decision support.
+Make Planetnik an actionable engineering decision-support product: explain
+what deserves attention, why it matters, who is affected, and what evidence
+supports the recommendation.
 
-## Guiding Principle
+Planetnik should retain its two delivery modes:
 
-Prioritize features that answer:
+- `apps/site` is the static, shareable report product
+- `apps/app` plus `apps/runtime` is the authenticated hosted product for
+  intelligence, persistence, and secret-dependent integrations
 
-- what should we fix next
-- why is it risky
-- who is affected
-- what kind of coupling or domain boundary problem is driving it
+The static product must not depend on the hosted runtime.
 
-More charts only matter when they support that loop.
+## How to maintain this roadmap
 
-## Platform Track: Static Reports and Hosted Intelligence
+- Update this document in the same change that materially completes or
+  re-sequences a roadmap slice.
+- Move completed work into the delivered baseline; do not leave it described as
+  future work.
+- Promote unfinished work from a specialist plan into this document before
+  treating it as a product commitment.
+- Keep ADRs authoritative for architectural decisions. This roadmap determines
+  delivery order, not architecture by itself.
+- Require repository evidence and fresh verification before changing a slice's
+  status.
 
-The platform split is formalized by:
+## Delivered baseline
 
-- [ADR-0015: Adopt Separate Static Reports and Hosted Runtime for Intelligence](/Users/alan/Projects/planetnik/docs/adr/0015-adopt-separate-static-reports-and-hosted-runtime-for-intelligence.md)
+The following capabilities already exist and are not future roadmap items.
 
-Alongside feature work, Planetnik now has a clear platform split to deliver:
+### Analysis and decision surfaces
 
-- keep `apps/site` as the easy, no-auth, static report product
-- add a separate authenticated hosted product for intelligence and secret-dependent features
-
-This is an enabling track, not a replacement for the product roadmap above.
-
-### Why this matters now
-
-- intelligence and Dependabot require request-time secrets
-- the static report product should stay simple to host and share
-- auth, user state, and runtime integrations should not leak into the static deployment model
-
-### Planned shape
-
-- `apps/site`
-  - static Astro
-  - GitHub Pages / static hosting
-  - report browsing and public analytics
-- `apps/app`
-  - hosted Astro SSR
-  - authenticated shell
-  - intelligence and user-aware features
-- `apps/runtime`
-  - Bun/Effect API
-  - Better Auth
-  - Dependabot and AI integrations
-  - Neon Postgres-backed state
-
-### Delivery order
-
-1. auth server first in `apps/runtime` with Better Auth and Neon
-2. hosted Astro shell on Azure Container Apps
-3. migrate intelligence out of the static app
-4. add Dependabot as a hosted feature
-5. only then extract shared packages where duplication is proven
-
-### Architectural rule
-
-Do not turn the static report product into a half-server app.
-
-If a capability needs:
-
-- auth
-- request-time secrets
-- persistent user state
-- provider credentials
-
-it belongs in the hosted product.
-
-## Current Strengths
-
-Planetnik already has strong coverage for:
-
-- structural analysis
-- file and unit metrics
-- contributor and temporal signals
-- dependency and coupling visualizations
+- file, unit, component, contributor, dependency, duplication, and temporal
+  analysis
+- explainable hotspots and impact views
+- controls and findings surfaces
+- static, temporal, and people-coupling views
+- topology, security, ownership, contributor, and team views
 - searchable report navigation
 
-## Primary Gap
+### Landscape mode
 
-Planetnik still under-serves the main buying question:
+- multi-repository analysis and normalized landscape contracts
+- landscape overview, repositories, contributors, teams, topology, tags, and
+  security routes
+- repo-scoped drilldown with single-repository report parity
+- a dedicated landscape root shell rather than a flattened copy of the
+  single-repository navigation
 
-- which hotspots should a team act on first
+The shell decision remains governed by
+[ADR-0011](./adr/0011-adopt-repo-scoped-shell-for-landscape-drilldown.md).
 
-That is the gap CodeScene emphasizes through Code Health, prioritization, and engineering guidance.
+### Static and hosted products
 
-## Priority 1: Planetnik Health and Hotspots
+- static reports remain available through `apps/site`
+- the authenticated Astro application exists in `apps/app`
+- the Bun/Effect hosted runtime exists in `apps/runtime`
+- authentication, administration, report browsing, and intelligence surfaces
+  exist in the hosted product
+- shared report presentation has begun moving into `packages/report-ui`
 
-Build a scoring and explanation layer across files, units, and components.
+The product boundary remains governed by
+[ADR-0015](./adr/0015-adopt-separate-static-reports-and-hosted-runtime-for-intelligence.md).
 
-### Outcomes
+### Canonical snapshot contract
 
-- ranked hotspot queues
-- explainable score breakdowns
-- trend direction, not just absolute metric values
-- drill-through into the existing pages
+- ADR-0018 is accepted and v2 `report_context.json` is emitted for both
+  single-repository and landscape exports.
+- Metrics and contributor readers are JSON-first, with TXT retained as a
+  compatibility projection for legacy datasets.
+- Each export has one UUID/timestamp identity, an emitted-file shard inventory,
+  and explicit compatibility projection references.
+- Repository, file, unit, component, contributor, dependency-file, and
+  contributor-repository records carry stable additive IDs.
+- Static and hosted readers reject unsupported, incomplete, or unsafe v2
+  manifests while preserving v1 fallback behaviour.
 
-### Inputs to combine
+The contract decision and field rules remain governed by
+[ADR-0018](./adr/0018-adopt-versioned-canonical-analysis-snapshots.md).
 
-- churn
-- temporal coupling
-- static dependency centrality
-- duplication
-- conditional complexity
-- contributor concentration / bus-factor risk
-- file age and freshness
+### Parser coverage
+
+- Rust uses `web-tree-sitter` and `tree-sitter-rust` for syntax-backed units and
+  conservative dependency extraction
+- the Rust pilot produced a measurable quality improvement on Tokio
+- Tree-sitter WASM assets are embedded successfully in standalone Bun binaries
+- Haskell has dedicated unit and dependency heuristics
+- HTML, XML, JSON, YAML, CSS, Shell, and SQL have explicit analyzers rather than
+  silently falling through the original language matrix
+
+The Rust evidence is recorded in
+[Rust Tree-sitter Migration Discovery](./rust-tree-sitter-migration-discovery.md).
+
+## Durable gaps
+
+### 1. Trends are a surface without longitudinal data
+
+The hosted trends route exists, but `readReportTrendsSummary` still returns an
+unavailable state. Planetnik needs multiple comparable snapshots before it can
+claim trend direction or regression detection.
+
+### 2. Actionability is mostly report-scoped
+
+Individual hotspot, control, security, coupling, and impact views exist. The
+next product-level gap is a portfolio queue that ranks evidence-backed actions
+across repositories without hiding the underlying signals.
+
+### 3. Language support depth is uneven
+
+Rust has proved the parser-backed approach, while Python still advertises unit
+and complexity capabilities without producing units or dependencies. The
+project needs a reusable parser adapter and demand-led language expansion, not
+a parser rewrite for every recognized extension.
+
+### 4. Hosted intelligence lacks a canonical persisted substrate
+
+The hosted runtime can browse filesystem-backed reports, but it does not yet
+ingest versioned analysis snapshots as durable entities. Semantic retrieval
+would be premature until those entities and their provenance are stable.
+
+## Delivery sequence
+
+## Phase 1 — Versioned canonical analysis snapshots
+
+**Status: Delivered — canonical snapshot contract and compatibility-removal proof green**
+
+### Outcome
+
+Static reports, hosted reports, parser improvements, and future ingestion all
+consume the same explicit, versioned, machine-first snapshot contract.
 
 ### Deliverables
 
-- `hotspots` export contract from analyzer/reports
-- `/hotspots` Astro page
-- file, unit, and component hotspot views
-- explanation cards such as:
-  - high churn + high temporal coupling
-  - large module + high complexity + low ownership spread
-  - stable core dependency with rising change pressure
+- accept an ADR declaring canonical JSON snapshots as the reporting source of
+  truth
+- add `metrics.json` while retaining `metrics.txt` as a compatibility
+  projection
+- make static and hosted metrics consumers JSON-first
+- make contributor consumers use the existing `contributors.json` contract
+  before falling back to `contributors.txt`
+- extend `report_context.json` with:
+  - a documented `dataVersion` compatibility policy
+  - `snapshotId`
+  - `generatedAt`
+  - report mode
+  - capabilities
+  - canonical shard references
+  - compatibility projection flags
+- define stable identity rules for repository, file, unit, component, and
+  contributor records
+- enumerate the complete set of emitted canonical shards and compatibility
+  projections in each manifest
+- reject invalid v2 manifests at the runtime and static-loader boundaries,
+  while retaining v1/TXT compatibility
+- add exporter-to-loader contract tests for both single-repository and
+  landscape snapshots
 
-### Why first
+### Exit criteria
 
-This is the shortest path from “interesting report” to “engineering management product”.
+- no core static or hosted route requires `metrics.txt` or `contributors.txt`
+  as its primary input
+- a consumer can determine snapshot version and available capabilities from
+  `report_context.json`
+- compatibility artifacts can be removed from a test fixture without breaking
+  every core static and hosted route; the route-by-route matrix is green as of
+  2026-08-16
+- contract tests fail clearly when a required canonical shard or version is
+  invalid
 
-## Priority 2: Goals, Controls, and Findings
+## Phase 1.5 — Code City semantic visualisation
 
-Turn existing backend capability into a real product surface.
+**Status: Delivered foundation — static repo-scoped UI verified at the contract,
+build, and initial browser-render boundary; full direct interaction acceptance
+remains open**
 
-### Current state
+### Reference implementation
 
-- analyzer and exporter support controls already exists
-- Astro parity expects `/controls` and `/findings`
-- both pages are still placeholders
+The product concept is informed by [Draxul](https://github.com/cmaughan/Draxul),
+particularly its [MegaCity plugin](https://github.com/cmaughan/draxul-megacity),
+which turns a semantic code model into an explorable city with dependency and
+health overlays. These repositories are reference material only; Planetnik
+should reimplement the concept rather than copy code or assets until reuse
+licensing is explicitly established.
+
+### Outcome
+
+Planetnik has a repo-scoped Code City decision surface that makes structure,
+coupling, hotspots, ownership, and impact explorable while preserving exact
+links to the underlying report evidence.
 
 ### Deliverables
 
-- traffic-light controls dashboard
-- trends against target ranges
-- failed and tolerant controls queue
-- findings page wired to exported data
-- optional goal packs such as:
-  - maintainability baseline
-  - team ownership baseline
-  - coupling control pack
+- build an in-memory `CodeCityModel` from the existing canonical JSON shards
+  before adding a new exporter contract
+- use logical components or stable path groups as districts, files as the
+  first building level, and units as drill-down detail
+- map LOC, complexity, hotspot severity, churn, ownership, impact, and
+  dependency strength to explicit visual channels with explanatory legends
+- provide deterministic, ID-seeded layout with level-of-detail limits for
+  small and dense repositories
+- ship the first view as a lazy-loaded 2.5D/browser visualisation shared by
+  `apps/site` and the hosted repo-scoped product; do not port Draxul's native
+  Vulkan/Metal renderer
+- make every selectable entity resolve to its existing file, unit, component,
+  hotspot, or impact surface
+- provide a table/list fallback for accessibility, no-WebGL browsers, print,
+  and large datasets
+- measure bundle cost, interaction latency, layout stability, and visual
+  regression behaviour on representative small and dense repositories
+- add a new canonical semantic/code-structure shard only if the feasibility
+  slice proves that existing records cannot express the required view
+
+### Exit criteria
+
+- the prototype is useful for at least one concrete engineering question, not
+  only visually impressive
+- positions remain stable across repeated exports when entity IDs are stable
+- dense repositories degrade through documented LOD/drill-down behaviour rather
+  than silently dropping evidence
+- the view remains functional with WebGL unavailable and links to exact source
+  records
+- static and hosted products consume the same model without a runtime coupling
+- an ADR records whether to adopt, defer, or narrow the Code City contract
+
+### Delivered evidence and remaining acceptance
+
+- the canonical v2 model, deterministic scene adapter, semantic lenses,
+  inspector, evidence links, lazy Three.js renderer, and complete table fallback
+  are implemented in shared report UI primitives
+- `/code-city` is available in the single-repository static shell and uses only
+  canonical JSON content collections
+- focused model, scene, selection, fallback, route-state, and reload tests pass;
+  package/site typechecks and the workspace build pass
+- a deterministic complete fixture rendered the orthographic/isometric city in
+  a real browser, with the expected map, lens, inspector, and navigation shell
+- the renderer chunk measured 547,233 bytes raw and 135,705 bytes gzip in the
+  acceptance build; no first-usable interaction claim is made yet
+- direct orbit/pan/zoom, camera preservation and restore, forced no-WebGL,
+  print, reduced-motion, partial-snapshot, and dense-snapshot browser checks
+  remain an explicit acceptance follow-on after browser automation is reliable
+- landscape aggregation and hosted route integration remain later slices; both
+  must consume the same `CodeCityModel` and renderer-neutral scene contract
+
+## Phase 2 — Shared Tree-sitter platform and Python pilot
+
+**Status: Next, after the parser fact shape in Phase 1 is fixed**
+
+### Outcome
+
+Planetnik has one repeatable parser-backed integration pattern, proven by Rust
+and a structurally different second language.
+
+### Deliverables
+
+- extract a shared Tree-sitter runtime and language-adapter boundary
+- initialize the runtime once and make parser and tree disposal explicit
+- use per-language Tree-sitter queries for unit and import captures where they
+  simplify traversal
+- document parse failure, syntax-error, and heuristic-fallback behaviour
+- retain static WASM asset imports compatible with `bun build --compile`
+- benchmark elapsed time, peak memory, and output quality on representative
+  real repositories
+- port Python unit, complexity, and conservative import extraction
+- validate Python against fixtures plus one representative public corpus
+- map parser facts into the canonical snapshot contract without adding
+  language-specific exporter shapes
+
+### Exit criteria
+
+- Rust continues to pass its fixtures and Tokio quality checks through the
+  shared adapter
+- Python produces functions, async functions, methods, classes, complexity,
+  and conservative internal import evidence
+- standalone compiled CLI execution loads every included grammar successfully
+- measured parser cost and output quality are recorded before another language
+  is approved
+
+## Phase 3 — Real longitudinal trends
+
+**Status: Next**
+
+### Outcome
+
+Planetnik compares compatible snapshots and explains material movement rather
+than showing an unavailable trends placeholder.
+
+### Deliverables
+
+- retain or ingest multiple snapshots with stable repository and entity IDs
+- define compatibility rules for comparing contract versions
+- implement project, component, hotspot, control, and ownership deltas
+- replace the unavailable `readReportTrendsSummary` result with real summaries
+- expose snapshot provenance and comparison windows in static or hosted views
+- distinguish missing history from an unchanged metric
 
-### Why second
+### Exit criteria
 
-This is a fast win with high product value and low research risk.
+- at least two compatible snapshots produce deterministic trend summaries
+- incompatible snapshots fail with an explicit contract error
+- every displayed trend links back to exact snapshots and underlying records
 
-## Priority 3: Coupling Studio
+## Phase 4 — Portfolio action queue
 
-Build a coupling workbench using Vlad Khononov style “balanced coupling” thinking, but start with the dimensions Planetnik can support credibly now.
+**Status: Later**
 
-### Phase 3A: First-class coupling views
+### Outcome
 
-- static/module coupling
-- temporal coupling
-- afferent/efferent coupling
+Landscape users receive one explainable queue of the most important
+interventions across repositories.
 
-These are already close to current data or can be derived from current exports.
+### Deliverables
 
-### Phase 3B: Higher-order coupling
+- combine hotspot, control, security, impact, coupling, ownership, and trend
+  evidence without collapsing them into an opaque score
+- provide repository, team, severity, evidence, and time-window filters
+- show why an item is ranked and which existing report surfaces support it
+- support explicit acknowledgement or workflow state only in the hosted product
 
-- semantic coupling
-- lifecycle coupling
-- runtime coupling
-- connascence-informed signals
+### Exit criteria
 
-These likely require new analyzers and clearer contracts.
+- each queue item is reproducible from canonical snapshot records
+- ranking factors are visible and testable
+- the static product can display the queue without requiring hosted services
 
-### Suggested product surface
+## Phase 5 — Hosted snapshot ingestion and grounded retrieval
 
-- `/coupling` overview
-- per-component coupling profiles
-- “balanced vs overloaded” coupling score
-- dependency rationale panels:
-  - incoming pressure
-  - outgoing volatility
-  - co-change intensity
-  - semantic overlap
+**Status: Later**
 
-### Why third
+### Outcome
 
-This can become a real differentiator, but it should deepen hotspot explanations rather than replace them.
+The hosted runtime persists canonical snapshots as queryable entities and uses
+them as the factual substrate for intelligence.
 
-## Priority 4: Domain Navigator
+### Deliverables
 
-Use DDD ideas to connect code structure to domain shape.
+- ingest snapshot metadata, entities, relationships, and provenance into Neon
+- preserve the canonical snapshot as the portable source of truth
+- support filtered and cross-snapshot queries over persisted entities
+- create curated semantic documents from stable project, component, hotspot,
+  contributor, security, and trend records
+- add `pgvector` only when retrieval can resolve every result back to exact
+  snapshot and entity IDs
+
+### Exit criteria
 
-### Product direction
-
-- bounded context map over codebase structure
-- domain language extraction from names and semantic clusters
-- context ownership and drift indicators
-- cross-context change pressure
-- domain hotspot views
-
-### Good first slice
-
-- context map from logical decompositions
-- domain glossary per component
-- cross-context coupling score
-
-### Why fourth
-
-High strategic value, but it needs the hotspot and coupling layers underneath to avoid becoming a static model diagram.
-
-## Priority 5: Cynefin Overlay
-
-Apply Cynefin as a decision support overlay, not as the core analysis model.
-
-### Best use
-
-- portfolio and leadership view
-- classify hotspots or components by intervention style
-- distinguish:
-  - clear
-  - complicated
-  - complex
-  - chaotic
-
-### Product surface
-
-- “how should we intervene” panel on hotspots
-- complexity-mode overlays for systems or bounded contexts
-- guidance on suitable action:
-  - refactor
-  - stabilize ownership
-  - reduce runtime coupling
-  - run experiment
-  - add guardrail
-
-### Why fifth
-
-Strong framing tool, but weaker than hotspots for day-to-day engineering workflow. It should interpret the data, not precede it.
-
-## Recommended Sequence
-
-1. Planetnik Health and Hotspots
-2. Goals, Controls, and Findings UI
-3. Coupling Studio
-4. Domain Navigator
-5. Cynefin Overlay
-
-## What Not to Prioritize Next
-
-- more standalone visualizations without actionability
-- replacing stable charting/table stacks again
-- executive framing models before engineering prioritization works
-
-## Next Build Slice
-
-The next concrete feature should be:
-
-- hotspot scoring export
-- `/hotspots` route
-- explainable score breakdowns
-
-In parallel, the fastest tactical follow-up is:
-
-- wire `/controls`
-- wire `/findings`
-
-## Delivery Slices by Scope
-
-This is the practical implementation split for the ideas currently on the table.
-
-### Astro Only
-
-These can ship from the data already loaded in `apps/site`.
-
-#### Small
-
-- `/controls` page shell using existing `controls.txt` if we add only frontend parsing inside the page
-- richer contributor risk cards from existing:
-  - contributor details
-  - people dependencies
-  - commits per period
-- ownership concentration views on `/components` using current `filesMain.contributors`
-- bus-factor overlays on files, units, and components
-- hotspot previews based on frontend-composed heuristics only
-
-#### Medium
-
-- knowledge distribution page using:
-  - contributor counts
-  - commits by contributor
-  - files per contributor
-  - components per contributor
-- “single point of knowledge” explorer
-- offboarding preview based on current contributor detail pages:
-  - what files/components lose primary coverage if contributor X disappears
-- coupling summary page using existing:
-  - static dependencies
-  - temporal dependencies
-  - people dependencies
-
-#### Large
-
-- a first `Planetnik Health` UI built entirely from frontend-composed scores
-- Conway-style visual overlays using inferred contributor clusters only
-
-This is possible, but the score quality will be weaker than a backend-owned contract.
-
-### CLI Export and Astro Loader Update
-
-These are the highest-leverage next slices because they produce stable data contracts without requiring brand new analyzers.
-
-#### Small
-
-- export structured `controls.json` instead of only `controls.txt`
-- add Astro loader and collection for controls
-- export structured `findings.json` if findings input already exists in report generation flow
-- add Astro loader and collection for findings
-- export a normalized `ownership_summary.json`
-  - files per contributor
-  - components per contributor
-  - backup contributor counts
-
-#### Medium
-
-- export `hotspots.json` using a first weighted scoring formula over existing metrics
-- export `knowledge_distribution.json`
-- export `component_health.json`
-- export `contributor_risk.json`
-
-#### Large
-
-- export scenario-style offboarding summaries:
-  - contributor removed
-  - affected files
-  - affected components
-  - controls likely to fail
-  - hotspots worsened
-
-This is still feasible without new analyzers if it is driven by current git-history ownership signals.
-
-### Beyond Loader and Export: New Analyzer or New Input Model
-
-These require new semantics, not just reshaping existing data.
-
-#### Medium
-
-- afferent/efferent coupling if we decide current dependency export is not enough and want first-class analyzer support
-- semantic coupling based on lexical similarity or co-naming
-- lifecycle coupling as a distinct contract rather than inferred from commits and ownership
-
-#### Large
-
-- Conway alignment with explicit team mapping
-- team-to-system congruence scoring
-- bounded-context drift detection
-- runtime coupling
-- connascence-informed signals
-
-#### Extra Large
-
-- Cynefin classification engine
-- robust offboarding simulation with team substitution and control impact forecasting
-- DDD context map generation with inferred domain language and socio-technical ownership alignment
-
-These need either:
-
-- new config input
-- richer org metadata
-- new analyzer passes
-- or all three
-
-## What We Can Do Now
-
-If the goal is maximum product value with minimal new backend work, the best immediate sequence is:
-
-1. Astro-only knowledge distribution and bus-factor views
-2. structured `controls.json` export plus Astro `/controls`
-3. first `hotspots.json` export
-4. Astro `/hotspots`
-5. offboarding preview based on existing contributor ownership
-
-## T-Shirt Sizing Summary
-
-### Small
-
-- `/controls` from existing exports
-- bus-factor and ownership overlays
-- knowledge distribution summaries
-
-### Medium
-
-- structured controls/findings contracts
-- `/findings`
-- first hotspot scoring export
-- first coupling overview page
-- offboarding preview from current contributor data
-
-### Large
-
-- full hotspot engine across file/unit/component
-- knowledge distribution product surface
-- balanced coupling workbench
-- Conway alignment with team model
-
-### Extra Large
-
-- Cynefin overlay
-- DDD/domain navigator
-- advanced semantic/runtime/lifecycle coupling
-- robust offboarding simulation with scenario analysis
-
-### OWASP updates realtime security threat tracking
-tbc
-
-
-## References
-
-- CodeScene Code Health: https://codescene.com/code-health
-- Behavioral code analysis in practice: https://codescene.com/hubfs/web_docs/Behavioral-code-analysis-in-practice.pdf
-- Module coupling overview: https://coupling.dev/posts/related-topics/module-coupling/
-- Integration strength dimension: https://coupling.dev/posts/dimensions-of-coupling/integration-strength/
-- Cynefin reference material: https://thecynefin.co/wp-content/uploads/2021/11/Cynefin-book-SAMPLE_Ed01.pdf
+- hosted reports can query ingested entities without reparsing every JSON file
+- re-ingestion is idempotent by snapshot identity
+- semantic answers rehydrate and cite exact canonical records
+- raw HTML and compatibility TXT files are not the embedding substrate
+
+## Phase 6 — Demand-led language expansion
+
+**Status: Later**
+
+### Recommended order
+
+1. TypeScript, JavaScript, and TSX as one language family with explicit grammar
+   dialects
+2. Go when active dataset frequency and baseline errors justify the port
+3. Ruby, Kotlin, C#, and other languages only from measured dataset demand
+
+Java remains a lower-priority parser candidate because it already has useful
+dependency extraction. C and C++ remain deferred because preprocessing and
+build semantics make syntax-only results easier to overstate. Config, markup,
+and data formats should keep lightweight analyzers unless architectural value
+is demonstrated.
+
+### Adoption gate
+
+A new Tree-sitter language must have:
+
+- meaningful frequency in real Planetnik datasets
+- a demonstrable unit, complexity, or dependency gap
+- a maintained grammar with compatible WASM output
+- measurable improvement on a representative corpus
+- acceptable runtime, memory, and compiled-binary size
+- conservative dependency mapping that does not invent internal edges
+- fixture, corpus, typecheck, and standalone compiled-CLI verification
+
+Tree-sitter provides syntax and error recovery. It does not provide project
+semantics, macro expansion, type resolution, or whole-program symbols.
+
+## Now, next, and later
+
+| Horizon | Work |
+| --- | --- |
+| Now | Phase 2: shared parser adapter and Python pilot |
+| Completed | Phase 1: versioned canonical snapshots and compatibility-removal proof |
+| Next | Phase 2: shared parser adapter and Python pilot |
+| Next | Phase 3: real snapshot trends |
+| Later | Phase 4: portfolio action queue |
+| Later | Phase 5: hosted snapshot ingestion and grounded semantic retrieval |
+| Later | Phase 6: demand-led parser expansion |
+
+Phase 1.5 is delivered as a repo-scoped static foundation; its remaining
+interaction matrix, landscape aggregation, and hosted integration stay as
+explicit follow-ons. Phase 2 can begin after the parser fact contract in
+Phase 1 is fixed. Phase 3 depends on snapshot identity and versioning from
+Phase 1. Phases 4 and 5 depend on trustworthy trends and canonical entities.
+
+## Not planned next
+
+- more standalone charts without a decision workflow
+- Tree-sitter for every recognized language
+- full language semantics inferred from syntax trees
+- semantic embeddings over raw report text or HTML
+- converting the static product into a server-dependent application
+- a direct Draxul/native Vulkan/Metal port or renderer-first rewrite
+- BioView/organism metaphors before the Code City decision surface proves its
+  value
+- Cynefin classification, automated bounded-context inference, runtime coupling,
+  or advanced offboarding simulation before the evidence substrate is stable
+- another charting, graph, table, or state-management stack replacement without
+  a demonstrated product blocker
+
+## Roadmap document status
+
+| Document | Status | Role |
+| --- | --- | --- |
+| `docs/product-roadmap.md` | Canonical | Sole source of product sequencing |
+| `docs/parser-coverage-roadmap.md` | Archived | Historical parser coverage proposal |
+| `docs/report-data-modernization-roadmap.md` | Archived | Discovery input for Phase 1 and Phase 5 |
+| `docs/landscape-ui-parity-plan.md` | Archived | Historical delivery plan for shipped landscape work |
+| `docs/shared-app-extraction-plan.md` | Archived | Historical delivery and handoff record for shared UI work |
+| `docs/tree-sitter-rust-pilot-checklist.md` | Completed and archived | Original Rust execution checklist |
+| `docs/rust-tree-sitter-migration-discovery.md` | Completed evidence | Measured Rust pilot outcome and limitations |
+| `docs/compatibility-removal-fixture-matrix.md` | Current evidence | Phase 1 compatibility-removal proof |
+| `docs/adr/*.md` | Decision records | Binding architectural decisions according to ADR status |
+
+Other specialist plans may describe implementation detail, but they are not
+product sequencing authorities. If they conflict with this document, this
+roadmap wins unless an accepted ADR requires a different architecture.
+
+## Immediate next move
+
+The previously approved immediate move was delivered on 2026-08-05. ADR-0018,
+[Adopt versioned canonical analysis snapshots](./adr/0018-adopt-versioned-canonical-analysis-snapshots.md),
+is accepted, and the first JSON-first contract slice is implemented across the
+report exporter, static site loader, hosted report reader, and Copilot data
+reader. The follow-on identity and validation slice is also delivered: it
+emits stable entity IDs, truthful single-repository and staged landscape shard
+inventories, and negative fixtures for unsupported, incomplete, and unsafe v2
+contexts. It retains TXT projections and v1 fallback behaviour.
+
+The Phase 1 compatibility-removal gate is green as of 2026-08-16. The
+[JSON-only fixture matrix](./compatibility-removal-fixture-matrix.md) covers
+the single-repository and landscape static loaders plus every hosted reader
+surface, with `metrics.txt` and `contributors.txt` absent. TXT export and v1
+fallback remain available for migration, but current routes no longer require
+those projections as primary input.
+
+The next bounded move is Phase 2: extract a shared parser adapter and prove it
+with the Python pilot, after the Rust evidence and canonical snapshot contracts.
+Keep Code City follow-ons bounded to its direct interaction matrix, landscape
+aggregation, and hosted repo-scoped integration; do not widen into a renderer
+rewrite or new semantic shard without evidence.
