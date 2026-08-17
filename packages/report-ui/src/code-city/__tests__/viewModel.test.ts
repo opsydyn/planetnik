@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { CodeCityModel, CodeCitySignals } from "@planetnik/common"
+import { getCodeCityAudiencePresentation } from "../audience.js"
 import { buildCodeCityFallbackRows, buildCodeCityInspectorModel } from "../viewModel.js"
 
 const signals = (overrides: Partial<CodeCitySignals> = {}): CodeCitySignals => ({
@@ -214,6 +215,21 @@ describe("buildCodeCityInspectorModel", () => {
 
   test("returns null when nothing is selected", () => {
     expect(buildCodeCityInspectorModel(modelFixture(), null, "/planetnik/")).toBeNull()
+  })
+
+  test("puts stakeholder impact and health first without changing their values", () => {
+    const inspector = buildCodeCityInspectorModel(
+      modelFixture(),
+      { kind: "district", id: "district:runtime" },
+      "/",
+      "health",
+      getCodeCityAudiencePresentation("stakeholder"),
+    )
+
+    expect(inspector?.metrics.slice(0, 2)).toEqual([
+      { label: "Impact", value: "73 (coupling)" },
+      { label: "Health", value: "87 (critical; change)" },
+    ])
   })
 
   test("explains a selected district's parcel, landmark, texture, and active lens treatment", () => {

@@ -6,6 +6,7 @@ import type {
   CodeCitySignals,
   CodeCityUnit,
 } from "@planetnik/common"
+import type { CodeCityAudienceMetricId, CodeCityAudiencePresentation } from "./audience.js"
 import { resolveCodeCityEvidenceHref } from "./evidence.js"
 import type { CodeCityLensId } from "./lens.js"
 import { resolveCodeCityLens } from "./lens.js"
@@ -84,15 +85,33 @@ const formatCoverage = (model: CodeCityModel): string => {
     .join("; ")
 }
 
-const metricsFor = (model: CodeCityModel, signals: CodeCitySignals): CodeCityInspectorModel["metrics"] => [
-  { label: "LOC", value: String(signals.footprint.loc) },
-  { label: "Health", value: formatHealth(signals) },
-  { label: "Ownership", value: formatOwnership(signals) },
-  { label: "Impact", value: formatImpact(signals) },
-  { label: "Change", value: formatChange(signals) },
-  { label: "Complexity", value: formatComplexity(signals) },
-  { label: "Coverage", value: formatCoverage(model) },
-]
+const metricsFor = (
+  model: CodeCityModel,
+  signals: CodeCitySignals,
+  presentation?: CodeCityAudiencePresentation,
+): CodeCityInspectorModel["metrics"] => {
+  const metrics: ReadonlyArray<{
+    readonly id: CodeCityAudienceMetricId
+    readonly label: string
+    readonly value: string
+  }> = [
+    { id: "footprint", label: "LOC", value: String(signals.footprint.loc) },
+    { id: "health", label: "Health", value: formatHealth(signals) },
+    { id: "ownership", label: "Ownership", value: formatOwnership(signals) },
+    { id: "impact", label: "Impact", value: formatImpact(signals) },
+    { id: "change", label: "Change", value: formatChange(signals) },
+    { id: "complexity", label: "Complexity", value: formatComplexity(signals) },
+    { id: "coverage", label: "Coverage", value: formatCoverage(model) },
+  ]
+
+  if (!presentation) return metrics.map(({ label, value }) => ({ label, value }))
+
+  const metricsById = new Map(metrics.map((metric) => [metric.id, metric]))
+  return presentation.inspectorMetricOrder.flatMap((id) => {
+    const metric = metricsById.get(id)
+    return metric ? [{ label: metric.label, value: metric.value }] : []
+  })
+}
 
 const districtForBuilding = (model: CodeCityModel, building: CodeCityBuilding): CodeCityDistrict | undefined =>
   model.districts.find((district) => district.id === building.primaryDistrictId)
@@ -184,6 +203,7 @@ export function buildCodeCityInspectorModel(
   selection: CodeCitySelection,
   basePath: string,
   lens: CodeCityLensId = "health",
+  presentation?: CodeCityAudiencePresentation,
 ): CodeCityInspectorModel | null {
   if (!selection) return null
 
@@ -203,7 +223,7 @@ export function buildCodeCityInspectorModel(
     path: building?.relativePath ?? district?.pathPrefix ?? null,
     districtLabel: district?.label ?? null,
     sourceSets: building ? building.sourceSets : district ? sourceSetsForDistrict(model, district) : [],
-    metrics: metricsFor(model, entity.metrics),
+    metrics: metricsFor(model, entity.metrics, presentation),
     visualFacts: visualFactsFor(model, entity, lens),
     evidence,
     units: building ? unitsInLayoutOrder(model, building.id).map((unit) => inspectorUnit(unit, basePath)) : [],

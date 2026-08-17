@@ -5,6 +5,7 @@
 }
 
 .code-city__controls,
+.code-city__audience,
 .code-city__legend,
 .code-city__structure-legend,
 .code-city__map,
@@ -45,12 +46,19 @@
 	gap: 0.45rem;
 }
 
+.code-city__audience-switch {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
 .code-city__view-buttons {
 	display: inline-flex;
 	gap: 0.35rem;
 }
 
 .code-city__lens-buttons button,
+.code-city__audience-switch button,
 .code-city__view-buttons button,
 .code-city-inspector__actions button,
 .code-city-fallback__actions button {
@@ -71,6 +79,7 @@
 }
 
 .code-city__lens-buttons button:hover,
+.code-city__audience-switch button:hover,
 .code-city__view-buttons button:hover,
 .code-city-inspector__actions button:hover,
 .code-city-fallback__actions button:hover {
@@ -78,6 +87,12 @@
 }
 
 .code-city__lens-buttons button[aria-pressed="true"] {
+	border-color: var(--color-accent, #58a6ff);
+	background: var(--color-accent-soft, rgba(88, 166, 255, 0.14));
+	color: var(--color-accent-strong, var(--color-accent, #58a6ff));
+}
+
+.code-city__audience-switch button[aria-pressed="true"] {
 	border-color: var(--color-accent, #58a6ff);
 	background: var(--color-accent-soft, rgba(88, 166, 255, 0.14));
 	color: var(--color-accent-strong, var(--color-accent, #58a6ff));
@@ -95,6 +110,7 @@
 }
 
 .code-city__lens-buttons button:focus-visible,
+.code-city__audience-switch button:focus-visible,
 .code-city__view-buttons button:focus-visible,
 .code-city-inspector a:focus-visible,
 .code-city-inspector button:focus-visible,
@@ -107,6 +123,32 @@
 .code-city-inspector__actions button:disabled {
 	cursor: not-allowed;
 	opacity: 0.55;
+}
+
+.code-city__audience {
+	display: grid;
+	grid-template-columns: minmax(0, 1.5fr) minmax(12rem, 0.75fr) minmax(12rem, 0.75fr);
+	gap: 1rem;
+	padding: 0.8rem 1rem;
+}
+
+.code-city__audience h2,
+.code-city__audience p {
+	margin: 0;
+}
+
+.code-city__audience h2 {
+	font-size: 1rem;
+}
+
+.code-city__audience p {
+	color: var(--color-text-secondary, #97a3bf);
+	font-size: 0.78rem;
+	line-height: 1.5;
+}
+
+.code-city__audience strong {
+	color: var(--color-text, #e8edf7);
 }
 
 .code-city__legend {
@@ -491,6 +533,10 @@
 		justify-content: flex-start;
 	}
 
+	.code-city__audience {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
 	.code-city__view-buttons {
 		align-self: stretch;
 	}
@@ -533,6 +579,14 @@
 		flex: 1 1 7rem;
 	}
 
+	.code-city__audience-switch {
+		width: 100%;
+	}
+
+	.code-city__audience-switch button {
+		flex: 1 1 7rem;
+	}
+
 	.code-city__map {
 		grid-template-rows: minmax(18rem, 48vh) auto;
 	}
@@ -559,6 +613,7 @@
 
 @media print {
 	.code-city__controls,
+	.code-city__audience,
 	.code-city__legend,
 	.code-city__structure-legend,
 	.code-city__workspace,

@@ -1,5 +1,3 @@
-export type { CodeCityFallbackProps, CodeCityFallbackRow } from "./CodeCityFallback"
-export { CodeCityFallback } from "./CodeCityFallback"
 export type {
   CodeCityAudienceId,
   CodeCityAudienceMetricId,
@@ -10,6 +8,10 @@ export {
   getCodeCityAudiencePresentation,
   resolveCodeCityAudience,
 } from "./audience.js"
+export type { CodeCityAudienceSwitchProps } from "./CodeCityAudienceSwitch.js"
+export { CodeCityAudienceSwitch } from "./CodeCityAudienceSwitch.js"
+export type { CodeCityFallbackProps, CodeCityFallbackRow } from "./CodeCityFallback"
+export { CodeCityFallback } from "./CodeCityFallback"
 export type { CodeCityInspectorProps } from "./CodeCityInspector"
 export { CodeCityInspector } from "./CodeCityInspector"
 export type { CodeCityViewProps } from "./CodeCityView"
@@ -17,12 +19,12 @@ export { default as CodeCityView } from "./CodeCityView"
 export type { CodeCityViewControlsProps } from "./CodeCityViewControls"
 export { CodeCityViewControls } from "./CodeCityViewControls"
 export { resolveCodeCityEvidenceHref } from "./evidence"
+export type { CodeCityDetailLevel, CodeCityKitPrimitive, CodeCityKitRecipe } from "./kitRecipe"
+export { buildCodeCityKitRecipe, resolveCodeCityDetailLevel } from "./kitRecipe"
 export type { CodeCityLensEntity, CodeCityLensId, CodeCityLensVisual } from "./lens"
 export { resolveCodeCityLens } from "./lens"
 export type { CodeCityMaterialSpec, CodeCitySurfaceTreatment } from "./materials"
 export { resolveCodeCityMaterialSpec, resolveCodeCitySurfaceTreatment } from "./materials"
-export type { CodeCityDetailLevel, CodeCityKitPrimitive, CodeCityKitRecipe } from "./kitRecipe"
-export { buildCodeCityKitRecipe, resolveCodeCityDetailLevel } from "./kitRecipe"
 export type {
   CodeCityRouteResolution,
   CodeCityRouteState,
@@ -31,11 +33,25 @@ export type {
 export { resolveCodeCityRouteState } from "./routeState"
 export { buildCodeCityScene } from "./sceneAdapter"
 export type {
-	CodeCityScene,
-	CodeCitySceneEdge,
-	CodeCitySceneNode,
-	CodeCityScenePoint,
+  CodeCityScene,
+  CodeCitySceneEdge,
+  CodeCitySceneNode,
+  CodeCityScenePoint,
 } from "./sceneTypes"
+export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
+export { resolveCodeCitySelection } from "./selection"
+export type { CodeCityTextureAtlas } from "./textureAtlas"
+export type { CodeCityViewAvailability, CodeCityViewMode } from "./viewMode"
+export { resolveCodeCityViewMode } from "./viewMode"
+export type {
+  CodeCityFallbackRowModel,
+  CodeCityInspectorModel,
+  CodeCityInspectorUnitModel,
+} from "./viewModel"
+export {
+  buildCodeCityFallbackRows,
+  buildCodeCityInspectorModel,
+} from "./viewModel"
 export type {
   CodeCityBuildingArchetype,
   CodeCityBuildingVisual,
@@ -54,17 +70,3 @@ export {
   resolveCodeCityDistrictVisual,
   resolveCodeCityMaterialFamily,
 } from "./visualTokens"
-export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
-export { resolveCodeCitySelection } from "./selection"
-export type { CodeCityTextureAtlas } from "./textureAtlas"
-export type { CodeCityViewAvailability, CodeCityViewMode } from "./viewMode"
-export { resolveCodeCityViewMode } from "./viewMode"
-export type {
-  CodeCityFallbackRowModel,
-  CodeCityInspectorModel,
-  CodeCityInspectorUnitModel,
-} from "./viewModel"
-export {
-  buildCodeCityFallbackRows,
-  buildCodeCityInspectorModel,
-} from "./viewModel"

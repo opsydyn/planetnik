@@ -5,9 +5,14 @@ import {
 	type CodeCityCanvasHandle,
 	type CodeCityCanvasUnavailableReason,
 } from "./CodeCityCanvas.js";
+import { CodeCityAudienceSwitch } from "./CodeCityAudienceSwitch.js";
 import { CodeCityFallback } from "./CodeCityFallback.js";
 import { CodeCityInspector } from "./CodeCityInspector.js";
 import { CodeCityViewControls } from "./CodeCityViewControls.js";
+import {
+	buildCodeCityAudiencePresentation,
+	type CodeCityAudienceId,
+} from "./audience.js";
 import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
 import { resolveCodeCityLens } from "./lens.js";
 import { buildCodeCityScene } from "./sceneAdapter.js";
@@ -26,6 +31,7 @@ import "./CodeCityView.css";
 export type CodeCityViewProps = {
 	readonly model: CodeCityModel;
 	readonly evidenceBasePath: string;
+	readonly initialAudience?: CodeCityAudienceId;
 };
 
 const LENSES: ReadonlyArray<{ readonly id: CodeCityLensId; readonly label: string }> = [
@@ -53,9 +59,14 @@ const rendererUnavailableMessage = (
 	}
 };
 
-export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewProps) {
+export default function CodeCityView({
+	model,
+	evidenceBasePath,
+	initialAudience = "onboarding",
+}: CodeCityViewProps) {
 	const canvasRef = useRef<CodeCityCanvasHandle | null>(null);
 	const [activeLens, setActiveLens] = useState<CodeCityLensId>("health");
+	const [audience, setAudience] = useState<CodeCityAudienceId>(initialAudience);
 	const [selection, setSelection] = useState<CodeCitySelection>(null);
 	const [requestedView, setRequestedView] = useState<CodeCityViewMode>("map");
 	const [rendererUnavailable, setRendererUnavailable] =
@@ -67,9 +78,13 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 		() => resolveCodeCitySelection(model, selection),
 		[model, selection],
 	);
+	const presentation = useMemo(
+		() => buildCodeCityAudiencePresentation(model, audience),
+		[model, audience],
+	);
 	const inspector = useMemo(
-		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath, activeLens),
-		[model, selection, evidenceBasePath, activeLens],
+		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath, activeLens, presentation),
+		[model, selection, evidenceBasePath, activeLens, presentation],
 	);
 	const fallbackRows = useMemo(
 		() => buildCodeCityFallbackRows(model, evidenceBasePath),
@@ -145,6 +160,7 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 					mapAvailable={mapAvailable}
 					onChange={setRequestedView}
 				/>
+				<CodeCityAudienceSwitch audience={audience} onChange={setAudience} />
 				<div className="code-city__lens-buttons" role="toolbar" aria-label="Code City lenses">
 					{LENSES.map((lens) => (
 						<button
@@ -158,6 +174,18 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 					))}
 				</div>
 			</header>
+
+			<section className="code-city__audience" aria-labelledby="code-city-audience-title">
+				<div>
+					<p className="code-city__eyebrow">What you’re seeing</p>
+					<h2 id="code-city-audience-title">{presentation.openingQuestion}</h2>
+					<p>{presentation.orientation}</p>
+				</div>
+				<p>
+					<strong>First action:</strong> {presentation.firstAction}
+				</p>
+				<p>{presentation.coverageNote}</p>
+			</section>
 
 			<div className="code-city__legend" aria-label="Lens legend">
 				<ul>
