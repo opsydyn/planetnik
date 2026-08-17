@@ -249,8 +249,10 @@ links to the underlying report evidence.
   city, table, all three audience questions and first actions, stable selection
   through audience changes, story navigation, focus/return announcements, and
   matching brief, inspector, and story evidence links on the single-repository
-  route; the repo-scoped route directly showed the same audience, story, table,
-  and evidence surfaces
+  route; repo-scoped browser evidence covered Onboarding and Architecture
+  Review, story start and advance to Name a district, the 16-row table, and
+  repo-scoped brief and evidence links, while Stakeholder and the remaining
+  story controls stay open on that route
 - the partial fixture directly explained that `impact.json` was unavailable and
   kept the available component evidence, but the partial story was not run to
   its unavailable step
