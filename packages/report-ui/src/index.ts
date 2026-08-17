@@ -13,6 +13,7 @@ export type {
   CodeCityLensVisual,
   CodeCityLandmarkTier,
   CodeCityMaterialFamily,
+  CodeCityMaterialSpec,
   CodeCityParcelStyle,
   CodeCityRouteResolution,
   CodeCityRouteState,
@@ -26,6 +27,8 @@ export type {
   CodeCitySelectionResult,
   CodeCityRoofStyle,
   CodeCityTexturePattern,
+  CodeCityTextureAtlas,
+  CodeCitySurfaceTreatment,
   CodeCityVisualContext,
   CodeCityViewMode,
   CodeCityViewProps,
@@ -44,9 +47,12 @@ export {
   resolveCodeCityDistrictVisual,
   resolveCodeCityLens,
   resolveCodeCityMaterialFamily,
+  resolveCodeCityMaterialSpec,
+  resolveCodeCitySurfaceTreatment,
   resolveCodeCityRouteState,
   resolveCodeCitySelection,
   resolveCodeCityViewMode,
+  createCodeCityTextureAtlas,
 } from "./code-city/index"
 export { default as SecurityActionCenter } from "./security/SecurityActionCenter"
 export { formatReportDate, normalizeReportDate } from "./utils/reportDates"
