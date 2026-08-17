@@ -45,7 +45,6 @@ export {
 export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
 export { resolveCodeCitySelection } from "./selection"
 export type { CodeCityTextureAtlas } from "./textureAtlas"
-export { createCodeCityTextureAtlas } from "./textureAtlas"
 export type { CodeCityViewAvailability, CodeCityViewMode } from "./viewMode"
 export { resolveCodeCityViewMode } from "./viewMode"
 export type {

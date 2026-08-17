@@ -6,6 +6,7 @@ import {
 import { createCodeCityTextureAtlas } from "../textureAtlas.js"
 import type { CodeCityLensId, CodeCityLensVisual } from "../lens.js"
 import type { CodeCityMaterialFamily, CodeCityTexturePattern } from "../visualTokens.js"
+import * as ReportUi from "../../index.js"
 
 const families: readonly CodeCityMaterialFamily[] = [
   "brick",
@@ -142,5 +143,12 @@ describe("createCodeCityTextureAtlas", () => {
 
     atlas.dispose()
     atlas.dispose()
+  })
+})
+
+describe("the server-safe Report UI entrypoint", () => {
+  test("keeps the browser-only texture factory out of its runtime exports", () => {
+    expect(ReportUi.resolveCodeCityMaterialSpec).toBe(resolveCodeCityMaterialSpec)
+    expect("createCodeCityTextureAtlas" in ReportUi).toBeFalse()
   })
 })
