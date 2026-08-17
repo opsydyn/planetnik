@@ -35,10 +35,21 @@ const largestContext = (model: CodeCityModel): CodeCityDistrict | null =>
         right.metrics.footprint.loc - left.metrics.footprint.loc || compareText(left.id, right.id),
     )[0] ?? null
 
-const strongestBoundary = (model: CodeCityModel): CodeCityDependencyEdge | null =>
-  [...model.edges]
-    .filter((edge) => Number.isFinite(edge.count) && edge.count > 0)
+const strongestBoundary = (model: CodeCityModel): CodeCityDependencyEdge | null => {
+  const districtIds = new Set(model.districts.map((district) => district.id))
+  return [...model.edges]
+    .filter(
+      (edge) =>
+        edge.resolution === "both" &&
+        Number.isFinite(edge.count) &&
+        edge.count > 0 &&
+        edge.sourceDistrictId !== null &&
+        edge.targetDistrictId !== null &&
+        districtIds.has(edge.sourceDistrictId) &&
+        districtIds.has(edge.targetDistrictId),
+    )
     .sort((left, right) => right.count - left.count || compareText(left.id, right.id))[0] ?? null
+}
 
 const normaliseBasePath = (basePath: string): string => {
   const href = resolveCodeCityEvidenceHref(basePath, "")

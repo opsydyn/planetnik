@@ -187,4 +187,24 @@ describe("buildCodeCityArchitectureBrief", () => {
     expect(stakeholder.nextAction).not.toBe(onboarding.nextAction)
     expect(stakeholder.facts).toEqual(onboarding.facts)
   })
+
+  test("does not present an unresolved high-count edge as the strongest boundary", () => {
+    const model = modelFixture()
+    const resolvedEdge = { ...model.edges[0]!, id: "edge:resolved", count: 2 }
+    const unresolvedEdge = {
+      ...model.edges[0]!,
+      id: "edge:unresolved",
+      count: 99,
+      resolution: "source" as const,
+    }
+    const brief = buildCodeCityArchitectureBrief(
+      { ...model, edges: [unresolvedEdge, resolvedEdge] },
+      getCodeCityAudiencePresentation("architecture-review"),
+      storyFixture(),
+      "/repo",
+    )
+
+    expect(brief.facts[1]?.value).toContain("edge:resolved")
+    expect(brief.facts[1]?.value).not.toContain("edge:unresolved")
+  })
 })
