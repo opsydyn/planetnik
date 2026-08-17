@@ -21,7 +21,16 @@ export type CodeCityCanvasUnavailableReason =
 	| "renderer-module-unavailable";
 
 export type CodeCityCanvasHandle = {
-	readonly focusEntity: (id: string | null) => void;
+	readonly focusEntity: (id: string | null) => boolean;
+};
+
+export const tryFocusCodeCityRenderer = (
+	controller: Pick<CodeCityRendererController, "focusEntity"> | null,
+	id: string | null,
+): boolean => {
+	if (!controller) return false;
+	controller.focusEntity(id);
+	return true;
 };
 
 export type CodeCityCanvasProps = {
@@ -77,7 +86,7 @@ function CodeCityCanvasInner(
 		ref,
 		() => ({
 			focusEntity(id) {
-				controllerRef.current?.focusEntity(id);
+				return tryFocusCodeCityRenderer(controllerRef.current, id);
 			},
 		}),
 		[],

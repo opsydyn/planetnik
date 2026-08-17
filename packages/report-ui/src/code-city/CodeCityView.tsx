@@ -402,7 +402,10 @@ export default function CodeCityView({
 			setFocusAnnouncement("Story focus is unavailable because the interactive map is not available.");
 			return;
 		}
-		canvasRef.current?.focusEntity(action.entityId);
+		if (!canvasRef.current.focusEntity(action.entityId)) {
+			setFocusAnnouncement("Interactive map is still loading. Try focusing this step again.");
+			return;
+		}
 		setStoryState(reduceCodeCityStoryState(storyState, { type: "focus" }, story.steps.length));
 		setFocusAnnouncement("Story step focused. Use Return to overview to undo this focus.");
 	};

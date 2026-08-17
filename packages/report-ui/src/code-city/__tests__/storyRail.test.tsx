@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { ReactElement, ReactNode } from "react"
+import { tryFocusCodeCityRenderer } from "../CodeCityCanvas.js"
 import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
 import {
   reduceCodeCityStoryViewState,
@@ -148,6 +149,19 @@ describe("CodeCityStoryRail", () => {
     expect(focusButton.props.disabled).toBe(true)
     focusButton.props.onClick?.()
     expect(focusCalls).toBe(0)
+  })
+
+  test("a pending renderer does not confirm focus until its controller is ready", () => {
+    const focusedIds: Array<string | null> = []
+    const controller = {
+      focusEntity: (id: string | null) => {
+        focusedIds.push(id)
+      },
+    }
+
+    expect(tryFocusCodeCityRenderer(null, "district:app")).toBe(false)
+    expect(tryFocusCodeCityRenderer(controller, "district:app")).toBe(true)
+    expect(focusedIds).toEqual(["district:app"])
   })
 
   test("focused navigation retains an explicit return action that clears the camera", () => {
