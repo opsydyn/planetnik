@@ -40,6 +40,15 @@ export type {
 } from "./sceneTypes"
 export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
 export { resolveCodeCitySelection } from "./selection"
+export type {
+  CodeCityStory,
+  CodeCityStoryEvent,
+  CodeCityStoryEvidence,
+  CodeCityStoryState,
+  CodeCityStoryStep,
+  CodeCityStoryStepId,
+} from "./story.js"
+export { buildCodeCityStory, reduceCodeCityStoryState } from "./story.js"
 export type { CodeCityTextureAtlas } from "./textureAtlas"
 export type { CodeCityViewAvailability, CodeCityViewMode } from "./viewMode"
 export { resolveCodeCityViewMode } from "./viewMode"
