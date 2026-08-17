@@ -3,15 +3,16 @@ import type { CodeCityArchitectureBrief as CodeCityArchitectureBriefModel } from
 export type CodeCityArchitectureBriefProps = {
   readonly brief: CodeCityArchitectureBriefModel
   readonly onCopy: () => void
-  readonly copied: boolean
+  readonly copyStatus: CodeCityBriefCopyStatus
 }
 
 export type CodeCityArchitectureBrief = CodeCityArchitectureBriefModel
+export type CodeCityBriefCopyStatus = "idle" | "success" | "failure"
 
 export function CodeCityArchitectureBrief({
   brief,
   onCopy,
-  copied,
+  copyStatus,
 }: CodeCityArchitectureBriefProps) {
   return (
     <section className="code-city__brief" aria-label="Architecture brief">
@@ -43,11 +44,13 @@ export function CodeCityArchitectureBrief({
         <p><strong>Next action:</strong> {brief.nextAction}</p>
         <button type="button" onClick={onCopy}>Copy brief</button>
       </div>
-      <p className="code-city__brief-status" role="status">
-        {copied
-          ? "Brief copied to the clipboard."
-          : "Copy failed. Select the brief text to copy it manually."}
-      </p>
+      {copyStatus === "idle" ? null : (
+        <p className="code-city__brief-status" role="status">
+          {copyStatus === "success"
+            ? "Brief copied to the clipboard."
+            : "Copy failed. Select the brief text to copy it manually."}
+        </p>
+      )}
     </section>
   )
 }

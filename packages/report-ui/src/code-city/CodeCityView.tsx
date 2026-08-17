@@ -7,6 +7,7 @@ import {
 } from "./CodeCityCanvas.js";
 import { CodeCityAudienceSwitch } from "./CodeCityAudienceSwitch.js";
 import { CodeCityArchitectureBrief } from "./CodeCityArchitectureBrief.js";
+import type { CodeCityBriefCopyStatus } from "./CodeCityArchitectureBrief.js";
 import { CodeCityFallback } from "./CodeCityFallback.js";
 import { CodeCityInspector } from "./CodeCityInspector.js";
 import { CodeCityStoryRail } from "./CodeCityStoryRail.js";
@@ -167,7 +168,8 @@ export default function CodeCityView({
 	const [rendererUnavailable, setRendererUnavailable] =
 		useState<CodeCityCanvasUnavailableReason | null>(null);
 	const [focusAnnouncement, setFocusAnnouncement] = useState("");
-	const [briefCopied, setBriefCopied] = useState(false);
+	const [briefCopyStatus, setBriefCopyStatus] =
+		useState<CodeCityBriefCopyStatus>("idle");
 
 	const scene = useMemo(() => buildCodeCityScene(model), [model]);
 	const selectionResult = useMemo(
@@ -262,11 +264,14 @@ export default function CodeCityView({
 	};
 
 	const copyBrief = () => {
-		setBriefCopied(false);
-		if (typeof navigator === "undefined" || !navigator.clipboard) return;
+		setBriefCopyStatus("idle");
+		if (typeof navigator === "undefined" || !navigator.clipboard) {
+			setBriefCopyStatus("failure");
+			return;
+		}
 		void navigator.clipboard.writeText(briefText(brief)).then(
-			() => setBriefCopied(true),
-			() => setBriefCopied(false),
+			() => setBriefCopyStatus("success"),
+			() => setBriefCopyStatus("failure"),
 		);
 	};
 
@@ -385,7 +390,7 @@ export default function CodeCityView({
 
 			<CodeCityArchitectureBrief
 				brief={brief}
-				copied={briefCopied}
+				copyStatus={briefCopyStatus}
 				onCopy={copyBrief}
 			/>
 

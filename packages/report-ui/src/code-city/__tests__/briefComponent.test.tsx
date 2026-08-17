@@ -37,7 +37,7 @@ describe("CodeCityArchitectureBrief", () => {
     let copied = 0
     const rendered = CodeCityArchitectureBrief({
       brief,
-      copied: false,
+      copyStatus: "idle",
       onCopy: () => copied++,
     })
     const elements = elementsIn(rendered)
@@ -56,8 +56,25 @@ describe("CodeCityArchitectureBrief", () => {
     })
   })
 
-  test("keeps the brief visible when copying fails", () => {
-    const rendered = CodeCityArchitectureBrief({ brief, copied: false, onCopy: () => {} })
+  test("does not announce a copy failure before a copy is attempted", () => {
+    const rendered = CodeCityArchitectureBrief({
+      brief,
+      copyStatus: "idle",
+      onCopy: () => {},
+    })
+
+    expect(elementsIn(rendered).map((child) => child.props.children).flat()).not.toContain(
+      "Copy failed. Select the brief text to copy it manually.",
+    )
+  })
+
+  test("announces manual copying after a rejected clipboard write", () => {
+    const rendered = CodeCityArchitectureBrief({
+      brief,
+      copyStatus: "failure",
+      onCopy: () => {},
+    })
+
     expect(elementsIn(rendered).map((child) => child.props.children).flat()).toContain(
       "Copy failed. Select the brief text to copy it manually.",
     )
