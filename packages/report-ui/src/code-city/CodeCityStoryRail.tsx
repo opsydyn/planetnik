@@ -3,6 +3,7 @@ import type { CodeCityStory, CodeCityStoryEvent, CodeCityStoryState } from "./st
 export type CodeCityStoryRailProps = {
   readonly story: CodeCityStory
   readonly state: CodeCityStoryState
+  readonly canFocus?: boolean
   readonly onEvent: (event: CodeCityStoryEvent) => void
   readonly onFocusStep: () => void
 }
@@ -13,6 +14,7 @@ const activeStep = (story: CodeCityStory, stepIndex: number) =>
 export function CodeCityStoryRail({
   story,
   state,
+  canFocus = true,
   onEvent,
   onFocusStep,
 }: CodeCityStoryRailProps) {
@@ -82,7 +84,7 @@ export function CodeCityStoryRail({
   }
 
   const isUnavailable = step.availability === "unavailable"
-  const canFocus = step.target !== null
+  const canFocusStep = step.target !== null && canFocus
 
   return (
     <section className="code-city__story-rail" aria-labelledby="code-city-story-title">
@@ -118,7 +120,11 @@ export function CodeCityStoryRail({
         <button type="button" disabled={!isUnavailable} onClick={() => onEvent({ type: "skip" })}>
           Skip
         </button>
-        <button type="button" disabled={!canFocus && !state.focused} onClick={onFocusStep}>
+        <button
+          type="button"
+          disabled={!canFocusStep && !state.focused}
+          onClick={canFocusStep || state.focused ? onFocusStep : undefined}
+        >
           {state.focused ? "Return to overview" : "Focus this step"}
         </button>
         <button type="button" onClick={() => onEvent({ type: "exit" })}>

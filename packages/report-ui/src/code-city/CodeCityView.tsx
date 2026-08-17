@@ -361,6 +361,10 @@ export default function CodeCityView({
 			return;
 		}
 		if (action.type !== "focus") return;
+		if (!canvasRef.current) {
+			setFocusAnnouncement("Story focus is unavailable because the interactive map is not available.");
+			return;
+		}
 		canvasRef.current?.focusEntity(action.entityId);
 		setStoryState(reduceCodeCityStoryState(storyState, { type: "focus" }, story.steps.length));
 		setFocusAnnouncement("Story step focused. Use Return to overview to undo this focus.");
@@ -410,6 +414,7 @@ export default function CodeCityView({
 			<CodeCityStoryRail
 				story={story}
 				state={storyState}
+				canFocus={mapAvailable && !fallbackPrimary}
 				onEvent={handleStoryEvent}
 				onFocusStep={focusStoryStep}
 			/>

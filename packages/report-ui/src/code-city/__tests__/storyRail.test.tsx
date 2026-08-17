@@ -132,6 +132,24 @@ describe("CodeCityStoryRail", () => {
     expect(events).toEqual([{ type: "skip" }])
   })
 
+  test("fallback mode disables and suppresses story focus without an interactive map", () => {
+    let focusCalls = 0
+    const rendered = CodeCityStoryRail({
+      story: storyFixture(),
+      state: { tag: "active", stepIndex: 1, focused: false },
+      canFocus: false,
+      onEvent: () => undefined,
+      onFocusStep: () => {
+        focusCalls += 1
+      },
+    })
+
+    const focusButton = findButton(rendered, "Focus this step")
+    expect(focusButton.props.disabled).toBe(true)
+    focusButton.props.onClick?.()
+    expect(focusCalls).toBe(0)
+  })
+
   test("focused navigation retains an explicit return action that clears the camera", () => {
     const story = storyFixture()
     const navigation = [
