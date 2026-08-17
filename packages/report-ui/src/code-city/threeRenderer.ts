@@ -64,7 +64,7 @@ export function resolveCodeCityHighlightedRouteIds(
   const selectedEdgeIds = new Set(selectedEdges.map((edge) => edge.id))
   const ambientEdges = scene.edges
     .filter((edge) => edge.renderable && !selectedEdgeIds.has(edge.id))
-    .sort((left, right) => right.weight - left.weight || left.id.localeCompare(right.id))
+    .sort((left, right) => right.weight - left.weight || compareText(left.id, right.id))
     .slice(0, 2)
 
   return [...selectedEdges, ...ambientEdges].map((edge) => edge.id)
@@ -138,6 +138,8 @@ type LabelRenderRecord = {
 const FALLBACK_FILL = "#64748b"
 const ROUTE_COLOR = "#64748b"
 const ROUTE_SELECTED_COLOR = "#38bdf8"
+
+const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0)
 
 const unavailable = (options: CodeCityRendererOptions, reason: CodeCityRendererUnavailableReason): null => {
   options.onRendererUnavailable(reason)

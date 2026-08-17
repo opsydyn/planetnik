@@ -285,6 +285,23 @@ describe("Code City renderer selection contracts", () => {
     expect(ids).toEqual(["edge:largest", "edge:second"])
   })
 
+  test("consequential emphasis uses ordinal IDs to break equal ambient route weights", () => {
+    const source = audienceEmphasisScene()
+    const scene: CodeCityScene = {
+      ...source,
+      edges: source.edges.map((edge, index) => ({
+        ...edge,
+        id: ["edge:é", "edge:z", "edge:Z", "edge:a"][index]!,
+        weight: 5,
+      })),
+    }
+
+    expect(resolveCodeCityHighlightedRouteIds(scene, emptySelection, "consequential")).toEqual([
+      "edge:Z",
+      "edge:a",
+    ])
+  })
+
   test("quiet emphasis keeps routes hidden until a selection exists", () => {
     expect(resolveCodeCityHighlightedRouteIds(audienceEmphasisScene(), emptySelection, "quiet")).toEqual([])
   })
