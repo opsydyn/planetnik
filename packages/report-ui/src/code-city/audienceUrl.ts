@@ -17,6 +17,13 @@ export function parseCodeCityUrlState(url: URL): CodeCityUrlState {
   }
 }
 
+export function resolveCodeCityInitialUrlState(
+  initialState: CodeCityUrlState,
+  browserUrl: URL | null,
+): CodeCityUrlState {
+  return browserUrl === null ? initialState : parseCodeCityUrlState(browserUrl)
+}
+
 export function buildCodeCityUrl(pathname: string, state: CodeCityUrlState): string {
   const searchParams = new URLSearchParams()
   if (state.audience !== "onboarding") searchParams.set("audience", state.audience)

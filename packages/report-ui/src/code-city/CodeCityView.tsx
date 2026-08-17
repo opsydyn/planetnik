@@ -18,7 +18,7 @@ import {
 	type CodeCityAudienceId,
 } from "./audience.js";
 import { buildCodeCityArchitectureBrief } from "./brief.js";
-import { buildCodeCityUrl } from "./audienceUrl.js";
+import { buildCodeCityUrl, resolveCodeCityInitialUrlState } from "./audienceUrl.js";
 import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
 import { resolveCodeCityLens } from "./lens.js";
 import { buildCodeCityScene } from "./sceneAdapter.js";
@@ -152,17 +152,23 @@ export default function CodeCityView({
 }: CodeCityViewProps) {
 	const canvasRef = useRef<CodeCityCanvasHandle | null>(null);
 	const [activeLens, setActiveLens] = useState<CodeCityLensId>("health");
-	const [audience, setAudience] = useState<CodeCityAudienceId>(initialAudience);
+	const [initialUrlState] = useState(() =>
+		resolveCodeCityInitialUrlState(
+			{ audience: initialAudience, story: initialStoryId },
+			typeof window === "undefined" ? null : new URL(window.location.href),
+		),
+	);
+	const [audience, setAudience] = useState<CodeCityAudienceId>(initialUrlState.audience);
 	const story = useMemo(
 		() => buildCodeCityStory(model, audience, evidenceBasePath),
 		[model, audience, evidenceBasePath],
 	);
 	const [storyState, setStoryState] = useState<CodeCityStoryState>(() =>
-		initialStoryState(story, initialStoryId),
+		initialStoryState(story, initialUrlState.story),
 	);
 	const savedStorySelectionRef = useRef<CodeCitySelection>(null);
 	const [selection, setSelection] = useState<CodeCitySelection>(
-		() => storyStepFor(story, initialStoryState(story, initialStoryId))?.target ?? null,
+		() => storyStepFor(story, initialStoryState(story, initialUrlState.story))?.target ?? null,
 	);
 	const [requestedView, setRequestedView] = useState<CodeCityViewMode>("map");
 	const [rendererUnavailable, setRendererUnavailable] =
