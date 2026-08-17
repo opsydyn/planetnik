@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { InstancedMesh, Scene as ThreeScene } from "three"
+import { InstancedMesh, Mesh, type MeshStandardMaterial, RepeatWrapping, Scene as ThreeScene } from "three"
 import type { CodeCityLensVisual } from "../lens.js"
+import { resolveCodeCityMaterialSpec } from "../materials.js"
 import type { CodeCityScene } from "../sceneTypes.js"
 import type { CodeCitySelectionResult } from "../selection.js"
 import { createCodeCityKitRenderer } from "../threeKit.js"
@@ -156,6 +157,19 @@ const renderedDetails = (kit: ReturnType<typeof createCodeCityKitRenderer>) => {
   )
 }
 
+const renderedNode = (kit: ReturnType<typeof createCodeCityKitRenderer>, id: string) => {
+  if (kit === null) throw new Error("Expected a Code City kit renderer")
+  const node = kit.group.children.find((child) => child.userData.entityId === id)
+  if (node === undefined) throw new Error(`Expected rendered node ${id}`)
+  return node
+}
+
+const baseMaterial = (kit: ReturnType<typeof createCodeCityKitRenderer>, id: string): MeshStandardMaterial => {
+  const base = renderedNode(kit, id).children[0]
+  if (!(base instanceof Mesh) || Array.isArray(base.material)) throw new Error(`Expected base mesh for ${id}`)
+  return base.material as MeshStandardMaterial
+}
+
 describe("canCreateWebGLRenderer", () => {
   test("rejects a missing WebGL context", () => {
     expect(canCreateWebGLRenderer(null)).toBe(false)
@@ -290,7 +304,11 @@ describe("Code City semantic kit renderer", () => {
       "file:other": "overview",
     })
     const focusedBuilding = kit?.group.children.find((child) => child.userData.entityId === "file:shared")
-    expect(focusedBuilding?.children.filter((child) => child instanceof InstancedMesh)).toHaveLength(2)
+    const facadeInstances = focusedBuilding?.children.filter((child) => child instanceof InstancedMesh) ?? []
+    expect(facadeInstances.map((instances) => [instances.name, instances.count])).toEqual([
+      ["src/shared.ts floor bands", 1],
+      ["src/shared.ts windows", 4],
+    ])
 
     kit?.update({
       scene,
@@ -341,5 +359,145 @@ describe("Code City semantic kit renderer", () => {
     kit?.dispose()
     kit?.dispose()
     expect(kit?.group.parent).toBeNull()
+  })
+
+  test("keeps material-family colour stable while lens colour remains a restrained surface cue", () => {
+    const scene = multiDistrictScene()
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+    const update = (fill: string) =>
+      kit?.update({
+        scene,
+        selectionResult: emptySelection,
+        lensVisuals: lensVisuals(scene, fill),
+        detailTargetId: null,
+        denseDataMode: false,
+      })
+
+    update("#166534")
+    const first = baseMaterial(kit, "file:shared")
+    expect(`#${first.color.getHexString()}`).toBe(resolveCodeCityMaterialSpec("brick", "solid").baseColor)
+    expect(`#${first.emissive.getHexString()}`).toBe("#166534")
+
+    update("#991b1b")
+    const second = baseMaterial(kit, "file:shared")
+    expect(`#${second.color.getHexString()}`).toBe(resolveCodeCityMaterialSpec("brick", "solid").baseColor)
+    expect(`#${second.emissive.getHexString()}`).toBe("#991b1b")
+    kit?.dispose()
+  })
+
+  test("does not share translucent district materials with matching building surfaces", () => {
+    const original = multiDistrictScene()
+    const scene: CodeCityScene = {
+      ...original,
+      nodes: original.nodes.map((node) => {
+        if (node.id === "district:other") {
+          return {
+            ...node,
+            visual: { ...districtVisual, parcelStyle: "derived" as const, texturePattern: "solid" as const },
+          }
+        }
+        if (node.id === "file:other") {
+          return {
+            ...node,
+            size: { width: 8, depth: 8, height: 0.5 },
+            visual: { ...buildingVisual, materialFamily: "slate" as const, texturePattern: "solid" as const },
+          }
+        }
+        return node
+      }),
+    }
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+    kit?.update({
+      scene,
+      selectionResult: emptySelection,
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: null,
+      denseDataMode: false,
+    })
+
+    const districtMaterial = baseMaterial(kit, "district:other")
+    const buildingMaterial = baseMaterial(kit, "file:other")
+    expect(districtMaterial).not.toBe(buildingMaterial)
+    expect(districtMaterial.transparent).toBeTrue()
+    expect(buildingMaterial.transparent).toBeFalse()
+    kit?.dispose()
+  })
+
+  test("materialises recipe bridge primitives for existing renderable district routes", () => {
+    const scene = multiDistrictScene()
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+    kit?.update({
+      scene,
+      selectionResult: emptySelection,
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: null,
+      denseDataMode: false,
+    })
+
+    expect(
+      renderedNode(kit, "district:core").children.some((child) => child.userData.primitiveKind === "bridge"),
+    ).toBeTrue()
+    expect(
+      renderedNode(kit, "district:other").children.some((child) => child.userData.primitiveKind === "bridge"),
+    ).toBeTrue()
+
+    const unavailableRouteScene: CodeCityScene = {
+      ...scene,
+      edges: [{ ...scene.edges[0]!, renderable: false }],
+    }
+    kit?.update({
+      scene: unavailableRouteScene,
+      selectionResult: emptySelection,
+      lensVisuals: lensVisuals(unavailableRouteScene),
+      detailTargetId: null,
+      denseDataMode: false,
+    })
+    expect(
+      renderedNode(kit, "district:core").children.some((child) => child.userData.primitiveKind === "bridge"),
+    ).toBeFalse()
+    kit?.dispose()
+  })
+
+  test("repeats atlas patterns at a deterministic bounded world-unit scale", () => {
+    const context = { fillStyle: "", fillRect: () => undefined }
+    const documentRef = {
+      createElement: () => ({ width: 0, height: 0, getContext: () => context }),
+    } as unknown as Document
+    const scene = multiDistrictScene()
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef })
+    kit?.update({
+      scene,
+      selectionResult: emptySelection,
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: null,
+      denseDataMode: false,
+    })
+
+    const districtMap = baseMaterial(kit, "district:core").map
+    const buildingMap = baseMaterial(kit, "file:shared").map
+    expect([districtMap?.wrapS, districtMap?.wrapT, districtMap?.repeat.x, districtMap?.repeat.y]).toEqual([
+      RepeatWrapping,
+      RepeatWrapping,
+      4,
+      4,
+    ])
+    expect([buildingMap?.repeat.x, buildingMap?.repeat.y]).toEqual([1, 2])
+
+    const oversizedScene: CodeCityScene = {
+      ...scene,
+      nodes: scene.nodes.map((node) =>
+        node.id === "district:core" ? { ...node, size: { width: 100, depth: 100, height: 100 } } : node,
+      ),
+    }
+    kit?.update({
+      scene: oversizedScene,
+      selectionResult: emptySelection,
+      lensVisuals: lensVisuals(oversizedScene),
+      detailTargetId: null,
+      denseDataMode: false,
+    })
+    const boundedMap = baseMaterial(kit, "district:core").map
+    expect([boundedMap?.repeat.x, boundedMap?.repeat.y]).toEqual([16, 16])
+    kit?.dispose()
   })
 })

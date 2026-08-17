@@ -57,6 +57,7 @@ export function buildCodeCityKitRecipe(
   node: CodeCitySceneNode,
   detail: CodeCityDetailLevel,
   surfaceTreatment: CodeCitySurfaceTreatment,
+  bridgeDirections: readonly ("north" | "east" | "south" | "west")[] = [],
 ): CodeCityKitRecipe {
   const primitives: CodeCityKitPrimitive[] = [
     {
@@ -88,6 +89,8 @@ export function buildCodeCityKitRecipe(
     for (const side of CARDINAL_SIDES) primitives.push({ kind: "buttress", side })
     primitives.push({ kind: "beacon", treatment: surfaceTreatment })
   }
+
+  for (const direction of bridgeDirections) primitives.push({ kind: "bridge", direction })
 
   return { nodeId: node.id, detail, primitives }
 }

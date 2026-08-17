@@ -9,11 +9,13 @@ import {
   Mesh,
   MeshStandardMaterial,
   Quaternion,
+  RepeatWrapping,
   SphereGeometry,
+  type Texture,
   type Scene as ThreeScene,
   Vector3,
 } from "three"
-import { buildCodeCityKitRecipe, resolveCodeCityDetailLevel } from "./kitRecipe.js"
+import { buildCodeCityKitRecipe, type CodeCityKitPrimitive, resolveCodeCityDetailLevel } from "./kitRecipe.js"
 import type { CodeCityLensVisual } from "./lens.js"
 import { resolveCodeCityMaterialSpec, resolveCodeCitySurfaceTreatment } from "./materials.js"
 import type { CodeCityScene, CodeCitySceneNode } from "./sceneTypes.js"
@@ -50,6 +52,16 @@ type SharedGeometries = {
 
 const FALLBACK_FILL = "#64748b"
 const FALLBACK_ACCENT = "#cbd5e1"
+const SELECTION_EMISSIVE = "#38bdf8"
+// Shared atlas tiles repeat once per two scene units and cap at 16 to keep
+// pattern density deterministic without producing pathological sampling.
+const TEXTURE_WORLD_UNITS = 2
+const MAX_TEXTURE_REPEAT = 16
+const CARDINAL_DIRECTIONS = ["north", "east", "south", "west"] as const
+
+type BridgeDirection = (typeof CARDINAL_DIRECTIONS)[number]
+type FloorBandPrimitive = Extract<CodeCityKitPrimitive, { readonly kind: "floor_band" }>
+type WindowRowPrimitive = Extract<CodeCityKitPrimitive, { readonly kind: "window_row" }>
 
 const createSharedGeometries = (): SharedGeometries => ({
   block: new BoxGeometry(1, 1, 1),
@@ -78,6 +90,77 @@ const familyAndPattern = (
 
 const nodeBaseY = (node: CodeCitySceneNode, nodesById: ReadonlyMap<string, CodeCitySceneNode>): number =>
   node.kind === "building" && node.parentId !== null ? (nodesById.get(node.parentId)?.size.height ?? 0) : 0
+
+const clampTextureRepeat = (worldSize: number): number =>
+  Math.max(1, Math.min(MAX_TEXTURE_REPEAT, Math.ceil(Math.max(worldSize, 0) / TEXTURE_WORLD_UNITS)))
+
+const textureRepeatForNode = (node: CodeCitySceneNode): { readonly x: number; readonly y: number } => ({
+  x: clampTextureRepeat(Math.max(node.size.width, node.size.depth)),
+  y: clampTextureRepeat(Math.max(node.size.height, node.size.depth)),
+})
+
+const lensEmissiveIntensity = (treatment: ReturnType<typeof resolveCodeCitySurfaceTreatment>): number => {
+  switch (treatment) {
+    case "impact":
+      return 0.14
+    case "scaffold":
+      return 0.1
+    case "banner":
+      return 0.07
+    case "neutral":
+    case "wear":
+    case "machinery":
+    case "unavailable":
+      return 0
+  }
+}
+
+const directionFromDelta = (deltaX: number, deltaZ: number): BridgeDirection | null => {
+  if (deltaX === 0 && deltaZ === 0) return null
+  if (Math.abs(deltaX) >= Math.abs(deltaZ)) return deltaX >= 0 ? "east" : "west"
+  return deltaZ >= 0 ? "south" : "north"
+}
+
+const oppositeDirection = (direction: BridgeDirection): BridgeDirection => {
+  switch (direction) {
+    case "north":
+      return "south"
+    case "east":
+      return "west"
+    case "south":
+      return "north"
+    case "west":
+      return "east"
+  }
+}
+
+const bridgeDirectionsByNode = (scene: CodeCityScene): ReadonlyMap<string, readonly BridgeDirection[]> => {
+  const nodesById = new Map(scene.nodes.map((node) => [node.id, node]))
+  const directions = new Map<string, Set<BridgeDirection>>()
+  const add = (nodeId: string, direction: BridgeDirection) => {
+    const nodeDirections = directions.get(nodeId) ?? new Set<BridgeDirection>()
+    nodeDirections.add(direction)
+    directions.set(nodeId, nodeDirections)
+  }
+
+  for (const edge of scene.edges) {
+    if (!edge.renderable) continue
+    const source = nodesById.get(edge.sourceId)
+    const target = nodesById.get(edge.targetId)
+    if (source?.kind !== "district" || target?.kind !== "district") continue
+    const direction = directionFromDelta(target.center.x - source.center.x, target.center.z - source.center.z)
+    if (direction === null) continue
+    add(source.id, direction)
+    add(target.id, oppositeDirection(direction))
+  }
+
+  return new Map(
+    [...directions.entries()].map(([nodeId, nodeDirections]) => [
+      nodeId,
+      CARDINAL_DIRECTIONS.filter((direction) => nodeDirections.has(direction)),
+    ]),
+  )
+}
 
 const addBox = (
   parent: Group,
@@ -144,16 +227,17 @@ const addRoof = (
   parent.add(roof)
 }
 
-const facadeMatrices = (node: CodeCitySceneNode, rows: number, segments: number): readonly Matrix4[] => {
-  if (rows <= 0 || segments <= 0) return []
+const facadeMatrices = (node: CodeCitySceneNode, rows: readonly WindowRowPrimitive[]): readonly Matrix4[] => {
+  if (rows.length === 0) return []
   const matrices: Matrix4[] = []
-  const rowHeight = node.size.height / (rows + 1)
-  const frontSegmentWidth = node.size.width / (segments + 1)
-  const sideSegmentWidth = node.size.depth / (segments + 1)
+  const rowCount = Math.max(...rows.map((row) => row.index))
+  const rowHeight = node.size.height / (rowCount + 1)
 
-  for (let row = 1; row <= rows; row += 1) {
-    const y = rowHeight * row
-    for (let segment = 1; segment <= segments; segment += 1) {
+  for (const row of rows) {
+    const y = rowHeight * row.index
+    const frontSegmentWidth = node.size.width / (row.segments + 1)
+    const sideSegmentWidth = node.size.depth / (row.segments + 1)
+    for (let segment = 1; segment <= row.segments; segment += 1) {
       const x = -node.size.width / 2 + frontSegmentWidth * segment
       matrices.push(
         composeMatrix(
@@ -209,13 +293,39 @@ const composeMatrix = (
     new Vector3(scale.x, scale.y, scale.z),
   )
 
-const floorBandMatrices = (node: CodeCitySceneNode, rows: number): readonly Matrix4[] => {
+const floorBandMatrices = (node: CodeCitySceneNode, bands: readonly FloorBandPrimitive[]): readonly Matrix4[] => {
+  if (bands.length === 0) return []
   const matrices: Matrix4[] = []
-  for (let row = 1; row <= rows; row += 1) {
-    const y = (node.size.height / (rows + 1)) * row
+  const rowCount = Math.max(...bands.map((band) => band.index))
+  for (const band of bands) {
+    const y = (node.size.height / (rowCount + 1)) * band.index
     matrices.push(new Matrix4().makeScale(node.size.width * 1.02, 0.055, node.size.depth * 1.02).setPosition(0, y, 0))
   }
   return matrices
+}
+
+const addBridge = (
+  parent: Group,
+  node: CodeCitySceneNode,
+  direction: BridgeDirection,
+  geometry: BoxGeometry,
+  material: MeshStandardMaterial,
+): void => {
+  const eastWest = direction === "east" || direction === "west"
+  const outward = Math.max(0.4, Math.min(eastWest ? node.size.width * 0.16 : node.size.depth * 0.16, 1.4))
+  const width = Math.max(0.16, Math.min(eastWest ? node.size.depth * 0.14 : node.size.width * 0.14, 0.8))
+  const sign = direction === "east" || direction === "south" ? 1 : -1
+  const bridge = addBox(
+    parent,
+    geometry,
+    material,
+    eastWest ? { x: outward, y: 0.12, z: width } : { x: width, y: 0.12, z: outward },
+    eastWest
+      ? { x: sign * (node.size.width / 2 + outward / 2), y: node.size.height + 0.14, z: 0 }
+      : { x: 0, y: node.size.height + 0.14, z: sign * (node.size.depth / 2 + outward / 2) },
+  )
+  bridge.userData.primitiveKind = "bridge"
+  bridge.userData.direction = direction
 }
 
 const createNodeGroup = (
@@ -225,6 +335,7 @@ const createNodeGroup = (
   visual: CodeCityLensVisual | undefined,
   geometries: SharedGeometries,
   selected: boolean,
+  bridgeDirections: readonly BridgeDirection[],
   materialFor: (
     node: CodeCitySceneNode,
     visual: CodeCityLensVisual | undefined,
@@ -248,7 +359,15 @@ const createNodeGroup = (
       unavailableReason: "Health unavailable",
     },
   )
-  const recipe = buildCodeCityKitRecipe(node, detail, treatment)
+  const recipe = buildCodeCityKitRecipe(node, detail, treatment, bridgeDirections)
+  const floorBands = recipe.primitives.filter(
+    (primitive): primitive is FloorBandPrimitive => primitive.kind === "floor_band",
+  )
+  const windowRows = recipe.primitives.filter(
+    (primitive): primitive is WindowRowPrimitive => primitive.kind === "window_row",
+  )
+  let floorBandsMaterialised = false
+  let windowRowsMaterialised = false
   const baseMaterial = materialFor(node, visual, "base", selected)
   const accentMaterial = materialFor(node, visual, "accent", selected)
 
@@ -267,8 +386,31 @@ const createNodeGroup = (
         addRoof(nodeGroup, node, primitive.style, geometries, accentMaterial)
         break
       case "floor_band":
+        if (!floorBandsMaterialised) {
+          addInstances(
+            nodeGroup,
+            geometries.block,
+            accentMaterial,
+            floorBandMatrices(node, floorBands),
+            `${node.label} floor bands`,
+          )
+          floorBandsMaterialised = true
+        }
+        break
       case "window_row":
+        if (!windowRowsMaterialised) {
+          addInstances(
+            nodeGroup,
+            geometries.block,
+            accentMaterial,
+            facadeMatrices(node, windowRows),
+            `${node.label} windows`,
+          )
+          windowRowsMaterialised = true
+        }
+        break
       case "bridge":
+        addBridge(nodeGroup, node, primitive.direction, geometries.block, accentMaterial)
         break
       case "cupola": {
         const cupola = new Mesh(geometries.dome, accentMaterial)
@@ -322,23 +464,6 @@ const createNodeGroup = (
     }
   }
 
-  if (node.visual.kind === "building" && (detail === "district" || detail === "building")) {
-    addInstances(
-      nodeGroup,
-      geometries.block,
-      accentMaterial,
-      floorBandMatrices(node, node.visual.floorCount),
-      `${node.label} floor bands`,
-    )
-    addInstances(
-      nodeGroup,
-      geometries.block,
-      accentMaterial,
-      facadeMatrices(node, node.visual.floorCount, node.visual.facadeSegments),
-      `${node.label} windows`,
-    )
-  }
-
   return nodeGroup
 }
 
@@ -349,6 +474,7 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
   let geometries: SharedGeometries | null = null
   let disposed = false
   const materials = new Map<string, MeshStandardMaterial>()
+  const ownedTextures = new Set<Texture>()
 
   try {
     atlas = options.documentRef === null ? null : createCodeCityTextureAtlas(options.documentRef)
@@ -373,21 +499,42 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
           unavailableReason: "Health unavailable",
         },
       )
-      const color =
-        selected || role === "accent" ? (visual?.accent ?? spec.accentColor) : (visual?.fill ?? spec.baseColor)
-      const key = [family, pattern, treatment, role, selected ? "selected" : "normal", color].join(":")
+      const color = role === "accent" ? spec.accentColor : spec.baseColor
+      const lensCue = visual?.fill ?? FALLBACK_FILL
+      const repeat = textureRepeatForNode(node)
+      const key = [
+        node.kind,
+        family,
+        pattern,
+        treatment,
+        role,
+        selected ? "selected" : "normal",
+        lensCue,
+        `${repeat.x}x${repeat.y}`,
+      ].join(":")
       const cached = materials.get(key)
       if (cached !== undefined) return cached
 
+      const map = atlas?.get(pattern).clone() ?? null
+      if (map !== null) {
+        map.wrapS = RepeatWrapping
+        map.wrapT = RepeatWrapping
+        map.repeat.set(repeat.x, repeat.y)
+        map.needsUpdate = true
+        ownedTextures.add(map)
+      }
+
+      const emissiveColor = selected ? SELECTION_EMISSIVE : lensEmissiveIntensity(treatment) > 0 ? lensCue : "#000000"
+
       const material = new MeshStandardMaterial({
         color: new Color(color),
-        map: atlas?.get(pattern) ?? null,
+        map,
         roughness: treatment === "wear" ? Math.min(1, spec.roughness + 0.12) : spec.roughness,
         metalness: treatment === "machinery" ? Math.max(0.48, spec.metalness) : spec.metalness,
         transparent: node.kind === "district",
         opacity: node.kind === "district" ? 0.62 : treatment === "unavailable" ? 0.72 : 1,
-        emissive: new Color(selected || treatment === "impact" || treatment === "scaffold" ? color : "#000000"),
-        emissiveIntensity: selected ? 0.28 : treatment === "impact" ? 0.18 : treatment === "scaffold" ? 0.1 : 0,
+        emissive: new Color(emissiveColor),
+        emissiveIntensity: selected ? 0.28 : lensEmissiveIntensity(treatment),
       })
       material.userData.surfaceTreatment = treatment
       materials.set(key, material)
@@ -402,6 +549,7 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
         const nodesById = new Map(scene.nodes.map((node) => [node.id, node]))
         const selectedDistrictIds = detailTargetId === null ? [] : selectionResult.districtIds
         const selectedId = selectionResult.selection?.id ?? null
+        const bridgesByNode = bridgeDirectionsByNode(scene)
         for (const node of scene.nodes) {
           const detail = resolveCodeCityDetailLevel(node, detailTargetId, selectedDistrictIds, denseDataMode)
           group.add(
@@ -412,6 +560,7 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
               lensVisuals[node.id],
               geometries,
               node.id === selectedId,
+              bridgesByNode.get(node.id) ?? [],
               materialFor,
             ),
           )
@@ -430,6 +579,10 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
           material.dispose()
         })
         materials.clear()
+        ownedTextures.forEach((texture) => {
+          texture.dispose()
+        })
+        ownedTextures.clear()
         atlas?.dispose()
         atlas = null
       },
@@ -441,6 +594,9 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
     })
     materials.forEach((material) => {
       material.dispose()
+    })
+    ownedTextures.forEach((texture) => {
+      texture.dispose()
     })
     atlas?.dispose()
     return null

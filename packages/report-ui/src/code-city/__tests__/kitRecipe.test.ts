@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { buildCodeCityKitRecipe, resolveCodeCityDetailLevel } from "../../index.js"
 import type { CodeCitySceneNode } from "../sceneTypes.js"
-import type {
-  CodeCityBuildingArchetype,
-  CodeCityLandmarkTier,
-} from "../visualTokens.js"
-import {
-  buildCodeCityKitRecipe,
-  resolveCodeCityDetailLevel,
-} from "../../index.js"
+import type { CodeCityBuildingArchetype, CodeCityLandmarkTier } from "../visualTokens.js"
 
 const district = (tier: CodeCityLandmarkTier = "none"): CodeCitySceneNode => ({
   id: "district:core",
@@ -121,7 +115,13 @@ describe("buildCodeCityKitRecipe", () => {
   test.each([
     ["none", []],
     ["connected", [{ kind: "cupola", tier: "connected" }]],
-    ["hub", [{ kind: "dome", tier: "hub" }, { kind: "tower", tier: "hub" }]],
+    [
+      "hub",
+      [
+        { kind: "dome", tier: "hub" },
+        { kind: "tower", tier: "hub" },
+      ],
+    ],
     [
       "super_hub",
       [
@@ -155,5 +155,16 @@ describe("buildCodeCityKitRecipe", () => {
 
     expect(JSON.parse(JSON.stringify(recipe))).toEqual(recipe)
     expect(recipe.primitives.some((primitive) => primitive.kind === "bridge")).toBeFalse()
+  })
+
+  test("emits only route bridge directions supplied by the existing scene", () => {
+    expect(buildCodeCityKitRecipe(district("hub"), "overview", "neutral", ["east", "south"]).primitives).toEqual([
+      { kind: "base", width: 20, depth: 16, height: 3 },
+      { kind: "roof", style: "flat" },
+      { kind: "dome", tier: "hub" },
+      { kind: "tower", tier: "hub" },
+      { kind: "bridge", direction: "east" },
+      { kind: "bridge", direction: "south" },
+    ])
   })
 })
