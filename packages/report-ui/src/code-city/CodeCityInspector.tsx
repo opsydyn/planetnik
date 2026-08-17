@@ -47,6 +47,18 @@ export function CodeCityInspector({
 						))}
 					</dl>
 
+					<section className="code-city-inspector__visuals" aria-labelledby="code-city-visual-encoding-title">
+						<h3 id="code-city-visual-encoding-title">Visual encoding</h3>
+						<dl>
+							{inspector.visualFacts.map((fact) => (
+								<div key={fact.label}>
+									<dt>{fact.label}</dt>
+									<dd>{fact.value}</dd>
+								</div>
+							))}
+						</dl>
+					</section>
+
 					{inspector.evidence.length > 0 ? (
 						<section className="code-city-inspector__evidence" aria-labelledby="code-city-evidence-title">
 							<h3 id="code-city-evidence-title">Evidence</h3>

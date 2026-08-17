@@ -180,6 +180,16 @@ describe("buildCodeCityInspectorModel", () => {
       { label: "File: file:runtime", href: "/planetnik/files/size#runtime" },
       { label: "Impact: impact:runtime", href: "/planetnik/impact#runtime" },
     ])
+    expect(inspector?.visualFacts).toEqual([
+      { label: "Material", value: "Brick" },
+      { label: "Archetype", value: "Tower" },
+      { label: "Roof", value: "Capped" },
+      { label: "Texture", value: "Checker" },
+      {
+        label: "Active lens",
+        value: "Health uses impact markers to show health severity without changing the building form.",
+      },
+    ])
     expect(inspector?.units).toEqual([
       {
         id: "unit:runtime-start",
@@ -202,6 +212,25 @@ describe("buildCodeCityInspectorModel", () => {
 
   test("returns null when nothing is selected", () => {
     expect(buildCodeCityInspectorModel(modelFixture(), null, "/planetnik/")).toBeNull()
+  })
+
+  test("explains a selected district's parcel, landmark, texture, and active lens treatment", () => {
+    const inspector = buildCodeCityInspectorModel(
+      modelFixture(),
+      { kind: "district", id: "district:runtime" },
+      "/planetnik/",
+      "ownership",
+    )
+
+    expect(inspector?.visualFacts).toEqual([
+      { label: "Parcel", value: "Civic" },
+      { label: "Landmark", value: "Super hub" },
+      { label: "Texture", value: "Gridded" },
+      {
+        label: "Active lens",
+        value: "Ownership uses banners to show contributor concentration without changing the parcel layout.",
+      },
+    ])
   })
 
   test("renders absent optional signals as neutral Unavailable values", () => {
@@ -270,7 +299,13 @@ describe("buildCodeCityFallbackRows", () => {
       loc: "240",
       health: "87 (critical; change)",
       impact: "73 (coupling)",
+      form: "Tower · capped roof",
+      landmark: "Super hub",
       href: "/planetnik/files/size#runtime",
+    })
+    expect(rows[0]).toMatchObject({
+      form: "Civic parcel",
+      landmark: "Super hub",
     })
     expect(rows[4]).toMatchObject({
       health: "Unavailable",

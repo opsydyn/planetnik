@@ -26,6 +26,8 @@ const lensVisual = (lens: CodeCityLensId, available = true): CodeCityLensVisual 
   accent: "#cbd5e1",
   label: lens,
   unavailableReason: available ? null : `${lens} unavailable`,
+  surfaceTreatment: available ? "neutral" : "unavailable",
+  nonColorCue: `${lens} cue`,
 })
 
 const relativeLuminance = (color: string): number => {

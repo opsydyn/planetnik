@@ -37,6 +37,8 @@ describe("CodeCityFallback", () => {
       loc: "240",
       health: "87",
       impact: "73",
+      form: "Civic parcel",
+      landmark: "Hub",
       href: "/topology#runtime",
     } as CodeCityFallbackRow
     const building = {
@@ -48,12 +50,15 @@ describe("CodeCityFallback", () => {
       loc: "240",
       health: "87",
       impact: "73",
+      form: "Tower · capped roof",
+      landmark: "Hub",
       href: "/files/size#runtime",
     } as CodeCityFallbackRow
 
     expect(formatCodeCityFallbackInspectLabel(district)).toBe("Inspect district Runtime")
     expect(formatCodeCityFallbackInspectLabel(building)).toBe("Inspect file src/runtime.ts")
   })
+
 })
 
 describe("CodeCityInspector", () => {
@@ -65,6 +70,13 @@ describe("CodeCityInspector", () => {
       sourceSets: ["main"],
       metrics: [],
       evidence: [],
+		visualFacts: [
+			{ label: "Material", value: "Brick" },
+			{ label: "Archetype", value: "Tower" },
+			{ label: "Roof", value: "Capped" },
+			{ label: "Texture", value: "Banded" },
+			{ label: "Active lens", value: "Health uses impact markers." },
+		],
       units: [
         {
           id: "unit:runtime-start",
@@ -92,6 +104,9 @@ describe("CodeCityInspector", () => {
     expect(text).toContain("Lines 10–31")
     expect(text).toContain("22 LOC")
     expect(text).toContain("McCabe 11")
+		expect(text).toContain("Visual encoding")
+		expect(text).toContain("Material")
+		expect(text).toContain("Health uses impact markers.")
     expect(links.map((link) => link.props.href)).toContain("/units/complexity#start")
   })
 })

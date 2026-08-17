@@ -68,8 +68,8 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 		[model, selection],
 	);
 	const inspector = useMemo(
-		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath),
-		[model, selection, evidenceBasePath],
+		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath, activeLens),
+		[model, selection, evidenceBasePath, activeLens],
 	);
 	const fallbackRows = useMemo(
 		() => buildCodeCityFallbackRows(model, evidenceBasePath),
@@ -170,6 +170,16 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 					))}
 				</ul>
 			</div>
+
+			<section className="code-city__structure-legend" aria-labelledby="code-city-structure-legend-title">
+				<h2 id="code-city-structure-legend-title">Structure legend</h2>
+				<ul>
+					<li><strong>Material</strong> names the canonical source-language family.</li>
+					<li><strong>Silhouette</strong> describes the deterministic archetype and roof.</li>
+					<li><strong>Scale</strong> reflects lines of code and remains stable across lenses.</li>
+					<li><strong>Lens treatment</strong> adds surface detail without moving or reshaping the city.</li>
+				</ul>
+			</section>
 
 			{fallbackPrimary ? null : (
 				<div className="code-city__workspace">

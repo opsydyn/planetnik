@@ -7,7 +7,15 @@ import type {
   CodeCityUnit,
 } from "@planetnik/common"
 import { resolveCodeCityEvidenceHref } from "./evidence.js"
+import type { CodeCityLensId } from "./lens.js"
+import { resolveCodeCityLens } from "./lens.js"
 import { type CodeCitySelection, resolveCodeCitySelection } from "./selection.js"
+import {
+  buildCodeCityVisualContext,
+  resolveCodeCityBuildingVisual,
+  resolveCodeCityDistrictVisual,
+  type CodeCityLandmarkTier,
+} from "./visualTokens.js"
 
 const UNAVAILABLE = "Unavailable"
 
@@ -17,6 +25,7 @@ export type CodeCityInspectorModel = {
   readonly districtLabel: string | null
   readonly sourceSets: readonly string[]
   readonly metrics: ReadonlyArray<{ readonly label: string; readonly value: string }>
+  readonly visualFacts: ReadonlyArray<{ readonly label: string; readonly value: string }>
   readonly evidence: readonly { readonly label: string; readonly href: string }[]
   readonly units: readonly CodeCityInspectorUnitModel[]
 }
@@ -99,6 +108,48 @@ const sourceSetsForDistrict = (model: CodeCityModel, district: CodeCityDistrict)
 
 const evidenceLabel = (kind: string, id: string): string => `${kind.charAt(0).toUpperCase()}${kind.slice(1)}: ${id}`
 
+const titleCase = (value: string): string =>
+  value
+    .split("_")
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ")
+
+const landmarkLabel = (tier: CodeCityLandmarkTier): string =>
+  tier === "super_hub"
+    ? "Super hub"
+    : tier === "none"
+      ? "None"
+      : titleCase(tier)
+
+const visualFactsFor = (
+  model: CodeCityModel,
+  entity: CodeCityBuilding | CodeCityDistrict,
+  lens: CodeCityLensId,
+): CodeCityInspectorModel["visualFacts"] => {
+  const context = buildCodeCityVisualContext(model)
+  const lensVisual = resolveCodeCityLens(entity, lens)
+  const lensFact = { label: "Active lens", value: lensVisual.nonColorCue }
+
+  if ("relativePath" in entity) {
+    const visual = resolveCodeCityBuildingVisual(entity, context)
+    return [
+      { label: "Material", value: titleCase(visual.materialFamily) },
+      { label: "Archetype", value: titleCase(visual.archetype) },
+      { label: "Roof", value: titleCase(visual.roofStyle) },
+      { label: "Texture", value: titleCase(visual.texturePattern) },
+      lensFact,
+    ]
+  }
+
+  const visual = resolveCodeCityDistrictVisual(entity, context)
+  return [
+    { label: "Parcel", value: titleCase(visual.parcelStyle) },
+    { label: "Landmark", value: landmarkLabel(visual.landmarkTier) },
+    { label: "Texture", value: titleCase(visual.texturePattern) },
+    lensFact,
+  ]
+}
+
 const evidenceLinks = (
   references: readonly CodeCityEvidenceRef[],
   basePath: string,
@@ -132,6 +183,7 @@ export function buildCodeCityInspectorModel(
   model: CodeCityModel,
   selection: CodeCitySelection,
   basePath: string,
+  lens: CodeCityLensId = "health",
 ): CodeCityInspectorModel | null {
   if (!selection) return null
 
@@ -152,6 +204,7 @@ export function buildCodeCityInspectorModel(
     districtLabel: district?.label ?? null,
     sourceSets: building ? building.sourceSets : district ? sourceSetsForDistrict(model, district) : [],
     metrics: metricsFor(model, entity.metrics),
+    visualFacts: visualFactsFor(model, entity, lens),
     evidence,
     units: building ? unitsInLayoutOrder(model, building.id).map((unit) => inspectorUnit(unit, basePath)) : [],
   }
@@ -191,10 +244,16 @@ export type CodeCityFallbackRowModel = {
   readonly loc: string
   readonly health: string
   readonly impact: string
+  readonly form: string
+  readonly landmark: string
   readonly href: string | null
 }
 
 export function buildCodeCityFallbackRows(model: CodeCityModel, basePath: string): readonly CodeCityFallbackRowModel[] {
+  const visualContext = buildCodeCityVisualContext(model)
+  const districtVisuals = new Map(
+    model.districts.map((district) => [district.id, resolveCodeCityDistrictVisual(district, visualContext)]),
+  )
   const districtRows = districtsInLayoutOrder(model).map((district): CodeCityFallbackRowModel => {
     const selectionEvidence = resolveCodeCitySelection(model, {
       kind: "district",
@@ -209,11 +268,14 @@ export function buildCodeCityFallbackRows(model: CodeCityModel, basePath: string
       loc: String(district.metrics.footprint.loc),
       health: formatHealth(district.metrics),
       impact: formatImpact(district.metrics),
+      form: `${titleCase(districtVisuals.get(district.id)?.parcelStyle ?? "derived")} parcel`,
+      landmark: landmarkLabel(districtVisuals.get(district.id)?.landmarkTier ?? "none"),
       href: firstEvidenceHref(district.evidence, basePath) ?? firstEvidenceHref(selectionEvidence, basePath),
     }
   })
-  const buildingRows = buildingsInLayoutOrder(model).map(
-    (building): CodeCityFallbackRowModel => ({
+  const buildingRows = buildingsInLayoutOrder(model).map((building): CodeCityFallbackRowModel => {
+    const visual = resolveCodeCityBuildingVisual(building, visualContext)
+    return {
       kind: "building",
       id: building.id,
       entity: building.relativePath,
@@ -222,9 +284,11 @@ export function buildCodeCityFallbackRows(model: CodeCityModel, basePath: string
       loc: String(building.metrics.footprint.loc),
       health: formatHealth(building.metrics),
       impact: formatImpact(building.metrics),
+      form: `${titleCase(visual.archetype)} · ${visual.roofStyle} roof`,
+      landmark: landmarkLabel(districtVisuals.get(building.primaryDistrictId)?.landmarkTier ?? "none"),
       href: firstEvidenceHref(building.evidence, basePath),
-    }),
-  )
+    }
+  })
 
   return [...districtRows, ...buildingRows]
 }

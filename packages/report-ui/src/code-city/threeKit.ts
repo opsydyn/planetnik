@@ -357,6 +357,8 @@ const createNodeGroup = (
       accent: FALLBACK_ACCENT,
       label: "Health unavailable",
       unavailableReason: "Health unavailable",
+      surfaceTreatment: "unavailable",
+      nonColorCue: "Health has no overlay because the signal is unavailable.",
     },
   )
   const recipe = buildCodeCityKitRecipe(node, detail, treatment, bridgeDirections)
@@ -497,6 +499,8 @@ export function createCodeCityKitRenderer(options: CodeCityKitRendererOptions): 
           accent: FALLBACK_ACCENT,
           label: "Health unavailable",
           unavailableReason: "Health unavailable",
+          surfaceTreatment: "unavailable",
+          nonColorCue: "Health has no overlay because the signal is unavailable.",
         },
       )
       const color = role === "accent" ? spec.accentColor : spec.baseColor

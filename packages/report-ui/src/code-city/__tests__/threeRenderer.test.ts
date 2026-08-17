@@ -145,6 +145,8 @@ const healthVisual = (fill: string): CodeCityLensVisual => ({
   accent: "#bfdbfe",
   label: "Health: 80 (low)",
   unavailableReason: null,
+  surfaceTreatment: "impact",
+  nonColorCue: "Health uses impact markers to show health severity without changing the building form.",
 })
 
 const lensVisuals = (scene: CodeCityScene, fill = "#166534") =>

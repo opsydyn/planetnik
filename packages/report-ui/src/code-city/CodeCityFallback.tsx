@@ -70,6 +70,8 @@ export function CodeCityFallback({
 							<th scope="col">Entity</th>
 							<th scope="col">District</th>
 							<th scope="col">Path / kind</th>
+							<th scope="col">Form</th>
+							<th scope="col">Landmark</th>
 							<th scope="col">LOC</th>
 							<th scope="col">Health</th>
 							<th scope="col">Impact</th>
@@ -84,6 +86,8 @@ export function CodeCityFallback({
 								<td>
 									<code>{row.path}</code>
 								</td>
+								<td>{row.form}</td>
+								<td>{row.landmark}</td>
 								<td>{row.loc}</td>
 								<td>{row.health}</td>
 								<td>{row.impact}</td>

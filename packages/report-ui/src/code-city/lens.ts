@@ -4,6 +4,10 @@ import type {
 	CodeCitySignals,
 	CodeCityUnit,
 } from "@planetnik/common";
+import {
+	resolveCodeCitySurfaceTreatment,
+	type CodeCitySurfaceTreatment,
+} from "./materials.js";
 
 export type CodeCityLensId =
 	| "footprint"
@@ -20,6 +24,8 @@ export type CodeCityLensVisual = {
 	readonly accent: string;
 	readonly label: string;
 	readonly unavailableReason: string | null;
+	readonly surfaceTreatment: CodeCitySurfaceTreatment;
+	readonly nonColorCue: string;
 };
 
 export type CodeCityLensEntity =
@@ -35,28 +41,80 @@ type Palette = {
 
 const NEUTRAL_PALETTE: Palette = { fill: "#64748b", accent: "#64748b" };
 
+const lensName = (lens: CodeCityLensId): string => {
+	switch (lens) {
+		case "footprint":
+			return "Footprint";
+		case "complexity":
+			return "Complexity";
+		case "health":
+			return "Health";
+		case "change_pressure":
+			return "Change";
+		case "ownership":
+			return "Ownership";
+		case "impact":
+			return "Impact";
+	}
+};
+
+const nonColorCue = (lens: CodeCityLensId, available: boolean): string => {
+	const name = lensName(lens);
+	if (!available) return `${name} has no overlay because the signal is unavailable.`;
+
+	switch (lens) {
+		case "footprint":
+			return "Footprint uses neutral surfaces; building scale remains the LOC cue.";
+		case "complexity":
+			return "Complexity uses wear marks without changing the building form.";
+		case "health":
+			return "Health uses impact markers to show health severity without changing the building form.";
+		case "change_pressure":
+			return "Change uses scaffold details without changing the building form.";
+		case "ownership":
+			return "Ownership uses banners to show contributor concentration without changing the parcel layout.";
+		case "impact":
+			return "Impact uses machinery details without changing the building form.";
+	}
+};
+
+const withSurfaceTreatment = (
+	visual: Omit<CodeCityLensVisual, "surfaceTreatment" | "nonColorCue">,
+): CodeCityLensVisual => {
+	const surfaceTreatment = resolveCodeCitySurfaceTreatment(
+		visual as CodeCityLensVisual,
+	);
+	return {
+		...visual,
+		surfaceTreatment,
+		nonColorCue: nonColorCue(visual.lens, visual.available),
+	};
+};
+
 const unavailable = (
 	lens: CodeCityLensId,
 	label: string,
-): CodeCityLensVisual => ({
-	lens,
-	available: false,
-	...NEUTRAL_PALETTE,
-	label,
-	unavailableReason: label,
-});
+): CodeCityLensVisual =>
+	withSurfaceTreatment({
+		lens,
+		available: false,
+		...NEUTRAL_PALETTE,
+		label,
+		unavailableReason: label,
+	});
 
 const available = (
 	lens: CodeCityLensId,
 	palette: Palette,
 	label: string,
-): CodeCityLensVisual => ({
-	lens,
-	available: true,
-	...palette,
-	label,
-	unavailableReason: null,
-});
+): CodeCityLensVisual =>
+	withSurfaceTreatment({
+		lens,
+		available: true,
+		...palette,
+		label,
+		unavailableReason: null,
+	});
 
 const isMeasured = (value: number | null): value is number =>
 	value !== null && Number.isFinite(value);

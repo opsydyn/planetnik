@@ -71,7 +71,26 @@ describe("resolveCodeCityLens", () => {
 			available: true,
 			label: "Health: 87 (critical)",
 			unavailableReason: null,
+			surfaceTreatment: "impact",
+			nonColorCue: "Health uses impact markers to show health severity without changing the building form.",
 		});
+	});
+
+	test("gives every lens a named surface treatment and non-colour cue", () => {
+		const lenses = [
+			"footprint",
+			"complexity",
+			"health",
+			"change_pressure",
+			"ownership",
+			"impact",
+		] as const;
+
+		for (const lens of lenses) {
+			const visual = resolveCodeCityLens(building(), lens);
+			expect(visual.surfaceTreatment).toBeTruthy();
+			expect(visual.nonColorCue).toBeTruthy();
+		}
 	});
 
 	test("keeps missing health neutral instead of treating null as zero", () => {
@@ -84,6 +103,8 @@ describe("resolveCodeCityLens", () => {
 			available: false,
 			label: "Health unavailable",
 			unavailableReason: "Health unavailable",
+			surfaceTreatment: "unavailable",
+			nonColorCue: "Health has no overlay because the signal is unavailable.",
 		});
 		expect(visual.fill).toBe(visual.accent);
 	});
