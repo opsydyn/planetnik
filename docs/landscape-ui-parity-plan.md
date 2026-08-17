@@ -1,5 +1,13 @@
 # Landscape UI Parity Plan
 
+> **Status: Archived — 2026-07-19**
+>
+> This is a historical delivery plan. Landscape root routes and repo-scoped
+> drilldown have shipped. Use the
+> [canonical product roadmap](./product-roadmap.md) for remaining product work
+> and [ADR-0011](./adr/0011-adopt-repo-scoped-shell-for-landscape-drilldown.md)
+> for the binding shell decision.
+
 ## Goal
 
 Bring Planetnik's multi-repository `landscape` capability to Astro UI parity with the Sokrates/OpenAI landscape reports, starting from the existing backend analyzer and exporter work rather than re-implementing the Java-era rendering approach.

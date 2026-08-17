@@ -1,5 +1,12 @@
 # Report Data Modernization Roadmap
 
+> **Status: Archived — 2026-07-19**
+>
+> This discovery supplied the canonical-snapshot direction now incorporated
+> into the [canonical product roadmap](./product-roadmap.md). Preserve it as
+> architectural evidence, but do not use its phase numbering for current
+> sequencing.
+
 ## Why this discovery exists
 
 Planetnik is currently carrying three overlapping reporting eras at the same time:

@@ -15,16 +15,70 @@ import { ContributorImpactExporter } from "./ContributorImpactExportInfo.js";
 import { DataExportUtils } from "./DataExportUtils.js";
 import { DependenciesExporter } from "./DependenciesExportInfo.js";
 import { DuplicationExporter } from "./DuplicationExportInfo.js";
+import {
+	ENTITY_ID_POLICY,
+	componentEntityId,
+	contributorEntityId,
+	fileEntityId,
+	repositoryEntityId,
+	unitEntityId,
+} from "./EntityIdentity.js";
 import { FileListExporter } from "./FilesExportInfo.js";
 import {
 	ImpactExporter,
 	type ImpactSourceHotspot,
 } from "./ImpactExportInfo.js";
+import {
+	createSnapshotExportContext,
+	type SnapshotExportContext,
+} from "./SnapshotContext.js";
 import { TemporalDependenciesExporter } from "./TemporalDependenciesExportInfo.js";
 import { UnitListExporter } from "./UnitsExportInfo.js";
 
 export class DataExporter {
 	static readonly DATA_FOLDER_NAME = "data";
+	private static readonly CANONICAL_SHARD_CANDIDATES = [
+		["summary", "analysisResults.json"],
+		["filesMain", "files_main.json"],
+		["filesTest", "files_test.json"],
+		["metrics", "metrics.json"],
+		["controls", "controls.json"],
+		["findings", "findings.json"],
+		["hotspots", "hotspots.json"],
+		["impact", "impact.json"],
+		["contributorImpact", "contributor_impact.json"],
+		["contributors", "contributors.json"],
+		["duplicates", "duplicates.json"],
+		["unitDuplicates", "unit_duplicates.json"],
+		["units", "units.json"],
+		["dependencies", "dependencies.json"],
+		["componentDependencies", "component_dependencies.json"],
+		["temporalDependencies", "temporal_dependencies.json"],
+		["peopleDependencies", "people_dependencies.json"],
+		["peopleDependencies30d", "people_dependencies_30d.json"],
+		["peopleDependencies90d", "people_dependencies_90d.json"],
+		["peopleDependencies180d", "people_dependencies_180d.json"],
+		["peopleDependencies365d", "people_dependencies_365d.json"],
+		["commitsPerExtension", "commits_per_extension.json"],
+		["contributorTimeline", "contributor_timeline.json"],
+	] as const;
+	private static readonly COMPATIBILITY_PROJECTION_CANDIDATES = [
+		["files", "files.txt"],
+		["metrics", "metrics.txt"],
+		["controls", "controls.txt"],
+		["contributors", "contributors.txt"],
+		["duplicates", "duplicates.txt"],
+		["unitDuplicates", "unit_duplicates.txt"],
+		["units", "units.txt"],
+		["dependencies", "dependencies.txt"],
+		["componentDependencies", "component_dependencies.txt"],
+		["temporalDependencies", "temporal_dependencies.txt"],
+		["peopleDependencies", "people_dependencies.txt"],
+		["peopleDependencies30d", "people_dependencies_30d.txt"],
+		["peopleDependencies90d", "people_dependencies_90d.txt"],
+		["peopleDependencies180d", "people_dependencies_180d.txt"],
+		["peopleDependencies365d", "people_dependencies_365d.txt"],
+	] as const;
 	static readonly SEPARATOR =
 		"- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n";
 	static readonly MAX_EXPORT_LIST_SIZE = 10000;
@@ -44,20 +98,21 @@ export class DataExporter {
 	}
 
 	exportData(): void {
+		const snapshotContext = createSnapshotExportContext();
 		const dataFolder = join(this.reportsFolder, DataExporter.DATA_FOLDER_NAME);
 		if (!existsSync(dataFolder)) {
 			mkdirSync(dataFolder, { recursive: true });
 		}
 
 		this.exportFileLists(dataFolder);
-		this.exportMetrics(dataFolder);
+		this.exportMetrics(dataFolder, snapshotContext);
 		this.exportControls(dataFolder);
 		this.exportFindings(dataFolder);
 		const hotspotData = this.buildHotspotData();
 		this.exportHotspots(dataFolder, hotspotData);
 		this.exportImpact(dataFolder, hotspotData);
 		this.exportContributorImpact(dataFolder, hotspotData);
-		this.exportContributors(dataFolder);
+		this.exportContributors(dataFolder, snapshotContext);
 		this.exportContributorDetails(dataFolder);
 		this.exportJson(dataFolder);
 		this.exportDuplicates(dataFolder);
@@ -67,6 +122,7 @@ export class DataExporter {
 		this.exportPeopleDependencies(dataFolder);
 		this.exportCommitsPerExtension(dataFolder);
 		this.exportContributorTimeline(dataFolder);
+		this.exportReportContext(dataFolder, snapshotContext);
 	}
 
 	private exportFileLists(dataFolder: string): void {
@@ -140,11 +196,31 @@ export class DataExporter {
 		}
 	}
 
-	private exportMetrics(dataFolder: string): void {
-		const lines = this.analysisResults.metricsList.metrics
+	private exportMetrics(
+		dataFolder: string,
+		snapshotContext: SnapshotExportContext,
+	): void {
+		const metrics = this.analysisResults.metricsList.metrics.map((metric) => ({
+			id: metric.id,
+			value: metric.value,
+		}));
+		const lines = metrics
 			.map((m) => `${m.id}: ${m.value}`)
 			.join("\n");
 		writeFileSync(join(dataFolder, "metrics.txt"), lines, "utf-8");
+		writeFileSync(
+			join(dataFolder, "metrics.json"),
+			JSON.stringify(
+				{
+					title: "Metrics",
+					timestamp: snapshotContext.generatedAt,
+					metrics,
+				},
+				null,
+				2,
+			),
+			"utf-8",
+		);
 	}
 
 	private exportControls(dataFolder: string): void {
@@ -349,27 +425,42 @@ export class DataExporter {
 		};
 	}
 
-	private exportContributors(dataFolder: string): void {
+	private exportContributors(
+		dataFolder: string,
+		snapshotContext: SnapshotExportContext,
+	): void {
 		const contributors =
 			this.analysisResults.contributorsAnalysisResults.contributors;
-		if (contributors.length === 0) return;
 
 		const total = contributors.reduce(
 			(sum: number, c: Contributor) => sum + c.commitsCount,
 			0,
 		);
-		const contributorExport = contributors.map((c) => ({
-			email: c.email,
-			userName: c.userName,
-			commitsCount: c.commitsCount,
-			commitsCount30Days: c.commitsCount30Days,
-			commitsCount90Days: c.commitsCount90Days,
-			commitsCount180Days: c.commitsCount180Days,
-			commitsCount365Days: c.commitsCount365Days,
-			firstCommitDate: c.firstCommitDate,
-			latestCommitDate: c.latestCommitDate,
-			isBot: c.isBot,
-		}));
+		const contributorExport = contributors.map((c) => {
+			const percentage =
+				total > 0
+					? FormattingUtils.getFormattedPercentage(
+							(100.0 * c.commitsCount) / total,
+						)
+					: "0%";
+
+			return {
+				id: contributorEntityId(c.email),
+				email: c.email,
+				userName: c.userName,
+				commitsCount: c.commitsCount,
+				commitsCount30Days: c.commitsCount30Days,
+				commitsCount90Days: c.commitsCount90Days,
+				commitsCount180Days: c.commitsCount180Days,
+				commitsCount365Days: c.commitsCount365Days,
+				firstCommitDate: c.firstCommitDate,
+				latestCommitDate: c.latestCommitDate,
+				isBot: c.isBot,
+				percentage,
+				isRookie: c.isRookie(),
+				isActive: c.isActive(),
+			};
+		});
 		const lines: string[] = [];
 		lines.push(
 			"Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit\tpercentage\tuserName\tisRookie\tisActive",
@@ -392,7 +483,7 @@ export class DataExporter {
 			JSON.stringify(
 				{
 					title: "Contributors",
-					timestamp: new Date().toISOString(),
+					timestamp: snapshotContext.generatedAt,
 					contributorCount: contributorExport.length,
 					contributors: contributorExport,
 				},
@@ -404,6 +495,59 @@ export class DataExporter {
 		writeFileSync(
 			join(dataFolder, "contributors.txt"),
 			lines.join("\n"),
+			"utf-8",
+		);
+	}
+
+	private exportReportContext(
+		dataFolder: string,
+		snapshotContext: SnapshotExportContext,
+	): void {
+		const config = this.analysisResults.codeConfiguration;
+		const title =
+			config?.metadata.name || this.analysisResults.metadata.name || "Planetnik";
+		const canonicalShards = Object.fromEntries(
+			DataExporter.CANONICAL_SHARD_CANDIDATES.filter(([, fileName]) =>
+				existsSync(join(dataFolder, fileName)),
+			),
+		);
+		const compatibilityProjections = Object.fromEntries(
+			DataExporter.COMPATIBILITY_PROJECTION_CANDIDATES.filter(([, fileName]) =>
+				existsSync(join(dataFolder, fileName)),
+			),
+		);
+
+		writeFileSync(
+			join(dataFolder, "report_context.json"),
+			JSON.stringify(
+				{
+					mode: "single_repository",
+					reportMode: "single_repository",
+					title,
+					rootRoute: "/",
+					dataVersion: 2,
+					source: "generateReports",
+					repositoryId: repositoryEntityId(title),
+					hasLandscape: false,
+					hasSingleRepositoryAnalysis: true,
+					primaryNavigation: [
+						"overview",
+						"structure",
+						"files",
+						"units",
+						"team",
+						"quality",
+					],
+					snapshotId: snapshotContext.snapshotId,
+					generatedAt: snapshotContext.generatedAt,
+					capabilities: Object.keys(canonicalShards),
+					canonicalShards,
+					compatibilityProjections,
+					entityIdPolicy: ENTITY_ID_POLICY,
+				},
+				null,
+				2,
+			),
 			"utf-8",
 		);
 	}
@@ -1004,6 +1148,7 @@ export class DataExporter {
 			.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
 
 		return {
+			id: contributorEntityId(contributor.email),
 			email: contributor.email,
 			userName: contributor.userName,
 			commitsCount: contributor.commitsCount,
@@ -1228,7 +1373,7 @@ export class DataExporter {
 		});
 
 		return {
-			id: `file:${file.relativePath}`,
+			id: fileEntityId(file.relativePath),
 			kind: "file",
 			name: file.relativePath,
 			parent: file.logicalComponents[0]?.name ?? "",
@@ -1293,7 +1438,7 @@ export class DataExporter {
 		});
 
 		return {
-			id: `unit:${filePath}:${unit.startLine}`,
+			id: unitEntityId(filePath, unit.startLine),
 			kind: "unit",
 			name: unit.shortName,
 			parent: filePath,
@@ -1379,7 +1524,7 @@ export class DataExporter {
 		});
 
 		return {
-			id: `component:${decompositionKey}:${componentName}`,
+			id: componentEntityId(decompositionKey, componentName),
 			kind: "component",
 			name: componentName,
 			parent: decompositionKey,

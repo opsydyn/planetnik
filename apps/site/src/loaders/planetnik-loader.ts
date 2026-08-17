@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Loader } from "astro/loaders";
@@ -124,6 +124,118 @@ function readTextFile(filename: string): string | null {
 	return readFileSync(path, "utf-8");
 }
 
+const entityIdPolicyKeys = [
+	"repository",
+	"file",
+	"unit",
+	"component",
+	"contributor",
+] as const;
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		!Array.isArray(value) &&
+		Object.values(value).every((item) => typeof item === "string")
+	);
+}
+
+function isSafeRelativeShardPath(value: string): boolean {
+	return (
+		value.length > 0 &&
+		!value.startsWith("/") &&
+		!value.includes("\\") &&
+		!value.split("/").includes("..")
+	);
+}
+
+function hasShardFile(dataDir: string, fileName: string): boolean {
+	try {
+		return statSync(join(dataDir, fileName)).isFile();
+	} catch {
+		return false;
+	}
+}
+
+function isIsoTimestamp(value: string): boolean {
+	if (!value || Number.isNaN(Date.parse(value))) return false;
+	return new Date(value).toISOString() === value;
+}
+
+function isValidV2ReportContext(
+	dataDir: string,
+	raw: Record<string, unknown>,
+): boolean {
+	const hasNonEmptyString = (value: unknown): value is string =>
+		typeof value === "string" && value.trim().length > 0;
+	const mode = raw.mode;
+	const reportMode = raw.reportMode;
+	const snapshotId = raw.snapshotId;
+	const generatedAt = raw.generatedAt;
+	const repositoryId = raw.repositoryId;
+	const capabilities = raw.capabilities;
+	const canonicalShards = raw.canonicalShards;
+	const compatibilityProjections = raw.compatibilityProjections;
+	const entityIdPolicy = raw.entityIdPolicy;
+
+	if (
+		(mode !== "single_repository" && mode !== "landscape") ||
+		reportMode !== mode ||
+		typeof snapshotId !== "string" ||
+		!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+			snapshotId,
+		) ||
+		typeof generatedAt !== "string" ||
+		!isIsoTimestamp(generatedAt) ||
+		(mode === "single_repository" && !hasNonEmptyString(repositoryId)) ||
+		!Array.isArray(capabilities) ||
+		!capabilities.every((item) => typeof item === "string") ||
+		!isStringRecord(canonicalShards) ||
+		!isStringRecord(entityIdPolicy) ||
+		!entityIdPolicyKeys.every((key) => hasNonEmptyString(entityIdPolicy[key]))
+	) {
+		return false;
+	}
+
+	const requiredCapabilities =
+		mode === "single_repository"
+			? ["summary", "metrics", "contributors"]
+			: ["analysis", "overview"];
+	const canonicalShardKeys = Object.keys(canonicalShards);
+	if (
+		capabilities.length !== canonicalShardKeys.length ||
+		!requiredCapabilities.every((key) => key in canonicalShards)
+	) {
+		return false;
+	}
+
+	for (const [key, fileName] of Object.entries(canonicalShards)) {
+		if (
+			!capabilities.includes(key) ||
+			!isSafeRelativeShardPath(fileName) ||
+			!fileName.endsWith(".json") ||
+			!hasShardFile(dataDir, fileName)
+		) {
+			return false;
+		}
+	}
+
+	if (compatibilityProjections !== undefined) {
+		if (!isStringRecord(compatibilityProjections)) return false;
+		for (const fileName of Object.values(compatibilityProjections)) {
+			if (
+				!isSafeRelativeShardPath(fileName) ||
+				!hasShardFile(dataDir, fileName)
+			) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 function readJsonArrayItems(
 	filename: string,
 	key: string,
@@ -187,11 +299,17 @@ export function reportContextLoader(): Loader {
 	return {
 		name: "planetnik-report-context",
 		async load({ store, parseData }) {
+			const dataDir = resolveDataDir();
+			const candidate = readJsonFile("report_context.json") as Record<
+				string,
+				unknown
+			> | null;
 			const raw =
-				(readJsonFile("report_context.json") as Record<
-					string,
-					unknown
-				> | null) ?? getFallbackReportContext();
+				candidate &&
+				(candidate.dataVersion !== 2 ||
+					isValidV2ReportContext(dataDir, candidate))
+					? candidate
+					: getFallbackReportContext();
 			const data = await parseData({ id: "context", data: raw });
 			store.set({ id: "context", data });
 		},
@@ -411,6 +529,26 @@ export function metricsLoader(): Loader {
 	return {
 		name: "planetnik-metrics",
 		async load({ store, parseData }) {
+			const raw = readJsonFile("metrics.json") as {
+				metrics?: unknown[];
+			} | null;
+			if (Array.isArray(raw?.metrics)) {
+				for (const entry of raw.metrics) {
+					if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+						continue;
+					}
+					const record = entry as Record<string, unknown>;
+					const id = typeof record.id === "string" ? record.id : "";
+					const value = record.value;
+					if (!id || typeof value !== "number" || Number.isNaN(value)) {
+						continue;
+					}
+					const data = await parseData({ id, data: { id, value } });
+					store.set({ id, data });
+				}
+				return;
+			}
+
 			const text = readTextFile("metrics.txt");
 			if (!text) return;
 			for (const line of text.split("\n")) {
@@ -558,6 +696,55 @@ export function contributorsLoader(): Loader {
 	return {
 		name: "planetnik-contributors",
 		async load({ store, parseData }) {
+			const raw = readJsonFile("contributors.json") as {
+				contributors?: unknown[];
+			} | null;
+			if (Array.isArray(raw?.contributors)) {
+				for (const entry of raw.contributors) {
+					if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+						continue;
+					}
+					const record = entry as Record<string, unknown>;
+					const email =
+						typeof record.email === "string" ? record.email.trim() : "";
+					if (!email) continue;
+
+					const numberField = (key: string): number =>
+						typeof record[key] === "number" ? (record[key] as number) : 0;
+					const data: Record<string, unknown> = {
+						email,
+						commitsAllTime: numberField("commitsCount"),
+						commits30Days: numberField("commitsCount30Days"),
+						commits90Days: numberField("commitsCount90Days"),
+						commits180Days: numberField("commitsCount180Days"),
+						commits365Days: numberField("commitsCount365Days"),
+						firstCommit:
+							typeof record.firstCommitDate === "string"
+								? record.firstCommitDate
+								: "",
+						lastCommit:
+							typeof record.latestCommitDate === "string"
+								? record.latestCommitDate
+								: "",
+						percentage:
+							typeof record.percentage === "string" ? record.percentage : "",
+					};
+					if (typeof record.userName === "string") {
+						data.userName = record.userName;
+					}
+					if (typeof record.isRookie === "boolean") {
+						data.isRookie = record.isRookie;
+					}
+					if (typeof record.isActive === "boolean") {
+						data.isActive = record.isActive;
+					}
+
+					const dataWithSchema = await parseData({ id: email, data });
+					store.set({ id: email, data: dataWithSchema });
+				}
+				return;
+			}
+
 			const text = readTextFile("contributors.txt");
 			if (!text) return;
 			const lines = text.split("\n").filter((l) => l.trim());

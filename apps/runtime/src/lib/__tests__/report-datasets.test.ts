@@ -67,6 +67,51 @@ function writeJson(path: string, value: unknown) {
   writeFileSync(path, JSON.stringify(value, null, 2))
 }
 
+const validEntityIdPolicy = {
+  repository: "repo:<normalised repository key>",
+  file: "file:<normalised relative path>",
+  unit: "unit:<normalised relative path>:<start line>",
+  component: "component:<decomposition key>:<component name>",
+  contributor: "contributor:<lowercase trimmed email>",
+}
+
+function writeValidV2Context(
+  dataDir: string,
+  overrides: Record<string, unknown> = {},
+): void {
+  writeJson(join(dataDir, "analysisResults.json"), {})
+  writeJson(join(dataDir, "metrics.json"), { metrics: [] })
+  writeJson(join(dataDir, "contributors.json"), { contributors: [] })
+  writeFileSync(join(dataDir, "metrics.txt"), "")
+  writeFileSync(join(dataDir, "contributors.txt"), "")
+  writeJson(join(dataDir, "report_context.json"), {
+    mode: "single_repository",
+    reportMode: "single_repository",
+    title: "Snapshot Repo",
+    rootRoute: "/",
+    dataVersion: 2,
+    source: "generateReports",
+    hasLandscape: false,
+    hasSingleRepositoryAnalysis: true,
+    primaryNavigation: ["overview"],
+    repositoryId: "repo:Snapshot Repo",
+    snapshotId: "8d2d9f6f-2246-4c4d-a89a-4ca3cbbce4c3",
+    generatedAt: "2026-08-05T10:00:00.000Z",
+    capabilities: ["summary", "metrics", "contributors"],
+    canonicalShards: {
+      summary: "analysisResults.json",
+      metrics: "metrics.json",
+      contributors: "contributors.json",
+    },
+    compatibilityProjections: {
+      metrics: "metrics.txt",
+      contributors: "contributors.txt",
+    },
+    entityIdPolicy: validEntityIdPolicy,
+    ...overrides,
+  })
+}
+
 afterAll(() => {
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { force: true, recursive: true })
@@ -147,6 +192,128 @@ describe("runtime report dataset helpers", () => {
       title: "Acme Platform",
       reportMode: "single_repository",
     })
+  })
+
+  test("preserves v2 snapshot metadata when reading report context", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeJson(join(dataDir, "analysisResults.json"), {})
+    writeJson(join(dataDir, "metrics.json"), { metrics: [] })
+    writeJson(join(dataDir, "contributors.json"), { contributors: [] })
+    writeFileSync(join(dataDir, "metrics.txt"), "")
+    writeFileSync(join(dataDir, "contributors.txt"), "")
+    writeJson(join(dataDir, "report_context.json"), {
+      mode: "single_repository",
+      reportMode: "single_repository",
+      title: "Snapshot Repo",
+      rootRoute: "/",
+      dataVersion: 2,
+      source: "generateReports",
+      hasLandscape: false,
+      hasSingleRepositoryAnalysis: true,
+      primaryNavigation: ["overview"],
+      repositoryId: "repo:Snapshot Repo",
+      snapshotId: "8d2d9f6f-2246-4c4d-a89a-4ca3cbbce4c3",
+      generatedAt: "2026-08-05T10:00:00.000Z",
+      capabilities: ["summary", "metrics", "contributors"],
+      canonicalShards: {
+        summary: "analysisResults.json",
+        metrics: "metrics.json",
+        contributors: "contributors.json",
+      },
+      compatibilityProjections: {
+        metrics: "metrics.txt",
+        contributors: "contributors.txt",
+      },
+      entityIdPolicy: {
+        repository: "repo:<normalised repository key>",
+        file: "file:<normalised relative path>",
+        unit: "unit:<normalised relative path>:<start line>",
+        component: "component:<decomposition key>:<component name>",
+        contributor: "contributor:<lowercase trimmed email>",
+      },
+    })
+
+    expect(readReportContextSummary(dataDir)).toMatchObject({
+      dataVersion: 2,
+      repositoryId: "repo:Snapshot Repo",
+      snapshotId: "8d2d9f6f-2246-4c4d-a89a-4ca3cbbce4c3",
+      generatedAt: "2026-08-05T10:00:00.000Z",
+      capabilities: ["summary", "metrics", "contributors"],
+      canonicalShards: {
+        metrics: "metrics.json",
+      },
+      compatibilityProjections: {
+        contributors: "contributors.txt",
+      },
+      entityIdPolicy: {
+        contributor: "contributor:<lowercase trimmed email>",
+      },
+    })
+  })
+
+  test("rejects a v2 context with an unsupported data version", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeValidV2Context(dataDir, { dataVersion: 3 })
+
+    expect(readReportContextSummary(dataDir)).toBeNull()
+  })
+
+  test("rejects a v2 context when a required canonical shard is missing", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeValidV2Context(dataDir, {
+      canonicalShards: {
+        summary: "analysisResults.json",
+        metrics: "missing-metrics.json",
+        contributors: "contributors.json",
+      },
+    })
+
+    expect(readReportContextSummary(dataDir)).toBeNull()
+  })
+
+  test("rejects a v2 context when a required canonical shard is not declared", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeValidV2Context(dataDir, {
+      canonicalShards: {
+        summary: "analysisResults.json",
+        contributors: "contributors.json",
+      },
+    })
+
+    expect(readReportContextSummary(dataDir)).toBeNull()
+  })
+
+  test("rejects a v2 context when a declared canonical shard file is absent", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeValidV2Context(dataDir)
+    rmSync(join(dataDir, "metrics.json"), { force: true })
+
+    expect(readReportContextSummary(dataDir)).toBeNull()
+  })
+
+  test("rejects a v2 context with an unsafe canonical shard path", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeValidV2Context(dataDir, {
+      canonicalShards: {
+        summary: "analysisResults.json",
+        metrics: "../metrics.json",
+        contributors: "contributors.json",
+      },
+    })
+
+    expect(readReportContextSummary(dataDir)).toBeNull()
   })
 
   test("reads a landscape artifact summary when the linked dataset is in landscape mode", () => {
@@ -1827,6 +1994,44 @@ describe("runtime report dataset helpers", () => {
     })
   })
 
+  test("reads contributor summaries from contributors.json before a conflicting TXT projection", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeJson(join(dataDir, "contributors.json"), {
+      contributors: [
+        {
+          email: "json@example.com",
+          userName: "JSON User",
+          commitsCount: 12,
+          commitsCount30Days: 4,
+          commitsCount90Days: 7,
+          commitsCount180Days: 10,
+          commitsCount365Days: 12,
+          firstCommitDate: "2025-01-01",
+          latestCommitDate: "2026-03-31",
+          percentage: "100%",
+          isRookie: false,
+          isActive: true,
+          isBot: false,
+        },
+      ],
+    })
+    writeFileSync(join(dataDir, "contributors.txt"), "email\tall_time\ntext@example.com\t1\n")
+
+    expect(readReportContributorsSummary(dataDir)).toEqual([
+      expect.objectContaining({
+        email: "json@example.com",
+        userName: "JSON User",
+        commitsAllTime: 12,
+        commits30Days: 4,
+        firstCommit: "2025-01-01",
+        lastCommit: "2026-03-31",
+        status: "Active",
+      }),
+    ])
+  })
+
   test("reads contributor summaries from contributors.txt and contributor_details", () => {
     const root = makeTempRoot()
     const dataDir = join(root, "reports", "data")
@@ -2203,6 +2408,32 @@ describe("runtime report dataset helpers", () => {
           },
         ],
       },
+    })
+  })
+
+  test("reads a metrics summary from metrics.json before a conflicting TXT projection", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeJson(join(dataDir, "metrics.json"), {
+      metrics: [
+        { id: "LINES_OF_CODE_MAIN", value: 62000 },
+        { id: "NUMBER_OF_FILES_MAIN", value: 300 },
+      ],
+    })
+    writeFileSync(join(dataDir, "metrics.txt"), "LINES_OF_CODE_MAIN: 1\n")
+
+    expect(readReportMetricsSummary(dataDir)).toMatchObject({
+      totalMetrics: 2,
+      headlineMetrics: {
+        mainLinesOfCode: 62000,
+      },
+      groupSummaries: expect.arrayContaining([
+        expect.objectContaining({
+          groupId: "LINES_OF_CODE",
+          metrics: [{ id: "LINES_OF_CODE_MAIN", value: 62000 }],
+        }),
+      ]),
     })
   })
 

@@ -1,6 +1,7 @@
 import type { DuplicationInstance } from "@planetnik/analyzer";
 import type { FileExportInfo } from "./FileExportInfo.js";
 import { fileExportInfoFromSourceFile } from "./FileExportInfo.js";
+import { fileEntityId } from "./EntityIdentity.js";
 
 export interface DuplicateFileBlockExportInfo {
 	file: FileExportInfo;
@@ -36,6 +37,7 @@ export class DuplicationExporter {
 				file: block.sourceFile
 					? fileExportInfoFromSourceFile(block.sourceFile)
 					: {
+							id: fileEntityId(""),
 							relativePath: "",
 							extension: "",
 							linesOfCode: 0,

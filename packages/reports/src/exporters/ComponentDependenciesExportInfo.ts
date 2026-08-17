@@ -1,9 +1,12 @@
 import type { ComponentDependency } from "@planetnik/analyzer";
+import { componentEntityId } from "./EntityIdentity.js";
 
 export interface ComponentDependencyExportInfo {
 	decompositionKey: string;
 	fromComponent: string;
 	toComponent: string;
+	fromComponentId: string;
+	toComponentId: string;
 	count: number;
 	locFrom: number;
 	evidenceCount: number;
@@ -30,6 +33,14 @@ export class ComponentDependenciesExporter {
 				decompositionKey,
 				fromComponent: dependency.fromComponent,
 				toComponent: dependency.toComponent,
+				fromComponentId: componentEntityId(
+					decompositionKey,
+					dependency.fromComponent,
+				),
+				toComponentId: componentEntityId(
+					decompositionKey,
+					dependency.toComponent,
+				),
 				count: dependency.count,
 				locFrom: dependency.locFrom,
 				evidenceCount: dependency.evidence.length,

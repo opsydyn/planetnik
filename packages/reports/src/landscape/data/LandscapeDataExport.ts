@@ -11,7 +11,15 @@ import {
 	ContributorConnectionUtils,
 	ContributorRepositories as ContributorRepositoriesModel,
 } from "@planetnik/analyzer";
+import {
+	ENTITY_ID_POLICY,
+	repositoryEntityId,
+} from "../../exporters/EntityIdentity.js";
 import type { TagMap } from "../utils/TagMap.js";
+import {
+	createSnapshotExportContext,
+	type SnapshotExportContext,
+} from "../../exporters/SnapshotContext.js";
 import { ContributorExport } from "./ContributorExport.js";
 import { getLandscapeRepoKey } from "./getLandscapeRepoKey.js";
 import { RepositoryExport } from "./RepositoryExport.js";
@@ -74,9 +82,32 @@ export class LandscapeDataExport {
 	static readonly REPORT_CONTEXT_DATA_JSON_FILE_NAME = "report_context.json";
 	static readonly LANDSCAPE_ANALYSIS_RESULTS_DATA_JSON_FILE_NAME =
 		"landscapeAnalysisResults.json";
+	private static readonly CANONICAL_SHARD_CANDIDATES = [
+		["analysis", LandscapeDataExport.LANDSCAPE_ANALYSIS_RESULTS_DATA_JSON_FILE_NAME],
+		["overview", LandscapeDataExport.LANDSCAPE_OVERVIEW_DATA_JSON_FILE_NAME],
+		[
+			"repositories",
+			LandscapeDataExport.LANDSCAPE_REPOSITORIES_DATA_JSON_FILE_NAME,
+		],
+		[
+			"contributors",
+			LandscapeDataExport.LANDSCAPE_CONTRIBUTORS_DATA_JSON_FILE_NAME,
+		],
+		["teams", LandscapeDataExport.LANDSCAPE_TEAMS_DATA_JSON_FILE_NAME],
+		["topology", LandscapeDataExport.LANDSCAPE_TOPOLOGY_DATA_JSON_FILE_NAME],
+		["tags", LandscapeDataExport.LANDSCAPE_TAGS_DATA_JSON_FILE_NAME],
+		["tagMatrix", LandscapeDataExport.LANDSCAPE_TAG_MATRIX_DATA_JSON_FILE_NAME],
+	] as const;
+	private static readonly COMPATIBILITY_PROJECTION_CANDIDATES = [
+		["repositories", LandscapeDataExport.REPOSITORIES_DATA_FILE_NAME],
+		["contributors", "contributors.txt"],
+		["teams", "teams.txt"],
+	] as const;
 
 	private analysisResults: LandscapeAnalysisResults;
 	private dataFolder: string;
+	private snapshotContext: SnapshotExportContext | null = null;
+	private snapshotSource: "analyzeLandscape" | "updateLandscape" | null = null;
 
 	constructor(analysisResults: LandscapeAnalysisResults, folder: string) {
 		this.analysisResults = analysisResults;
@@ -88,9 +119,11 @@ export class LandscapeDataExport {
 	}
 
 	exportCoreContracts(source: "analyzeLandscape" | "updateLandscape"): void {
+		this.snapshotContext = createSnapshotExportContext();
+		this.snapshotSource = source;
 		this.exportAnalysisResults();
-		this.exportReportContext(source);
 		this.exportOverview();
+		this.exportReportContext();
 	}
 
 	exportPeopleContracts(teamsConfig: TeamsConfig): void {
@@ -101,6 +134,7 @@ export class LandscapeDataExport {
 			teamsConfig,
 		);
 		this.exportTopology(contributors);
+		this.exportReportContext();
 	}
 
 	exportRepositories(tagMap: TagMap): void {
@@ -119,10 +153,12 @@ export class LandscapeDataExport {
 				);
 			}
 		}
+		this.exportReportContext();
 	}
 
 	exportTagContracts(tagMap: TagMap, tagGroups: TagGroup[]): void {
 		const summarizeRepository = (repository: RepositoryAnalysisResult) => ({
+			id: repositoryEntityId(getLandscapeRepoKey(repository.analysisResultsPath)),
 			name: repository.name,
 			repoKey: getLandscapeRepoKey(repository.analysisResultsPath),
 			analysisResultsPath: repository.analysisResultsPath,
@@ -205,6 +241,9 @@ export class LandscapeDataExport {
 						this.analysisResults.repositoryAnalysisResults.length,
 					repositories: this.analysisResults.repositoryAnalysisResults.map(
 						(repository) => ({
+							id: repositoryEntityId(
+								getLandscapeRepoKey(repository.analysisResultsPath),
+							),
 							name: repository.name,
 							repoKey: getLandscapeRepoKey(repository.analysisResultsPath),
 							analysisResultsPath: repository.analysisResultsPath,
@@ -223,6 +262,7 @@ export class LandscapeDataExport {
 			),
 			"utf-8",
 		);
+		this.exportReportContext();
 	}
 
 	private exportRepositoriesJson(tagMap: TagMap): void {
@@ -465,9 +505,19 @@ export class LandscapeDataExport {
 		);
 	}
 
-	private exportReportContext(
-		source: "analyzeLandscape" | "updateLandscape",
-	): void {
+	private exportReportContext(): void {
+		if (!this.snapshotContext || !this.snapshotSource) return;
+
+		const canonicalShards = Object.fromEntries(
+			LandscapeDataExport.CANONICAL_SHARD_CANDIDATES.filter(([, fileName]) =>
+				existsSync(join(this.dataFolder, fileName)),
+			),
+		);
+		const compatibilityProjections = Object.fromEntries(
+			LandscapeDataExport.COMPATIBILITY_PROJECTION_CANDIDATES.filter(
+				([, fileName]) => existsSync(join(this.dataFolder, fileName)),
+			),
+		);
 		writeFileSync(
 			join(
 				this.dataFolder,
@@ -479,8 +529,8 @@ export class LandscapeDataExport {
 					reportMode: "landscape",
 					title: this.analysisResults.metadata.name || "Landscape",
 					rootRoute: "/landscape",
-					dataVersion: 1,
-					source,
+					dataVersion: 2,
+					source: this.snapshotSource,
 					hasLandscape: true,
 					hasSingleRepositoryAnalysis: false,
 					primaryNavigation: [
@@ -492,6 +542,12 @@ export class LandscapeDataExport {
 						"tags",
 						"statistics",
 					],
+					snapshotId: this.snapshotContext.snapshotId,
+					generatedAt: this.snapshotContext.generatedAt,
+					capabilities: Object.keys(canonicalShards),
+					canonicalShards,
+					compatibilityProjections,
+					entityIdPolicy: ENTITY_ID_POLICY,
 				},
 				null,
 				2,
@@ -517,6 +573,7 @@ export class LandscapeDataExport {
 			.sort((left, right) => right.mainLoc - left.mainLoc)
 			.slice(0, 10)
 			.map((repo) => ({
+				id: repositoryEntityId(getLandscapeRepoKey(repo.analysisResultsPath)),
 				name: repo.name,
 				repoKey: getLandscapeRepoKey(repo.analysisResultsPath),
 				mainLinesOfCode: repo.mainLoc,
@@ -743,6 +800,7 @@ export class LandscapeDataExport {
 		const displayName = entry.contributor.userName || entry.contributor.email;
 
 		return {
+			id: entry.id,
 			email: entry.contributor.email,
 			displayName,
 			name: displayName,

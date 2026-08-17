@@ -39,6 +39,18 @@ export {
 	type ValueSnapshotPair,
 } from "./MetricsTrendExporter.js";
 export {
+	createSnapshotExportContext,
+	type SnapshotExportContext,
+} from "./SnapshotContext.js";
+export {
+	ENTITY_ID_POLICY,
+	componentEntityId,
+	contributorEntityId,
+	fileEntityId,
+	repositoryEntityId,
+	unitEntityId,
+} from "./EntityIdentity.js";
+export {
 	type UnitInfoExport,
 	UnitListExporter,
 	type UnitsExportInfo,

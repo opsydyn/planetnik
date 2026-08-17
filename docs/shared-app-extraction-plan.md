@@ -1,5 +1,12 @@
 # Shared App Extraction Plan
 
+> **Status: Archived — 2026-07-19**
+>
+> This document is a historical delivery and handoff record for shared report
+> UI work. It no longer determines product order. Promote any unfinished item
+> into the [canonical product roadmap](./product-roadmap.md) before treating it
+> as committed work.
+
 ## Goal
 
 Achieve UI parity between:

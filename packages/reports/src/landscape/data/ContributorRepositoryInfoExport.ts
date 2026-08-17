@@ -1,7 +1,9 @@
 import type { ContributorRepositoryInfo } from "@planetnik/analyzer";
+import { repositoryEntityId } from "../../exporters/EntityIdentity.js";
 import { getLandscapeRepoKey } from "./getLandscapeRepoKey.js";
 
 export class ContributorRepositoryInfoExport {
+	id: string;
 	name: string;
 	description: string;
 	analysisResultsPath: string;
@@ -19,6 +21,9 @@ export class ContributorRepositoryInfoExport {
 		const metadata = info.repositoryAnalysisResult?.metadata;
 		const analysisResultsPath =
 			info.repositoryAnalysisResult?.analysisResultsPath ?? "";
+		this.id = repositoryEntityId(
+			analysisResultsPath ? getLandscapeRepoKey(analysisResultsPath) : "",
+		);
 		this.name = metadata?.name ?? "";
 		this.description = metadata?.description ?? "";
 		this.analysisResultsPath = analysisResultsPath;

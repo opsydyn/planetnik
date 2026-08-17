@@ -1,0 +1,59 @@
+<h2>Choose the civic-map geography</h2>
+<p class="subtitle">How should bounded contexts occupy the map while the inspector keeps the selected district in view?</p>
+
+<div class="options">
+  <div class="option" data-choice="context-parcels" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Context parcels <span class="badge">DDD-native</span></h3>
+      <div class="map parcel-map">
+        <div class="parcel p-runtime"><b>runtime</b><span></span><span></span><span></span><span></span><i>1,240 LOC</i></div>
+        <div class="parcel p-reports"><b>reports</b><span></span><span></span><span></span><i>860 LOC</i></div>
+        <div class="parcel p-shared"><b>shared</b><span></span><span></span><i>420 LOC</i></div>
+        <div class="cross-road cr1"></div><div class="cross-road cr2"></div>
+      </div>
+      <p>Each bounded context is a named parcel; buildings are placed inside it. Stable, explainable, and naturally aligned with district identity.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="street-network" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Street network <span class="badge warm">Relationship-led</span></h3>
+      <div class="map street-map">
+        <div class="hub h1"><b>runtime</b><span></span><span></span><span></span></div>
+        <div class="hub h2"><b>reports</b><span></span><span></span></div>
+        <div class="hub h3"><b>shared</b><span></span></div>
+        <div class="street s1"></div><div class="street s2"></div><div class="street s3"></div><div class="street s4"></div>
+        <em class="road-label rl1">5 deps</em><em class="road-label rl2">2 deps</em>
+      </div>
+      <p>Dependencies become the street plan and contexts become hubs. Strong for topology, but spatial position follows relationships more than ownership.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="loc-territory" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>LOC territory <span class="badge violet">Metric-led</span></h3>
+      <div class="map territory-map">
+        <div class="territory t-runtime"><b>runtime</b><small>1,240 LOC</small><span></span><span></span><span></span><span></span></div>
+        <div class="territory t-reports"><b>reports</b><small>860 LOC</small><span></span><span></span></div>
+        <div class="territory t-shared"><b>shared</b><small>420 LOC</small><span></span></div>
+        <div class="thin-road tr1"></div><div class="thin-road tr2"></div>
+      </div>
+      <p>Parcel area tracks footprint, making the largest contexts visually dominant. High signal for scale; small contexts need stronger labels and zoom.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  :root { --ink: #eef4fb; --muted: #91a0b5; --line: rgba(148,163,184,.19); --cyan: #3ed9e8; --orange: #ff9d5c; --violet: #a48aff; }
+  .options { display: grid; gap: 1rem; margin-top: 1.4rem; }
+  .option { display: grid; grid-template-columns: 2.1rem minmax(0,1fr); gap: .8rem; padding: .8rem; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(100deg,#111b2c,#0a1220); cursor: pointer; transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+  .option:hover { border-color: rgba(62,217,232,.55); transform: translateX(3px); }.option.selected { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(62,217,232,.16), 0 16px 36px rgba(0,0,0,.2); }
+  .letter { width: 2rem; height: 2rem; display: grid; place-items: center; border: 1px solid rgba(62,217,232,.32); border-radius: 9px; color: var(--cyan); font-weight: 700; }.content h3 { margin: .1rem 0 .55rem; color: var(--ink); font-size: 1rem; }.content p { margin: .65rem 0 .1rem; color: var(--muted); font-size: .78rem; line-height: 1.45; }.badge { margin-left: .35rem; padding: .18rem .4rem; border-radius: 999px; border: 1px solid rgba(62,217,232,.25); color: var(--cyan); font-size: .55rem; letter-spacing: .07em; text-transform: uppercase; vertical-align: .12em; }.badge.warm { color: var(--orange); border-color: rgba(255,157,92,.3); }.badge.violet { color: var(--violet); border-color: rgba(164,138,255,.3); }
+  .map { height: 150px; position: relative; overflow: hidden; border: 1px solid rgba(148,163,184,.15); border-radius: 11px; background: #091321; }.map b,.map i,.map small { position: absolute; z-index: 2; color: #e9f3f6; font: 600 .62rem ui-monospace, SFMono-Regular, Menlo, monospace; }.map b { top: 9px; left: 10px; }.map i,.map small { right: 9px; bottom: 8px; color: #86a3ae; font-style: normal; font-weight: 400; font-size: .53rem; }
+  .parcel { position: absolute; border: 1px solid rgba(62,217,232,.34); border-radius: 8px; background: rgba(22,83,102,.44); }.parcel span { position: relative; display: inline-block; width: 18px; height: 23px; margin: 32px 2px 0; border-radius: 2px 2px 0 0; background: linear-gradient(#54e1e9,#176b84); }.p-runtime { left: 3%; top: 10%; width: 52%; height: 78%; }.p-reports { right: 4%; top: 13%; width: 35%; height: 51%; border-color: rgba(164,138,255,.38); background: rgba(64,47,111,.4); }.p-reports span { background: linear-gradient(#b29fff,#6248b8); }.p-shared { left: 40%; bottom: 3%; width: 41%; height: 25%; border-color: rgba(255,157,92,.38); background: rgba(106,57,31,.38); }.p-shared span { width: 15px; height: 11px; margin-top: 19px; background: linear-gradient(#ffb278,#af4f36); }.cross-road { position: absolute; height: 1px; background: rgba(239,246,252,.44); transform-origin: left center; }.cr1 { width: 72%; left: 16%; top: 69%; transform: rotate(-19deg); }.cr2 { width: 45%; left: 31%; top: 82%; transform: rotate(-64deg); }
+  .hub { position: absolute; display: grid; grid-template-columns: repeat(3, 15px); gap: 4px; padding: 24px 9px 9px; border-radius: 8px; border: 1px solid rgba(62,217,232,.4); background: rgba(24,69,89,.63); }.hub b { top: 7px; left: 9px; }.hub span { height: 19px; background: linear-gradient(#55e1e9,#176d86); border-radius: 2px 2px 0 0; }.h1 { left: 8%; top: 20%; }.h2 { right: 12%; top: 12%; border-color: rgba(164,138,255,.5); background: rgba(64,47,111,.58); }.h2 span { background: linear-gradient(#b4a0ff,#6248b8); }.h3 { left: 43%; bottom: 7%; border-color: rgba(255,157,92,.47); background: rgba(106,57,31,.5); }.h3 span { background: linear-gradient(#ffb278,#af4f36); }.street { position: absolute; height: 2px; background: rgba(255,210,153,.7); transform-origin: left center; box-shadow: 0 0 8px rgba(255,157,92,.42); }.s1 { width: 48%; left: 27%; top: 37%; transform: rotate(-23deg); }.s2 { width: 42%; left: 37%; top: 57%; transform: rotate(26deg); }.s3 { width: 44%; left: 32%; top: 65%; transform: rotate(-70deg); }.s4 { width: 33%; left: 40%; top: 37%; transform: rotate(73deg); }.road-label { position: absolute; color: #ffbd85; font: .5rem ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(70,40,28,.9); padding: 2px 4px; border-radius: 3px; }.rl1 { left: 51%; top: 24%; }.rl2 { left: 53%; top: 73%; }
+  .territory { position: absolute; border-radius: 12px; padding: 11px; border: 1px solid rgba(62,217,232,.36); background: rgba(22,83,102,.5); }.territory b { left: 12px; top: 10px; }.territory small { left: 12px; top: 28px; color: #a3c8cf; font: .52rem ui-monospace, SFMono-Regular, Menlo, monospace; }.territory span { display: inline-block; width: 16px; height: 21px; margin: 46px 2px 0; border-radius: 2px 2px 0 0; background: linear-gradient(#54e1e9,#176b84); }.t-runtime { left: 3%; top: 5%; width: 58%; height: 90%; }.t-reports { right: 3%; top: 9%; width: 33%; height: 54%; border-color: rgba(164,138,255,.42); background: rgba(64,47,111,.48); }.t-reports span { background: linear-gradient(#b29fff,#6248b8); }.t-shared { left: 43%; bottom: 5%; width: 38%; height: 23%; border-color: rgba(255,157,92,.4); background: rgba(106,57,31,.42); }.t-shared span { width: 13px; height: 10px; margin-top: 18px; background: linear-gradient(#ffb278,#af4f36); }.thin-road { position: absolute; height: 1px; background: rgba(239,246,252,.33); transform-origin: left center; }.tr1 { width: 65%; left: 17%; top: 69%; transform: rotate(-16deg); }.tr2 { width: 37%; left: 43%; top: 74%; transform: rotate(45deg); }
+</style>

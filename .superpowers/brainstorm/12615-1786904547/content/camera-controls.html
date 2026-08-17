@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planetnik — Code City camera</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: #0a1020; color: #dbe7ff; }
+      main { width: min(1180px, calc(100vw - 40px)); margin: 0 auto; padding: 44px 0 56px; }
+      .eyebrow { color: #8ca7d9; letter-spacing: .13em; text-transform: uppercase; font-size: 12px; }
+      h1 { margin: 10px 0 10px; font-size: clamp(30px, 5vw, 52px); line-height: 1; }
+      .intro { max-width: 760px; margin: 0 0 30px; color: #aebbd5; line-height: 1.55; }
+      .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+      .card { position: relative; min-height: 360px; padding: 18px; border: 1px solid #2b3a5d; border-radius: 16px; background: linear-gradient(160deg, #14213b, #0f172b); overflow: hidden; }
+      .card.recommended { border-color: #70d6c0; box-shadow: 0 0 0 1px #70d6c044, 0 20px 60px #0005; }
+      .tag { position: absolute; top: 16px; right: 16px; padding: 5px 8px; border-radius: 999px; background: #19473f; color: #9af0da; font-size: 11px; letter-spacing: .04em; }
+      h2 { margin: 0 0 5px; font-size: 19px; }
+      .sub { color: #8fa1c4; font-size: 13px; }
+      .scene { height: 166px; margin: 24px 0 20px; position: relative; display: grid; place-items: center; background: radial-gradient(circle at 50% 35%, #24365b, #101a30 68%); border-radius: 12px; overflow: hidden; }
+      .ground { position: absolute; width: 190px; height: 100px; background: #203652; transform: rotate(30deg) skewX(-30deg) scaleY(.86); border: 1px solid #4d7191; box-shadow: 30px 22px 0 #172840; }
+      .parcel { position: absolute; width: 44px; height: 28px; background: #5f83b5; transform: rotate(30deg) skewX(-30deg) scaleY(.86); border: 1px solid #96b9dc; }
+      .parcel.one { left: 60px; top: 65px; } .parcel.two { left: 115px; top: 43px; } .parcel.three { left: 136px; top: 84px; }
+      .tower { position: absolute; width: 19px; height: 52px; background: #cf8b55; transform: translate(0, -23px) skewY(30deg); box-shadow: 12px 7px 0 #7c4e3b, -9px 5px 0 #e9b36d; }
+      .tower.a { left: 82px; top: 86px; } .tower.b { left: 132px; top: 65px; height: 40px; background: #77c7b8; box-shadow: 12px 7px 0 #3b7775, -9px 5px 0 #b5e6d8; } .tower.c { left: 153px; top: 106px; height: 62px; background: #d86661; box-shadow: 12px 7px 0 #803e4b, -9px 5px 0 #ec9a74; }
+      .orbit { position: absolute; width: 220px; height: 80px; border: 1px dashed #82a1d2aa; border-radius: 50%; transform: rotate(-18deg); }
+      .ray { position: absolute; width: 180px; height: 1px; background: #9bb9e855; transform: rotate(-13deg); }
+      .copy { color: #adbad4; line-height: 1.5; font-size: 14px; }
+      .copy strong { color: #dfeaff; }
+      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .card { min-height: 300px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Planetnik · Code City · Camera contract</div>
+      <h1>How much freedom should the city camera have?</h1>
+      <p class="intro">All three keep an orthographic isometric view as the starting point. The difference is whether the reader can orbit away from the civic-map context.</p>
+      <section class="grid" aria-label="Camera control options">
+        <article class="card">
+          <h2>A · Locked civic map</h2>
+          <div class="sub">Pan + zoom only</div>
+          <div class="scene"><div class="ground"></div><div class="parcel one"></div><div class="parcel two"></div><div class="parcel three"></div><div class="tower a"></div><div class="tower b"></div><div class="tower c"></div></div>
+          <p class="copy"><strong>Most legible.</strong> Parcels always read as a map. Lowest interaction risk, but less like an explorable city.</p>
+        </article>
+        <article class="card recommended">
+          <div class="tag">Recommended</div>
+          <h2>B · Constrained orbit</h2>
+          <div class="sub">Isometric default + shallow orbit</div>
+          <div class="scene"><div class="ground"></div><div class="parcel one"></div><div class="parcel two"></div><div class="parcel three"></div><div class="tower a"></div><div class="tower b"></div><div class="tower c"></div><div class="orbit"></div><div class="ray"></div></div>
+          <p class="copy"><strong>Best balance.</strong> Preserve the civic map at rest; allow a bounded orbit for depth, inspection, and the Draxul-like feel.</p>
+        </article>
+        <article class="card">
+          <h2>C · Full explorer</h2>
+          <div class="sub">Orbit + perspective toggle</div>
+          <div class="scene"><div class="ground"></div><div class="parcel one"></div><div class="parcel two"></div><div class="parcel three"></div><div class="tower a"></div><div class="tower b"></div><div class="tower c"></div><div class="orbit" style="transform:rotate(18deg) scale(.8)"></div><div class="ray" style="transform:rotate(31deg)"></div></div>
+          <p class="copy"><strong>Most cinematic.</strong> Closest to a game-like city, but it can make boundaries and impact routes harder to compare.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

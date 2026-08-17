@@ -1,6 +1,8 @@
 import type { UnitInfo } from "@planetnik/analyzer";
+import { unitEntityId } from "./EntityIdentity.js";
 
 export interface UnitInfoExport {
+	id: string;
 	shortName: string;
 	longName: string;
 	relativeFileName: string;
@@ -31,6 +33,7 @@ export class UnitListExporter {
 		const exportedUnits: UnitInfoExport[] = units
 			.filter((u) => u.sourceFile)
 			.map((u) => ({
+				id: unitEntityId(u.sourceFile?.relativePath ?? "", u.startLine),
 				shortName: u.shortName,
 				longName: u.longName || u.shortName,
 				relativeFileName: u.sourceFile?.relativePath ?? "",

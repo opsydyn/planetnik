@@ -2,8 +2,11 @@ import type {
 	MetadataType,
 	RepositoryAnalysisResult,
 } from "@planetnik/analyzer";
+import { repositoryEntityId } from "../../exporters/EntityIdentity.js";
+import { getLandscapeRepoKey } from "./getLandscapeRepoKey.js";
 
 export class RepositoryExport {
+	id: string;
 	metadata: MetadataType;
 	latestCommitDate: string;
 	commitsCount: number;
@@ -22,6 +25,9 @@ export class RepositoryExport {
 	otherLinesOfCode: number;
 
 	constructor(repo: RepositoryAnalysisResult) {
+		this.id = repositoryEntityId(
+			getLandscapeRepoKey(repo.analysisResultsPath),
+		);
 		this.metadata = repo.metadata;
 		this.latestCommitDate = repo.latestCommitDate;
 		this.analysisResultsPath = repo.analysisResultsPath;

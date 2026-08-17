@@ -147,7 +147,8 @@ Example namespace:
 
 Related docs:
 
-- [docs/landscape-ui-parity-plan.md](/Users/alan/Projects/planetnik/docs/landscape-ui-parity-plan.md)
+- [docs/product-roadmap.md](docs/product-roadmap.md) — canonical product sequencing
+- [docs/landscape-ui-parity-plan.md](docs/landscape-ui-parity-plan.md) — archived delivery history
 - [docs/adr/0011-adopt-repo-scoped-shell-for-landscape-drilldown.md](/Users/alan/Projects/planetnik/docs/adr/0011-adopt-repo-scoped-shell-for-landscape-drilldown.md)
 
 ## Graph And Routing Caveats
@@ -221,21 +222,22 @@ The pragmatic sharing model is:
 - do not share Astro `src/pages` directly
 - do not couple static loaders to the future hosted runtime
 
-Relevant plan:
+Historical delivery plan:
 
-- [docs/shared-app-extraction-plan.md](/Users/alan/Projects/planetnik/docs/shared-app-extraction-plan.md)
+- [docs/shared-app-extraction-plan.md](docs/shared-app-extraction-plan.md) — archived; promote unfinished work into the canonical roadmap before acting on it
 
 ## Docs Worth Reading Before Large Changes
 
+- [docs/product-roadmap.md](docs/product-roadmap.md) — sole source of truth for current product sequencing
 - [CLAUDE.md](/Users/alan/Projects/planetnik/CLAUDE.md)
 - [README.md](/Users/alan/Projects/planetnik/README.md)
 - [docs/cli.md](/Users/alan/Projects/planetnik/docs/cli.md)
 - [docs/local-dataset-dx-review.md](/Users/alan/Projects/planetnik/docs/local-dataset-dx-review.md)
-- [docs/product-roadmap.md](/Users/alan/Projects/planetnik/docs/product-roadmap.md)
-- [docs/landscape-ui-parity-plan.md](/Users/alan/Projects/planetnik/docs/landscape-ui-parity-plan.md)
-- [docs/shared-app-extraction-plan.md](/Users/alan/Projects/planetnik/docs/shared-app-extraction-plan.md)
+- [docs/rust-tree-sitter-migration-discovery.md](docs/rust-tree-sitter-migration-discovery.md) — completed parser evidence, not active sequencing
 - [docs/adr/0010-adopt-effect-structured-concurrency-for-landscape-analysis.md](/Users/alan/Projects/planetnik/docs/adr/0010-adopt-effect-structured-concurrency-for-landscape-analysis.md)
 - [docs/adr/0011-adopt-repo-scoped-shell-for-landscape-drilldown.md](/Users/alan/Projects/planetnik/docs/adr/0011-adopt-repo-scoped-shell-for-landscape-drilldown.md)
+- [docs/adr/0018-adopt-versioned-canonical-analysis-snapshots.md](docs/adr/0018-adopt-versioned-canonical-analysis-snapshots.md) — canonical snapshot and identity contract
+- [docs/compatibility-removal-fixture-matrix.md](docs/compatibility-removal-fixture-matrix.md) — executable Phase 1 proof that core routes do not require TXT projections
 
 ## If You Are Resuming A Broken Session
 

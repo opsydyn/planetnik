@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { isValid } from "date-fns"
@@ -68,6 +68,13 @@ export type ReportContextSummary = {
   readonly hasLandscape: boolean
   readonly hasSingleRepositoryAnalysis: boolean
   readonly primaryNavigation: ReadonlyArray<string>
+  readonly repositoryId?: string
+  readonly snapshotId?: string
+  readonly generatedAt?: string
+  readonly capabilities?: ReadonlyArray<string>
+  readonly canonicalShards?: Readonly<Record<string, string>>
+  readonly compatibilityProjections?: Readonly<Record<string, string>>
+  readonly entityIdPolicy?: Readonly<Record<string, string>>
 }
 
 export type SingleRepositoryArtifactSummary = {
@@ -979,6 +986,20 @@ type ReportUnitRecord = {
 }
 
 function readMetricsMap(dataDir: string): Map<string, number> {
+  const raw = readJsonRecord(dataDir, "metrics.json")
+  if (Array.isArray(raw?.metrics)) {
+    const metrics = new Map<string, number>()
+    for (const item of raw.metrics) {
+      if (typeof item !== "object" || item === null) continue
+      const record = item as Record<string, unknown>
+      const id = typeof record.id === "string" ? record.id.trim() : ""
+      const value = record.value
+      if (!id || typeof value !== "number" || Number.isNaN(value)) continue
+      metrics.set(id, value)
+    }
+    return metrics
+  }
+
   const text = readTextFile(dataDir, "metrics.txt")
   if (!text) {
     return new Map()
@@ -1479,6 +1500,111 @@ function isReportMode(value: unknown): value is "single_repository" | "landscape
   return value === "single_repository" || value === "landscape"
 }
 
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((item) => typeof item === "string")
+  )
+}
+
+const ENTITY_ID_POLICY_KEYS = [
+  "repository",
+  "file",
+  "unit",
+  "component",
+  "contributor",
+] as const
+
+function isSafeRelativeShardPath(value: string): boolean {
+  return (
+    value.length > 0 &&
+    !value.startsWith("/") &&
+    !value.includes("\\") &&
+    !value.split("/").includes("..")
+  )
+}
+
+function isIsoTimestamp(value: string): boolean {
+  if (!value || Number.isNaN(Date.parse(value))) return false
+  return new Date(value).toISOString() === value
+}
+
+function hasShardFile(dataDir: string, fileName: string): boolean {
+  try {
+    return statSync(join(dataDir, fileName)).isFile()
+  } catch {
+    return false
+  }
+}
+
+function isValidV2Context(
+  dataDir: string,
+  mode: "single_repository" | "landscape",
+  snapshotId: unknown,
+  generatedAt: unknown,
+  repositoryId: unknown,
+  capabilities: unknown,
+  canonicalShards: unknown,
+  compatibilityProjections: unknown,
+  entityIdPolicy: unknown,
+): boolean {
+  const hasNonEmptyString = (value: unknown): value is string =>
+    typeof value === "string" && value.trim().length > 0
+
+  if (
+    typeof snapshotId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      snapshotId,
+    ) ||
+    typeof generatedAt !== "string" ||
+    !isIsoTimestamp(generatedAt) ||
+    (mode === "single_repository" && !hasNonEmptyString(repositoryId)) ||
+    !Array.isArray(capabilities) ||
+    !capabilities.every((item) => typeof item === "string") ||
+    !isStringRecord(canonicalShards) ||
+    !isStringRecord(entityIdPolicy) ||
+    !ENTITY_ID_POLICY_KEYS.every((key) => hasNonEmptyString(entityIdPolicy[key]))
+  ) {
+    return false
+  }
+
+  const requiredCapabilities =
+    mode === "single_repository"
+      ? ["summary", "metrics", "contributors"]
+      : ["analysis", "overview"]
+  const canonicalShardKeys = Object.keys(canonicalShards)
+  if (
+    capabilities.length !== canonicalShardKeys.length ||
+    !requiredCapabilities.every((key) => key in canonicalShards)
+  ) {
+    return false
+  }
+
+  for (const [key, fileName] of Object.entries(canonicalShards)) {
+    if (
+      !capabilities.includes(key) ||
+      !isSafeRelativeShardPath(fileName) ||
+      !fileName.endsWith(".json") ||
+      !hasShardFile(dataDir, fileName)
+    ) {
+      return false
+    }
+  }
+
+  if (compatibilityProjections !== undefined) {
+    if (!isStringRecord(compatibilityProjections)) return false
+    for (const fileName of Object.values(compatibilityProjections)) {
+      if (!isSafeRelativeShardPath(fileName) || !hasShardFile(dataDir, fileName)) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
 export function readReportContextSummary(dataDir: string): ReportContextSummary | null {
   const context = readReportContext(dataDir)
   if (!context) {
@@ -1494,6 +1620,13 @@ export function readReportContextSummary(dataDir: string): ReportContextSummary 
   const hasLandscape = context.hasLandscape
   const hasSingleRepositoryAnalysis = context.hasSingleRepositoryAnalysis
   const primaryNavigation = context.primaryNavigation
+  const repositoryId = context.repositoryId
+  const snapshotId = context.snapshotId
+  const generatedAt = context.generatedAt
+  const capabilities = context.capabilities
+  const canonicalShards = context.canonicalShards
+  const compatibilityProjections = context.compatibilityProjections
+  const entityIdPolicy = context.entityIdPolicy
 
   if (
     !isReportMode(mode) ||
@@ -1505,7 +1638,30 @@ export function readReportContextSummary(dataDir: string): ReportContextSummary 
     typeof hasLandscape !== "boolean" ||
     typeof hasSingleRepositoryAnalysis !== "boolean" ||
     !Array.isArray(primaryNavigation) ||
-    !primaryNavigation.every((item) => typeof item === "string")
+    !primaryNavigation.every((item) => typeof item === "string") ||
+    (repositoryId !== undefined && typeof repositoryId !== "string") ||
+    (snapshotId !== undefined && typeof snapshotId !== "string") ||
+    (generatedAt !== undefined && typeof generatedAt !== "string") ||
+    (capabilities !== undefined &&
+      (!Array.isArray(capabilities) ||
+        !capabilities.every((item) => typeof item === "string"))) ||
+    (canonicalShards !== undefined && !isStringRecord(canonicalShards)) ||
+    (compatibilityProjections !== undefined && !isStringRecord(compatibilityProjections)) ||
+    (entityIdPolicy !== undefined && !isStringRecord(entityIdPolicy)) ||
+    (dataVersion !== 1 && dataVersion !== 2) ||
+    (dataVersion === 2 && reportMode !== mode) ||
+    (dataVersion === 2 &&
+      !isValidV2Context(
+        dataDir,
+        mode,
+        snapshotId,
+        generatedAt,
+        repositoryId,
+        capabilities,
+        canonicalShards,
+        compatibilityProjections,
+        entityIdPolicy,
+      ))
   ) {
     return null
   }
@@ -1520,6 +1676,13 @@ export function readReportContextSummary(dataDir: string): ReportContextSummary 
     hasLandscape,
     hasSingleRepositoryAnalysis,
     primaryNavigation,
+    ...(typeof repositoryId === "string" ? { repositoryId } : {}),
+    ...(typeof snapshotId === "string" ? { snapshotId } : {}),
+    ...(typeof generatedAt === "string" ? { generatedAt } : {}),
+    ...(Array.isArray(capabilities) ? { capabilities } : {}),
+    ...(isStringRecord(canonicalShards) ? { canonicalShards } : {}),
+    ...(isStringRecord(compatibilityProjections) ? { compatibilityProjections } : {}),
+    ...(isStringRecord(entityIdPolicy) ? { entityIdPolicy } : {}),
   }
 }
 
@@ -1807,12 +1970,61 @@ export function readReportLandscapeTeamsSummary(dataDir: string): ReportLandscap
 }
 
 export function readReportContributorsSummary(dataDir: string): ReadonlyArray<ReportContributorSummary> {
+  const contributorDetailsByEmail = readContributorDetailsByEmail(dataDir)
+  const raw = readJsonRecord(dataDir, "contributors.json")
+  if (Array.isArray(raw?.contributors)) {
+    return raw.contributors
+      .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+      .map((item): ReportContributorSummary | null => {
+        const email = typeof item.email === "string" ? item.email.trim() : ""
+        if (email.length === 0) {
+          return null
+        }
+
+        const userName = typeof item.userName === "string" ? item.userName.trim() : ""
+        const isRookie = typeof item.isRookie === "boolean" ? item.isRookie : false
+        const isActive = typeof item.isActive === "boolean" ? item.isActive : false
+        const detail = contributorDetailsByEmail.get(email)
+        const files = detail?.files
+        const logicalComponents = detail?.logicalComponents
+        const filesTouched = Array.isArray(files) ? files.length : null
+        const componentsTouched = Array.isArray(logicalComponents) ? logicalComponents.length : null
+        const numberField = (key: string): number => (typeof item[key] === "number" ? (item[key] as number) : 0)
+        const firstCommit = typeof item.firstCommitDate === "string" ? item.firstCommitDate : ""
+        const lastCommit = typeof item.latestCommitDate === "string" ? item.latestCommitDate : ""
+
+        return {
+          email,
+          userName,
+          displayName: getContributorDisplayName({ email, userName }),
+          status: getContributorStatus({ isRookie, isActive }),
+          commitsAllTime: numberField("commitsCount"),
+          commits30Days: numberField("commitsCount30Days"),
+          commits90Days: numberField("commitsCount90Days"),
+          commits180Days: numberField("commitsCount180Days"),
+          commits365Days: numberField("commitsCount365Days"),
+          firstCommit,
+          lastCommit,
+          percentage: typeof item.percentage === "string" ? item.percentage : "",
+          filesTouched,
+          componentsTouched,
+          primaryComponent: getPrimaryComponent(detail),
+          knowledgeSignal: getKnowledgeSignal(componentsTouched),
+          repositoryCount: null,
+          latestCommitDate: lastCommit,
+          isBot: typeof item.isBot === "boolean" ? item.isBot : null,
+          repositories: [],
+        }
+      })
+      .filter((contributor): contributor is ReportContributorSummary => contributor !== null)
+      .sort((left, right) => right.commitsAllTime - left.commitsAllTime)
+  }
+
   const text = readTextFile(dataDir, "contributors.txt")
   if (!text) {
     return []
   }
 
-  const contributorDetailsByEmail = readContributorDetailsByEmail(dataDir)
   const lines = text
     .split("\n")
     .map((line) => line.trim())

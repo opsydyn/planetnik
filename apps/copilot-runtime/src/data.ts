@@ -155,6 +155,25 @@ export interface Contributor {
 }
 
 export function getContributors(): Contributor[] {
+  const raw = readJson("contributors.json") as Record<string, unknown> | null
+  if (Array.isArray(raw?.contributors)) {
+    return raw.contributors
+      .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
+      .map((entry) => ({
+        email: String(entry.email ?? ""),
+        commitsAllTime: Number(entry.commitsCount ?? 0),
+        commits30Days: Number(entry.commitsCount30Days ?? 0),
+        commits90Days: Number(entry.commitsCount90Days ?? 0),
+        commits180Days: Number(entry.commitsCount180Days ?? 0),
+        commits365Days: Number(entry.commitsCount365Days ?? 0),
+        firstCommit: String(entry.firstCommitDate ?? ""),
+        lastCommit: String(entry.latestCommitDate ?? ""),
+        userName: String(entry.userName ?? ""),
+        isRookie: entry.isRookie === true,
+        isActive: entry.isActive === true,
+      }))
+  }
+
   const rows = readTsv("contributors.txt")
   if (rows.length < 2) return []
   return rows.slice(1).map((cols) => ({

@@ -1,0 +1,83 @@
+<h2>Choose the Code City visual language</h2>
+<p class="subtitle">Which direction should anchor the first static <code>/code-city</code> route?</p>
+
+<div class="choices">
+  <div class="choice" data-choice="civic-map" onclick="toggleSelect(this)">
+    <div class="choice-head"><span class="eyebrow">A · Civic map</span><span class="choice-tag">Readable first</span></div>
+    <div class="mock map-mock">
+      <div class="mock-top"><span>CODE CITY</span><span class="mock-pill">HEALTH · 72</span></div>
+      <div class="map-body">
+        <div class="district district-a"><b>runtime</b><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="district district-b"><b>reports</b><i></i><i></i><i></i><i></i></div>
+        <div class="district district-c"><b>shared</b><i></i><i></i><i></i></div>
+        <div class="road road-one"></div><div class="road road-two"></div><div class="road road-three"></div>
+      </div>
+      <div class="mock-bottom"><span><em class="legend-dot cyan"></em>LOC footprint</span><span><em class="legend-dot orange"></em>change pressure</span><span><em class="legend-dot violet"></em>impact</span></div>
+    </div>
+    <h3>Map-first Code City</h3>
+    <p>Districts read as neighborhoods; buildings stay legible at a glance. Best for orientation, comparison, and static-report accessibility.</p>
+  </div>
+
+  <div class="choice" data-choice="elevation" onclick="toggleSelect(this)">
+    <div class="choice-head"><span class="eyebrow">B · Elevation</span><span class="choice-tag">Most iconic</span></div>
+    <div class="mock skyline-mock">
+      <div class="mock-top"><span>STRUCTURE / RISK</span><span class="mock-pill hot">HOTSPOTS 12</span></div>
+      <div class="skyline">
+        <div class="tower t1"><b>src</b><i></i><i></i><i></i></div>
+        <div class="tower t2"><b>runtime</b><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="tower t3"><b>reports</b><i></i><i></i><i></i><i></i></div>
+        <div class="tower t4"><b>tests</b><i></i><i></i></div>
+      </div>
+      <div class="skyline-floor"><span>0 LOC</span><span>↑ BUILDING HEIGHT = LOC</span><span>← COLOR = HEALTH</span></div>
+    </div>
+    <h3>Elevated skyline</h3>
+    <p>LOC becomes height, health becomes color, and dependencies become connective tissue. Strongest visual signature, with more explanation required.</p>
+  </div>
+
+  <div class="choice" data-choice="inspector" onclick="toggleSelect(this)">
+    <div class="choice-head"><span class="eyebrow">C · Explorer</span><span class="choice-tag">Most actionable</span></div>
+    <div class="mock explorer-mock">
+      <div class="mock-top"><span>CODE CITY / RUNTIME</span><span class="mock-pill">FILTERS</span></div>
+      <div class="explorer-body">
+        <div class="mini-map"><div class="mini-block b1"></div><div class="mini-block b2"></div><div class="mini-block b3"></div><div class="mini-block b4"></div><div class="mini-line l1"></div><div class="mini-line l2"></div></div>
+        <div class="inspector"><span class="eyebrow">SELECTED BUILDING</span><strong>src/runtime.ts</strong><span class="metric-row"><small>LOC</small><b>1,240</b></span><span class="metric-row"><small>HEALTH</small><b class="text-orange">HIGH RISK</b></span><span class="metric-row"><small>OWNER</small><b>alan@example.com</b></span><button>Open file evidence →</button></div>
+      </div>
+      <div class="mock-bottom"><span>Click a building to inspect evidence</span><span>Esc clears selection</span></div>
+    </div>
+    <h3>Map + inspector</h3>
+    <p>A quieter map paired with a durable evidence panel. Best for turning a visual finding into a next action without leaving the report.</p>
+  </div>
+</div>
+
+<style>
+  :root { --ink: #e8eef7; --muted: #92a0b5; --line: rgba(148,163,184,.18); --panel: #111a2a; --panel2: #0d1523; --cyan: #38d9e9; --violet: #9b7cff; --orange: #ff9b55; }
+  .choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+  .choice { min-width: 0; background: linear-gradient(160deg, rgba(17,26,42,.98), rgba(9,15,26,.98)); border: 1px solid var(--line); border-radius: 18px; padding: .85rem; cursor: pointer; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+  .choice:hover { transform: translateY(-3px); border-color: rgba(56,217,233,.5); box-shadow: 0 16px 40px rgba(0,0,0,.24); }
+  .choice.selected { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(56,217,233,.16), 0 18px 50px rgba(0,0,0,.28); }
+  .choice-head, .mock-top, .mock-bottom, .metric-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  .eyebrow { color: var(--cyan); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
+  .choice-tag, .mock-pill { color: #b7c1d1; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: .22rem .42rem; border: 1px solid var(--line); border-radius: 999px; }
+  .mock { margin: .8rem 0 1rem; background: var(--panel2); border: 1px solid rgba(148,163,184,.15); border-radius: 13px; overflow: hidden; color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .mock-top, .mock-bottom { padding: .55rem .65rem; font-size: .58rem; letter-spacing: .08em; color: #8090a9; }
+  .mock-pill { color: var(--cyan); border-color: rgba(56,217,233,.28); letter-spacing: .04em; }
+  .mock-pill.hot { color: var(--orange); border-color: rgba(255,155,85,.28); }
+  .map-body { height: 200px; position: relative; background: radial-gradient(circle at 30% 40%, rgba(56,217,233,.08), transparent 35%), #0a1220; }
+  .district { position: absolute; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 25px 9px 9px; border: 1px solid rgba(56,217,233,.28); background: rgba(24,55,74,.48); border-radius: 8px; }
+  .district b { position: absolute; top: 7px; left: 9px; color: #bfe9ef; font-size: .6rem; font-weight: 600; }
+  .district i { height: 22px; border-radius: 2px 2px 0 0; background: linear-gradient(#44dbe8, #187c9b); box-shadow: 0 2px 0 rgba(0,0,0,.24); }
+  .district-a { left: 7%; top: 17%; width: 48%; height: 46%; }
+  .district-b { right: 7%; top: 10%; width: 35%; height: 38%; border-color: rgba(155,124,255,.38); background: rgba(61,43,103,.4); }
+  .district-b i { background: linear-gradient(#b39bff, #5f46b6); }
+  .district-c { left: 31%; bottom: 9%; width: 44%; height: 30%; border-color: rgba(255,155,85,.36); background: rgba(94,54,32,.38); }
+  .district-c i { height: 13px; background: linear-gradient(#ffad6f, #b95938); }
+  .road { position: absolute; height: 1px; background: rgba(233,239,247,.32); transform-origin: left center; }
+  .road-one { width: 70%; left: 15%; top: 60%; transform: rotate(-19deg); }.road-two { width: 55%; left: 35%; top: 67%; transform: rotate(18deg); }.road-three { width: 42%; left: 29%; top: 37%; transform: rotate(68deg); }
+  .mock-bottom { border-top: 1px solid var(--line); font-size: .55rem; letter-spacing: .01em; }
+  .legend-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }.cyan { background: var(--cyan); }.orange { background: var(--orange); }.violet { background: var(--violet); }
+  .skyline-mock { background: linear-gradient(#101827, #0c1421); }.skyline { height: 200px; display: flex; align-items: end; justify-content: center; gap: 7px; padding: 12px 12px 0; background: linear-gradient(180deg, rgba(155,124,255,.06), transparent 55%), repeating-linear-gradient(0deg, rgba(148,163,184,.09) 0 1px, transparent 1px 34px); }
+  .tower { width: 19%; min-height: 54px; position: relative; display: flex; flex-direction: column-reverse; gap: 3px; padding: 7px 5px 5px; border: 1px solid rgba(56,217,233,.36); background: linear-gradient(180deg, rgba(44,173,186,.58), rgba(18,65,88,.8)); clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%); }.tower b { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: .48rem; color: #c3edf1; white-space: nowrap; font-weight: 500; }.tower i { display: block; height: 7px; background: rgba(214,250,255,.72); border-radius: 1px; }.t1 { height: 92px; }.t2 { height: 153px; border-color: rgba(255,155,85,.6); background: linear-gradient(180deg, rgba(255,144,73,.76), rgba(108,53,34,.9)); }.t3 { height: 120px; border-color: rgba(155,124,255,.55); background: linear-gradient(180deg, rgba(145,117,245,.76), rgba(67,42,122,.86)); }.t4 { height: 68px; border-color: rgba(148,163,184,.3); background: linear-gradient(180deg, rgba(83,101,122,.7), rgba(31,44,59,.9)); }.skyline-floor { display: flex; justify-content: space-between; padding: .55rem .65rem; color: #7f8da3; font-size: .5rem; border-top: 1px solid var(--line); }
+  .explorer-body { height: 200px; display: grid; grid-template-columns: 1.35fr .9fr; gap: 8px; padding: 10px; }.mini-map { position: relative; overflow: hidden; border: 1px solid rgba(56,217,233,.22); border-radius: 8px; background: radial-gradient(circle at 35% 50%, rgba(56,217,233,.15), transparent 34%), #09111e; }.mini-block { position: absolute; border-radius: 3px; background: linear-gradient(#4bdde8, #1a6f8c); box-shadow: 0 3px 8px rgba(0,0,0,.25); }.b1 { width: 30%; height: 35%; left: 10%; top: 19%; }.b2 { width: 22%; height: 51%; left: 45%; top: 12%; background: linear-gradient(#ffad6f,#ae4d35); }.b3 { width: 27%; height: 26%; right: 8%; top: 43%; background: linear-gradient(#ae97ff,#5e45ae); }.b4 { width: 18%; height: 18%; left: 19%; bottom: 11%; background: #42566b; }.mini-line { position: absolute; height: 1px; background: rgba(233,239,247,.38); transform-origin: left center; }.l1 { width: 73%; left: 13%; top: 59%; transform: rotate(-12deg); }.l2 { width: 58%; left: 28%; top: 70%; transform: rotate(29deg); }.inspector { border: 1px solid rgba(255,155,85,.28); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: rgba(75,45,34,.2); }.inspector strong { font-size: .72rem; color: #f2f5f9; }.metric-row { border-top: 1px solid rgba(148,163,184,.13); padding-top: 6px; font-size: .58rem; }.metric-row small { color: #8090a9; }.metric-row b { font-weight: 500; color: #c9d3e0; }.text-orange { color: var(--orange) !important; }.inspector button { margin-top: auto; padding: 6px; border: 1px solid rgba(56,217,233,.3); border-radius: 4px; color: var(--cyan); background: rgba(56,217,233,.08); font: inherit; font-size: .55rem; }
+  .choice h3 { color: #f0f5fb; font-size: .95rem; margin: .2rem 0 .35rem; }.choice p { color: var(--muted); font-size: .78rem; line-height: 1.45; margin: 0; }
+  @media (max-width: 980px) { .choices { grid-template-columns: 1fr; }.choice { display: grid; grid-template-columns: minmax(260px, .85fr) 1fr; gap: 0 1rem; }.choice-head { grid-column: 1 / -1; }.mock { grid-row: span 2; margin-bottom: 0; }.choice h3 { align-self: end; }.choice p { align-self: start; } }
+</style>

@@ -1,5 +1,13 @@
 # Parser Coverage Roadmap
 
+> **Status: Archived — 2026-07-19**
+>
+> This document preserves the pre-Rust-pilot coverage proposal and contains a
+> stale implementation matrix. It must not drive current sequencing. Use the
+> [canonical product roadmap](./product-roadmap.md) for current parser work and
+> [Rust migration discovery](./rust-tree-sitter-migration-discovery.md) for the
+> measured pilot outcome.
+
 ## Purpose
 
 Define a concrete plan to:

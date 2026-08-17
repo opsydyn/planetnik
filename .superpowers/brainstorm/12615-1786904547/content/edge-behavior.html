@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planetnik — Code City dependency edges</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: #090f1e; color: #dbe7ff; }
+      main { width: min(1180px, calc(100vw - 40px)); margin: 0 auto; padding: 44px 0 56px; }
+      .eyebrow { color: #8ca7d9; letter-spacing: .13em; text-transform: uppercase; font-size: 12px; }
+      h1 { margin: 10px 0; font-size: clamp(30px, 5vw, 52px); line-height: 1; }
+      .intro { max-width: 840px; margin: 0 0 30px; color: #aebbd5; line-height: 1.55; }
+      .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+      .card { min-height: 375px; padding: 18px; border: 1px solid #2b3a5d; border-radius: 16px; background: linear-gradient(160deg, #14213b, #0f172b); }
+      .card.recommended { border-color: #70d6c0; box-shadow: 0 0 0 1px #70d6c044, 0 20px 60px #0005; }
+      .tag { display: inline-block; padding: 5px 8px; border-radius: 999px; background: #19473f; color: #9af0da; font-size: 11px; letter-spacing: .04em; margin-bottom: 12px; }
+      h2 { margin: 0 0 5px; font-size: 19px; } .sub { color: #8fa1c4; font-size: 13px; }
+      .scene { height: 170px; margin: 24px 0 20px; position: relative; display: grid; place-items: center; background: radial-gradient(circle at 50% 28%, #263b60, #101a30 70%); border-radius: 12px; overflow: hidden; }
+      .ground { position: absolute; width: 190px; height: 92px; background: #203652; transform: rotate(30deg) skewX(-30deg) scaleY(.86); border: 1px solid #4d7191; box-shadow: 30px 20px 0 #172840; }
+      .parcel { position: absolute; width: 60px; height: 38px; transform: rotate(30deg) skewX(-30deg) scaleY(.86); border: 1px solid #a2c3d5aa; background: #416f72; } .p1 { left: 55px; top: 77px; } .p2 { left: 102px; top: 55px; background: #65507d; } .p3 { left: 126px; top: 95px; background: #79583e; }
+      .building { position: absolute; width: 17px; height: 48px; transform: skewY(30deg); background: #d3a45e; box-shadow: 8px 5px 0 #6a4939; } .b1 { left: 78px; top: 79px; } .b2 { left: 120px; top: 59px; height: 64px; background: #73c3ae; box-shadow: 8px 5px 0 #3e7068; } .b3 { left: 148px; top: 98px; height: 43px; background: #d5646f; box-shadow: 8px 5px 0 #743d4d; }
+      .edge { position: absolute; height: 3px; transform-origin: left center; background: #f0c66f; box-shadow: 0 0 10px #f0c66f99; border-radius: 4px; } .e1 { left: 88px; top: 89px; width: 75px; transform: rotate(-18deg); } .e2 { left: 128px; top: 79px; width: 62px; transform: rotate(38deg); } .e3 { left: 96px; top: 113px; width: 82px; transform: rotate(12deg); }
+      .muted { opacity: .13; box-shadow: none; } .focus { outline: 3px solid #aaf2de; outline-offset: 5px; }
+      .copy { color: #adbad4; line-height: 1.5; font-size: 14px; } .copy strong { color: #dfeaff; }
+      @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .card { min-height: 300px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Planetnik · Code City · Dependency routes</div>
+      <h1>When should dependency roads appear?</h1>
+      <p class="intro">Edges are evidence, not decoration. The default scene should preserve parcel legibility; routes should become prominent when a reader has a question to investigate.</p>
+      <section class="grid" aria-label="Dependency edge options">
+        <article class="card">
+          <h2>A · Always-on network</h2>
+          <div class="sub">All component edges visible</div>
+          <div class="scene"><div class="ground"></div><div class="parcel p1"></div><div class="parcel p2"></div><div class="parcel p3"></div><div class="building b1"></div><div class="building b2"></div><div class="building b3"></div><div class="edge e1"></div><div class="edge e2"></div><div class="edge e3"></div></div>
+          <p class="copy"><strong>Network-first.</strong> Useful for topology, but dense repositories quickly become a road tangle.</p>
+        </article>
+        <article class="card recommended">
+          <div class="tag">Recommended</div>
+          <h2>B · Selection path</h2>
+          <div class="sub">Selected context/building reveals its routes</div>
+          <div class="scene"><div class="ground"></div><div class="parcel p1"></div><div class="parcel p2 focus"></div><div class="parcel p3"></div><div class="building b1"></div><div class="building b2 focus"></div><div class="building b3"></div><div class="edge e1 muted"></div><div class="edge e2"></div><div class="edge e3 muted"></div></div>
+          <p class="copy"><strong>Inspector-first.</strong> Keep the city calm; selecting a parcel or building reveals only its connected evidence paths.</p>
+        </article>
+        <article class="card">
+          <h2>C · Impact routes</h2>
+          <div class="sub">Edges visible only in Impact lens</div>
+          <div class="scene"><div class="ground"></div><div class="parcel p1"></div><div class="parcel p2"></div><div class="parcel p3"></div><div class="building b1"></div><div class="building b2"></div><div class="building b3"></div><div class="edge e1"></div><div class="edge e2"></div><div class="edge e3"></div></div>
+          <p class="copy"><strong>Analysis-first.</strong> Very clean at rest, but dependency evidence is hidden until the reader changes lens.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,5 +1,11 @@
 # Rust Tree-sitter Migration Discovery
 
+> **Status: Completed evidence — 2026-07-19**
+>
+> This document records the Rust pilot outcome and remains valid evidence. It is
+> not an active roadmap. Use the
+> [canonical product roadmap](./product-roadmap.md) for current sequencing.
+
 ## Why this discovery exists
 
 `docs/adr/0009-pilot-tree-sitter-for-rust-parser-parity.md` captured the decision to pilot Tree-sitter for Rust.
@@ -298,7 +304,9 @@ The Rust feature should be considered complete when all of the following are tru
 
 ## Relationship to the broader parser roadmap
 
-This discovery strengthens the direction in `docs/parser-coverage-roadmap.md`.
+This discovery supplied the measured parser evidence now incorporated into
+`docs/product-roadmap.md`. The earlier coverage proposal remains archived in
+`docs/parser-coverage-roadmap.md` for historical context.
 
 The Rust pilot is now strong enough to support the following conclusion:
 

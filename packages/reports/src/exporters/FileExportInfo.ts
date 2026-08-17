@@ -1,6 +1,8 @@
 import type { SourceFileType } from "@planetnik/analyzer";
+import { fileEntityId } from "./EntityIdentity.js";
 
 export interface FileExportInfo {
+	id: string;
 	relativePath: string;
 	extension: string;
 	linesOfCode: number;
@@ -19,6 +21,7 @@ export function fileExportInfoFromSourceFile(
 	file: SourceFileType,
 ): FileExportInfo {
 	const info: FileExportInfo = {
+		id: fileEntityId(file.relativePath),
 		relativePath: file.relativePath,
 		extension: file.extension,
 		linesOfCode: file.linesOfCode,

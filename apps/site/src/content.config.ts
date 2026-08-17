@@ -31,6 +31,7 @@ import {
 } from "./loaders/planetnik-loader"
 
 const fileSchema = z.object({
+  id: z.string().optional(),
   relativePath: z.string(),
   extension: z.string(),
   linesOfCode: z.number(),
@@ -75,7 +76,12 @@ const reportContextSchema = z.object({
   rootRoute: z.string(),
   dataVersion: z.number(),
   repositoryId: z.string().optional(),
+  snapshotId: z.string().optional(),
+  generatedAt: z.string().optional(),
+  capabilities: z.array(z.string()).optional(),
   canonicalShards: z.record(z.string(), z.string()).optional(),
+  compatibilityProjections: z.record(z.string(), z.string()).optional(),
+  entityIdPolicy: z.record(z.string(), z.string()).optional(),
   source: z.string(),
   hasLandscape: z.boolean(),
   hasSingleRepositoryAnalysis: z.boolean(),
@@ -83,6 +89,7 @@ const reportContextSchema = z.object({
 })
 
 const landscapeRepositorySummarySchema = z.object({
+  id: z.string().optional(),
   name: z.string(),
   repoKey: z.string(),
   mainLinesOfCode: z.number(),
@@ -92,6 +99,7 @@ const landscapeRepositorySummarySchema = z.object({
 })
 
 const landscapeContributorRepositorySchema = z.object({
+  id: z.string().optional(),
   name: z.string(),
   description: z.string(),
   analysisResultsPath: z.string(),
@@ -107,6 +115,7 @@ const landscapeContributorRepositorySchema = z.object({
 })
 
 const landscapeContributorSchema = z.object({
+  id: z.string().optional(),
   email: z.string(),
   displayName: z.string(),
   name: z.string(),
@@ -220,6 +229,7 @@ export const collections = {
   units: defineCollection({
     loader: unitsLoader(),
     schema: z.object({
+      id: z.string().optional(),
       shortName: z.string(),
       longName: z.string(),
       relativeFileName: z.string(),
@@ -243,6 +253,8 @@ export const collections = {
   dependencies: defineCollection({
     loader: dependenciesLoader(),
     schema: z.object({
+      fromComponentId: z.string().optional(),
+      toComponentId: z.string().optional(),
       decompositionKey: z.string(),
       fromComponent: z.string(),
       toComponent: z.string(),
@@ -292,6 +304,7 @@ export const collections = {
   hotspots: defineCollection({
     loader: hotspotsLoader(),
     schema: z.object({
+      id: z.string().optional(),
       kind: z.enum(["file", "unit", "component"]),
       name: z.string(),
       parent: z.string(),
@@ -394,6 +407,7 @@ export const collections = {
   contributors: defineCollection({
     loader: contributorsLoader(),
     schema: z.object({
+      id: z.string().optional(),
       email: z.string(),
       commitsAllTime: z.number(),
       commits30Days: z.number(),
@@ -412,6 +426,7 @@ export const collections = {
   contributorDetails: defineCollection({
     loader: contributorDetailsLoader(),
     schema: z.object({
+      id: z.string().optional(),
       email: z.string(),
       userName: z.string(),
       commitsCount: z.number(),

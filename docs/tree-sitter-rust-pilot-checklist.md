@@ -1,5 +1,12 @@
 # Tree-sitter Rust Pilot Checklist
 
+> **Status: Completed and archived — 2026-07-19**
+>
+> The pilot has shipped. Use
+> [Rust Tree-sitter Migration Discovery](./rust-tree-sitter-migration-discovery.md)
+> for measured results and the
+> [canonical product roadmap](./product-roadmap.md) for future parser work.
+
 ## Goal
 
 Improve Rust parsing quality in `packages/analyzer` without forcing a whole-repo parser migration.

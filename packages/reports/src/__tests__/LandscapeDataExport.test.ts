@@ -138,10 +138,17 @@ describe("LandscapeDataExport", () => {
 		) as {
 			mode: string;
 			reportMode: string;
+			dataVersion: number;
 			source: string;
 			rootRoute: string;
 			hasLandscape: boolean;
 			hasSingleRepositoryAnalysis: boolean;
+			snapshotId: string;
+			generatedAt: string;
+			capabilities: string[];
+			canonicalShards: Record<string, string>;
+			compatibilityProjections: Record<string, string>;
+			entityIdPolicy: Record<string, string>;
 		};
 		const overview = JSON.parse(readFileSync(overviewPath, "utf-8")) as {
 			landscapeName: string;
@@ -176,10 +183,67 @@ describe("LandscapeDataExport", () => {
 				reportMode: "landscape",
 				source: "analyzeLandscape",
 				rootRoute: "/landscape",
+				dataVersion: 2,
 				hasLandscape: true,
 				hasSingleRepositoryAnalysis: false,
 			}),
 		);
+		expect(reportContext.snapshotId).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+		);
+		expect(reportContext.generatedAt).toMatch(
+			/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+		);
+		expect(reportContext.entityIdPolicy.repository).toBe(
+			"repo:<normalised repository key>",
+		);
+		expect(reportContext.capabilities).toEqual([
+			"analysis",
+			"overview",
+		]);
+		expect(reportContext.canonicalShards).toEqual(
+			expect.objectContaining({
+				analysis: "landscapeAnalysisResults.json",
+				overview: "landscape_overview.json",
+			}),
+		);
+		expect(reportContext.compatibilityProjections).toEqual({});
+
+		const tagMap = new TagMap(new LandscapeConfiguration(), []);
+		exportData.exportPeopleContracts(new TeamsConfig());
+		exportData.exportRepositories(tagMap);
+		exportData.exportTagContracts(tagMap, []);
+
+		const completedContext = JSON.parse(
+			readFileSync(reportContextPath, "utf-8"),
+		) as typeof reportContext;
+		expect(completedContext.snapshotId).toBe(reportContext.snapshotId);
+		expect(completedContext.generatedAt).toBe(reportContext.generatedAt);
+		expect(completedContext.capabilities).toEqual([
+			"analysis",
+			"overview",
+			"repositories",
+			"contributors",
+			"teams",
+			"topology",
+			"tags",
+			"tagMatrix",
+		]);
+		expect(completedContext.canonicalShards).toEqual({
+			analysis: "landscapeAnalysisResults.json",
+			overview: "landscape_overview.json",
+			repositories: "landscape_repositories.json",
+			contributors: "landscape_contributors.json",
+			teams: "landscape_teams.json",
+			topology: "landscape_topology.json",
+			tags: "landscape_tags.json",
+			tagMatrix: "landscape_tag_matrix.json",
+		});
+		expect(completedContext.compatibilityProjections).toEqual({
+			repositories: "repositories.txt",
+			contributors: "contributors.txt",
+			teams: "teams.txt",
+		});
 		expect(overview.landscapeName).toBe("Acme Landscape");
 		expect(overview.repositoryCount).toBe(2);
 		expect(overview.contributorCount).toBe(2);
@@ -194,6 +258,7 @@ describe("LandscapeDataExport", () => {
 		]);
 		expect(overview.topRepositories[0]).toEqual(
 			expect.objectContaining({
+				id: "repo:repo-a",
 				name: "repo-a",
 				repoKey: "repo-a",
 				mainLinesOfCode: 1200,
@@ -250,6 +315,7 @@ describe("LandscapeDataExport", () => {
 		]);
 		expect(normalized.repositories[0]).toEqual(
 			expect.objectContaining({
+				id: "repo:repo-a",
 				name: "repo-a",
 				repoKey: "repo-a",
 				commits30d: 4,
@@ -504,6 +570,7 @@ describe("LandscapeDataExport", () => {
 		expect(contributors.contributorCount).toBe(2);
 		expect(contributors.contributors[0]).toEqual(
 			expect.objectContaining({
+				id: "contributor:alice@example.com",
 				email: "alice@example.com",
 				displayName: "alice@example.com",
 				commitsCount: 16,
@@ -513,11 +580,13 @@ describe("LandscapeDataExport", () => {
 		);
 		expect(contributors.contributors[0]!.repositories).toEqual([
 			expect.objectContaining({
+				id: "repo:repo-a",
 				name: "repo-a",
 				repoKey: "repo-a",
 				analysisResultsPath: "repo-a/data/analysisResults.json",
 			}),
 			expect.objectContaining({
+				id: "repo:repo-b",
 				name: "repo-b",
 				repoKey: "repo-b",
 				analysisResultsPath: "repo-b/data/analysisResults.json",

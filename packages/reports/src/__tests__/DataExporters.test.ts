@@ -29,6 +29,7 @@ import {
 } from "@planetnik/analyzer";
 import { DataExporter } from "../exporters/DataExporter";
 import { DataExportUtils } from "../exporters/DataExportUtils";
+import { createSnapshotExportContext } from "../exporters/index.js";
 import { DependenciesExporter } from "../exporters/DependenciesExportInfo";
 import { DuplicationExporter } from "../exporters/DuplicationExportInfo";
 import { fileExportInfoFromSourceFile } from "../exporters/FileExportInfo";
@@ -50,6 +51,21 @@ describe("DataExportUtils", () => {
 		expect(DataExportUtils.getAspectFileName("prefix_", "my aspect")).toBe(
 			"prefix_my_aspect",
 		);
+	});
+});
+
+describe("SnapshotExportContext", () => {
+	test("creates a unique UUID and ISO timestamp for each export run", () => {
+		const first = createSnapshotExportContext();
+		const second = createSnapshotExportContext();
+
+		expect(first.snapshotId).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+		);
+		expect(first.generatedAt).toMatch(
+			/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+		);
+		expect(second.snapshotId).not.toBe(first.snapshotId);
 	});
 });
 
@@ -118,6 +134,7 @@ describe("FileListExporter", () => {
 		expect(result.totalLinesOfCode).toBe(150);
 		expect(result.files).toHaveLength(2);
 		expect(result.files[0]!.relativePath).toBe("src/main.ts");
+		expect(result.files[0]!.id).toBe("file:src/main.ts");
 	});
 });
 
@@ -149,6 +166,7 @@ describe("UnitListExporter", () => {
 		expect(result.totalUnitsCount).toBe(1);
 		expect(result.totalLinesOfCode).toBe(20);
 		expect(result.units[0]!.shortName).toBe("doStuff");
+		expect(result.units[0]!.id).toBe("unit:src/main.ts:10");
 		expect(result.units[0]!.mcCabeIndex).toBe(3);
 		expect(result.units[0]!.numberOfParameters).toBe(2);
 		expect(result.units[0]!.relativeFileName).toBe("src/main.ts");
@@ -210,6 +228,7 @@ describe("DependenciesExporter", () => {
 		expect(result[0]!.from.dependencyPatterns).toEqual(["import.*from"]);
 		expect(result[0]!.from.files).toHaveLength(1);
 		expect(result[0]!.from.files[0]!.relativePath).toBe("src/app.ts");
+		expect(result[0]!.from.files[0]!.id).toBe("file:src/app.ts");
 		expect(result[0]!.fromFiles).toHaveLength(1);
 		expect(result[0]!.fromFiles[0]!.codeFragment).toBe(
 			"import { B } from './b'",
@@ -530,6 +549,8 @@ describe("DataExporter", () => {
 					decompositionKey: string;
 					fromComponent: string;
 					toComponent: string;
+					fromComponentId: string;
+					toComponentId: string;
 					count: number;
 					locFrom: number;
 					evidenceCount: number;
@@ -543,6 +564,8 @@ describe("DataExporter", () => {
 					decompositionKey: "primary",
 					fromComponent: "codeanalyzer",
 					toComponent: "common",
+					fromComponentId: "component:primary:codeanalyzer",
+					toComponentId: "component:primary:common",
 					count: 2,
 					locFrom: 500,
 					evidenceCount: 0,
@@ -552,6 +575,8 @@ describe("DataExporter", () => {
 					decompositionKey: "primary",
 					fromComponent: "reports",
 					toComponent: "codeanalyzer",
+					fromComponentId: "component:primary:reports",
+					toComponentId: "component:primary:codeanalyzer",
 					count: 1,
 					locFrom: 150,
 					evidenceCount: 0,
@@ -1341,6 +1366,7 @@ describe("DataExporter", () => {
 
 		results.filesHistoryAnalysisResults.firstDate = "2024-01-10";
 		results.filesHistoryAnalysisResults.latestDate = "2024-06-20";
+		results.metricsList.addMetric().setId("LOC").setValue(120);
 
 		const alice = new Contributor("alice@example.com");
 		alice.userName = "Alice";
@@ -1388,10 +1414,32 @@ describe("DataExporter", () => {
 			) as {
 				contributorCount: number;
 				contributors: Array<{
+					id: string;
 					email: string;
 					userName: string;
 					commitsCount: number;
+					percentage: string;
+					isRookie: boolean;
+					isActive: boolean;
 				}>;
+			};
+			const metricsJson = JSON.parse(
+				readFileSync(join(reportsFolder, "data", "metrics.json"), "utf-8"),
+			) as {
+				timestamp: string;
+				metrics: Array<{ id: string; value: number }>;
+			};
+			const context = JSON.parse(
+				readFileSync(join(reportsFolder, "data", "report_context.json"), "utf-8"),
+			) as {
+				dataVersion: number;
+				repositoryId: string;
+				snapshotId: string;
+				generatedAt: string;
+				capabilities: string[];
+				canonicalShards: Record<string, string>;
+				compatibilityProjections: Record<string, string>;
+				entityIdPolicy: Record<string, string>;
 			};
 
 			expect(summary.metadata.name).toBe("RepoA");
@@ -1416,15 +1464,79 @@ describe("DataExporter", () => {
 				firstDate: "2024-01-10",
 				latestDate: "2024-06-20",
 			});
+			expect(metricsJson.metrics).toEqual([{ id: "LOC", value: 120 }]);
+			expect(context.dataVersion).toBe(2);
+			expect(context.repositoryId).toBe("repo:RepoA");
+			expect(context.entityIdPolicy.contributor).toBe(
+				"contributor:<lowercase trimmed email>",
+			);
+			expect(context.capabilities).toEqual([
+				"summary",
+				"metrics",
+				"controls",
+				"findings",
+				"hotspots",
+				"impact",
+				"contributorImpact",
+				"contributors",
+				"temporalDependencies",
+			]);
+			expect(context.canonicalShards).toEqual({
+				summary: "analysisResults.json",
+				metrics: "metrics.json",
+				controls: "controls.json",
+				findings: "findings.json",
+				hotspots: "hotspots.json",
+				impact: "impact.json",
+				contributorImpact: "contributor_impact.json",
+				contributors: "contributors.json",
+				temporalDependencies: "temporal_dependencies.json",
+			});
+			expect(context.compatibilityProjections.metrics).toBe("metrics.txt");
+			expect(context.snapshotId).toMatch(
+				/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+			);
+			expect(context.generatedAt).toBe(metricsJson.timestamp);
 
 			expect(contributorsJson.contributorCount).toBe(1);
 			expect(contributorsJson.contributors).toEqual([
 				expect.objectContaining({
+					id: "contributor:alice@example.com",
 					email: "alice@example.com",
 					userName: "Alice",
 					commitsCount: 7,
+					percentage: expect.any(String),
+					isRookie: expect.any(Boolean),
+					isActive: expect.any(Boolean),
 				}),
 			]);
+		} finally {
+			rmSync(reportsFolder, { recursive: true, force: true });
+		}
+	});
+
+	test("exportData writes an empty canonical contributors shard", () => {
+		const results = new CodeAnalysisResults();
+		const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-data-export-"));
+
+		try {
+			new DataExporter(results, reportsFolder).exportData();
+
+			const contributorsJson = JSON.parse(
+				readFileSync(join(reportsFolder, "data", "contributors.json"), "utf-8"),
+			) as {
+				title: string;
+				timestamp: string;
+				contributorCount: number;
+				contributors: unknown[];
+			};
+
+			expect(contributorsJson).toEqual({
+				title: "Contributors",
+				timestamp: expect.any(String),
+				contributorCount: 0,
+				contributors: [],
+			});
 		} finally {
 			rmSync(reportsFolder, { recursive: true, force: true });
 		}
