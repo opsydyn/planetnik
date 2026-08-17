@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from "react"
 import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
 import {
   reduceCodeCityStoryViewState,
+  resolveCodeCityStoryCompletionAction,
   resolveCodeCityStoryFocusAction,
 } from "../CodeCityView.js"
 import type { CodeCityStory, CodeCityStoryEvent } from "../story.js"
@@ -158,6 +159,22 @@ describe("CodeCityStoryRail", () => {
         entityId: null,
       })
       expect(textContent(rendered)).toContain("Return to overview")
+    }
+  })
+
+  test("focused final navigation restores the overview before story completion", () => {
+    const story = storyFixture()
+    const navigation = [{ type: "next" } as const, { type: "skip" } as const]
+
+    for (const event of navigation) {
+      const previousState = { tag: "active" as const, stepIndex: 3, focused: true }
+      const nextState = reduceCodeCityStoryViewState(previousState, event, story.steps.length)
+
+      expect(nextState).toEqual({ tag: "completed" })
+      expect(resolveCodeCityStoryCompletionAction(previousState, event, nextState)).toEqual({
+        type: "return-to-overview",
+        entityId: null,
+      })
     }
   })
 })

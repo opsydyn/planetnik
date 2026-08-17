@@ -112,6 +112,18 @@ export const resolveCodeCityStoryFocusAction = (
 	return step.target ? { type: "focus", entityId: step.target.id } : { type: "none" };
 };
 
+export const resolveCodeCityStoryCompletionAction = (
+	previousState: CodeCityStoryState,
+	event: CodeCityStoryEvent,
+	nextState: CodeCityStoryState,
+): CodeCityStoryFocusAction =>
+	previousState.tag === "active" &&
+	previousState.focused &&
+	nextState.tag === "completed" &&
+	(event.type === "next" || event.type === "skip")
+		? { type: "return-to-overview", entityId: null }
+		: { type: "none" };
+
 export default function CodeCityView({
 	model,
 	evidenceBasePath,
@@ -235,7 +247,16 @@ export default function CodeCityView({
 		}
 
 		const nextState = reduceCodeCityStoryViewState(storyState, event, story.steps.length);
+		const completionAction = resolveCodeCityStoryCompletionAction(
+			storyState,
+			event,
+			nextState,
+		);
 		setStoryState(nextState);
+		if (completionAction.type === "return-to-overview") {
+			restoreStoryContext("Story complete. Previous selection and overview restored.");
+			return;
+		}
 		const nextStep = storyStepFor(story, nextState);
 		if (nextStep) {
 			setSelection(nextStep.target);
