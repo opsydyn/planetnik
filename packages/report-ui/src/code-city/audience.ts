@@ -85,9 +85,11 @@ export function resolveCodeCityAudience(value: string | null | undefined): CodeC
 }
 
 export function getCodeCityAudiencePresentation(audience: CodeCityAudienceId): CodeCityAudiencePresentation {
+  const presentation = AUDIENCE_PRESENTATIONS[audience]
   return {
     audience,
-    ...AUDIENCE_PRESENTATIONS[audience],
+    ...presentation,
+    inspectorMetricOrder: [...presentation.inspectorMetricOrder],
     coverageNote: COMPLETE_COVERAGE_NOTE,
   }
 }

@@ -109,4 +109,19 @@ describe("resolveCodeCityAudience", () => {
       "All available signals are represented.",
     )
   })
+
+  test("a consumer cannot contaminate later presentation results", () => {
+    const first = getCodeCityAudiencePresentation("onboarding")
+    ;(first.inspectorMetricOrder as string[]).pop()
+
+    expect(getCodeCityAudiencePresentation("onboarding").inspectorMetricOrder).toEqual([
+      "footprint",
+      "ownership",
+      "health",
+      "impact",
+      "change",
+      "complexity",
+      "coverage",
+    ])
+  })
 })
