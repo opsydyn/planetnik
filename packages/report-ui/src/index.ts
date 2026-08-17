@@ -2,6 +2,9 @@ export type {
   CodeCityFallbackProps,
   CodeCityFallbackRow,
   CodeCityFallbackRowModel,
+  CodeCityAudienceId,
+  CodeCityAudienceMetricId,
+  CodeCityAudiencePresentation,
   CodeCityBuildingArchetype,
   CodeCityBuildingVisual,
   CodeCityDistrictVisual,
@@ -37,6 +40,7 @@ export type {
   CodeCityViewProps,
 } from "./code-city/index"
 export {
+  buildCodeCityAudiencePresentation,
   buildCodeCityFallbackRows,
   buildCodeCityKitRecipe,
   buildCodeCityInspectorModel,
@@ -46,6 +50,7 @@ export {
   CodeCityInspector,
   CodeCityView,
   CodeCityViewControls,
+  getCodeCityAudiencePresentation,
   resolveCodeCityEvidenceHref,
   resolveCodeCityDetailLevel,
   resolveCodeCityBuildingVisual,
@@ -56,6 +61,7 @@ export {
   resolveCodeCitySurfaceTreatment,
   resolveCodeCityRouteState,
   resolveCodeCitySelection,
+  resolveCodeCityAudience,
   resolveCodeCityViewMode,
 } from "./code-city/index"
 export { default as SecurityActionCenter } from "./security/SecurityActionCenter"

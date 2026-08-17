@@ -1,5 +1,15 @@
 export type { CodeCityFallbackProps, CodeCityFallbackRow } from "./CodeCityFallback"
 export { CodeCityFallback } from "./CodeCityFallback"
+export type {
+  CodeCityAudienceId,
+  CodeCityAudienceMetricId,
+  CodeCityAudiencePresentation,
+} from "./audience.js"
+export {
+  buildCodeCityAudiencePresentation,
+  getCodeCityAudiencePresentation,
+  resolveCodeCityAudience,
+} from "./audience.js"
 export type { CodeCityInspectorProps } from "./CodeCityInspector"
 export { CodeCityInspector } from "./CodeCityInspector"
 export type { CodeCityViewProps } from "./CodeCityView"
