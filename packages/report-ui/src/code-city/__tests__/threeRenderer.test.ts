@@ -9,6 +9,24 @@ import {
   resolveCodeCityVisibleLabelIds,
 } from "../threeRenderer.js"
 
+const districtVisual = {
+  kind: "district" as const,
+  parcelStyle: "civic" as const,
+  landmarkTier: "none" as const,
+  texturePattern: "gridded" as const,
+}
+
+const buildingVisual = {
+  kind: "building" as const,
+  materialFamily: "brick" as const,
+  archetype: "block" as const,
+  roofStyle: "flat" as const,
+  texturePattern: "solid" as const,
+  floorCount: 1,
+  facadeSegments: 1,
+  multiDistrict: false,
+}
+
 const multiDistrictScene = (): CodeCityScene => ({
   contractVersion: 1,
   nodes: [
@@ -20,6 +38,7 @@ const multiDistrictScene = (): CodeCityScene => ({
       center: { x: 0, z: 0 },
       size: { width: 8, depth: 8, height: 0.5 },
       districtKey: "district:core",
+      visual: districtVisual,
     },
     {
       id: "district:web",
@@ -29,6 +48,7 @@ const multiDistrictScene = (): CodeCityScene => ({
       center: { x: 12, z: 0 },
       size: { width: 8, depth: 8, height: 0.5 },
       districtKey: "district:web",
+      visual: districtVisual,
     },
     {
       id: "district:other",
@@ -38,6 +58,7 @@ const multiDistrictScene = (): CodeCityScene => ({
       center: { x: 24, z: 0 },
       size: { width: 8, depth: 8, height: 0.5 },
       districtKey: "district:other",
+      visual: districtVisual,
     },
     {
       id: "file:shared",
@@ -47,6 +68,7 @@ const multiDistrictScene = (): CodeCityScene => ({
       center: { x: 0, z: 0 },
       size: { width: 2, depth: 2, height: 4 },
       districtKey: "district:core",
+      visual: { ...buildingVisual, multiDistrict: true },
     },
     {
       id: "file:web",
@@ -56,6 +78,7 @@ const multiDistrictScene = (): CodeCityScene => ({
       center: { x: 12, z: 0 },
       size: { width: 2, depth: 2, height: 3 },
       districtKey: "district:web",
+      visual: buildingVisual,
     },
     {
       id: "file:other",
@@ -65,6 +88,7 @@ const multiDistrictScene = (): CodeCityScene => ({
       center: { x: 24, z: 0 },
       size: { width: 2, depth: 2, height: 2 },
       districtKey: "district:other",
+      visual: buildingVisual,
     },
   ],
   edges: [
@@ -143,6 +167,7 @@ describe("resolveCodeCityRouteSelectionId", () => {
           center: { x: 0, z: 0 },
           size: { width: 8, depth: 8, height: 0.5 },
           districtKey: "district:core",
+          visual: districtVisual,
         },
         {
           id: "file:alpha",
@@ -152,6 +177,7 @@ describe("resolveCodeCityRouteSelectionId", () => {
           center: { x: 0, z: 0 },
           size: { width: 2, depth: 2, height: 4 },
           districtKey: "district:core",
+          visual: buildingVisual,
         },
       ],
       edges: [],

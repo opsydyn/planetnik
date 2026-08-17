@@ -1,3 +1,5 @@
+import type { CodeCitySceneNodeVisual } from "./visualTokens.js";
+
 export type CodeCityScenePoint = {
 	readonly x: number;
 	readonly y: number;
@@ -16,6 +18,7 @@ export type CodeCitySceneNode = {
 		readonly height: number;
 	};
 	readonly districtKey: string;
+	readonly visual: CodeCitySceneNodeVisual;
 };
 
 export type CodeCitySceneEdge = {

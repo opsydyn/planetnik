@@ -177,4 +177,25 @@ describe("buildCodeCityScene", () => {
 		const scene = buildCodeCityScene(modelFixture());
 		expect(JSON.parse(JSON.stringify(scene))).toEqual(scene);
 	});
+
+	test("attaches renderer-neutral visual tokens without changing the scene contract", () => {
+		const scene = buildCodeCityScene(modelFixture());
+
+		expect(scene.nodes.find((node) => node.id === "district:core")?.visual).toEqual({
+			kind: "district",
+			parcelStyle: "civic",
+			landmarkTier: "super_hub",
+			texturePattern: "gridded",
+		});
+		expect(scene.nodes.find((node) => node.id === "file:alpha")?.visual).toEqual({
+			kind: "building",
+			materialFamily: "brick",
+			archetype: "tower",
+			roofStyle: "capped",
+			texturePattern: "solid",
+			floorCount: 5,
+			facadeSegments: 1,
+			multiDistrict: true,
+		});
+	});
 });

@@ -9,6 +9,11 @@ import type {
 	CodeCitySceneEdge,
 	CodeCitySceneNode,
 } from "./sceneTypes.js";
+import {
+	buildCodeCityVisualContext,
+	resolveCodeCityBuildingVisual,
+	resolveCodeCityDistrictVisual,
+} from "./visualTokens.js";
 
 const CELL_SIZE = 4;
 const PARCEL_MARGIN = 2;
@@ -117,6 +122,7 @@ const sceneEdge = (
 };
 
 export function buildCodeCityScene(model: CodeCityModel): CodeCityScene {
+	const visualContext = buildCodeCityVisualContext(model);
 	const districts = orderByLayout(
 		uniqueById(model.districts),
 		model.layout.districtOrder,
@@ -181,6 +187,7 @@ export function buildCodeCityScene(model: CodeCityModel): CodeCityScene {
 				height: DISTRICT_HEIGHT,
 			},
 			districtKey: placement.district.id,
+			visual: resolveCodeCityDistrictVisual(placement.district, visualContext),
 		});
 	}
 
@@ -208,6 +215,7 @@ export function buildCodeCityScene(model: CodeCityModel): CodeCityScene {
 				height: buildingHeight(building.metrics.footprint.loc),
 			},
 			districtKey: building.primaryDistrictId,
+			visual: resolveCodeCityBuildingVisual(building, visualContext),
 		});
 	}
 

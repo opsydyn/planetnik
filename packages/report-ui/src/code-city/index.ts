@@ -17,11 +17,29 @@ export type {
 export { resolveCodeCityRouteState } from "./routeState"
 export { buildCodeCityScene } from "./sceneAdapter"
 export type {
-  CodeCityScene,
-  CodeCitySceneEdge,
-  CodeCitySceneNode,
-  CodeCityScenePoint,
+	CodeCityScene,
+	CodeCitySceneEdge,
+	CodeCitySceneNode,
+	CodeCityScenePoint,
 } from "./sceneTypes"
+export type {
+  CodeCityBuildingArchetype,
+  CodeCityBuildingVisual,
+  CodeCityDistrictVisual,
+  CodeCityLandmarkTier,
+  CodeCityMaterialFamily,
+  CodeCityParcelStyle,
+  CodeCityRoofStyle,
+  CodeCitySceneNodeVisual,
+  CodeCityTexturePattern,
+  CodeCityVisualContext,
+} from "./visualTokens"
+export {
+  buildCodeCityVisualContext,
+  resolveCodeCityBuildingVisual,
+  resolveCodeCityDistrictVisual,
+  resolveCodeCityMaterialFamily,
+} from "./visualTokens"
 export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
 export { resolveCodeCitySelection } from "./selection"
 export type { CodeCityViewAvailability, CodeCityViewMode } from "./viewMode"
