@@ -10,6 +10,15 @@ export {
 } from "./audience.js"
 export type { CodeCityAudienceSwitchProps } from "./CodeCityAudienceSwitch.js"
 export { CodeCityAudienceSwitch } from "./CodeCityAudienceSwitch.js"
+export type { CodeCityArchitectureBriefProps } from "./CodeCityArchitectureBrief.js"
+export { CodeCityArchitectureBrief } from "./CodeCityArchitectureBrief.js"
+export type {
+  CodeCityBriefEvidence,
+  CodeCityBriefFact,
+} from "./brief.js"
+export { buildCodeCityArchitectureBrief } from "./brief.js"
+export type { CodeCityUrlState } from "./audienceUrl.js"
+export { buildCodeCityUrl, parseCodeCityUrlState } from "./audienceUrl.js"
 export type { CodeCityFallbackProps, CodeCityFallbackRow } from "./CodeCityFallback"
 export { CodeCityFallback } from "./CodeCityFallback"
 export type { CodeCityInspectorProps } from "./CodeCityInspector"

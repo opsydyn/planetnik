@@ -6,6 +6,7 @@ import {
 	type CodeCityCanvasUnavailableReason,
 } from "./CodeCityCanvas.js";
 import { CodeCityAudienceSwitch } from "./CodeCityAudienceSwitch.js";
+import { CodeCityArchitectureBrief } from "./CodeCityArchitectureBrief.js";
 import { CodeCityFallback } from "./CodeCityFallback.js";
 import { CodeCityInspector } from "./CodeCityInspector.js";
 import { CodeCityStoryRail } from "./CodeCityStoryRail.js";
@@ -15,6 +16,8 @@ import {
 	getCodeCityAudiencePresentation,
 	type CodeCityAudienceId,
 } from "./audience.js";
+import { buildCodeCityArchitectureBrief } from "./brief.js";
+import { buildCodeCityUrl } from "./audienceUrl.js";
 import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
 import { resolveCodeCityLens } from "./lens.js";
 import { buildCodeCityScene } from "./sceneAdapter.js";
@@ -82,6 +85,22 @@ const initialStoryState = (
 const storyStepFor = (story: CodeCityStory, state: CodeCityStoryState) =>
 	state.tag === "active" ? story.steps[state.stepIndex] ?? null : null;
 
+const storyIdFor = (
+	story: CodeCityStory,
+	state: CodeCityStoryState,
+): CodeCityStoryStepId | null => storyStepFor(story, state)?.id ?? null;
+
+const briefText = (brief: ReturnType<typeof buildCodeCityArchitectureBrief>): string =>
+	[
+		brief.title,
+		brief.lead,
+		...brief.facts.flatMap((fact) => [
+			`${fact.label}: ${fact.value}`,
+			...fact.evidence.map((evidence) => `- ${evidence.label}: ${evidence.href}`),
+		]),
+		`Next action: ${brief.nextAction}`,
+	].join("\n\n");
+
 export type CodeCityStoryFocusAction =
 	| { readonly type: "focus"; readonly entityId: string }
 	| { readonly type: "return-to-overview"; readonly entityId: null }
@@ -148,6 +167,7 @@ export default function CodeCityView({
 	const [rendererUnavailable, setRendererUnavailable] =
 		useState<CodeCityCanvasUnavailableReason | null>(null);
 	const [focusAnnouncement, setFocusAnnouncement] = useState("");
+	const [briefCopied, setBriefCopied] = useState(false);
 
 	const scene = useMemo(() => buildCodeCityScene(model), [model]);
 	const selectionResult = useMemo(
@@ -157,6 +177,10 @@ export default function CodeCityView({
 	const presentation = useMemo(
 		() => buildCodeCityAudiencePresentation(model, audience),
 		[model, audience],
+	);
+	const brief = useMemo(
+		() => buildCodeCityArchitectureBrief(model, presentation, story, evidenceBasePath),
+		[model, presentation, story, evidenceBasePath],
 	);
 	const inspector = useMemo(
 		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath, activeLens, presentation),
@@ -222,8 +246,33 @@ export default function CodeCityView({
 		setFocusAnnouncement("Selection cleared. Map view restored if it was focused.");
 	};
 
+	const replaceUrlState = (
+		nextAudience: CodeCityAudienceId,
+		nextStoryState: CodeCityStoryState,
+	) => {
+		if (typeof window === "undefined") return;
+		window.history.replaceState(
+			window.history.state,
+			"",
+			buildCodeCityUrl(window.location.pathname, {
+				audience: nextAudience,
+				story: storyIdFor(story, nextStoryState),
+			}),
+		);
+	};
+
+	const copyBrief = () => {
+		setBriefCopied(false);
+		if (typeof navigator === "undefined" || !navigator.clipboard) return;
+		void navigator.clipboard.writeText(briefText(brief)).then(
+			() => setBriefCopied(true),
+			() => setBriefCopied(false),
+		);
+	};
+
 	const changeAudience = (nextAudience: CodeCityAudienceId) => {
 		setAudience(nextAudience);
+		replaceUrlState(nextAudience, storyState);
 		setFocusAnnouncement(
 			`${getCodeCityAudiencePresentation(nextAudience).label} audience selected. The city geometry is unchanged.`,
 		);
@@ -238,7 +287,9 @@ export default function CodeCityView({
 	const handleStoryEvent = (event: CodeCityStoryEvent) => {
 		if (event.type === "exit") {
 			restoreStoryContext("Story exited. Previous selection and overview restored.");
-			setStoryState(reduceCodeCityStoryState(storyState, event, story.steps.length));
+			const nextState = reduceCodeCityStoryState(storyState, event, story.steps.length);
+			setStoryState(nextState);
+			replaceUrlState(audience, nextState);
 			return;
 		}
 
@@ -253,6 +304,7 @@ export default function CodeCityView({
 			nextState,
 		);
 		setStoryState(nextState);
+		replaceUrlState(audience, nextState);
 		if (completionAction.type === "return-to-overview") {
 			restoreStoryContext("Story complete. Previous selection and overview restored.");
 			return;
@@ -329,6 +381,12 @@ export default function CodeCityView({
 				state={storyState}
 				onEvent={handleStoryEvent}
 				onFocusStep={focusStoryStep}
+			/>
+
+			<CodeCityArchitectureBrief
+				brief={brief}
+				copied={briefCopied}
+				onCopy={copyBrief}
 			/>
 
 			<div className="code-city__legend" aria-label="Lens legend">

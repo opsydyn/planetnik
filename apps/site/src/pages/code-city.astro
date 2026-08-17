@@ -5,6 +5,7 @@ import {
 } from "@planetnik/common";
 import {
 	CodeCityView,
+	parseCodeCityUrlState,
 	resolveCodeCityRouteState,
 	type CodeCityRouteResolution,
 } from "@planetnik/report-ui";
@@ -82,6 +83,7 @@ const cityModel =
 		? pageState.model
 		: null;
 const invalidMessage = pageState.tag === "invalid" ? pageState.message : "";
+const initialPresentationState = parseCodeCityUrlState(Astro.url);
 ---
 
 <Dashboard title="Code City" projectName={projectName}>
@@ -113,6 +115,8 @@ const invalidMessage = pageState.tag === "invalid" ? pageState.message : "";
 				client:load
 				model={cityModel}
 				evidenceBasePath={route("/")}
+				initialAudience={initialPresentationState.audience}
+				initialStoryId={initialPresentationState.story}
 			/>
 		</>
 	) : pageState.tag === "unsupported-landscape" ? (

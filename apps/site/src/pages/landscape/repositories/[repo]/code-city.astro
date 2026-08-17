@@ -1,6 +1,6 @@
 ---
 import { CodeCityInputError } from "@planetnik/common";
-import { CodeCityView } from "@planetnik/report-ui";
+import { CodeCityView, parseCodeCityUrlState } from "@planetnik/report-ui";
 import Dashboard from "../../../../layouts/Dashboard.astro";
 import {
 	getLandscapeRepositoryFilePageHref,
@@ -42,6 +42,7 @@ const cityModel =
 		? pageState.model
 		: null;
 const invalidMessage = pageState.tag === "invalid" ? pageState.message : "";
+const initialPresentationState = parseCodeCityUrlState(Astro.url);
 ---
 
 <Dashboard
@@ -77,6 +78,8 @@ const invalidMessage = pageState.tag === "invalid" ? pageState.message : "";
 				client:load
 				model={cityModel}
 				evidenceBasePath={repositoryHref}
+				initialAudience={initialPresentationState.audience}
+				initialStoryId={initialPresentationState.story}
 			/>
 		</>
 	) : pageState.tag === "unsupported-landscape" ? (
