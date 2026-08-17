@@ -180,9 +180,9 @@ consume the same explicit, versioned, machine-first snapshot contract.
 
 ## Phase 1.5 — Code City semantic visualisation
 
-**Status: Delivered foundation — static repo-scoped UI verified at the contract,
-build, and initial browser-render boundary; full direct interaction acceptance
-remains open**
+**Status: Delivered foundation — audience-aware static UI implemented and
+partially exercised in a real browser; direct interaction acceptance remains
+open**
 
 ### Reference implementation
 
@@ -238,17 +238,30 @@ links to the underlying report evidence.
 - the canonical v2 model, deterministic scene adapter, semantic lenses,
   inspector, evidence links, lazy Three.js renderer, and complete table fallback
   are implemented in shared report UI primitives
-- `/code-city` is available in the single-repository static shell and uses only
-  canonical JSON content collections
-- focused model, scene, selection, fallback, route-state, and reload tests pass;
-  package/site typechecks and the workspace build pass
-- a deterministic complete fixture rendered the orthographic/isometric city in
-  a real browser, with the expected map, lens, inspector, and navigation shell
-- the renderer chunk measured 547,233 bytes raw and 135,705 bytes gzip in the
-  acceptance build; no first-usable interaction claim is made yet
-- direct orbit/pan/zoom, camera preservation and restore, forced no-WebGL,
-  print, reduced-motion, partial-snapshot, and dense-snapshot browser checks
-  remain an explicit acceptance follow-on after browser automation is reliable
+- `/code-city` and the repo-scoped landscape Code City route use canonical JSON
+  content collections and expose Onboarding, Architecture Review, and
+  Stakeholder explanations, a reversible story rail, architecture brief, and
+  table path
+- focused model, scene, selection, fallback, route-state, responsive, print,
+  and reduced-motion assertions pass; the workspace typecheck and deterministic
+  fixture build pass
+- the complete fixture directly showed the rendered orthographic/isometric
+  city, table, all three audience questions and first actions, stable selection
+  through audience changes, story navigation, focus/return announcements, and
+  matching brief, inspector, and story evidence links on the single-repository
+  route; the repo-scoped route directly showed the same audience, story, table,
+  and evidence surfaces
+- the partial fixture directly explained that `impact.json` was unavailable and
+  kept the available component evidence, but the partial story was not run to
+  its unavailable step
+- after the final hydration repair in `79d5251`, direct reload of
+  `audience=architecture-review&story=connect` restored Architecture Review,
+  Connect the city, the `analysis` inspector, and Map view on both routes
+- the renderer chunk measured 571,471 bytes raw and 142,358 bytes gzip in the
+  2026-08-17 acceptance build; no first-usable interaction claim is made yet
+- direct orbit/pan/zoom, camera coordinate preservation and restore, keyboard
+  traversal, forced no-WebGL, print preview, reduced-motion emulation, the
+  partial unavailable-step flow, and the dense snapshot remain open
 - landscape aggregation and hosted route integration remain later slices; both
   must consume the same `CodeCityModel` and renderer-neutral scene contract
 

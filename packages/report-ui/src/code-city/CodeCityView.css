@@ -6,6 +6,7 @@
 
 .code-city__controls,
 .code-city__audience,
+.code-city__story,
 .code-city__story-rail,
 .code-city__brief,
 .code-city__legend,
@@ -684,7 +685,13 @@
 	}
 
 	.code-city__lens-buttons {
+		order: 3;
 		justify-content: flex-start;
+	}
+
+	.code-city__audience-switch {
+		order: 2;
+		width: 100%;
 	}
 
 	.code-city__audience {
@@ -704,6 +711,7 @@
 	}
 
 	.code-city__view-buttons {
+		order: 1;
 		align-self: stretch;
 	}
 
@@ -755,6 +763,11 @@
 
 	.code-city__story-rail button {
 		flex: 1 1 8rem;
+		min-height: 2.75rem;
+	}
+
+	.code-city__story-actions {
+		width: 100%;
 	}
 
 	.code-city__map {
@@ -778,6 +791,16 @@
 
 	.code-city-fallback--supplemental {
 		display: grid;
+	}
+
+	.code-city__story-rail {
+		animation: none !important;
+		transition: none !important;
+	}
+
+	.code-city__story-evidence {
+		border-left: 2px solid var(--color-accent, #58a6ff);
+		padding-left: 1rem;
 	}
 }
 
@@ -809,5 +832,29 @@
 	.code-city-fallback a {
 		color: #000;
 		text-decoration: underline;
+	}
+
+	.code-city__brief {
+		display: grid !important;
+		break-inside: avoid;
+		border: 0;
+		padding: 0 0 1rem;
+		color: #000;
+		background: #fff;
+	}
+
+	.code-city__brief-copy > p:not(.code-city__eyebrow),
+	.code-city__brief-actions p,
+	.code-city__brief-status {
+		color: #000;
+	}
+
+	.code-city__brief a {
+		color: #000;
+		text-decoration: underline;
+	}
+
+	.code-city__brief-actions button {
+		display: none;
 	}
 }

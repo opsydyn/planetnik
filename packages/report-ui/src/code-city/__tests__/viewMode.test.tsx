@@ -1,10 +1,35 @@
 import { describe, expect, test } from "bun:test";
 import type { ReactElement, ReactNode } from "react";
+import {
+	formatCodeCityFallbackInspectLabel,
+	type CodeCityFallbackRow,
+} from "../CodeCityFallback.js";
 import { CodeCityViewControls } from "../CodeCityViewControls.js";
 import {
 	resolveCodeCityViewMode,
 	type CodeCityViewMode,
 } from "../viewMode.js";
+
+const stylesheet = await Bun.file(new URL("../CodeCityView.css", import.meta.url)).text();
+
+const blockContents = (source: string, marker: string): string => {
+	const markerIndex = source.indexOf(marker);
+	if (markerIndex === -1) return "";
+	const openingBrace = source.indexOf("{", markerIndex + marker.length);
+	if (openingBrace === -1) return "";
+	let depth = 1;
+	for (let index = openingBrace + 1; index < source.length; index += 1) {
+		if (source[index] === "{") depth += 1;
+		if (source[index] === "}") depth -= 1;
+		if (depth === 0) return source.slice(openingBrace + 1, index);
+	}
+	return "";
+};
+
+const declarationsFor = (source: string, selector: string): string =>
+	blockContents(source, selector)
+		.replaceAll(/\s+/g, " ")
+		.trim();
 
 type ViewButtonProps = {
 	readonly type: "button";
@@ -70,5 +95,67 @@ describe("CodeCityViewControls", () => {
 
 		tableButton?.props.onClick();
 		expect(changes).toEqual(["table"]);
+	});
+});
+
+describe("Code City fallback parity", () => {
+	test("keeps the complete table path and entity-specific inspection available", () => {
+		const changes: CodeCityViewMode[] = [];
+		const row = {
+			kind: "building",
+			id: "file:runtime",
+			entity: "src/runtime.ts",
+			district: "Runtime",
+			path: "src/runtime.ts",
+			loc: "240",
+			health: "87 (critical; change)",
+			impact: "73 (coupling)",
+			form: "Tower · capped roof",
+			landmark: "Super hub",
+			href: "/planetnik/files/size#runtime",
+		} satisfies CodeCityFallbackRow;
+		const control = CodeCityViewControls({
+			mode: "table",
+			mapAvailable: false,
+			onChange: (mode) => changes.push(mode),
+		});
+		const buttons = control.props.children as ReactElement<ViewButtonProps>[];
+		const mapButton = buttons[0];
+		const tableButton = buttons[1];
+
+		expect(mapButton?.props.disabled).toBe(true);
+		expect(tableButton?.props).toMatchObject({
+			children: "Table view",
+			"aria-controls": "code-city-fallback",
+			"aria-pressed": true,
+		});
+		expect(formatCodeCityFallbackInspectLabel(row)).toBe("Inspect file src/runtime.ts");
+	});
+
+	test("keeps responsive controls explicit, reduced motion static, and print evidence readable", () => {
+		const tablet = blockContents(stylesheet, "@media (max-width: 1000px)");
+		const mobile = blockContents(stylesheet, "@media (max-width: 600px)");
+		const reducedMotion = blockContents(
+			stylesheet,
+			"@media (prefers-reduced-motion: reduce)",
+		);
+		const print = blockContents(stylesheet, "@media print");
+
+		expect(declarationsFor(tablet, ".code-city__audience-switch")).toContain("order: 2");
+		expect(declarationsFor(tablet, ".code-city__lens-buttons")).toContain("order: 3");
+		expect(declarationsFor(mobile, ".code-city__story-rail button")).toContain(
+			"min-height: 2.75rem",
+		);
+		expect(declarationsFor(reducedMotion, ".code-city__story-rail")).toContain(
+			"animation: none !important",
+		);
+		expect(declarationsFor(reducedMotion, ".code-city__story-evidence")).toContain(
+			"border-left: 2px solid",
+		);
+		expect(declarationsFor(print, ".code-city__brief")).toContain("display: grid !important");
+		expect(declarationsFor(print, ".code-city__brief")).toContain("color: #000");
+		expect(declarationsFor(print, ".code-city__brief-actions button")).toContain(
+			"display: none",
+		);
 	});
 });

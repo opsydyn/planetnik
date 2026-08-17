@@ -1,9 +1,15 @@
 import { describe, expect, test } from "bun:test"
 import type { ReactElement, ReactNode } from "react"
+import { CodeCityArchitectureBrief } from "../CodeCityArchitectureBrief.js"
+import { CodeCityAudienceSwitch } from "../CodeCityAudienceSwitch.js"
 import { formatCodeCityFallbackInspectLabel } from "../CodeCityFallback.js"
 import { CodeCityInspector } from "../CodeCityInspector.js"
+import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
+import type { CodeCityStory } from "../story.js"
 import type { CodeCityFallbackRow } from "../CodeCityFallback.js"
 import type { CodeCityInspectorModel } from "../viewModel.js"
+
+const viewSource = await Bun.file(new URL("../CodeCityView.tsx", import.meta.url)).text()
 
 const textContent = (node: ReactNode): string => {
   if (typeof node === "string" || typeof node === "number") return String(node)
@@ -59,6 +65,82 @@ describe("CodeCityFallback", () => {
     expect(formatCodeCityFallbackInspectLabel(building)).toBe("Inspect file src/runtime.ts")
   })
 
+})
+
+describe("Code City audience experience", () => {
+  test("keeps audience explanation, architecture brief, and table fallback wired into the view", () => {
+    expect(viewSource).toContain("What you’re seeing")
+    expect(viewSource).toContain("<CodeCityArchitectureBrief")
+    expect(viewSource).toContain("<CodeCityFallback")
+  })
+
+  test("exposes a labelled audience group and the guided explanation entry point", () => {
+    const audience = CodeCityAudienceSwitch({
+      audience: "onboarding",
+      onChange: () => undefined,
+    })
+    const story: CodeCityStory = {
+      audience: "onboarding",
+      steps: [],
+    }
+    const rail = CodeCityStoryRail({
+      story,
+      state: { tag: "idle" },
+      onEvent: () => undefined,
+      onFocusStep: () => undefined,
+    })
+    const audienceButtons = findElements(audience, (element) => element.type === "button")
+    const storyButtons = findElements(rail, (element) => element.type === "button")
+
+    expect(audience.props).toMatchObject({
+      role: "group",
+      "aria-label": "Code City audience",
+    })
+    expect(audienceButtons.map((button) => textContent(button))).toEqual([
+      "Onboarding",
+      "Architecture Review",
+      "Stakeholder",
+    ])
+    expect(textContent(rail)).toContain("Explain this city")
+    expect(storyButtons.map((button) => textContent(button))).toContain("Explain this city")
+  })
+
+  test("keeps architecture brief facts and their evidence visible outside the map", () => {
+    const rendered = CodeCityArchitectureBrief({
+      brief: {
+        title: "Architecture Review brief",
+        lead: "Where are the boundaries and pressures?",
+        facts: [
+          {
+            label: "Largest context",
+            value: "Runtime · 240 LOC",
+            evidence: [{ label: "Runtime component", href: "/components#runtime" }],
+          },
+          {
+            label: "Evidence",
+            value: "1 canonical route",
+            evidence: [{ label: "Runtime topology", href: "/topology#runtime" }],
+          },
+        ],
+        nextAction: "Inspect a hub or boundary crossing",
+      },
+      copyStatus: "idle",
+      onCopy: () => undefined,
+    })
+    const links = findElements(rendered, (element) => element.type === "a")
+
+    expect(rendered.props).toMatchObject({
+      className: "code-city__brief",
+      "aria-label": "Architecture brief",
+    })
+    expect(textContent(rendered)).toContain("Largest context")
+    expect(textContent(rendered)).toContain("Runtime · 240 LOC")
+    expect(textContent(rendered)).toContain("Inspect a hub or boundary crossing")
+    expect(links.map((link) => link.props.href)).toEqual([
+      "/components#runtime",
+      "/topology#runtime",
+    ])
+  })
 })
 
 describe("CodeCityInspector", () => {

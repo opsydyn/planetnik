@@ -73,28 +73,46 @@ does not adopt or port Draxul's native renderer, code, or assets.
 
 The provisional evidence boundary is deliberately narrow.
 
-Automated evidence on 2026-08-16 covered the canonical model, deterministic
-layout, lenses, selection paths, safe evidence links, route states, fallback
-row preservation, WebGL capability handling, route reload policy, package/site
-typechecks, and the full workspace build. The acceptance build emitted the
-lazy `threeRenderer` chunk at 547,233 bytes raw and 135,705 bytes gzip.
+Automated evidence on 2026-08-17 covers the canonical model, deterministic
+layout, lenses, selection paths, safe evidence links, audience and story state
+machines, fallback row preservation, WebGL capability handling, responsive,
+print, and reduced-motion rules, workspace typechecks, and the static build.
+The acceptance build emitted the lazy `threeRenderer` chunk at 571,471 bytes
+raw and 142,358 bytes gzip.
 
-A real browser opened the deterministic complete fixture at
-`/planetnik/code-city`. The DOM and screenshot showed 13 files, three contexts,
-zero diagnostics, the Health lens, all six lens controls, the map/table switch,
-inspector, navigation entry, and a rendered orthographic/isometric city. A
-lower-level browser diagnostic then hung, so this evidence does not establish
-orbit/pan/zoom, camera preservation and restore, Focus behaviour, forced
-renderer failure, print preview, reduced motion, partial snapshots, dense
-fallback, or a reliable first-usable interaction time.
+The in-app browser opened the deterministic complete fixture at
+`/planetnik/code-city`. The DOM and screenshots showed 13 files, three
+contexts, zero diagnostics, the map and 16-row table, and a rendered
+orthographic/isometric city. Onboarding, Architecture Review, and Stakeholder
+showed their distinct opening questions and first actions while the selected
+`analysis` district, one dependency route, architecture-brief facts, evidence
+links, and visible scene framing remained stable. The complete story was
+advanced, reversed, focused, returned to overview, completed, replayed, and
+exited. At its Prove step, story, inspector, and brief linked the same component
+and impact evidence routes.
 
-Those checks remain a release-confidence follow-on. Until they are recorded,
-this ADR establishes only that the canonical fixture can reach and render the
-initial WebGL view; it does not accept the interaction contract. In particular,
-orbit/pan/zoom, selection/focus/restore, renderer fallback, keyboard and print
-behaviour, reduced motion, partial and dense snapshots, and first-usable timing
-remain pending. This boundary does not broaden the ADR into a native renderer
-commitment or permit removing the HTML fallback.
+The encoded repo-scoped route
+`/planetnik/landscape/repositories/acme$2Faudience-fixture/code-city` directly
+showed the complete map/table surface, Architecture Review, story navigation,
+16 fallback rows, and repo-scoped component and impact evidence links. The
+partial single-repository fixture directly named `impact.json` as unavailable,
+retained its 16-row record set and available component evidence, and did not
+invent a replacement impact value. The partial story was only observed at its
+available Orient step, where Skip was correctly disabled; its unavailable step
+and the partial repo-scoped route were not exercised.
+
+After the final URL hydration repair in `79d5251`, direct reload of URLs containing
+`audience=architecture-review&story=connect` restored Architecture Review,
+Connect the city, the `analysis` inspector, and Map view on both routes. This is
+fresh direct evidence rather than a result inferred from the URL parser tests.
+
+The remaining direct rows are orbit/pan/zoom, exact camera-coordinate
+preservation and restore, keyboard traversal, forced renderer failure, print
+preview, reduced-motion emulation, the partial unavailable-story flow, the
+1,501-building dense fixture, and a reliable first-usable interaction time.
+Until those remaining rows are green, this ADR does not accept the full
+interaction contract. This boundary does not broaden the ADR into a native
+renderer commitment or permit removing the HTML fallback.
 
 ## Alternatives Considered
 
@@ -146,10 +164,10 @@ exists.
 ## Follow-up
 
 1. Complete the direct interaction matrix in a reliable browser harness,
-   including orbit limits, selection/focus/restore, lens geometry stability,
-   no-WebGL fallback, keyboard flow, print, and reduced motion.
-2. Run the partial and 1,501-building dense fixtures directly and record table
-   row equality and LOD behaviour.
+   including orbit limits, exact camera preservation and restore, no-WebGL
+   fallback, keyboard flow, print, and reduced motion.
+2. Run the partial unavailable-story step and 1,501-building dense fixture
+   directly, recording table row equality and LOD behaviour on both routes.
 3. Establish a repeatable first-usable interaction measurement before setting
    a performance budget or publishing a latency claim.
 4. Integrate the shared model and UI primitives into a hosted repo-scoped route
