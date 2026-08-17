@@ -3,6 +3,7 @@ import {
   buildCodeCityUrl,
   parseCodeCityUrlState,
   resolveCodeCityInitialUrlState,
+  resolveCodeCityPostHydrationUrlState,
 } from "../audienceUrl.js"
 
 describe("Code City audience URL state", () => {
@@ -26,21 +27,14 @@ describe("Code City audience URL state", () => {
     ).toBe("/code-city?audience=architecture-review&story=connect")
   })
 
-  test("uses the browser query when static route props are build-time defaults", () => {
+  test("keeps serialised props for the hydration render before applying the browser query", () => {
+    const serialisedProps = { audience: "onboarding" as const, story: null }
+
+    expect(resolveCodeCityInitialUrlState(serialisedProps)).toEqual(serialisedProps)
     expect(
-      resolveCodeCityInitialUrlState(
-        { audience: "onboarding", story: null },
+      resolveCodeCityPostHydrationUrlState(
         new URL("https://example.test/code-city?audience=architecture-review&story=connect"),
       ),
     ).toEqual({ audience: "architecture-review", story: "connect" })
-  })
-
-  test("retains serialised route props when no browser URL exists during SSR", () => {
-    expect(
-      resolveCodeCityInitialUrlState(
-        { audience: "stakeholder", story: "prove" },
-        null,
-      ),
-    ).toEqual({ audience: "stakeholder", story: "prove" })
   })
 })

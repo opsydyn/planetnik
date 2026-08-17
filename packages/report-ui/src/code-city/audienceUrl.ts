@@ -19,9 +19,14 @@ export function parseCodeCityUrlState(url: URL): CodeCityUrlState {
 
 export function resolveCodeCityInitialUrlState(
   initialState: CodeCityUrlState,
-  browserUrl: URL | null,
 ): CodeCityUrlState {
-  return browserUrl === null ? initialState : parseCodeCityUrlState(browserUrl)
+  return initialState
+}
+
+export function resolveCodeCityPostHydrationUrlState(
+  browserUrl: URL | null,
+): CodeCityUrlState | null {
+  return browserUrl === null ? null : parseCodeCityUrlState(browserUrl)
 }
 
 export function buildCodeCityUrl(pathname: string, state: CodeCityUrlState): string {

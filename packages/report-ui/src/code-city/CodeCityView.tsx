@@ -1,5 +1,5 @@
 import type { CodeCityModel } from "@planetnik/common";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	CodeCityCanvas,
 	type CodeCityCanvasHandle,
@@ -18,7 +18,11 @@ import {
 	type CodeCityAudienceId,
 } from "./audience.js";
 import { buildCodeCityArchitectureBrief } from "./brief.js";
-import { buildCodeCityUrl, resolveCodeCityInitialUrlState } from "./audienceUrl.js";
+import {
+	buildCodeCityUrl,
+	resolveCodeCityInitialUrlState,
+	resolveCodeCityPostHydrationUrlState,
+} from "./audienceUrl.js";
 import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
 import { resolveCodeCityLens } from "./lens.js";
 import { buildCodeCityScene } from "./sceneAdapter.js";
@@ -151,12 +155,10 @@ export default function CodeCityView({
 	initialStoryId = null,
 }: CodeCityViewProps) {
 	const canvasRef = useRef<CodeCityCanvasHandle | null>(null);
+	const hasAppliedBrowserUrlStateRef = useRef(false);
 	const [activeLens, setActiveLens] = useState<CodeCityLensId>("health");
 	const [initialUrlState] = useState(() =>
-		resolveCodeCityInitialUrlState(
-			{ audience: initialAudience, story: initialStoryId },
-			typeof window === "undefined" ? null : new URL(window.location.href),
-		),
+		resolveCodeCityInitialUrlState({ audience: initialAudience, story: initialStoryId }),
 	);
 	const [audience, setAudience] = useState<CodeCityAudienceId>(initialUrlState.audience);
 	const story = useMemo(
@@ -176,6 +178,24 @@ export default function CodeCityView({
 	const [focusAnnouncement, setFocusAnnouncement] = useState("");
 	const [briefCopyStatus, setBriefCopyStatus] =
 		useState<CodeCityBriefCopyStatus>("idle");
+
+	useEffect(() => {
+		if (hasAppliedBrowserUrlStateRef.current || typeof window === "undefined") return;
+		hasAppliedBrowserUrlStateRef.current = true;
+		const browserUrlState = resolveCodeCityPostHydrationUrlState(
+			new URL(window.location.href),
+		);
+		if (browserUrlState === null) return;
+		const browserStory = buildCodeCityStory(
+			model,
+			browserUrlState.audience,
+			evidenceBasePath,
+		);
+		const browserStoryState = initialStoryState(browserStory, browserUrlState.story);
+		setAudience(browserUrlState.audience);
+		setStoryState(browserStoryState);
+		setSelection(storyStepFor(browserStory, browserStoryState)?.target ?? null);
+	}, [model, evidenceBasePath]);
 
 	const scene = useMemo(() => buildCodeCityScene(model), [model]);
 	const selectionResult = useMemo(
