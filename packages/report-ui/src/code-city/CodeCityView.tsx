@@ -82,6 +82,36 @@ const initialStoryState = (
 const storyStepFor = (story: CodeCityStory, state: CodeCityStoryState) =>
 	state.tag === "active" ? story.steps[state.stepIndex] ?? null : null;
 
+export type CodeCityStoryFocusAction =
+	| { readonly type: "focus"; readonly entityId: string }
+	| { readonly type: "return-to-overview"; readonly entityId: null }
+	| { readonly type: "none" };
+
+export const reduceCodeCityStoryViewState = (
+	state: CodeCityStoryState,
+	event: CodeCityStoryEvent,
+	stepCount: number,
+): CodeCityStoryState => {
+	const nextState = reduceCodeCityStoryState(state, event, stepCount);
+	const preservesFocusedContext =
+		state.tag === "active" &&
+		state.focused &&
+		nextState.tag === "active" &&
+		(event.type === "next" || event.type === "back" || event.type === "skip");
+
+	return preservesFocusedContext ? { ...nextState, focused: true } : nextState;
+};
+
+export const resolveCodeCityStoryFocusAction = (
+	story: CodeCityStory,
+	state: CodeCityStoryState,
+): CodeCityStoryFocusAction => {
+	const step = storyStepFor(story, state);
+	if (!step || state.tag !== "active") return { type: "none" };
+	if (state.focused) return { type: "return-to-overview", entityId: null };
+	return step.target ? { type: "focus", entityId: step.target.id } : { type: "none" };
+};
+
 export default function CodeCityView({
 	model,
 	evidenceBasePath,
@@ -204,7 +234,7 @@ export default function CodeCityView({
 			savedStorySelectionRef.current = selection;
 		}
 
-		const nextState = reduceCodeCityStoryState(storyState, event, story.steps.length);
+		const nextState = reduceCodeCityStoryViewState(storyState, event, story.steps.length);
 		setStoryState(nextState);
 		const nextStep = storyStepFor(story, nextState);
 		if (nextStep) {
@@ -220,17 +250,16 @@ export default function CodeCityView({
 	};
 
 	const focusStoryStep = () => {
-		const step = storyStepFor(story, storyState);
-		if (!step || storyState.tag !== "active") return;
-		if (storyState.focused) {
+		const action = resolveCodeCityStoryFocusAction(story, storyState);
+		if (action.type === "return-to-overview" && storyState.tag === "active") {
 			restoreStoryContext("Overview restored. Previous selection returned.");
 			setStoryState({ ...storyState, focused: false });
 			return;
 		}
-		if (!step.target) return;
-		canvasRef.current?.focusEntity(step.target?.id ?? null);
+		if (action.type !== "focus") return;
+		canvasRef.current?.focusEntity(action.entityId);
 		setStoryState(reduceCodeCityStoryState(storyState, { type: "focus" }, story.steps.length));
-		setFocusAnnouncement(`Focusing ${step.title}. Use Return to overview to undo this focus.`);
+		setFocusAnnouncement("Story step focused. Use Return to overview to undo this focus.");
 	};
 
 	return (

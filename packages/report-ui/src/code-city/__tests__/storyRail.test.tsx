@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import type { ReactElement, ReactNode } from "react"
 import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
+import {
+  reduceCodeCityStoryViewState,
+  resolveCodeCityStoryFocusAction,
+} from "../CodeCityView.js"
 import type { CodeCityStory, CodeCityStoryEvent } from "../story.js"
 
 type ButtonProps = {
@@ -125,5 +129,35 @@ describe("CodeCityStoryRail", () => {
     expect(findButton(rendered, "Focus this step").props.disabled).toBe(true)
     findButton(rendered, "Skip").props.onClick?.()
     expect(events).toEqual([{ type: "skip" }])
+  })
+
+  test("focused navigation retains an explicit return action that clears the camera", () => {
+    const story = storyFixture()
+    const navigation = [
+      { event: { type: "next" } as const, stepIndex: 2 },
+      { event: { type: "back" } as const, stepIndex: 0 },
+      { event: { type: "skip" } as const, stepIndex: 2 },
+    ]
+
+    for (const { event, stepIndex } of navigation) {
+      const state = reduceCodeCityStoryViewState(
+        { tag: "active", stepIndex: 1, focused: true },
+        event,
+        story.steps.length,
+      )
+      const rendered = CodeCityStoryRail({
+        story,
+        state,
+        onEvent: () => undefined,
+        onFocusStep: () => undefined,
+      })
+
+      expect(state).toEqual({ tag: "active", stepIndex, focused: true })
+      expect(resolveCodeCityStoryFocusAction(story, state)).toEqual({
+        type: "return-to-overview",
+        entityId: null,
+      })
+      expect(textContent(rendered)).toContain("Return to overview")
+    }
   })
 })
