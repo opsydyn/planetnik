@@ -19,7 +19,7 @@ const district = (tier: CodeCityLandmarkTier = "none"): CodeCitySceneNode => ({
   },
 })
 
-const building = (archetype: CodeCityBuildingArchetype = "block"): CodeCitySceneNode => ({
+const building = (archetype: CodeCityBuildingArchetype = "block", multiDistrict = false): CodeCitySceneNode => ({
   id: "file:core",
   kind: "building",
   label: "core.ts",
@@ -42,7 +42,7 @@ const building = (archetype: CodeCityBuildingArchetype = "block"): CodeCityScene
     texturePattern: "banded",
     floorCount: 3,
     facadeSegments: 2,
-    multiDistrict: false,
+    multiDistrict,
   },
 })
 
@@ -94,7 +94,7 @@ describe("buildCodeCityKitRecipe", () => {
     ])
   })
 
-  test("adds building-only supports and an explicit unavailable beacon after visual detail", () => {
+  test("adds an explicit treatment beacon without fabricating cross-context supports", () => {
     expect(buildCodeCityKitRecipe(building("stepped"), "building", "unavailable").primitives).toEqual([
       { kind: "base", width: 8, depth: 6, height: 12 },
       { kind: "roof", style: "stepped" },
@@ -104,11 +104,20 @@ describe("buildCodeCityKitRecipe", () => {
       { kind: "window_row", index: 1, segments: 2 },
       { kind: "window_row", index: 2, segments: 2 },
       { kind: "window_row", index: 3, segments: 2 },
+      { kind: "beacon", treatment: "unavailable" },
+    ])
+  })
+
+  test("adds stable buttresses only to focused multi-district buildings", () => {
+    const singleDistrict = buildCodeCityKitRecipe(building("block", false), "building", "neutral")
+    const multiDistrict = buildCodeCityKitRecipe(building("block", true), "building", "neutral")
+
+    expect(singleDistrict.primitives.filter((primitive) => primitive.kind === "buttress")).toEqual([])
+    expect(multiDistrict.primitives.filter((primitive) => primitive.kind === "buttress")).toEqual([
       { kind: "buttress", side: "north" },
       { kind: "buttress", side: "east" },
       { kind: "buttress", side: "south" },
       { kind: "buttress", side: "west" },
-      { kind: "beacon", treatment: "unavailable" },
     ])
   })
 

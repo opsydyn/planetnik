@@ -75,7 +75,10 @@ describe("CodeCityInspector", () => {
 			{ label: "Archetype", value: "Tower" },
 			{ label: "Roof", value: "Capped" },
 			{ label: "Texture", value: "Banded" },
-			{ label: "Active lens", value: "Health uses impact markers." },
+			{
+				label: "Active lens",
+				value: "Health has no separate geometry cue; it uses a restrained emissive surface tint.",
+			},
 		],
       units: [
         {
@@ -106,7 +109,7 @@ describe("CodeCityInspector", () => {
     expect(text).toContain("McCabe 11")
 		expect(text).toContain("Visual encoding")
 		expect(text).toContain("Material")
-		expect(text).toContain("Health uses impact markers.")
+		expect(text).toContain("Health has no separate geometry cue; it uses a restrained emissive surface tint.")
     expect(links.map((link) => link.props.href)).toContain("/units/complexity#start")
   })
 })

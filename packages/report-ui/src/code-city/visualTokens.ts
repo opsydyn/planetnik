@@ -39,9 +39,14 @@ const compareText = (left: string, right: string): number => (left < right ? -1 
 
 const clamp = (value: number, minimum: number, maximum: number): number => Math.min(maximum, Math.max(minimum, value))
 
+const MINIMUM_PERCENTILE_COHORT = 3
+
 const percentile75 = (values: readonly number[]): number => {
-  if (values.length === 0) return 0
-  const sorted = [...values].sort((left, right) => left - right)
+  // Zero is the canonical absence value for these aggregate metrics. A high
+  // bucket is meaningful only once at least three positive measurements exist.
+  const measured = values.filter((value) => value > 0)
+  if (measured.length < MINIMUM_PERCENTILE_COHORT) return 0
+  const sorted = measured.sort((left, right) => left - right)
   return sorted[Math.floor((sorted.length - 1) * 0.75)] ?? 0
 }
 
@@ -138,9 +143,9 @@ export function resolveCodeCityBuildingVisual(
   const unitCount = normaliseNonNegative(building.metrics.complexity.unitCount)
   const testFile = building.sourceSets.includes("test")
   const archetype: CodeCityBuildingArchetype =
-    loc >= context.locHighCutoff
+    loc > 0 && context.locHighCutoff > 0 && loc >= context.locHighCutoff
       ? "tower"
-      : unitCount >= context.unitHighCutoff
+      : unitCount > 0 && context.unitHighCutoff > 0 && unitCount >= context.unitHighCutoff
         ? "stepped"
         : testFile
           ? "annex"

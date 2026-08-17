@@ -12,9 +12,9 @@ import { resolveCodeCityLens } from "./lens.js"
 import { type CodeCitySelection, resolveCodeCitySelection } from "./selection.js"
 import {
   buildCodeCityVisualContext,
+  type CodeCityLandmarkTier,
   resolveCodeCityBuildingVisual,
   resolveCodeCityDistrictVisual,
-  type CodeCityLandmarkTier,
 } from "./visualTokens.js"
 
 const UNAVAILABLE = "Unavailable"
@@ -115,11 +115,7 @@ const titleCase = (value: string): string =>
     .join(" ")
 
 const landmarkLabel = (tier: CodeCityLandmarkTier): string =>
-  tier === "super_hub"
-    ? "Super hub"
-    : tier === "none"
-      ? "None"
-      : titleCase(tier)
+  tier === "super_hub" ? "Super hub" : tier === "none" ? "None" : titleCase(tier)
 
 const visualFactsFor = (
   model: CodeCityModel,
@@ -137,6 +133,10 @@ const visualFactsFor = (
       { label: "Archetype", value: titleCase(visual.archetype) },
       { label: "Roof", value: titleCase(visual.roofStyle) },
       { label: "Texture", value: titleCase(visual.texturePattern) },
+      {
+        label: "Context span",
+        value: visual.multiDistrict ? "Multi-district · buttressed when focused" : "Single district",
+      },
       lensFact,
     ]
   }
@@ -284,7 +284,7 @@ export function buildCodeCityFallbackRows(model: CodeCityModel, basePath: string
       loc: String(building.metrics.footprint.loc),
       health: formatHealth(building.metrics),
       impact: formatImpact(building.metrics),
-      form: `${titleCase(visual.archetype)} · ${visual.roofStyle} roof`,
+      form: `${titleCase(visual.archetype)} · ${visual.roofStyle} roof${visual.multiDistrict ? " · multi-district" : ""}`,
       landmark: landmarkLabel(districtVisuals.get(building.primaryDistrictId)?.landmarkTier ?? "none"),
       href: firstEvidenceHref(building.evidence, basePath),
     }

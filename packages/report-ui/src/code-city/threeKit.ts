@@ -446,13 +446,15 @@ const createNodeGroup = (
           south: { x: 0, y: height / 2, z: -node.size.depth / 2 - width / 2 },
           west: { x: -node.size.width / 2 - width / 2, y: height / 2, z: 0 },
         } as const
-        addBox(
+        const buttress = addBox(
           nodeGroup,
           geometries.block,
           accentMaterial,
           { x: width, y: height, z: width },
           positions[primitive.side],
         )
+        buttress.userData.primitiveKind = "buttress"
+        buttress.userData.side = primitive.side
         break
       }
       case "beacon": {

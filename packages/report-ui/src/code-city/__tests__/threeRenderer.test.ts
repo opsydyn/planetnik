@@ -146,7 +146,8 @@ const healthVisual = (fill: string): CodeCityLensVisual => ({
   label: "Health: 80 (low)",
   unavailableReason: null,
   surfaceTreatment: "impact",
-  nonColorCue: "Health uses impact markers to show health severity without changing the building form.",
+  nonColorCue:
+    "Health has no separate geometry cue; it uses a restrained emissive surface tint without changing the building form.",
 })
 
 const lensVisuals = (scene: CodeCityScene, fill = "#166534") =>
@@ -325,6 +326,37 @@ describe("Code City semantic kit renderer", () => {
     })
     expect(renderedDetails(kit)["district:core"]).toBe("district")
     expect(renderedDetails(kit)["file:shared"]).toBe("district")
+    kit?.dispose()
+  })
+
+  test("materialises cross-context buttresses only for focused multi-district buildings", () => {
+    const scene = multiDistrictScene()
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+    const buttressCount = (id: string) =>
+      renderedNode(kit, id).children.filter((child) => child.userData.primitiveKind === "buttress").length
+
+    kit?.update({
+      scene,
+      selectionResult: multiDistrictSelection,
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: "file:shared",
+      denseDataMode: false,
+    })
+    expect(buttressCount("file:shared")).toBe(4)
+
+    kit?.update({
+      scene,
+      selectionResult: {
+        selection: { kind: "building", id: "file:web" },
+        districtIds: ["district:web"],
+        incidentEdgeIds: [],
+        evidence: [],
+      },
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: "file:web",
+      denseDataMode: false,
+    })
+    expect(buttressCount("file:web")).toBe(0)
     kit?.dispose()
   })
 

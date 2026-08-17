@@ -185,9 +185,11 @@ describe("buildCodeCityInspectorModel", () => {
       { label: "Archetype", value: "Tower" },
       { label: "Roof", value: "Capped" },
       { label: "Texture", value: "Checker" },
+      { label: "Context span", value: "Single district" },
       {
         label: "Active lens",
-        value: "Health uses impact markers to show health severity without changing the building form.",
+        value:
+          "Health has no separate geometry cue; it uses a restrained emissive surface tint without changing the building form.",
       },
     ])
     expect(inspector?.units).toEqual([
@@ -228,9 +230,27 @@ describe("buildCodeCityInspectorModel", () => {
       { label: "Texture", value: "Gridded" },
       {
         label: "Active lens",
-        value: "Ownership uses banners to show contributor concentration without changing the parcel layout.",
+        value:
+          "Ownership has no separate geometry cue; it uses a restrained emissive surface tint without changing the city layout.",
       },
     ])
+  })
+
+  test("explains the cross-context buttress cue only for multi-district buildings", () => {
+    const model = modelFixture()
+    const multiDistrict: CodeCityModel = {
+      ...model,
+      buildings: model.buildings.map((building) =>
+        building.id === "file:runtime" ? { ...building, districtIds: ["district:runtime", "district:web"] } : building,
+      ),
+    }
+
+    expect(
+      buildCodeCityInspectorModel(multiDistrict, { kind: "building", id: "file:runtime" }, "/planetnik/")?.visualFacts,
+    ).toContainEqual({ label: "Context span", value: "Multi-district · buttressed when focused" })
+    expect(buildCodeCityFallbackRows(multiDistrict, "/planetnik/").find((row) => row.id === "file:runtime")?.form).toBe(
+      "Tower · capped roof · multi-district",
+    )
   })
 
   test("renders absent optional signals as neutral Unavailable values", () => {

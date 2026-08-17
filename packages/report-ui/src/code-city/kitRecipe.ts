@@ -86,7 +86,9 @@ export function buildCodeCityKitRecipe(
   }
 
   if (node.visual.kind === "building" && detail === "building") {
-    for (const side of CARDINAL_SIDES) primitives.push({ kind: "buttress", side })
+    if (node.visual.multiDistrict) {
+      for (const side of CARDINAL_SIDES) primitives.push({ kind: "buttress", side })
+    }
     primitives.push({ kind: "beacon", treatment: surfaceTreatment })
   }
 

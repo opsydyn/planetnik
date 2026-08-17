@@ -328,4 +328,53 @@ describe("Code City visual tokens", () => {
     expect(resolveCodeCityBuildingVisual(stepped, context).archetype).toBe("stepped")
     expect(buildCodeCityVisualContext(permuted)).toEqual(context)
   })
+
+  test("does not promote missing unit measurements or all-zero LOC into high-bucket forms", () => {
+    const model = modelFixture()
+    const missingUnits = {
+      ...model,
+      buildings: model.buildings.map((building, index) => ({
+        ...building,
+        metrics: signals([10, 20, 30, 5, 100][index]!, 0),
+      })),
+    }
+    const missingUnitContext = buildCodeCityVisualContext(missingUnits)
+
+    expect(missingUnitContext.unitHighCutoff).toBe(0)
+    expect(resolveCodeCityBuildingVisual(missingUnits.buildings[0]!, missingUnitContext).archetype).toBe("block")
+    expect(resolveCodeCityBuildingVisual(missingUnits.buildings[3]!, missingUnitContext).archetype).toBe("annex")
+
+    const allZero = {
+      ...model,
+      buildings: model.buildings.map((building) => ({ ...building, metrics: signals(0, 0) })),
+    }
+    const allZeroContext = buildCodeCityVisualContext(allZero)
+
+    expect(allZeroContext.locHighCutoff).toBe(0)
+    expect(
+      allZero.buildings.map((building) => resolveCodeCityBuildingVisual(building, allZeroContext).archetype),
+    ).toEqual(["block", "block", "block", "annex", "block"])
+  })
+
+  test("keeps undersized percentile cohorts ordinary and deterministic", () => {
+    const model = modelFixture()
+    const sparse = {
+      ...model,
+      buildings: model.buildings.slice(0, 2).map((building, index) => ({
+        ...building,
+        districtIds: [building.primaryDistrictId],
+        sourceSets: ["main"] as const,
+        metrics: signals((index + 1) * 10, index + 1),
+      })),
+    }
+    const context = buildCodeCityVisualContext(sparse)
+
+    expect(context.locHighCutoff).toBe(0)
+    expect(context.unitHighCutoff).toBe(0)
+    expect(sparse.buildings.map((building) => resolveCodeCityBuildingVisual(building, context).archetype)).toEqual([
+      "block",
+      "block",
+    ])
+    expect(buildCodeCityVisualContext({ ...sparse, buildings: [...sparse.buildings].reverse() })).toEqual(context)
+  })
 })
