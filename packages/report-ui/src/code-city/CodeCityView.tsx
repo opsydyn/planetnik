@@ -179,6 +179,7 @@ export default function CodeCityView({ model, evidenceBasePath }: CodeCityViewPr
 							scene={scene}
 							lensVisuals={lensVisuals}
 							selectionResult={selectionResult}
+							denseDataMode={denseDataMode}
 							onSelect={selectEntity}
 							onFocusComplete={() =>
 								setFocusAnnouncement(

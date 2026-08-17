@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
+import { InstancedMesh, Scene as ThreeScene } from "three"
+import type { CodeCityLensVisual } from "../lens.js"
 import type { CodeCityScene } from "../sceneTypes.js"
 import type { CodeCitySelectionResult } from "../selection.js"
+import { createCodeCityKitRenderer } from "../threeKit.js"
 import {
   CODE_CITY_CAMERA_CONFIG,
   canCreateWebGLRenderer,
@@ -127,6 +130,32 @@ const multiDistrictSelection: CodeCitySelectionResult = {
   evidence: [],
 }
 
+const emptySelection: CodeCitySelectionResult = {
+  selection: null,
+  districtIds: [],
+  incidentEdgeIds: [],
+  evidence: [],
+}
+
+const healthVisual = (fill: string): CodeCityLensVisual => ({
+  lens: "health",
+  available: true,
+  fill,
+  accent: "#bfdbfe",
+  label: "Health: 80 (low)",
+  unavailableReason: null,
+})
+
+const lensVisuals = (scene: CodeCityScene, fill = "#166534") =>
+  Object.fromEntries(scene.nodes.map((node) => [node.id, healthVisual(fill)]))
+
+const renderedDetails = (kit: ReturnType<typeof createCodeCityKitRenderer>) => {
+  if (kit === null) throw new Error("Expected a Code City kit renderer")
+  return Object.fromEntries(
+    kit.group.children.map((child) => [child.userData.entityId as string, child.userData.detail as string]),
+  )
+}
+
 describe("canCreateWebGLRenderer", () => {
   test("rejects a missing WebGL context", () => {
     expect(canCreateWebGLRenderer(null)).toBe(false)
@@ -204,5 +233,113 @@ describe("Code City renderer selection contracts", () => {
       "file:shared",
       "file:web",
     ])
+  })
+})
+
+describe("Code City semantic kit renderer", () => {
+  test("materialises every authored node at overview detail without changing its visual tokens", () => {
+    const scene = multiDistrictScene()
+    const authored = scene.nodes.map((node) => ({
+      id: node.id,
+      center: node.center,
+      size: node.size,
+      visual: node.visual,
+    }))
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+
+    kit?.update({
+      scene,
+      selectionResult: emptySelection,
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: null,
+      denseDataMode: false,
+    })
+
+    expect(renderedDetails(kit)).toEqual({
+      "district:core": "overview",
+      "district:web": "overview",
+      "district:other": "overview",
+      "file:shared": "overview",
+      "file:web": "overview",
+      "file:other": "overview",
+    })
+    expect(scene.nodes.every((node) => node.visual.kind === node.kind)).toBeTrue()
+    expect(
+      scene.nodes.map((node) => ({ id: node.id, center: node.center, size: node.size, visual: node.visual })),
+    ).toEqual(authored)
+    kit?.dispose()
+  })
+
+  test("raises only the explicit focus path to district or building detail", () => {
+    const scene = multiDistrictScene()
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+
+    kit?.update({
+      scene,
+      selectionResult: multiDistrictSelection,
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: "file:shared",
+      denseDataMode: false,
+    })
+    expect(renderedDetails(kit)).toEqual({
+      "district:core": "district",
+      "district:web": "district",
+      "district:other": "overview",
+      "file:shared": "building",
+      "file:web": "district",
+      "file:other": "overview",
+    })
+    const focusedBuilding = kit?.group.children.find((child) => child.userData.entityId === "file:shared")
+    expect(focusedBuilding?.children.filter((child) => child instanceof InstancedMesh)).toHaveLength(2)
+
+    kit?.update({
+      scene,
+      selectionResult: {
+        ...multiDistrictSelection,
+        selection: { kind: "district", id: "district:core" },
+        districtIds: ["district:core"],
+      },
+      lensVisuals: lensVisuals(scene),
+      detailTargetId: "district:core",
+      denseDataMode: false,
+    })
+    expect(renderedDetails(kit)["district:core"]).toBe("district")
+    expect(renderedDetails(kit)["file:shared"]).toBe("district")
+    kit?.dispose()
+  })
+
+  test("uses dense recipes independently of focus and keeps geometry tokens stable across lenses", () => {
+    const scene = multiDistrictScene()
+    const geometryBefore = scene.nodes.map((node) => ({
+      id: node.id,
+      center: { ...node.center },
+      size: { ...node.size },
+      landmarkTier: node.visual.kind === "district" ? node.visual.landmarkTier : null,
+    }))
+    const kit = createCodeCityKitRenderer({ threeScene: new ThreeScene(), documentRef: null })
+    const update = (fill: string) =>
+      kit?.update({
+        scene,
+        selectionResult: multiDistrictSelection,
+        lensVisuals: lensVisuals(scene, fill),
+        detailTargetId: "file:shared",
+        denseDataMode: true,
+      })
+
+    update("#166534")
+    expect(Object.values(renderedDetails(kit))).toEqual(Array(scene.nodes.length).fill("dense"))
+    update("#991b1b")
+    expect(kit?.group.children).toHaveLength(scene.nodes.length)
+    expect(
+      scene.nodes.map((node) => ({
+        id: node.id,
+        center: node.center,
+        size: node.size,
+        landmarkTier: node.visual.kind === "district" ? node.visual.landmarkTier : null,
+      })),
+    ).toEqual(geometryBefore)
+    kit?.dispose()
+    kit?.dispose()
+    expect(kit?.group.parent).toBeNull()
   })
 })

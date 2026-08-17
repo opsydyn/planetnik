@@ -20,6 +20,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import type { CodeCityLensVisual } from "./lens.js"
 import type { CodeCityScene, CodeCitySceneEdge, CodeCitySceneNode } from "./sceneTypes.js"
 import type { CodeCitySelectionResult } from "./selection.js"
+import { createCodeCityKitRenderer } from "./threeKit.js"
 
 export type CodeCityRendererStatus = "pending" | "ready" | "unavailable"
 
@@ -76,6 +77,7 @@ export type CodeCityRendererOptions = {
   readonly scene: CodeCityScene
   readonly lensVisuals: CodeCityLensVisuals
   readonly selectionResult: CodeCitySelectionResult
+  readonly denseDataMode: boolean
   readonly onSelect: (id: string) => void
   readonly onFocusComplete: () => void
   readonly onRendererUnavailable: (reason: CodeCityRendererUnavailableReason) => void
@@ -97,7 +99,6 @@ type CameraState = {
 type NodeRenderRecord = {
   readonly node: CodeCitySceneNode
   readonly mesh: Mesh<BoxGeometry, MeshStandardMaterial>
-  readonly material: MeshStandardMaterial
 }
 
 type RouteRenderRecord = {
@@ -113,7 +114,6 @@ type LabelRenderRecord = {
 }
 
 const FALLBACK_FILL = "#64748b"
-const FALLBACK_ACCENT = "#cbd5e1"
 const ROUTE_COLOR = "#64748b"
 const ROUTE_SELECTED_COLOR = "#38bdf8"
 
@@ -141,27 +141,25 @@ const nodePositionY = (node: CodeCitySceneNode, nodesById: ReadonlyMap<string, C
 const createNodeRecord = (
   node: CodeCitySceneNode,
   nodesById: ReadonlyMap<string, CodeCitySceneNode>,
-  lensVisuals: CodeCityLensVisuals,
 ): NodeRenderRecord => {
-  const visual = lensVisuals[node.id]
   const geometry = new BoxGeometry(
     Math.max(node.size.width, 0.01),
     Math.max(node.size.height, 0.01),
     Math.max(node.size.depth, 0.01),
   )
   const material = new MeshStandardMaterial({
-    color: new Color(visual?.fill ?? FALLBACK_FILL),
-    roughness: 0.82,
-    metalness: 0.04,
-    transparent: node.kind === "district",
-    opacity: node.kind === "district" ? 0.58 : 1,
+    color: new Color(FALLBACK_FILL),
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
   })
+  material.colorWrite = false
   const mesh = new Mesh(geometry, material)
   mesh.position.set(node.center.x, nodePositionY(node, nodesById), node.center.z)
   mesh.userData.entityId = node.id
   mesh.name = node.label
 
-  return { node, mesh, material }
+  return { node, mesh }
 }
 
 const createLabelRecord = (
@@ -300,9 +298,15 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
     const nodeRecords = new Map<string, NodeRenderRecord>()
     const labelRecords = new Map<string, LabelRenderRecord>()
     cleanupActions.push(() => disposeSceneObjects(threeScene, [...labelRecords.values()]))
+    const kitRenderer = createCodeCityKitRenderer({
+      threeScene,
+      documentRef: typeof document === "undefined" ? null : document,
+    })
+    if (kitRenderer === null) throw new Error("Code City semantic kit initialisation failed")
+    cleanupActions.push(() => kitRenderer.dispose())
     const pickableMeshes: Mesh[] = []
     for (const node of options.scene.nodes) {
-      const record = createNodeRecord(node, nodesById, options.lensVisuals)
+      const record = createNodeRecord(node, nodesById)
       nodeRecords.set(node.id, record)
       pickableMeshes.push(record.mesh)
       threeScene.add(record.mesh)
@@ -338,20 +342,20 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
 
     let lensVisuals = options.lensVisuals
     let selectionResult = options.selectionResult
+    let detailTargetId: string | null = null
     let preservedCameraState: CameraState | null = null
     const render = () => {
       if (!disposed) renderer.render(threeScene, camera)
     }
 
     const updateMaterials = () => {
-      const selectedId = selectionResult.selection?.id ?? null
-      for (const [id, record] of nodeRecords) {
-        const visual = lensVisuals[id]
-        const selected = selectedId === id
-        record.material.color.set(selected ? (visual?.accent ?? FALLBACK_ACCENT) : (visual?.fill ?? FALLBACK_FILL))
-        record.material.emissive.set(selected ? "#172554" : "#000000")
-        record.material.emissiveIntensity = selected ? 0.55 : 0
-      }
+      kitRenderer.update({
+        scene: options.scene,
+        selectionResult,
+        lensVisuals,
+        detailTargetId,
+        denseDataMode: options.denseDataMode,
+      })
       const highlightedRouteIds = new Set(resolveCodeCityHighlightedRouteIds(options.scene, selectionResult))
       for (const record of routeRecords) {
         const selected = highlightedRouteIds.has(record.edge.id)
@@ -441,6 +445,8 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
       },
       focusEntity(id) {
         if (id === null) {
+          detailTargetId = null
+          updateMaterials()
           if (!preservedCameraState) return
           camera.position.copy(preservedCameraState.position)
           camera.zoom = preservedCameraState.zoom
@@ -455,6 +461,8 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
 
         const record = nodeRecords.get(id)
         if (!record) return
+        detailTargetId = id
+        updateMaterials()
         if (!preservedCameraState) {
           preservedCameraState = {
             position: camera.position.clone(),

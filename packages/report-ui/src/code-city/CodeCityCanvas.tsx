@@ -27,6 +27,7 @@ export type CodeCityCanvasProps = {
 	readonly scene: CodeCityScene;
 	readonly lensVisuals: Readonly<Record<string, CodeCityLensVisual>>;
 	readonly selectionResult: CodeCitySelectionResult;
+	readonly denseDataMode: boolean;
 	readonly onSelect: (id: string) => void;
 	readonly onFocusComplete: () => void;
 	readonly onRendererUnavailable: (
@@ -40,6 +41,7 @@ function CodeCityCanvasInner(
 		scene,
 		lensVisuals,
 		selectionResult,
+		denseDataMode,
 		onSelect,
 		onFocusComplete,
 		onRendererUnavailable,
@@ -89,6 +91,7 @@ function CodeCityCanvasInner(
 					scene,
 					lensVisuals: lensVisualsRef.current,
 					selectionResult: selectionResultRef.current,
+					denseDataMode,
 					onSelect: (id) => callbacksRef.current.onSelect(id),
 					onFocusComplete: () => callbacksRef.current.onFocusComplete(),
 					onRendererUnavailable: (reason) => {
@@ -112,7 +115,7 @@ function CodeCityCanvasInner(
 			if (controllerRef.current === controller) controllerRef.current = null;
 			controller?.dispose();
 		};
-	}, [scene]);
+	}, [scene, denseDataMode]);
 
 	useEffect(() => {
 		controllerRef.current?.setLensVisuals(lensVisuals);
