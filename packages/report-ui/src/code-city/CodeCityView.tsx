@@ -8,9 +8,11 @@ import {
 import { CodeCityAudienceSwitch } from "./CodeCityAudienceSwitch.js";
 import { CodeCityFallback } from "./CodeCityFallback.js";
 import { CodeCityInspector } from "./CodeCityInspector.js";
+import { CodeCityStoryRail } from "./CodeCityStoryRail.js";
 import { CodeCityViewControls } from "./CodeCityViewControls.js";
 import {
 	buildCodeCityAudiencePresentation,
+	getCodeCityAudiencePresentation,
 	type CodeCityAudienceId,
 } from "./audience.js";
 import type { CodeCityLensId, CodeCityLensVisual } from "./lens.js";
@@ -18,6 +20,14 @@ import { resolveCodeCityLens } from "./lens.js";
 import { buildCodeCityScene } from "./sceneAdapter.js";
 import type { CodeCitySelection } from "./selection.js";
 import { resolveCodeCitySelection } from "./selection.js";
+import {
+	buildCodeCityStory,
+	reduceCodeCityStoryState,
+	type CodeCityStory,
+	type CodeCityStoryEvent,
+	type CodeCityStoryState,
+	type CodeCityStoryStepId,
+} from "./story.js";
 import {
 	buildCodeCityFallbackRows,
 	buildCodeCityInspectorModel,
@@ -32,6 +42,7 @@ export type CodeCityViewProps = {
 	readonly model: CodeCityModel;
 	readonly evidenceBasePath: string;
 	readonly initialAudience?: CodeCityAudienceId;
+	readonly initialStoryId?: CodeCityStoryStepId | null;
 };
 
 const LENSES: ReadonlyArray<{ readonly id: CodeCityLensId; readonly label: string }> = [
@@ -59,15 +70,38 @@ const rendererUnavailableMessage = (
 	}
 };
 
+const initialStoryState = (
+	story: CodeCityStory,
+	initialStoryId: CodeCityStoryStepId | null | undefined,
+): CodeCityStoryState => {
+	if (!initialStoryId) return { tag: "idle" };
+	const stepIndex = story.steps.findIndex((step) => step.id === initialStoryId);
+	return stepIndex === -1 ? { tag: "idle" } : { tag: "active", stepIndex, focused: false };
+};
+
+const storyStepFor = (story: CodeCityStory, state: CodeCityStoryState) =>
+	state.tag === "active" ? story.steps[state.stepIndex] ?? null : null;
+
 export default function CodeCityView({
 	model,
 	evidenceBasePath,
 	initialAudience = "onboarding",
+	initialStoryId = null,
 }: CodeCityViewProps) {
 	const canvasRef = useRef<CodeCityCanvasHandle | null>(null);
 	const [activeLens, setActiveLens] = useState<CodeCityLensId>("health");
 	const [audience, setAudience] = useState<CodeCityAudienceId>(initialAudience);
-	const [selection, setSelection] = useState<CodeCitySelection>(null);
+	const story = useMemo(
+		() => buildCodeCityStory(model, audience, evidenceBasePath),
+		[model, audience, evidenceBasePath],
+	);
+	const [storyState, setStoryState] = useState<CodeCityStoryState>(() =>
+		initialStoryState(story, initialStoryId),
+	);
+	const savedStorySelectionRef = useRef<CodeCitySelection>(null);
+	const [selection, setSelection] = useState<CodeCitySelection>(
+		() => storyStepFor(story, initialStoryState(story, initialStoryId))?.target ?? null,
+	);
 	const [requestedView, setRequestedView] = useState<CodeCityViewMode>("map");
 	const [rendererUnavailable, setRendererUnavailable] =
 		useState<CodeCityCanvasUnavailableReason | null>(null);
@@ -146,6 +180,59 @@ export default function CodeCityView({
 		setFocusAnnouncement("Selection cleared. Map view restored if it was focused.");
 	};
 
+	const changeAudience = (nextAudience: CodeCityAudienceId) => {
+		setAudience(nextAudience);
+		setFocusAnnouncement(
+			`${getCodeCityAudiencePresentation(nextAudience).label} audience selected. The city geometry is unchanged.`,
+		);
+	};
+
+	const restoreStoryContext = (announcement: string) => {
+		canvasRef.current?.focusEntity(null);
+		setSelection(savedStorySelectionRef.current);
+		setFocusAnnouncement(announcement);
+	};
+
+	const handleStoryEvent = (event: CodeCityStoryEvent) => {
+		if (event.type === "exit") {
+			restoreStoryContext("Story exited. Previous selection and overview restored.");
+			setStoryState(reduceCodeCityStoryState(storyState, event, story.steps.length));
+			return;
+		}
+
+		if (event.type === "start" && storyState.tag === "idle") {
+			savedStorySelectionRef.current = selection;
+		}
+
+		const nextState = reduceCodeCityStoryState(storyState, event, story.steps.length);
+		setStoryState(nextState);
+		const nextStep = storyStepFor(story, nextState);
+		if (nextStep) {
+			setSelection(nextStep.target);
+			setFocusAnnouncement(
+				`${nextStep.title}. ${nextStep.availability === "unavailable" ? nextStep.unavailableReason : "Selection updated; camera position unchanged."}`,
+			);
+			return;
+		}
+		if (nextState.tag === "completed") {
+			setFocusAnnouncement("Story complete. Replay it or exit to return to the previous selection.");
+		}
+	};
+
+	const focusStoryStep = () => {
+		const step = storyStepFor(story, storyState);
+		if (!step || storyState.tag !== "active") return;
+		if (storyState.focused) {
+			restoreStoryContext("Overview restored. Previous selection returned.");
+			setStoryState({ ...storyState, focused: false });
+			return;
+		}
+		if (!step.target) return;
+		canvasRef.current?.focusEntity(step.target?.id ?? null);
+		setStoryState(reduceCodeCityStoryState(storyState, { type: "focus" }, story.steps.length));
+		setFocusAnnouncement(`Focusing ${step.title}. Use Return to overview to undo this focus.`);
+	};
+
 	return (
 		<section className="code-city" aria-label="Code City">
 			<header className="code-city__controls">
@@ -160,7 +247,7 @@ export default function CodeCityView({
 					mapAvailable={mapAvailable}
 					onChange={setRequestedView}
 				/>
-				<CodeCityAudienceSwitch audience={audience} onChange={setAudience} />
+				<CodeCityAudienceSwitch audience={audience} onChange={changeAudience} />
 				<div className="code-city__lens-buttons" role="toolbar" aria-label="Code City lenses">
 					{LENSES.map((lens) => (
 						<button
@@ -186,6 +273,13 @@ export default function CodeCityView({
 				</p>
 				<p>{presentation.coverageNote}</p>
 			</section>
+
+			<CodeCityStoryRail
+				story={story}
+				state={storyState}
+				onEvent={handleStoryEvent}
+				onFocusStep={focusStoryStep}
+			/>
 
 			<div className="code-city__legend" aria-label="Lens legend">
 				<ul>

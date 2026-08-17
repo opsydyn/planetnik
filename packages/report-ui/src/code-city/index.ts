@@ -14,6 +14,8 @@ export type { CodeCityFallbackProps, CodeCityFallbackRow } from "./CodeCityFallb
 export { CodeCityFallback } from "./CodeCityFallback"
 export type { CodeCityInspectorProps } from "./CodeCityInspector"
 export { CodeCityInspector } from "./CodeCityInspector"
+export type { CodeCityStoryRailProps } from "./CodeCityStoryRail.js"
+export { CodeCityStoryRail } from "./CodeCityStoryRail.js"
 export type { CodeCityViewProps } from "./CodeCityView"
 export { default as CodeCityView } from "./CodeCityView"
 export type { CodeCityViewControlsProps } from "./CodeCityViewControls"
