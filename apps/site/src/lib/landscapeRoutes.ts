@@ -65,6 +65,10 @@ export function getLandscapeRepositoryComponentsHref(repoKey: string): string {
 	return getLandscapeRepositoryPageHref(repoKey, "/components");
 }
 
+export function getLandscapeRepositoryCodeCityHref(repoKey: string): string {
+	return getLandscapeRepositoryPageHref(repoKey, "/code-city");
+}
+
 export function getLandscapeRepositoryDuplicationHref(repoKey: string): string {
 	return getLandscapeRepositoryPageHref(repoKey, "/duplication");
 }
@@ -116,6 +120,7 @@ export function mapLandscapeRepositoryRoute(
 		"/metrics": getLandscapeRepositoryMetricsHref(repoKey),
 		"/commits": getLandscapeRepositoryCommitsHref(repoKey),
 		"/components": getLandscapeRepositoryComponentsHref(repoKey),
+		"/code-city": getLandscapeRepositoryCodeCityHref(repoKey),
 		"/duplication": getLandscapeRepositoryDuplicationHref(repoKey),
 		"/coupling": getLandscapeRepositoryCouplingHref(repoKey),
 		"/dependencies": getLandscapeRepositoryDependenciesHref(repoKey),

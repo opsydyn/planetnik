@@ -11,6 +11,7 @@ const reloadRouteMatchers: ReloadRouteMatcher[] = [
 	route("/files/temporal"),
 	route("/landscape/topology"),
 	new RegExp(`^${basePattern}\\/landscape\\/repositories\\/[^/]+\\/topology$`),
+	new RegExp(`^${basePattern}\\/landscape\\/repositories\\/[^/]+\\/code-city$`),
 	new RegExp(
 		`^${basePattern}\\/landscape\\/repositories\\/[^/]+\\/files\\/temporal$`,
 	),

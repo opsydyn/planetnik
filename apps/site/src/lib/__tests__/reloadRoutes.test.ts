@@ -26,6 +26,14 @@ describe("reload route helpers", () => {
 		).toBe(true);
 	});
 
+	test("bypasses the client router for a landscape repository Code City route", () => {
+		expect(
+			shouldBypassClientRouter(
+				"/landscape/repositories/Effect-TS$2Feffect/code-city",
+			),
+		).toBe(true);
+	});
+
 	test("ignores query strings when matching reload routes", () => {
 		expect(
 			shouldBypassClientRouter(

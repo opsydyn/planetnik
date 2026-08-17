@@ -11,6 +11,7 @@ import IntelligencePanelLoader from "../components/intelligence/IntelligencePane
 import GlobalSearch from "../components/search/GlobalSearch";
 import {
 	getLandscapeRepositoryCommitsHref,
+	getLandscapeRepositoryCodeCityHref,
 	getLandscapeRepositoryComponentsHref,
 	getLandscapeRepositoryControlsHref,
 	getLandscapeRepositoryCouplingHref,
@@ -188,6 +189,10 @@ function getLandscapeRepoNavSections(
 				{
 					href: getLandscapeRepositoryComponentsHref(repoKey),
 					label: "Components",
+				},
+				{
+					href: getLandscapeRepositoryCodeCityHref(repoKey),
+					label: "Code City",
 				},
 				{
 					href: getLandscapeRepositoryCouplingHref(repoKey),

@@ -7,6 +7,7 @@ export {
 	getLandscapeRepoKeyFromParam,
 	getLandscapeRepoRouteParam,
 	getLandscapeRepositoryCommitsHref,
+	getLandscapeRepositoryCodeCityHref,
 	getLandscapeRepositoryComponentsHref,
 	getLandscapeRepositoryContributorHref,
 	getLandscapeRepositoryContributorsHref,

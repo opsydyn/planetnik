@@ -1,0 +1,135 @@
+---
+import { CodeCityInputError } from "@planetnik/common";
+import { CodeCityView } from "@planetnik/report-ui";
+import Dashboard from "../../../../layouts/Dashboard.astro";
+import {
+	getLandscapeRepositoryFilePageHref,
+	getLandscapeRepositoryHref,
+} from "../../../../lib/landscape";
+import {
+	getLandscapeRepositoryPageContext,
+	getLandscapeRepositoryStaticPaths,
+	type LandscapeRepoPageProps,
+} from "../../../../lib/landscapeRepoContext";
+import { resolveLandscapeCodeCityRouteState } from "../../../../lib/landscapeCodeCityRoute";
+import { readLandscapeRepositoryCodeCitySnapshot } from "../../../../lib/landscapeCodeCitySnapshot";
+
+export async function getStaticPaths() {
+	return getLandscapeRepositoryStaticPaths();
+}
+
+const props = Astro.props as LandscapeRepoPageProps;
+const { projectName, repoName } = await getLandscapeRepositoryPageContext(props);
+const repositoryHref = getLandscapeRepositoryHref(props.repoKey);
+
+let snapshot = null;
+let readError: string | null = null;
+try {
+	snapshot = readLandscapeRepositoryCodeCitySnapshot(props.repoKey);
+} catch (error) {
+	if (error instanceof CodeCityInputError) {
+		readError = error.message;
+	} else {
+		throw error;
+	}
+}
+
+const pageState = readError
+	? { tag: "invalid" as const, message: readError }
+	: resolveLandscapeCodeCityRouteState(repoName, snapshot);
+const cityModel =
+	pageState.tag === "ready" || pageState.tag === "partial"
+		? pageState.model
+		: null;
+const invalidMessage = pageState.tag === "invalid" ? pageState.message : "";
+---
+
+<Dashboard
+	title={`${repoName} Code City`}
+	projectName={projectName}
+	repoScope={{ repoKey: props.repoKey, repoName }}
+>
+	{cityModel ? (
+		<>
+			<section class="code-city-state code-city-state--summary" aria-labelledby="code-city-state-title">
+				<h2 id="code-city-state-title">{repoName} Code City</h2>
+				<p>
+					Snapshot <code>{cityModel.snapshot.snapshotId ?? "current"}</code> contains{" "}
+					{cityModel.coverage.counts.files} files, {cityModel.coverage.counts.districts} contexts,
+					and {cityModel.coverage.counts.diagnostics} diagnostics.
+				</p>
+				{pageState.tag === "partial" ? (
+					<>
+						<p>
+							Optional canonical shards are unavailable:{" "}
+							<code>{cityModel.coverage.missingOptionalShards.join(", ")}</code>.
+						</p>
+						<p>
+							Use the table view for the complete accessible record list, or inspect the available{" "}
+							<a href={getLandscapeRepositoryFilePageHref(props.repoKey, "size")}>file evidence</a>.
+						</p>
+					</>
+				) : (
+					<p>All optional Code City shards are available. Select a parcel or building to inspect its evidence.</p>
+				)}
+			</section>
+			<CodeCityView
+				client:load
+				model={cityModel}
+				evidenceBasePath={repositoryHref}
+			/>
+		</>
+	) : pageState.tag === "unsupported-landscape" ? (
+		<section class="code-city-state" aria-labelledby="code-city-state-title">
+			<h2 id="code-city-state-title">Code City is not available for landscape snapshots</h2>
+			<p>
+				This repository does not contain a single-repository canonical snapshot. Open the repository dashboard
+				to inspect the available landscape evidence.
+			</p>
+			<a href={repositoryHref}>Open repository dashboard</a>
+		</section>
+	) : pageState.tag === "empty" ? (
+		<section class="code-city-state" aria-labelledby="code-city-state-title">
+			<h2 id="code-city-state-title">{repoName} has no buildings to map</h2>
+			<p>
+				The repository's canonical v2 snapshot is valid but its <code>files_main</code> shard contains no files.
+			</p>
+			<p>Generate the repository report from analysed source files, then reload this page.</p>
+			<a href={repositoryHref}>Review the repository dashboard</a>
+		</section>
+	) : (
+		<section class="code-city-state" aria-labelledby="code-city-state-title">
+			<h2 id="code-city-state-title">Code City could not use this repository report</h2>
+			<p>{invalidMessage}</p>
+			<p>Generate a canonical v2 repository report, then reload this page.</p>
+			<a href={repositoryHref}>Review the repository dashboard</a>
+		</section>
+	)}
+</Dashboard>
+
+<style>
+	.code-city-state {
+		max-width: 48rem;
+		padding: 1.5rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		background: var(--color-card);
+	}
+
+	.code-city-state h2 {
+		margin-top: 0;
+	}
+
+	.code-city-state p {
+		color: var(--color-text-muted);
+	}
+
+	.code-city-state--summary {
+		display: grid;
+		gap: 0.25rem;
+	}
+
+	.code-city-state--summary a {
+		margin-left: 0.25rem;
+	}
+</style>
