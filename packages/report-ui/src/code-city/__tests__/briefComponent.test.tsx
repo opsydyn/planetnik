@@ -4,6 +4,11 @@ import {
   CodeCityArchitectureBrief,
   type CodeCityArchitectureBrief as CodeCityArchitectureBriefModel,
 } from "../CodeCityArchitectureBrief.js"
+import {
+  beginCodeCityBriefCopy,
+  resetCodeCityBriefCopy,
+  settleCodeCityBriefCopy,
+} from "../CodeCityView.js"
 
 type BriefElement = ReactElement<{
   readonly children?: unknown
@@ -78,5 +83,20 @@ describe("CodeCityArchitectureBrief", () => {
     expect(elementsIn(rendered).map((child) => child.props.children).flat()).toContain(
       "Copy failed. Select the brief text to copy it manually.",
     )
+  })
+
+  test("ignores a late copy completion after the brief changes", () => {
+    const firstCopy = beginCodeCityBriefCopy("brief:onboarding")
+    const changedBrief = resetCodeCityBriefCopy("brief:architecture-review")
+    const lateCompletion = settleCodeCityBriefCopy(
+      changedBrief,
+      firstCopy.briefIdentity,
+      "success",
+    )
+
+    expect(lateCompletion).toEqual({
+      briefIdentity: "brief:architecture-review",
+      status: "idle",
+    })
   })
 })

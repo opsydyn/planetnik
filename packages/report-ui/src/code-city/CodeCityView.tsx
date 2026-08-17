@@ -106,6 +106,24 @@ const briefText = (brief: ReturnType<typeof buildCodeCityArchitectureBrief>): st
 		`Next action: ${brief.nextAction}`,
 	].join("\n\n");
 
+export type CodeCityBriefCopyState = {
+	readonly briefIdentity: string;
+	readonly status: CodeCityBriefCopyStatus;
+};
+
+export const resetCodeCityBriefCopy = (
+	briefIdentity: string,
+): CodeCityBriefCopyState => ({ briefIdentity, status: "idle" });
+
+export const beginCodeCityBriefCopy = resetCodeCityBriefCopy;
+
+export const settleCodeCityBriefCopy = (
+	state: CodeCityBriefCopyState,
+	briefIdentity: string,
+	status: Exclude<CodeCityBriefCopyStatus, "idle">,
+): CodeCityBriefCopyState =>
+	state.briefIdentity === briefIdentity ? { briefIdentity, status } : state;
+
 export type CodeCityStoryFocusAction =
 	| { readonly type: "focus"; readonly entityId: string }
 	| { readonly type: "return-to-overview"; readonly entityId: null }
@@ -176,8 +194,9 @@ export default function CodeCityView({
 	const [rendererUnavailable, setRendererUnavailable] =
 		useState<CodeCityCanvasUnavailableReason | null>(null);
 	const [focusAnnouncement, setFocusAnnouncement] = useState("");
-	const [briefCopyStatus, setBriefCopyStatus] =
-		useState<CodeCityBriefCopyStatus>("idle");
+	const [briefCopyState, setBriefCopyState] = useState<CodeCityBriefCopyState>(() =>
+		resetCodeCityBriefCopy(""),
+	);
 
 	useEffect(() => {
 		if (hasAppliedBrowserUrlStateRef.current || typeof window === "undefined") return;
@@ -210,6 +229,15 @@ export default function CodeCityView({
 		() => buildCodeCityArchitectureBrief(model, presentation, story, evidenceBasePath),
 		[model, presentation, story, evidenceBasePath],
 	);
+	const briefIdentity = briefText(brief);
+	const briefCopyStatus =
+		briefCopyState.briefIdentity === briefIdentity ? briefCopyState.status : "idle";
+
+	useEffect(() => {
+		setBriefCopyState((state) =>
+			state.briefIdentity === briefIdentity ? state : resetCodeCityBriefCopy(briefIdentity),
+		);
+	}, [briefIdentity]);
 	const inspector = useMemo(
 		() => buildCodeCityInspectorModel(model, selection, evidenceBasePath, activeLens, presentation),
 		[model, selection, evidenceBasePath, activeLens, presentation],
@@ -290,14 +318,23 @@ export default function CodeCityView({
 	};
 
 	const copyBrief = () => {
-		setBriefCopyStatus("idle");
+		const copiedBriefIdentity = briefIdentity;
+		setBriefCopyState(beginCodeCityBriefCopy(copiedBriefIdentity));
 		if (typeof navigator === "undefined" || !navigator.clipboard) {
-			setBriefCopyStatus("failure");
+			setBriefCopyState((state) =>
+				settleCodeCityBriefCopy(state, copiedBriefIdentity, "failure"),
+			);
 			return;
 		}
-		void navigator.clipboard.writeText(briefText(brief)).then(
-			() => setBriefCopyStatus("success"),
-			() => setBriefCopyStatus("failure"),
+		void navigator.clipboard.writeText(copiedBriefIdentity).then(
+			() =>
+				setBriefCopyState((state) =>
+					settleCodeCityBriefCopy(state, copiedBriefIdentity, "success"),
+				),
+			() =>
+				setBriefCopyState((state) =>
+					settleCodeCityBriefCopy(state, copiedBriefIdentity, "failure"),
+				),
 		);
 	};
 
