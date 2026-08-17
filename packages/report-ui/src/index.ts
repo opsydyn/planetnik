@@ -5,9 +5,12 @@ export type {
   CodeCityBuildingArchetype,
   CodeCityBuildingVisual,
   CodeCityDistrictVisual,
+  CodeCityDetailLevel,
   CodeCityInspectorModel,
   CodeCityInspectorProps,
   CodeCityInspectorUnitModel,
+  CodeCityKitPrimitive,
+  CodeCityKitRecipe,
   CodeCityLensEntity,
   CodeCityLensId,
   CodeCityLensVisual,
@@ -35,6 +38,7 @@ export type {
 } from "./code-city/index"
 export {
   buildCodeCityFallbackRows,
+  buildCodeCityKitRecipe,
   buildCodeCityInspectorModel,
   buildCodeCityScene,
   buildCodeCityVisualContext,
@@ -43,6 +47,7 @@ export {
   CodeCityView,
   CodeCityViewControls,
   resolveCodeCityEvidenceHref,
+  resolveCodeCityDetailLevel,
   resolveCodeCityBuildingVisual,
   resolveCodeCityDistrictVisual,
   resolveCodeCityLens,

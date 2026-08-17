@@ -11,6 +11,8 @@ export type { CodeCityLensEntity, CodeCityLensId, CodeCityLensVisual } from "./l
 export { resolveCodeCityLens } from "./lens"
 export type { CodeCityMaterialSpec, CodeCitySurfaceTreatment } from "./materials"
 export { resolveCodeCityMaterialSpec, resolveCodeCitySurfaceTreatment } from "./materials"
+export type { CodeCityDetailLevel, CodeCityKitPrimitive, CodeCityKitRecipe } from "./kitRecipe"
+export { buildCodeCityKitRecipe, resolveCodeCityDetailLevel } from "./kitRecipe"
 export type {
   CodeCityRouteResolution,
   CodeCityRouteState,
