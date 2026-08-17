@@ -124,6 +124,49 @@ const multiDistrictScene = (): CodeCityScene => ({
   bounds: { width: 32, depth: 8, height: 4 },
 })
 
+const audienceEmphasisScene = (): CodeCityScene => ({
+  contractVersion: 1,
+  nodes: [
+    {
+      id: "district:app",
+      kind: "district",
+      label: "App",
+      parentId: null,
+      center: { x: 0, z: 0 },
+      size: { width: 8, depth: 8, height: 0.5 },
+      districtKey: "district:app",
+      visual: districtVisual,
+    },
+    {
+      id: "district:shared",
+      kind: "district",
+      label: "Shared",
+      parentId: null,
+      center: { x: 12, z: 0 },
+      size: { width: 8, depth: 8, height: 0.5 },
+      districtKey: "district:shared",
+      visual: districtVisual,
+    },
+    {
+      id: "file:app",
+      kind: "building",
+      label: "src/app.ts",
+      parentId: "district:app",
+      center: { x: 0, z: 0 },
+      size: { width: 2, depth: 2, height: 4 },
+      districtKey: "district:app",
+      visual: buildingVisual,
+    },
+  ],
+  edges: [
+    { id: "edge:smallest", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 1 },
+    { id: "edge:second", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 8 },
+    { id: "edge:third", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 3 },
+    { id: "edge:largest", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 13 },
+  ],
+  bounds: { width: 20, depth: 8, height: 4 },
+})
+
 const multiDistrictSelection: CodeCitySelectionResult = {
   selection: { kind: "building", id: "file:shared" },
   districtIds: ["district:core", "district:web"],
@@ -235,6 +278,40 @@ describe("resolveCodeCityRouteSelectionId", () => {
 })
 
 describe("Code City renderer selection contracts", () => {
+
+  test("consequential emphasis adds the highest weighted routes but stays bounded", () => {
+    const ids = resolveCodeCityHighlightedRouteIds(audienceEmphasisScene(), emptySelection, "consequential")
+
+    expect(ids).toEqual(["edge:largest", "edge:second"])
+  })
+
+  test("quiet emphasis keeps routes hidden until a selection exists", () => {
+    expect(resolveCodeCityHighlightedRouteIds(audienceEmphasisScene(), emptySelection, "quiet")).toEqual([])
+  })
+
+  test("consequential emphasis retains selected routes before ambient emphasis", () => {
+    const selection: CodeCitySelectionResult = {
+      selection: { kind: "district", id: "district:app" },
+      districtIds: ["district:app"],
+      incidentEdgeIds: ["edge:third"],
+      evidence: [],
+    }
+
+    expect(resolveCodeCityHighlightedRouteIds(audienceEmphasisScene(), selection, "consequential")).toEqual([
+      "edge:third",
+      "edge:largest",
+      "edge:second",
+    ])
+  })
+
+  test("label density changes visibility without changing scene coordinates", () => {
+    const scene = audienceEmphasisScene()
+    const coordinates = scene.nodes.map(({ id, center }) => [id, { ...center }])
+
+    expect(resolveCodeCityVisibleLabelIds(scene, emptySelection, "generous")).toContain("file:app")
+    expect(scene.nodes.map(({ id, center }) => [id, { ...center }])).toEqual(coordinates)
+  })
+
   test("highlights every incident route for a multi-affiliated building", () => {
     expect(resolveCodeCityHighlightedRouteIds(multiDistrictScene(), multiDistrictSelection)).toEqual([
       "edge:core-web",

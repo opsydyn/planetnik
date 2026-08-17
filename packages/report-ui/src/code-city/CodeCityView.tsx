@@ -217,6 +217,7 @@ export default function CodeCityView({
 							scene={scene}
 							lensVisuals={lensVisuals}
 							selectionResult={selectionResult}
+							presentation={presentation}
 							denseDataMode={denseDataMode}
 							onSelect={selectEntity}
 							onFocusComplete={() =>

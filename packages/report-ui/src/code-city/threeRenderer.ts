@@ -17,6 +17,7 @@ import {
   WebGLRenderer,
 } from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
+import type { CodeCityAudiencePresentation } from "./audience.js"
 import type { CodeCityLensVisual } from "./lens.js"
 import type { CodeCityScene, CodeCitySceneEdge, CodeCitySceneNode } from "./sceneTypes.js"
 import type { CodeCitySelectionResult } from "./selection.js"
@@ -25,6 +26,11 @@ import { createCodeCityKitRenderer } from "./threeKit.js"
 export type CodeCityRendererStatus = "pending" | "ready" | "unavailable"
 
 export type CodeCityRendererUnavailableReason = "webgl-context-unavailable" | "renderer-initialisation-failed"
+
+export type CodeCityRendererPresentation = Pick<
+  CodeCityAudiencePresentation,
+  "routeEmphasis" | "labelDensity"
+>
 
 export const CODE_CITY_CAMERA_CONFIG = {
   projection: "orthographic",
@@ -49,20 +55,34 @@ export function resolveCodeCityRouteSelectionId(scene: CodeCityScene, selectedId
 export function resolveCodeCityHighlightedRouteIds(
   scene: CodeCityScene,
   selectionResult: CodeCitySelectionResult,
+  routeEmphasis: CodeCityRendererPresentation["routeEmphasis"] = "selection",
 ): readonly string[] {
   const incidentEdgeIds = new Set(selectionResult.incidentEdgeIds)
-  return scene.edges.filter((edge) => edge.renderable && incidentEdgeIds.has(edge.id)).map((edge) => edge.id)
+  const selectedEdges = scene.edges.filter((edge) => edge.renderable && incidentEdgeIds.has(edge.id))
+  if (routeEmphasis !== "consequential") return selectedEdges.map((edge) => edge.id)
+
+  const selectedEdgeIds = new Set(selectedEdges.map((edge) => edge.id))
+  const ambientEdges = scene.edges
+    .filter((edge) => edge.renderable && !selectedEdgeIds.has(edge.id))
+    .sort((left, right) => right.weight - left.weight || left.id.localeCompare(right.id))
+    .slice(0, 2)
+
+  return [...selectedEdges, ...ambientEdges].map((edge) => edge.id)
 }
 
 export function resolveCodeCityVisibleLabelIds(
   scene: CodeCityScene,
   selectionResult: CodeCitySelectionResult,
+  labelDensity: CodeCityRendererPresentation["labelDensity"] = "balanced",
 ): readonly string[] {
+  if (labelDensity === "generous") return scene.nodes.map((node) => node.id)
+
   const selectedDistrictIds = new Set(selectionResult.districtIds)
   return scene.nodes
     .filter((node) => {
       if (node.kind === "district") return true
       if (selectionResult.selection === null) return false
+      if (labelDensity === "calm") return node.id === selectionResult.selection.id
       return (
         node.id === selectionResult.selection.id || (node.parentId !== null && selectedDistrictIds.has(node.parentId))
       )
@@ -77,6 +97,7 @@ export type CodeCityRendererOptions = {
   readonly scene: CodeCityScene
   readonly lensVisuals: CodeCityLensVisuals
   readonly selectionResult: CodeCitySelectionResult
+  readonly presentation: CodeCityRendererPresentation
   readonly denseDataMode: boolean
   readonly onSelect: (id: string) => void
   readonly onFocusComplete: () => void
@@ -86,6 +107,7 @@ export type CodeCityRendererOptions = {
 export type CodeCityRendererController = {
   readonly setLensVisuals: (lensVisuals: CodeCityLensVisuals) => void
   readonly setSelectionResult: (selectionResult: CodeCitySelectionResult) => void
+  readonly setPresentation: (presentation: CodeCityRendererPresentation) => void
   readonly focusEntity: (id: string | null) => void
   readonly dispose: () => void
 }
@@ -342,6 +364,7 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
 
     let lensVisuals = options.lensVisuals
     let selectionResult = options.selectionResult
+    let presentation = options.presentation
     let detailTargetId: string | null = null
     let preservedCameraState: CameraState | null = null
     const render = () => {
@@ -356,13 +379,17 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
         detailTargetId,
         denseDataMode: options.denseDataMode,
       })
-      const highlightedRouteIds = new Set(resolveCodeCityHighlightedRouteIds(options.scene, selectionResult))
+      const highlightedRouteIds = new Set(
+        resolveCodeCityHighlightedRouteIds(options.scene, selectionResult, presentation.routeEmphasis),
+      )
       for (const record of routeRecords) {
         const selected = highlightedRouteIds.has(record.edge.id)
         record.material.color.set(selected ? ROUTE_SELECTED_COLOR : ROUTE_COLOR)
         record.material.opacity = selected ? 0.78 : 0.34
       }
-      const visibleLabelIds = new Set(resolveCodeCityVisibleLabelIds(options.scene, selectionResult))
+      const visibleLabelIds = new Set(
+        resolveCodeCityVisibleLabelIds(options.scene, selectionResult, presentation.labelDensity),
+      )
       for (const id of visibleLabelIds) {
         if (labelRecords.has(id)) continue
         const node = nodesById.get(id)
@@ -441,6 +468,17 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
       },
       setSelectionResult(nextSelectionResult) {
         selectionResult = nextSelectionResult
+        updateMaterials()
+      },
+      setPresentation(nextPresentation) {
+        if (
+          disposed ||
+          (presentation.routeEmphasis === nextPresentation.routeEmphasis &&
+            presentation.labelDensity === nextPresentation.labelDensity)
+        ) {
+          return
+        }
+        presentation = nextPresentation
         updateMaterials()
       },
       focusEntity(id) {

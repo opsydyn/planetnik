@@ -11,6 +11,7 @@ import type { CodeCityScene } from "./sceneTypes.js";
 import type { CodeCitySelectionResult } from "./selection.js";
 import type {
 	CodeCityRendererController,
+	CodeCityRendererPresentation,
 	CodeCityRendererStatus,
 	CodeCityRendererUnavailableReason,
 } from "./threeRenderer.js";
@@ -27,6 +28,7 @@ export type CodeCityCanvasProps = {
 	readonly scene: CodeCityScene;
 	readonly lensVisuals: Readonly<Record<string, CodeCityLensVisual>>;
 	readonly selectionResult: CodeCitySelectionResult;
+	readonly presentation: CodeCityRendererPresentation;
 	readonly denseDataMode: boolean;
 	readonly onSelect: (id: string) => void;
 	readonly onFocusComplete: () => void;
@@ -41,6 +43,7 @@ function CodeCityCanvasInner(
 		scene,
 		lensVisuals,
 		selectionResult,
+		presentation,
 		denseDataMode,
 		onSelect,
 		onFocusComplete,
@@ -53,6 +56,7 @@ function CodeCityCanvasInner(
 	const controllerRef = useRef<CodeCityRendererController | null>(null);
 	const lensVisualsRef = useRef(lensVisuals);
 	const selectionResultRef = useRef(selectionResult);
+	const presentationRef = useRef(presentation);
 	const callbacksRef = useRef({
 		onSelect,
 		onFocusComplete,
@@ -62,6 +66,7 @@ function CodeCityCanvasInner(
 
 	lensVisualsRef.current = lensVisuals;
 	selectionResultRef.current = selectionResult;
+	presentationRef.current = presentation;
 	callbacksRef.current = {
 		onSelect,
 		onFocusComplete,
@@ -91,6 +96,7 @@ function CodeCityCanvasInner(
 					scene,
 					lensVisuals: lensVisualsRef.current,
 					selectionResult: selectionResultRef.current,
+					presentation: presentationRef.current,
 					denseDataMode,
 					onSelect: (id) => callbacksRef.current.onSelect(id),
 					onFocusComplete: () => callbacksRef.current.onFocusComplete(),
@@ -124,6 +130,10 @@ function CodeCityCanvasInner(
 	useEffect(() => {
 		controllerRef.current?.setSelectionResult(selectionResult);
 	}, [selectionResult]);
+
+	useEffect(() => {
+		controllerRef.current?.setPresentation(presentation);
+	}, [presentation]);
 
 	return (
 		<canvas
