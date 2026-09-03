@@ -22,6 +22,7 @@ export type CodeCityCanvasUnavailableReason =
 
 export type CodeCityCanvasHandle = {
 	readonly focusEntity: (id: string | null) => boolean;
+	readonly resetView: () => boolean;
 };
 
 export const tryFocusCodeCityRenderer = (
@@ -30,6 +31,14 @@ export const tryFocusCodeCityRenderer = (
 ): boolean => {
 	if (!controller) return false;
 	controller.focusEntity(id);
+	return true;
+};
+
+export const tryResetCodeCityRenderer = (
+	controller: Pick<CodeCityRendererController, "resetView"> | null,
+): boolean => {
+	if (!controller) return false;
+	controller.resetView();
 	return true;
 };
 
@@ -87,6 +96,9 @@ function CodeCityCanvasInner(
 		() => ({
 			focusEntity(id) {
 				return tryFocusCodeCityRenderer(controllerRef.current, id);
+			},
+			resetView() {
+				return tryResetCodeCityRenderer(controllerRef.current);
 			},
 		}),
 		[],
@@ -148,8 +160,10 @@ function CodeCityCanvasInner(
 		<canvas
 			ref={canvasRef}
 			aria-label={label}
+			aria-keyshortcuts="Home"
 			aria-busy={status === "pending"}
 			data-renderer-status={status}
+			tabIndex={0}
 			style={{ display: "block", width: "100%", height: "100%" }}
 		/>
 	);

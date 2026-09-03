@@ -12,6 +12,14 @@ import {
 
 const stylesheet = await Bun.file(new URL("../CodeCityView.css", import.meta.url)).text();
 
+const textContent = (node: ReactNode): string => {
+	if (typeof node === "string" || typeof node === "number") return String(node);
+	if (node === null || node === undefined || typeof node === "boolean") return "";
+	if (Array.isArray(node)) return node.map(textContent).join("");
+	const element = node as ReactElement<{ readonly children?: ReactNode }>;
+	return textContent(element.props.children);
+};
+
 const blockContents = (source: string, marker: string): string => {
 	const markerIndex = source.indexOf(marker);
 	if (markerIndex === -1) return "";
@@ -35,8 +43,10 @@ type ViewButtonProps = {
 	readonly type: "button";
 	readonly children: ReactNode;
 	readonly disabled?: boolean;
-	readonly "aria-controls": string;
-	readonly "aria-pressed": boolean;
+	readonly "aria-controls"?: string;
+	readonly "aria-pressed"?: boolean;
+	readonly "aria-keyshortcuts"?: string;
+	readonly title?: string;
 	readonly onClick: () => void;
 };
 
@@ -95,6 +105,48 @@ describe("CodeCityViewControls", () => {
 
 		tableButton?.props.onClick();
 		expect(changes).toEqual(["table"]);
+	});
+
+	test("exposes a reset overview control with a Home shortcut", () => {
+		const changes: CodeCityViewMode[] = [];
+		let resetCalls = 0;
+		const control = CodeCityViewControls({
+			mode: "map",
+			mapAvailable: true,
+			canReset: true,
+			onChange: (mode) => changes.push(mode),
+			onReset: () => {
+				resetCalls += 1;
+			},
+		});
+		const buttons = (control.props.children as Array<ReactElement<ViewButtonProps> | null>).filter(
+			(button): button is ReactElement<ViewButtonProps> => button !== null,
+		);
+		const resetButton = buttons[2];
+
+		expect(resetButton?.props).toMatchObject({
+			"aria-controls": "code-city-map",
+			"aria-keyshortcuts": "Home",
+			title: "Reset the camera to the overview (Home)",
+		});
+		expect(textContent(resetButton)).toContain("Reset overview");
+		expect(textContent(resetButton)).toContain("Home");
+		expect(resetButton?.props.disabled).toBe(false);
+		resetButton?.props.onClick();
+		expect(resetCalls).toBe(1);
+
+		const fallbackControl = CodeCityViewControls({
+			mode: "table",
+			mapAvailable: false,
+			canReset: false,
+			onChange: (mode) => changes.push(mode),
+			onReset: () => undefined,
+		});
+		const fallbackButtons = (
+			fallbackControl.props.children as Array<ReactElement<ViewButtonProps> | null>
+		).filter((button): button is ReactElement<ViewButtonProps> => button !== null);
+
+		expect(fallbackButtons[2]?.props.disabled).toBe(true);
 	});
 });
 

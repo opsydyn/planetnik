@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import type { ReactElement, ReactNode } from "react"
-import { tryFocusCodeCityRenderer } from "../CodeCityCanvas.js"
+import { tryFocusCodeCityRenderer, tryResetCodeCityRenderer } from "../CodeCityCanvas.js"
 import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
 import {
   reduceCodeCityStoryViewState,
+  isCodeCityResetShortcut,
+  resolveCodeCityResetViewResult,
   resolveCodeCityStoryCompletionAction,
   resolveCodeCityStoryFocusAction,
   resolveCodeCitySelectionFocusResult,
@@ -163,6 +165,44 @@ describe("CodeCityStoryRail", () => {
     expect(tryFocusCodeCityRenderer(null, "district:app")).toBe(false)
     expect(tryFocusCodeCityRenderer(controller, "district:app")).toBe(true)
     expect(focusedIds).toEqual(["district:app"])
+  })
+
+  test("a pending renderer does not claim that the overview was reset", () => {
+    let resetCalls = 0
+    const controller = {
+      resetView: () => {
+        resetCalls += 1
+      },
+    }
+
+    expect(tryResetCodeCityRenderer(null)).toBe(false)
+    expect(tryResetCodeCityRenderer(controller)).toBe(true)
+    expect(resetCalls).toBe(1)
+  })
+
+  test("reset overview keeps the selected inspector context visible", () => {
+    const resetCalls: number[] = []
+    const canvas = {
+      resetView: () => {
+        resetCalls.push(1)
+        return true
+      },
+    }
+
+    expect(resolveCodeCityResetViewResult(canvas, "Application")).toEqual({
+      reset: true,
+      announcement: "Overview restored. Application remains selected.",
+    })
+    expect(resolveCodeCityResetViewResult(null, "Application")).toEqual({
+      reset: false,
+      announcement: "Interactive map is still loading. Try resetting the overview again.",
+    })
+    expect(resetCalls).toHaveLength(1)
+  })
+
+  test("Home is the discoverable keyboard shortcut for reset overview", () => {
+    expect(isCodeCityResetShortcut("Home")).toBe(true)
+    expect(isCodeCityResetShortcut("Escape")).toBe(false)
   })
 
   test("inspector focus explains when the renderer is still pending", () => {

@@ -1,5 +1,5 @@
 import type { CodeCityModel } from "@planetnik/common";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
 	CodeCityCanvas,
 	type CodeCityCanvasHandle,
@@ -179,6 +179,31 @@ export const resolveCodeCitySelectionFocusResult = (
 	return { focused: true, announcement: `Focused on ${title}.` };
 };
 
+export type CodeCityResetViewResult = {
+	readonly reset: boolean;
+	readonly announcement: string;
+};
+
+export const isCodeCityResetShortcut = (key: string): boolean => key === "Home";
+
+export const resolveCodeCityResetViewResult = (
+	canvas: Pick<CodeCityCanvasHandle, "resetView"> | null,
+	selectionLabel: string | null,
+): CodeCityResetViewResult => {
+	if (!canvas || !canvas.resetView()) {
+		return {
+			reset: false,
+			announcement: "Interactive map is still loading. Try resetting the overview again.",
+		};
+	}
+	return {
+		reset: true,
+		announcement: selectionLabel
+			? `Overview restored. ${selectionLabel} remains selected.`
+			: "Overview restored.",
+	};
+};
+
 export const resolveCodeCityStoryCompletionAction = (
 	previousState: CodeCityStoryState,
 	event: CodeCityStoryEvent,
@@ -325,6 +350,18 @@ export default function CodeCityView({
 		setFocusAnnouncement(result.announcement);
 	};
 
+	const resetView = () => {
+		const result = resolveCodeCityResetViewResult(canvasRef.current, selectionLabel);
+		setFocusAnnouncement(result.announcement);
+	};
+
+	const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+		if (viewMode !== "map" || !isCodeCityResetShortcut(event.key)) return;
+		if (!(event.target instanceof HTMLCanvasElement)) return;
+		event.preventDefault();
+		resetView();
+	};
+
 	const clearSelection = () => {
 		canvasRef.current?.focusEntity(null);
 		setSelection(null);
@@ -440,7 +477,7 @@ export default function CodeCityView({
 	};
 
 	return (
-		<section className="code-city" aria-label="Code City">
+		<section className="code-city" aria-label="Code City" onKeyDown={handleKeyDown}>
 			<header className="code-city__controls">
 				<div>
 					<p className="code-city__eyebrow">Active lens</p>
@@ -452,6 +489,8 @@ export default function CodeCityView({
 					mode={viewMode}
 					mapAvailable={mapAvailable}
 					onChange={setRequestedView}
+					onReset={resetView}
+					canReset={mapAvailable && !fallbackPrimary}
 				/>
 				<CodeCityAudienceSwitch audience={audience} onChange={changeAudience} />
 				<div className="code-city__lens-buttons" role="toolbar" aria-label="Code City lenses">

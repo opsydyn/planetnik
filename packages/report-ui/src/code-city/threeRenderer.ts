@@ -109,6 +109,7 @@ export type CodeCityRendererController = {
   readonly setSelectionResult: (selectionResult: CodeCitySelectionResult) => void
   readonly setPresentation: (presentation: CodeCityRendererPresentation) => void
   readonly focusEntity: (id: string | null) => void
+  readonly resetView: () => void
   readonly dispose: () => void
 }
 
@@ -363,6 +364,11 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
     controls.minZoom = 0.6
     controls.maxZoom = 4
     controls.update()
+    const overviewCameraState: CameraState = {
+      position: camera.position.clone(),
+      target: controls.target.clone(),
+      zoom: camera.zoom,
+    }
 
     let lensVisuals = options.lensVisuals
     let selectionResult = options.selectionResult
@@ -519,6 +525,16 @@ export function createCodeCityRenderer(options: CodeCityRendererOptions): CodeCi
         controls.update()
         render()
         options.onFocusComplete()
+      },
+      resetView() {
+        detailTargetId = null
+        preservedCameraState = null
+        camera.position.copy(overviewCameraState.position)
+        camera.zoom = overviewCameraState.zoom
+        controls.target.copy(overviewCameraState.target)
+        camera.updateProjectionMatrix()
+        controls.update()
+        updateMaterials()
       },
       dispose() {
         cleanup()
