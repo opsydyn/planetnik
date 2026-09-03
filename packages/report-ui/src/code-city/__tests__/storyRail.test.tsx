@@ -6,6 +6,7 @@ import {
   reduceCodeCityStoryViewState,
   resolveCodeCityStoryCompletionAction,
   resolveCodeCityStoryFocusAction,
+  resolveCodeCitySelectionFocusResult,
 } from "../CodeCityView.js"
 import type { CodeCityStory, CodeCityStoryEvent } from "../story.js"
 
@@ -161,6 +162,29 @@ describe("CodeCityStoryRail", () => {
 
     expect(tryFocusCodeCityRenderer(null, "district:app")).toBe(false)
     expect(tryFocusCodeCityRenderer(controller, "district:app")).toBe(true)
+    expect(focusedIds).toEqual(["district:app"])
+  })
+
+  test("inspector focus explains when the renderer is still pending", () => {
+    const selection = { kind: "district" as const, id: "district:app" }
+
+    expect(resolveCodeCitySelectionFocusResult(null, selection, "Application")).toEqual({
+      focused: false,
+      announcement: "Interactive map is still loading. Try focusing again.",
+    })
+
+    const focusedIds: Array<string | null> = []
+    const canvas = {
+      focusEntity: (id: string | null) => {
+        focusedIds.push(id)
+        return true
+      },
+    }
+
+    expect(resolveCodeCitySelectionFocusResult(canvas, selection, "Application")).toEqual({
+      focused: true,
+      announcement: "Focused on Application.",
+    })
     expect(focusedIds).toEqual(["district:app"])
   })
 

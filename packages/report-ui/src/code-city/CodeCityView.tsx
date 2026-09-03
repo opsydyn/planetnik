@@ -154,6 +154,31 @@ export const resolveCodeCityStoryFocusAction = (
 	return step.target ? { type: "focus", entityId: step.target.id } : { type: "none" };
 };
 
+export type CodeCitySelectionFocusResult = {
+	readonly focused: boolean;
+	readonly announcement: string;
+};
+
+export const resolveCodeCitySelectionFocusResult = (
+	canvas: Pick<CodeCityCanvasHandle, "focusEntity"> | null,
+	selection: CodeCitySelection,
+	title: string,
+): CodeCitySelectionFocusResult => {
+	if (!selection) {
+		return {
+			focused: false,
+			announcement: "Select a district or building first.",
+		};
+	}
+	if (!canvas || !canvas.focusEntity(selection.id)) {
+		return {
+			focused: false,
+			announcement: "Interactive map is still loading. Try focusing again.",
+		};
+	}
+	return { focused: true, announcement: `Focused on ${title}.` };
+};
+
 export const resolveCodeCityStoryCompletionAction = (
 	previousState: CodeCityStoryState,
 	event: CodeCityStoryEvent,
@@ -292,8 +317,12 @@ export default function CodeCityView({
 	};
 
 	const focusSelection = () => {
-		if (!selection) return;
-		canvasRef.current?.focusEntity(selection.id);
+		const result = resolveCodeCitySelectionFocusResult(
+			canvasRef.current,
+			selection,
+			inspector?.title ?? selection?.id ?? "selection",
+		);
+		setFocusAnnouncement(result.announcement);
 	};
 
 	const clearSelection = () => {
