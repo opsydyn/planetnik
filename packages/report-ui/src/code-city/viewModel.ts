@@ -1,5 +1,6 @@
 import type {
   CodeCityBuilding,
+  CodeCityDependencyEdge,
   CodeCityDistrict,
   CodeCityEvidenceRef,
   CodeCityModel,
@@ -27,8 +28,16 @@ export type CodeCityInspectorModel = {
   readonly sourceSets: readonly string[]
   readonly metrics: ReadonlyArray<{ readonly label: string; readonly value: string }>
   readonly visualFacts: ReadonlyArray<{ readonly label: string; readonly value: string }>
+  readonly relationships: readonly CodeCityInspectorRelationshipModel[]
   readonly evidence: readonly { readonly label: string; readonly href: string }[]
   readonly units: readonly CodeCityInspectorUnitModel[]
+}
+
+export type CodeCityInspectorRelationshipModel = {
+  readonly id: string
+  readonly label: string
+  readonly summary: string
+  readonly href: string | null
 }
 
 export type CodeCityInspectorUnitModel = {
@@ -41,6 +50,8 @@ export type CodeCityInspectorUnitModel = {
 }
 
 const formatCount = (count: number, singular: string): string => `${count} ${singular}${count === 1 ? "" : "s"}`
+
+const formatDependencies = (count: number): string => `${count} dependenc${count === 1 ? "y" : "ies"}`
 
 const formatHealth = (signals: CodeCitySignals): string => {
   const { score, severity, dominantDimension } = signals.health
@@ -178,6 +189,56 @@ const evidenceLinks = (
     return href === null ? [] : [{ label: evidenceLabel(reference.kind, reference.id), href }]
   })
 
+const relationshipLabel = (resolution: CodeCityDependencyEdge["resolution"]): string =>
+  resolution === "both" ? "Dependency route" : "Unresolved dependency"
+
+const relationshipSummary = (model: CodeCityModel, edge: CodeCityDependencyEdge): string => {
+  const source =
+    model.districts.find((district) => district.id === edge.sourceDistrictId)?.label ?? "Unavailable source"
+  const target =
+    model.districts.find((district) => district.id === edge.targetDistrictId)?.label ?? "Unavailable target"
+  const connector = edge.resolution === "both" ? " → " : " ↝ "
+  return `${source}${connector}${target} · ${formatDependencies(edge.count)}`
+}
+
+const relationshipsFor = (
+  model: CodeCityModel,
+  selection: Exclude<CodeCitySelection, null>,
+  entity: CodeCityBuilding | CodeCityDistrict,
+  basePath: string,
+): readonly CodeCityInspectorRelationshipModel[] => {
+  const selectedDistrictIds = new Set(
+    selection.kind === "building" ? (entity as CodeCityBuilding).districtIds : [entity.id],
+  )
+  const memberships =
+    selection.kind === "building"
+      ? [...model.districts]
+          .filter((district) => selectedDistrictIds.has(district.id))
+          .sort((left, right) => compareText(left.id, right.id))
+          .map((district) => ({
+            id: `membership:${district.id}`,
+            label: "Context membership",
+            summary: district.label,
+            href: firstEvidenceHref(district.evidence, basePath),
+          }))
+      : []
+  const edgeRelationships = model.edges
+    .filter(
+      (edge) =>
+        (edge.sourceDistrictId !== null && selectedDistrictIds.has(edge.sourceDistrictId)) ||
+        (edge.targetDistrictId !== null && selectedDistrictIds.has(edge.targetDistrictId)),
+    )
+    .sort((left, right) => compareText(left.id, right.id))
+    .map((edge) => ({
+      id: edge.id,
+      label: relationshipLabel(edge.resolution),
+      summary: relationshipSummary(model, edge),
+      href: firstEvidenceHref(edge.evidence, basePath),
+    }))
+
+  return [...memberships, ...edgeRelationships]
+}
+
 const unitsInLayoutOrder = (model: CodeCityModel, buildingId: string): CodeCityUnit[] => {
   const positions = new Map(model.layout.unitOrder.map((id, index) => [id, index]))
   return model.units
@@ -225,6 +286,7 @@ export function buildCodeCityInspectorModel(
     sourceSets: building ? building.sourceSets : district ? sourceSetsForDistrict(model, district) : [],
     metrics: metricsFor(model, entity.metrics, presentation),
     visualFacts: visualFactsFor(model, entity, lens),
+    relationships: relationshipsFor(model, selection, entity, basePath),
     evidence,
     units: building ? unitsInLayoutOrder(model, building.id).map((unit) => inspectorUnit(unit, basePath)) : [],
   }

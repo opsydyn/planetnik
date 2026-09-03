@@ -66,6 +66,7 @@ export { resolveCodeCityViewMode } from "./viewMode"
 export type {
   CodeCityFallbackRowModel,
   CodeCityInspectorModel,
+  CodeCityInspectorRelationshipModel,
   CodeCityInspectorUnitModel,
 } from "./viewModel"
 export {

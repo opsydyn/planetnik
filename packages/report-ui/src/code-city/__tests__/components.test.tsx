@@ -151,7 +151,15 @@ describe("CodeCityInspector", () => {
       districtLabel: "Runtime",
       sourceSets: ["main"],
       metrics: [],
-      evidence: [],
+		evidence: [],
+		relationships: [
+			{
+				id: "edge:runtime-web",
+				label: "Dependency route",
+				summary: "Runtime → Web · 2 dependencies",
+				href: "/topology#runtime-web",
+			},
+		],
 		visualFacts: [
 			{ label: "Material", value: "Brick" },
 			{ label: "Archetype", value: "Tower" },
@@ -192,6 +200,12 @@ describe("CodeCityInspector", () => {
 		expect(text).toContain("Visual encoding")
 		expect(text).toContain("Material")
 		expect(text).toContain("Health has no separate geometry cue; it uses a restrained emissive surface tint.")
+		expect(text).toContain("Architecture tethers")
+		expect(text).toContain("Runtime → Web · 2 dependencies")
     expect(links.map((link) => link.props.href)).toContain("/units/complexity#start")
+		expect(links.map((link) => link.props["aria-label"])).toContain(
+			"Dependency route: Runtime → Web · 2 dependencies",
+		)
+		expect(links.map((link) => link.props.href)).toContain("/topology#runtime-web")
   })
 })

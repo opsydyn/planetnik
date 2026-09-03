@@ -59,6 +59,35 @@ export function CodeCityInspector({
 						</dl>
 					</section>
 
+					{inspector.relationships.length > 0 ? (
+						<section
+							className="code-city-inspector__relationships"
+							aria-labelledby="code-city-relationships-title"
+						>
+							<h3 id="code-city-relationships-title">Architecture tethers</h3>
+							<ul>
+								{inspector.relationships.map((relationship) => (
+									<li key={relationship.id}>
+										<strong>{relationship.label}</strong>
+										<span>{relationship.summary}</span>
+										{relationship.href ? (
+											<a
+												href={relationship.href}
+												aria-label={`${relationship.label}: ${relationship.summary}`}
+											>
+												Open evidence
+											</a>
+										) : (
+											<span className="code-city-inspector__relationship-unavailable">
+												Evidence unavailable
+											</span>
+										)}
+									</li>
+								))}
+							</ul>
+						</section>
+					) : null}
+
 					{inspector.evidence.length > 0 ? (
 						<section className="code-city-inspector__evidence" aria-labelledby="code-city-evidence-title">
 							<h3 id="code-city-evidence-title">Evidence</h3>

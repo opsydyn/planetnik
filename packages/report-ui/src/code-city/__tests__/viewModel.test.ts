@@ -153,6 +153,62 @@ const metricsObject = (metrics: ReadonlyArray<{ readonly label: string; readonly
   Object.fromEntries(metrics.map(({ label, value }) => [label, value]))
 
 describe("buildCodeCityInspectorModel", () => {
+  test("builds deterministic architecture tethers for context membership and resolved routes", () => {
+    const inspector = buildCodeCityInspectorModel(
+      modelFixture(),
+      { kind: "building", id: "file:runtime" },
+      "/planetnik/",
+    )
+
+    expect(inspector?.relationships).toEqual([
+      {
+        id: "membership:district:runtime",
+        label: "Context membership",
+        summary: "Runtime",
+        href: null,
+      },
+      {
+        id: "edge:runtime-web",
+        label: "Dependency route",
+        summary: "Runtime → Web · 2 dependencies",
+        href: "/planetnik/topology#runtime-web",
+      },
+    ])
+  })
+
+  test("labels unresolved dependency endpoints instead of presenting them as routes", () => {
+    const model = modelFixture()
+    const inspector = buildCodeCityInspectorModel(
+      {
+        ...model,
+        edges: [
+          ...model.edges,
+          {
+            id: "edge:runtime-unknown",
+            kind: "component_dependency",
+            decompositionKey: "primary",
+            sourceDistrictId: "district:runtime",
+            targetDistrictId: null,
+            count: 1,
+            locFrom: null,
+            evidenceCount: null,
+            resolution: "source",
+            evidence: [],
+          },
+        ],
+      },
+      { kind: "district", id: "district:runtime" },
+      "/planetnik/",
+    )
+
+    expect(inspector?.relationships).toContainEqual({
+      id: "edge:runtime-unknown",
+      label: "Unresolved dependency",
+      summary: "Runtime ↝ Unavailable target · 1 dependency",
+      href: null,
+    })
+  })
+
   test("presents a selected building's signals, identity, and resolvable evidence", () => {
     const inspector = buildCodeCityInspectorModel(
       modelFixture(),

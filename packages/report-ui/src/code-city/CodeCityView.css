@@ -494,6 +494,56 @@
 	line-height: 1.35;
 }
 
+.code-city-inspector__relationships {
+	display: grid;
+	gap: 0.5rem;
+	padding-top: 0.9rem;
+	border-top: 1px solid var(--color-border, #29334a);
+}
+
+.code-city-inspector__relationships h3 {
+	font-size: 0.82rem;
+}
+
+.code-city-inspector__relationships ul {
+	display: grid;
+	gap: 0.45rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.code-city-inspector__relationships li {
+	display: grid;
+	gap: 0.2rem;
+	border-left: 2px solid var(--color-accent, #58a6ff);
+	padding: 0.45rem 0.55rem;
+	background: var(--color-surface-muted, rgba(88, 166, 255, 0.06));
+}
+
+.code-city-inspector__relationships strong {
+	font-size: 0.72rem;
+}
+
+.code-city-inspector__relationships span,
+.code-city-inspector__relationships a {
+	font-size: 0.74rem;
+	line-height: 1.35;
+}
+
+.code-city-inspector__relationships span {
+	color: var(--color-text-secondary, #97a3bf);
+}
+
+.code-city-inspector__relationships a {
+	color: var(--color-accent, #58a6ff);
+	font-weight: 700;
+}
+
+.code-city-inspector__relationships .code-city-inspector__relationship-unavailable {
+	color: var(--color-warning, #f0a74a);
+}
+
 .code-city-inspector__evidence {
 	display: grid;
 	gap: 0.5rem;
