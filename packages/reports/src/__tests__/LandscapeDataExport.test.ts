@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -239,11 +246,7 @@ describe("LandscapeDataExport", () => {
 			tags: "landscape_tags.json",
 			tagMatrix: "landscape_tag_matrix.json",
 		});
-		expect(completedContext.compatibilityProjections).toEqual({
-			repositories: "repositories.txt",
-			contributors: "contributors.txt",
-			teams: "teams.txt",
-		});
+		expect(completedContext.compatibilityProjections).toEqual({});
 		expect(overview.landscapeName).toBe("Acme Landscape");
 		expect(overview.repositoryCount).toBe(2);
 		expect(overview.contributorCount).toBe(2);
@@ -271,7 +274,7 @@ describe("LandscapeDataExport", () => {
 		expect(rawResults.repositoriesPerExtension).toEqual({ java: 2, ts: 1 });
 	});
 
-	test("exports both legacy and normalized repositories data", () => {
+	test("exports canonical and normalized repositories data", () => {
 		const root = mkdtempSync(
 			join(tmpdir(), "planetnik-landscape-repositories-"),
 		);
@@ -323,6 +326,101 @@ describe("LandscapeDataExport", () => {
 				contributorEmails: ["alice@example.com"],
 			}),
 		);
+	});
+
+	test("does not emit landscape TXT compatibility projections by default", () => {
+		const root = mkdtempSync(
+			join(tmpdir(), "planetnik-landscape-json-only-"),
+		);
+		roots.push(root);
+
+		const contributor = makeContributor("alice@example.com", 20, 4, 10);
+		const results = new LandscapeAnalysisResults();
+		results.allContributors = [contributor];
+		results.repositoryAnalysisResults = [
+			makeRepoResult("repo-a", 1200, [contributor], "2024-07-01"),
+		];
+
+		const exportData = new LandscapeDataExport(results, root);
+		exportData.exportCoreContracts("analyzeLandscape");
+		exportData.exportPeopleContracts(new TeamsConfig());
+		exportData.exportRepositories(new TagMap(new LandscapeConfiguration(), []));
+
+		const dataDir = join(root, "data");
+		expect(existsSync(join(dataDir, "landscape_overview.json"))).toBe(true);
+		expect(existsSync(join(dataDir, "landscape_repositories.json"))).toBe(true);
+		expect(existsSync(join(dataDir, "landscape_contributors.json"))).toBe(true);
+		expect(existsSync(join(dataDir, "landscape_teams.json"))).toBe(true);
+		expect(existsSync(join(dataDir, "repositories.txt"))).toBe(false);
+		expect(existsSync(join(dataDir, "contributors.txt"))).toBe(false);
+		expect(existsSync(join(dataDir, "teams.txt"))).toBe(false);
+
+		const context = JSON.parse(
+			readFileSync(join(dataDir, "report_context.json"), "utf-8"),
+		) as { compatibilityProjections: Record<string, string> };
+		expect(context.compatibilityProjections).toEqual({});
+	});
+
+	test("emits landscape TXT compatibility projections when explicitly opted in", () => {
+		const root = mkdtempSync(
+			join(tmpdir(), "planetnik-landscape-compatibility-"),
+		);
+		roots.push(root);
+
+		const contributor = makeContributor("alice@example.com", 20, 4, 10);
+		const results = new LandscapeAnalysisResults();
+		results.allContributors = [contributor];
+		results.repositoryAnalysisResults = [
+			makeRepoResult("repo-a", 1200, [contributor], "2024-07-01"),
+		];
+
+		const exportData = new LandscapeDataExport(results, root, {
+			emitCompatibilityProjections: true,
+		});
+		exportData.exportCoreContracts("analyzeLandscape");
+		exportData.exportPeopleContracts(new TeamsConfig());
+		exportData.exportRepositories(new TagMap(new LandscapeConfiguration(), []));
+
+		const dataDir = join(root, "data");
+		expect(existsSync(join(dataDir, "repositories.txt"))).toBe(true);
+		expect(existsSync(join(dataDir, "contributors.txt"))).toBe(true);
+		expect(existsSync(join(dataDir, "teams.txt"))).toBe(true);
+
+		const context = JSON.parse(
+			readFileSync(join(dataDir, "report_context.json"), "utf-8"),
+		) as { compatibilityProjections: Record<string, string> };
+		expect(context.compatibilityProjections).toEqual({
+			repositories: "repositories.txt",
+			contributors: "contributors.txt",
+			teams: "teams.txt",
+		});
+	});
+
+	test("does not advertise stale landscape TXT files when opt-in is disabled", () => {
+		const root = mkdtempSync(
+			join(tmpdir(), "planetnik-landscape-stale-compatibility-"),
+		);
+		roots.push(root);
+
+		const dataDir = join(root, "data");
+		mkdirSync(dataDir, { recursive: true });
+		for (const fileName of [
+			"repositories.txt",
+			"contributors.txt",
+			"teams.txt",
+		]) {
+			writeFileSync(join(dataDir, fileName), "stale", "utf-8");
+		}
+
+		const results = new LandscapeAnalysisResults();
+		const exportData = new LandscapeDataExport(results, root);
+		exportData.exportCoreContracts("updateLandscape");
+
+		const context = JSON.parse(
+			readFileSync(join(dataDir, "report_context.json"), "utf-8"),
+		) as { compatibilityProjections: Record<string, string> };
+		expect(context.compatibilityProjections).toEqual({});
+		expect(existsSync(join(dataDir, "repositories.txt"))).toBe(true);
 	});
 
 	test("exports normalized tags and repository tag matrix", () => {

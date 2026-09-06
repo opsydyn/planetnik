@@ -8,6 +8,6 @@ coverage/
 .env.local
 _planetnik/
 _sokrates/
-datasets/
+/datasets/
 _planetnik_landscape/
 apps/runtime/artifacts/

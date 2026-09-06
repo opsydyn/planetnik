@@ -36,6 +36,7 @@ describe("hydrateLandscapeConfiguration", () => {
 					},
 				],
 				mergeExtensions: [{ primary: "ts", secondary: "tsx" }],
+				emitLegacyProjections: true,
 			},
 		);
 
@@ -55,5 +56,6 @@ describe("hydrateLandscapeConfiguration", () => {
 			primary: "ts",
 			secondary: "tsx",
 		});
+		expect(hydrated.emitLegacyProjections).toBe(true);
 	});
 });

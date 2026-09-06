@@ -43,4 +43,6 @@ export class LandscapeConfiguration {
 	tagGroups: TagGroup[] = [];
 	customTabs: CustomTab[] = [];
 	mergeExtensions: MergeExtension[] = [];
+	/** Keep legacy TXT/HTML report projections opt-in during JSON migration. */
+	emitLegacyProjections = false;
 }

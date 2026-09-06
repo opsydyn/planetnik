@@ -135,6 +135,9 @@ export const LandscapeConfigSchema = Schema.Struct({
 			alertSeverities: ["critical", "high", "medium", "low"],
 		}),
 	}),
+	emitLegacyProjections: Schema.optionalWith(Schema.Boolean, {
+		default: () => false,
+	}),
 });
 
 export type LandscapeConfigInput = typeof LandscapeConfigSchema.Type;

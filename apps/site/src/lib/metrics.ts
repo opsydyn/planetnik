@@ -1,29 +1,28 @@
 export interface MetricEntry {
-	id: string;
-	value: number;
+  id: string
+  value: number
 }
 
-export function parseMetricsText(
-	text: string | null | undefined,
-): MetricEntry[] {
-	if (!text) return [];
+export function parseMetricsJson(raw: unknown): MetricEntry[] {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return []
 
-	return text
-		.split("\n")
-		.map((line) => line.trim())
-		.filter(Boolean)
-		.flatMap((line) => {
-			const colonIndex = line.indexOf(":");
-			if (colonIndex < 0) return [];
+  const metrics = (raw as { metrics?: unknown }).metrics
+  if (!Array.isArray(metrics)) return []
 
-			const id = line.slice(0, colonIndex).trim();
-			const value = Number.parseFloat(line.slice(colonIndex + 1).trim());
-			if (!id || Number.isNaN(value)) return [];
+  return metrics.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return []
+    }
 
-			return [{ id, value }];
-		});
+    const record = entry as { id?: unknown; value?: unknown }
+    const id = typeof record.id === "string" ? record.id.trim() : ""
+    const value = record.value
+    if (!id || typeof value !== "number" || Number.isNaN(value)) return []
+
+    return [{ id, value }]
+  })
 }
 
 export function getMetric(entries: MetricEntry[], id: string): number | null {
-	return entries.find((entry) => entry.id === id)?.value ?? null;
+  return entries.find((entry) => entry.id === id)?.value ?? null
 }

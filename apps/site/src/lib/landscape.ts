@@ -48,16 +48,6 @@ export function readLandscapeRepoJson<T>(
 	return JSON.parse(readFileSync(path, "utf-8")) as T;
 }
 
-export function readLandscapeRepoText(
-	repoKey: string,
-	fileName: string,
-	dataDir = resolveDataDir(),
-): string | null {
-	const path = join(resolveLandscapeRepoDataDir(repoKey, dataDir), fileName);
-	if (!existsSync(path)) return null;
-	return readFileSync(path, "utf-8");
-}
-
 export function readLandscapeRepoContributorDetailJson<T>(
 	repoKey: string,
 	email: string,

@@ -30,10 +30,16 @@ const analysisRoot = Options.text("analysisRoot").pipe(
 const confFile = Options.text("confFile").pipe(Options.optional);
 const name = Options.text("name").pipe(Options.optional);
 const description = Options.text("description").pipe(Options.optional);
+const emitLegacyProjections = Options.boolean("emitLegacyProjections").pipe(
+	Options.optional,
+	Options.withDescription(
+		"Emit legacy landscape TXT and HTML projections (default: canonical JSON only)",
+	),
+);
 
 export const updateLandscapeCommand = Command.make(
 	"updateLandscape",
-	{ analysisRoot, confFile, name, description },
+	{ analysisRoot, confFile, name, description, emitLegacyProjections },
 	(args) =>
 		Effect.gen(function* () {
 			const root = resolve(args.analysisRoot);
@@ -56,12 +62,22 @@ export const updateLandscapeCommand = Command.make(
 				configPath,
 				false,
 			);
+			let rawConfig: Record<string, unknown> = {};
 			if (existsSync(configPath)) {
+				rawConfig = JSON.parse(readFileSync(configPath, "utf-8")) as Record<
+					string,
+					unknown
+				>;
 				hydrateLandscapeConfiguration(
 					landscapeConfig,
-					JSON.parse(readFileSync(configPath, "utf-8")),
+					rawConfig,
 				);
 			}
+			const shouldEmitLegacyProjections =
+				(args.emitLegacyProjections._tag === "Some" &&
+					args.emitLegacyProjections.value === true) ||
+				landscapeConfig.emitLegacyProjections;
+			landscapeConfig.emitLegacyProjections = shouldEmitLegacyProjections;
 
 			// Apply metadata overrides
 			if (args.name._tag === "Some" || args.description._tag === "Some") {
@@ -78,33 +94,40 @@ export const updateLandscapeCommand = Command.make(
 			const analyzer = new LandscapeAnalyzer(landscapeConfig, root);
 			const results = analyzer.analyze();
 
-			// Generate report
-			const report = new RichTextReport("landscape", "index.html");
-			report.displayName = results.metadata.name || "Landscape";
-			LandscapeReportGenerator.generate(report, results);
-
-			// Write report
+			// Write canonical data and, only when requested, the legacy report.
 			const reportsDir = resolveLandscapeReportsDir(root);
 			mkdirSync(reportsDir, { recursive: true });
 
-			const parts: string[] = [];
-			const client = { append: (text: string) => parts.push(text) };
-			new ReportRenderer().render(report, client);
+			if (shouldEmitLegacyProjections) {
+				const report = new RichTextReport("landscape", "index.html");
+				report.displayName = results.metadata.name || "Landscape";
+				LandscapeReportGenerator.generate(report, results);
 
-			const html =
-				REPORTS_HTML_HEADER.replace("{{TITLE}}", report.displayName).replace(
-					"{{CUSTOM_HEADER}}",
-					"",
-				) +
-				parts.join("") +
-				REPORTS_HTML_FOOTER;
+				const parts: string[] = [];
+				const client = { append: (text: string) => parts.push(text) };
+				new ReportRenderer().render(report, client);
 
-			writeFileSync(join(reportsDir, "index.html"), html, "utf-8");
+				const html =
+					REPORTS_HTML_HEADER.replace("{{TITLE}}", report.displayName).replace(
+						"{{CUSTOM_HEADER}}",
+						"",
+					) +
+					parts.join("") +
+					REPORTS_HTML_FOOTER;
+
+				writeFileSync(join(reportsDir, "index.html"), html, "utf-8");
+			} else {
+				yield* Effect.log(
+					"Skipping legacy landscape TXT/HTML projections (canonical JSON is default).",
+				);
+			}
 
 			// Write analysis results JSON
 			const dataDir = resolveLandscapeDataDir(root);
 			mkdirSync(dataDir, { recursive: true });
-			const landscapeDataExport = new LandscapeDataExport(results, reportsDir);
+			const landscapeDataExport = new LandscapeDataExport(results, reportsDir, {
+				emitCompatibilityProjections: shouldEmitLegacyProjections,
+			});
 			landscapeDataExport.exportCoreContracts("updateLandscape");
 			landscapeDataExport.exportPeopleContracts(landscapeConfig.teamsConfig);
 			const tagMap = buildLandscapeTagMap(
@@ -115,9 +138,11 @@ export const updateLandscapeCommand = Command.make(
 			landscapeDataExport.exportRepositories(tagMap);
 			landscapeDataExport.exportTagContracts(tagMap, landscapeConfig.tagGroups);
 
-			yield* Effect.log(
-				`Landscape report generated at ${reportsDir}/index.html`,
-			);
+			if (shouldEmitLegacyProjections) {
+				yield* Effect.log(
+					`Landscape report generated at ${reportsDir}/index.html`,
+				);
+			}
 			yield* Effect.log(
 				`Found ${results.getRepositoryCount()} repositories, ${results.getTotalLoc()} total LOC`,
 			);

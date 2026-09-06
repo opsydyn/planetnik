@@ -18,6 +18,7 @@ describe("LandscapeConfigSchema", () => {
 		expect(result.mergeExtensions).toEqual([]);
 		expect(result.tagGroups).toEqual([]);
 		expect(result.commitsMaxYears).toBe(10);
+		expect(result.emitLegacyProjections).toBe(false);
 	});
 
 	test("decodes a full config with all fields", () => {
@@ -45,6 +46,7 @@ describe("LandscapeConfigSchema", () => {
 			ignoreContributors: ["bot@ci.local"],
 			extensionThresholdLoc: 100,
 			commitsMaxYears: 5,
+			emitLegacyProjections: true,
 		};
 
 		const result = decode(input);
@@ -66,6 +68,7 @@ describe("LandscapeConfigSchema", () => {
 		expect(result.ignoreContributors).toEqual(["bot@ci.local"]);
 		expect(result.extensionThresholdLoc).toBe(100);
 		expect(result.commitsMaxYears).toBe(5);
+		expect(result.emitLegacyProjections).toBe(true);
 	});
 
 	test("githubToken is optional and defaults to undefined", () => {

@@ -1,0 +1,932 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common";
+import DatasetCard from "../components/datasets/DatasetCard.astro";
+import DatasetPreview from "../components/datasets/DatasetPreview.astro";
+import ExploreLayout from "../layouts/ExploreLayout.astro";
+import { loadDatasetCatalog } from "../lib/datasets/catalogSource";
+import {
+	type ExploreAudience,
+	getDatasetRecommendedView,
+	getDatasetViewPath,
+} from "../lib/datasets/explore";
+import { route } from "../lib/route";
+
+const { catalog, diagnostics } = loadDatasetCatalog();
+const datasets = catalog.datasets;
+
+const audienceOptions: Array<{ value: ExploreAudience; label: string }> = [
+	{ value: "onboarding", label: "Onboarding" },
+	{ value: "architecture-review", label: "Architecture Review" },
+	{ value: "stakeholder", label: "Stakeholder" },
+];
+
+function parseAudience(value: string | null): ExploreAudience {
+	return audienceOptions.some((option) => option.value === value)
+		? (value as ExploreAudience)
+		: "onboarding";
+}
+
+const selectedAudience = parseAudience(Astro.url.searchParams.get("audience"));
+const selectedMode = ["all", "single_repository", "landscape"].includes(
+	Astro.url.searchParams.get("mode") ?? "",
+)
+	? Astro.url.searchParams.get("mode") ?? "all"
+	: "all";
+const selectedStatus = ["verified", "all", "ready", "partial", "planned"].includes(
+	Astro.url.searchParams.get("status") ?? "",
+)
+	? Astro.url.searchParams.get("status") ?? "verified"
+	: "verified";
+const selectedSort = ["featured", "recent", "loc", "contributors", "name"].includes(
+	Astro.url.searchParams.get("sort") ?? "",
+)
+	? Astro.url.searchParams.get("sort") ?? "featured"
+	: "featured";
+const selectedLanguage = Astro.url.searchParams.get("language") ?? "all";
+const selectedTag = Astro.url.searchParams.get("tag") ?? "all";
+const selectedQuery = Astro.url.searchParams.get("q") ?? "";
+
+const languages = [...new Map(
+	datasets.flatMap((dataset) => dataset.languages.map((language) => [language.key, language.label] as const)),
+)].sort((left, right) => left[1].localeCompare(right[1]));
+const tags = [...new Set(datasets.flatMap((dataset) => dataset.tags))].sort((left, right) => left.localeCompare(right));
+
+const shelves = [...datasets.reduce((groups, dataset) => {
+	const shelf = groups.get(dataset.curation.shelf) ?? [];
+	groups.set(dataset.curation.shelf, [...shelf, dataset]);
+	return groups;
+}, new Map<string, DatasetDescriptor[]>())];
+
+const readyCount = datasets.filter((dataset) => dataset.availability === "ready").length;
+const partialCount = datasets.filter((dataset) => dataset.availability === "partial").length;
+const plannedCount = datasets.filter((dataset) => dataset.availability === "planned").length;
+
+function datasetHref(dataset: DatasetDescriptor): string {
+	const recommendedView = getDatasetRecommendedView(dataset, selectedAudience);
+	const path = recommendedView === "overview" || recommendedView === "code-city"
+		? getDatasetViewPath(dataset, recommendedView)
+		: null;
+	return route(path ?? `/datasets/${dataset.slug}`);
+}
+
+function datasetDetailHref(dataset: DatasetDescriptor): string {
+	return route(`/datasets/${dataset.slug}`);
+}
+
+function datasetViewHref(dataset: DatasetDescriptor, view: "overview" | "code-city"): string | null {
+	const path = getDatasetViewPath(dataset, view);
+	return path ? route(path) : null;
+}
+---
+
+<ExploreLayout title="Explore codebases" description="Browse frozen, evidence-backed Planetnik snapshots.">
+	<div class="explore-page" data-explore-page>
+		<section class="explore-hero" aria-labelledby="explore-title">
+			<div class="explore-hero-copy">
+				<p class="explore-eyebrow">Planetnik dataset index</p>
+				<h1 id="explore-title">Explore codebases.</h1>
+				<p class="explore-lede">
+					Choose a frozen, evidence-backed snapshot and see how a system is shaped before you open the full report.
+				</p>
+				<div class="explore-trust-line">
+					<span><span class="trust-glyph" aria-hidden="true">✦</span> Canonical v2 JSON</span>
+					<span><span class="trust-glyph" aria-hidden="true">↗</span> Shareable snapshot routes</span>
+				</div>
+			</div>
+			<div class="explore-hero-stats" aria-label="Catalogue summary">
+				<div class="hero-stat hero-stat-primary">
+					<strong>{datasets.length}</strong>
+					<span>curated examples</span>
+				</div>
+				<div class="hero-stat-row">
+					<div class="hero-stat"><strong>{readyCount}</strong><span>ready</span></div>
+					<div class="hero-stat"><strong>{partialCount}</strong><span>partial</span></div>
+					<div class="hero-stat"><strong>{plannedCount}</strong><span>planned</span></div>
+				</div>
+			</div>
+		</section>
+
+		<section class="explore-controls-shell" aria-labelledby="catalogue-controls-title">
+			<div class="controls-heading">
+				<div>
+					<p class="explore-eyebrow">Find a useful comparison</p>
+					<h2 id="catalogue-controls-title">Browse the catalogue</h2>
+				</div>
+				<p class="controls-note">Planned examples are clearly labelled and never carry invented metrics.</p>
+			</div>
+			<form class="explore-controls" id="dataset-controls" role="search">
+				<div class="explore-search-field">
+					<label for="dataset-search">Search datasets</label>
+					<input
+						id="dataset-search"
+						name="q"
+						type="search"
+						value={selectedQuery}
+						placeholder="Try Python, Rust, AI, monorepo…"
+						role="combobox"
+						aria-autocomplete="list"
+						aria-controls="dataset-shelves"
+					/>
+					<span class="field-hint">Title, source, language, or tag</span>
+				</div>
+				<div class="explore-select-field">
+					<label for="dataset-mode">Type</label>
+					<select id="dataset-mode" name="mode">
+						<option value="all" selected={selectedMode === "all"}>All types</option>
+						<option value="single_repository" selected={selectedMode === "single_repository"}>Repositories</option>
+						<option value="landscape" selected={selectedMode === "landscape"}>Landscapes</option>
+					</select>
+				</div>
+				<div class="explore-select-field">
+					<label for="dataset-language">Language</label>
+					<select id="dataset-language" name="language">
+						<option value="all" selected={selectedLanguage === "all"}>All languages</option>
+						{languages.map(([key, label]) => <option value={key} selected={selectedLanguage === key}>{label}</option>)}
+					</select>
+				</div>
+				<div class="explore-select-field">
+					<label for="dataset-tag">Tag</label>
+					<select id="dataset-tag" name="tag">
+						<option value="all" selected={selectedTag === "all"}>All tags</option>
+						{tags.map((tag) => <option value={tag} selected={selectedTag === tag}>{tag}</option>)}
+					</select>
+				</div>
+				<div class="explore-select-field">
+					<label for="dataset-status">Availability</label>
+					<select id="dataset-status" name="status">
+						<option value="verified" selected={selectedStatus === "verified"}>Verified snapshots</option>
+						<option value="all" selected={selectedStatus === "all"}>All catalogue entries</option>
+						<option value="ready" selected={selectedStatus === "ready"}>Ready</option>
+						<option value="partial" selected={selectedStatus === "partial"}>Partial</option>
+						<option value="planned" selected={selectedStatus === "planned"}>Planned</option>
+					</select>
+				</div>
+				<div class="explore-select-field">
+					<label for="dataset-sort">Sort by</label>
+					<select id="dataset-sort" name="sort">
+						<option value="featured" selected={selectedSort === "featured"}>Featured</option>
+						<option value="recent" selected={selectedSort === "recent"}>Recently verified</option>
+						<option value="loc" selected={selectedSort === "loc"}>Largest by LOC</option>
+						<option value="contributors" selected={selectedSort === "contributors"}>Most contributors</option>
+						<option value="name" selected={selectedSort === "name"}>Name</option>
+					</select>
+				</div>
+				<div class="explore-select-field explore-audience-field">
+					<label for="dataset-audience">Show me as</label>
+					<select id="dataset-audience" name="audience">
+						{audienceOptions.map((option) => <option value={option.value} selected={selectedAudience === option.value}>{option.label}</option>)}
+					</select>
+				</div>
+				<div class="explore-control-actions">
+					<button class="clear-filters" id="clear-filters" type="button">Clear all</button>
+				</div>
+			</form>
+			<div class="results-bar">
+				<p id="dataset-result-count" aria-live="polite">Showing {datasets.length} catalogue entries</p>
+				<p>Selected view: <strong id="audience-summary">{audienceOptions.find((option) => option.value === selectedAudience)?.label}</strong></p>
+			</div>
+		</section>
+
+		<div class="explore-content" id="explore-content">
+			<div class="explore-shelves" id="dataset-shelves">
+				{datasets.length > 0 ? shelves.map(([shelf, shelfDatasets]) => (
+					<section class="dataset-shelf" data-dataset-shelf>
+						<div class="shelf-heading">
+							<div>
+								<p class="shelf-kicker">Curated shelf</p>
+								<h2>{shelf}</h2>
+							</div>
+							<span>{shelfDatasets.length} {shelfDatasets.length === 1 ? "example" : "examples"}</span>
+						</div>
+						<div class="dataset-grid">
+							{shelfDatasets.map((dataset) => (
+								<DatasetCard
+									dataset={dataset}
+									href={datasetHref(dataset)}
+									previewHref={datasetDetailHref(dataset)}
+									audience={selectedAudience}
+									overviewHref={datasetViewHref(dataset, "overview")}
+									codeCityHref={datasetViewHref(dataset, "code-city")}
+								/>
+							))}
+						</div>
+					</section>
+				)) : null}
+				<section class="explore-empty" id="explore-empty" hidden aria-live="polite">
+					<p class="explore-eyebrow">No matching datasets</p>
+					<h2>Try a broader lens.</h2>
+					<p>Nothing in the catalogue matches those filters. Clear them to return to the full set.</p>
+					<button class="clear-filters empty-clear" type="button" data-clear-filters>Clear filters</button>
+				</section>
+				{diagnostics.length > 0 ? (
+					<p class="catalogue-diagnostics" role="note">
+						{diagnostics.length} dataset {diagnostics.length === 1 ? "entry was" : "entries were"} omitted because its canonical v2 snapshot failed validation.
+					</p>
+				) : null}
+			</div>
+
+			<aside class="dataset-preview-panel" id="dataset-preview" tabindex="-1" hidden aria-label="Dataset preview">
+				<div class="preview-panel-header">
+					<div>
+						<p class="shelf-kicker">Snapshot preview</p>
+						<p class="preview-panel-hint">The catalogue stays in place while you inspect the evidence boundary.</p>
+					</div>
+					<button class="preview-close" id="preview-close" type="button" aria-label="Close dataset preview">×</button>
+				</div>
+				<div id="dataset-preview-content"></div>
+			</aside>
+		</div>
+
+		<div class="preview-templates" aria-hidden="true">
+			{datasets.map((dataset) => (
+				<template data-preview-template={dataset.id}>
+					<DatasetPreview dataset={dataset} audience={selectedAudience} href={datasetDetailHref(dataset)} compact />
+				</template>
+			))}
+		</div>
+
+		<noscript>
+			<p class="no-script-note">JavaScript is optional. Select Preview to open a full-page snapshot detail.</p>
+		</noscript>
+	</div>
+
+	<script is:inline data-astro-rerun>
+		(() => {
+			const root = document.querySelector("[data-explore-page]")
+			if (!(root instanceof HTMLElement) || root.dataset.exploreReady === "true") return
+			root.dataset.exploreReady = "true"
+
+			const search = root.querySelector("#dataset-search")
+			const mode = root.querySelector("#dataset-mode")
+			const language = root.querySelector("#dataset-language")
+			const tag = root.querySelector("#dataset-tag")
+			const status = root.querySelector("#dataset-status")
+			const sort = root.querySelector("#dataset-sort")
+			const audience = root.querySelector("#dataset-audience")
+			const resultCount = root.querySelector("#dataset-result-count")
+			const audienceSummary = root.querySelector("#audience-summary")
+			const emptyState = root.querySelector("#explore-empty")
+			const content = root.querySelector("#explore-content")
+			const preview = root.querySelector("#dataset-preview")
+			const previewContent = root.querySelector("#dataset-preview-content")
+			const cards = [...root.querySelectorAll("[data-dataset-card]")]
+			const shelves = [...root.querySelectorAll("[data-dataset-shelf]")]
+			const defaultState = { q: "", mode: "all", language: "all", tag: "all", status: "verified", sort: "featured", audience: "onboarding" }
+
+			const valueOf = (element, fallback) => element instanceof HTMLInputElement || element instanceof HTMLSelectElement ? element.value || fallback : fallback
+			const setValue = (element, value, fallback) => {
+				if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLSelectElement)) return
+				const optionExists = element instanceof HTMLSelectElement
+					? [...element.options].some((option) => option.value === value)
+					: true
+				element.value = optionExists && value ? value : fallback
+			}
+
+			const params = new URLSearchParams(window.location.search)
+			setValue(search, params.get("q") ?? "", defaultState.q)
+			setValue(mode, params.get("mode") ?? "all", defaultState.mode)
+			setValue(language, params.get("language") ?? "all", defaultState.language)
+			setValue(tag, params.get("tag") ?? "all", defaultState.tag)
+			setValue(status, params.get("status") ?? "verified", defaultState.status)
+			setValue(sort, params.get("sort") ?? "featured", defaultState.sort)
+			setValue(audience, params.get("audience") ?? "onboarding", defaultState.audience)
+
+			const state = () => ({
+				q: valueOf(search, defaultState.q).trim().toLowerCase(),
+				mode: valueOf(mode, defaultState.mode),
+				language: valueOf(language, defaultState.language),
+				tag: valueOf(tag, defaultState.tag),
+				status: valueOf(status, defaultState.status),
+				sort: valueOf(sort, defaultState.sort),
+				audience: valueOf(audience, defaultState.audience),
+			})
+
+			const numberValue = (card, attribute) => {
+				const value = Number(card.getAttribute(attribute))
+				return Number.isFinite(value) ? value : 0
+			}
+
+			const dateValue = (card) => Date.parse(card.getAttribute("data-generated-at") ?? "") || 0
+
+			const tokens = (card, attribute) => (card.getAttribute(attribute) ?? "").toLowerCase().split(/\s+/u).filter(Boolean)
+
+			const matches = (card, current) => {
+				if (current.q && !(card.getAttribute("data-search") ?? "").includes(current.q)) return false
+				if (current.mode !== "all" && card.getAttribute("data-mode") !== current.mode) return false
+				const availability = card.getAttribute("data-availability")
+				if (current.status === "verified" && availability !== "ready" && availability !== "partial") return false
+				if (current.status !== "verified" && current.status !== "all" && availability !== current.status) return false
+				if (current.language !== "all" && !tokens(card, "data-languages").includes(current.language.toLowerCase())) return false
+				if (current.tag !== "all" && !tokens(card, "data-tags").includes(current.tag.toLowerCase())) return false
+				return true
+			}
+
+			const compare = (left, right, currentSort) => {
+				if (currentSort === "name") return (left.getAttribute("data-search") ?? "").localeCompare(right.getAttribute("data-search") ?? "")
+				if (currentSort === "recent") return dateValue(right) - dateValue(left)
+				if (currentSort === "loc") return numberValue(right, "data-loc") - numberValue(left, "data-loc")
+				if (currentSort === "contributors") return numberValue(right, "data-contributors") - numberValue(left, "data-contributors")
+				return Number(right.getAttribute("data-featured") === "true") - Number(left.getAttribute("data-featured") === "true") || numberValue(left, "data-order") - numberValue(right, "data-order")
+			}
+
+			const updateUrl = (current) => {
+				const next = new URLSearchParams(window.location.search)
+				const set = (key, value, fallback) => value === fallback ? next.delete(key) : next.set(key, value)
+				set("q", current.q, defaultState.q)
+				set("mode", current.mode, defaultState.mode)
+				set("language", current.language, defaultState.language)
+				set("tag", current.tag, defaultState.tag)
+				set("status", current.status, defaultState.status)
+				set("sort", current.sort, defaultState.sort)
+				set("audience", current.audience, defaultState.audience)
+				const query = next.toString()
+				window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`)
+			}
+
+			const updateAudienceCopy = (current) => {
+				const labels = { onboarding: "Onboarding", "architecture-review": "Architecture Review", stakeholder: "Stakeholder" }
+				if (audienceSummary) audienceSummary.textContent = labels[current.audience] ?? labels.onboarding
+				for (const card of cards) {
+					const action = card.querySelector("[data-primary-action]")
+					if (!(action instanceof HTMLAnchorElement)) continue
+					const capabilities = tokens(card, "data-capabilities")
+					const codeCity = current.audience === "architecture-review" && (capabilities.includes("code-city") || capabilities.includes("filesmain"))
+					const audienceHref = current.audience === "architecture-review"
+						? card.getAttribute("data-code-city-href") || card.getAttribute("data-overview-href")
+						: card.getAttribute("data-overview-href")
+					if (audienceHref) action.href = audienceHref
+					if (codeCity && card.getAttribute("data-code-city-href")) action.setAttribute("data-astro-reload", "true")
+					else action.removeAttribute("data-astro-reload")
+					const textNode = [...action.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)
+					if (textNode) textNode.nodeValue = `${codeCity ? "Open Code City" : "Open snapshot"} `
+				}
+				const previewAudience = previewContent?.querySelector("[data-preview-audience]")
+				if (previewAudience) previewAudience.textContent = `For ${labels[current.audience] ?? labels.onboarding}`
+				const recommendation = previewContent?.querySelector("[data-preview-recommendation]")
+				if (recommendation) {
+					const activeId = preview?.getAttribute("data-active-dataset")
+					const activeCard = cards.find((card) => card.getAttribute("data-dataset-id") === activeId)
+					const capabilities = activeCard ? tokens(activeCard, "data-capabilities") : []
+					const codeCity = current.audience === "architecture-review" && (capabilities.includes("code-city") || capabilities.includes("filesmain"))
+					recommendation.textContent = `Start with ${codeCity ? "Code City" : "Overview"}`
+				}
+			}
+
+			const update = () => {
+				const current = state()
+				let visibleCount = 0
+				for (const shelf of shelves) {
+					const grid = shelf.querySelector(".dataset-grid")
+					if (!(grid instanceof HTMLElement)) continue
+					const shelfCards = [...grid.querySelectorAll("[data-dataset-card]")]
+					shelfCards.sort((left, right) => compare(left, right, current.sort)).forEach((card) => grid.append(card))
+					let shelfVisible = 0
+					for (const card of shelfCards) {
+						const shown = matches(card, current)
+						card.hidden = !shown
+						if (shown) shelfVisible += 1
+					}
+					shelf.hidden = shelfVisible === 0
+					visibleCount += shelfVisible
+				}
+				if (resultCount) resultCount.textContent = `Showing ${visibleCount} ${visibleCount === 1 ? "dataset" : "datasets"}`
+				if (emptyState instanceof HTMLElement) emptyState.hidden = visibleCount !== 0
+				updateAudienceCopy(current)
+				updateUrl(current)
+			}
+
+			const closePreview = (replaceHistory = false) => {
+				if (!(preview instanceof HTMLElement)) return
+				preview.hidden = true
+				preview.removeAttribute("data-active-dataset")
+				content?.classList.remove("has-preview")
+				if (!replaceHistory) {
+					const next = new URLSearchParams(window.location.search)
+					next.delete("preview")
+					const query = next.toString()
+					window.history.pushState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`)
+				}
+			}
+
+			const openPreview = (id, pushHistory = true) => {
+				if (!(preview instanceof HTMLElement) || !(previewContent instanceof HTMLElement)) return
+				const template = root.querySelector(`[data-preview-template="${CSS.escape(id)}"]`)
+				if (!(template instanceof HTMLTemplateElement)) return
+				previewContent.replaceChildren(template.content.cloneNode(true))
+				preview.hidden = false
+				preview.setAttribute("data-active-dataset", id)
+				content?.classList.add("has-preview")
+				updateAudienceCopy(state())
+				if (pushHistory) {
+					const next = new URLSearchParams(window.location.search)
+					next.set("preview", id)
+					window.history.pushState({}, "", `${window.location.pathname}?${next.toString()}${window.location.hash}`)
+				}
+				requestAnimationFrame(() => preview.focus())
+			}
+
+			root.addEventListener("input", (event) => {
+				if (event.target === search) update()
+			})
+			root.addEventListener("change", (event) => {
+				if (event.target === mode || event.target === language || event.target === tag || event.target === status || event.target === sort || event.target === audience) update()
+			})
+			root.addEventListener("click", (event) => {
+				const target = event.target instanceof Element ? event.target : null
+				const clear = target?.closest("[data-clear-filters], #clear-filters")
+				if (clear) {
+					event.preventDefault()
+					setValue(search, defaultState.q, defaultState.q)
+					setValue(mode, defaultState.mode, defaultState.mode)
+					setValue(language, defaultState.language, defaultState.language)
+					setValue(tag, defaultState.tag, defaultState.tag)
+					setValue(status, defaultState.status, defaultState.status)
+					setValue(sort, defaultState.sort, defaultState.sort)
+					setValue(audience, defaultState.audience, defaultState.audience)
+					update()
+					if (search instanceof HTMLInputElement) search.focus()
+					return
+				}
+				const trigger = target?.closest("[data-preview-trigger]")
+				if (trigger instanceof HTMLAnchorElement && window.matchMedia("(min-width: 980px)").matches) {
+					event.preventDefault()
+					const id = trigger.getAttribute("data-preview-trigger")
+					if (id) openPreview(id)
+					return
+				}
+				if (target?.closest("#preview-close")) {
+					event.preventDefault()
+					closePreview()
+				}
+			})
+
+			document.addEventListener("astro:page-load", update)
+			window.addEventListener("popstate", () => {
+				const id = new URLSearchParams(window.location.search).get("preview")
+				if (id) openPreview(id, false)
+				else closePreview(true)
+				update()
+			})
+			const initialPreview = params.get("preview")
+			update()
+			if (initialPreview) openPreview(initialPreview, false)
+		})()
+	</script>
+</ExploreLayout>
+
+<style>
+	.explore-page {
+		display: grid;
+		gap: 2rem;
+	}
+
+	.explore-hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+		align-items: end;
+		gap: 2rem;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.explore-eyebrow,
+	.shelf-kicker {
+		margin: 0;
+		color: var(--color-accent-strong);
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	}
+
+	.explore-hero h1 {
+		max-width: 10ch;
+		margin: 0.55rem 0 0.8rem;
+		font-family: var(--font-heading-stack);
+		font-size: clamp(2.55rem, 6vw, 5rem);
+		line-height: 0.92;
+		letter-spacing: -0.05em;
+		text-wrap: balance;
+	}
+
+	.explore-lede {
+		max-width: 38rem;
+		margin: 0;
+		color: var(--color-text-secondary);
+		font-size: 1rem;
+		line-height: 1.65;
+	}
+
+	.explore-trust-line {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.1rem;
+		margin-top: 1.35rem;
+		color: var(--color-text-muted);
+		font-size: 0.74rem;
+	}
+
+	.trust-glyph {
+		color: var(--color-warm);
+		font-size: 0.95rem;
+	}
+
+	.explore-hero-stats {
+		display: grid;
+		gap: 0.75rem;
+		padding: 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		background: var(--color-card);
+	}
+
+	.hero-stat {
+		display: grid;
+		gap: 0.12rem;
+		min-width: 0;
+	}
+
+	.hero-stat strong {
+		color: var(--color-text);
+		font-family: var(--font-heading-stack);
+		font-size: 1.45rem;
+		line-height: 1;
+	}
+
+	.hero-stat span {
+		color: var(--color-text-muted);
+		font-size: 0.7rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.hero-stat-primary {
+		padding-bottom: 0.8rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.hero-stat-primary strong {
+		color: var(--color-accent-strong);
+		font-size: 2.2rem;
+	}
+
+	.hero-stat-row {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.8rem;
+	}
+
+	.controls-heading,
+	.results-bar,
+	.shelf-heading,
+	.preview-panel-header {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.controls-heading h2 {
+		margin: 0.35rem 0 0;
+		font-family: var(--font-heading-stack);
+		font-size: 1.45rem;
+	}
+
+	.controls-note,
+	.results-bar p,
+	.shelf-heading > span,
+	.preview-panel-hint {
+		margin: 0;
+		color: var(--color-text-muted);
+		font-size: 0.76rem;
+		line-height: 1.45;
+	}
+
+	.controls-note {
+		max-width: 20rem;
+		text-align: right;
+	}
+
+	.explore-controls-shell {
+		display: grid;
+		gap: 1rem;
+		padding: 1.25rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		background: color-mix(in srgb, var(--color-card) 90%, transparent);
+	}
+
+	.explore-controls {
+		display: grid;
+		grid-template-columns: minmax(15rem, 2fr) repeat(6, minmax(8rem, 1fr)) auto;
+		align-items: end;
+		gap: 0.75rem;
+	}
+
+	.explore-search-field,
+	.explore-select-field {
+		display: grid;
+		gap: 0.35rem;
+		min-width: 0;
+	}
+
+	.explore-controls label {
+		color: var(--color-text-muted);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.explore-controls input,
+	.explore-controls select {
+		width: 100%;
+		min-height: 2.4rem;
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-inline);
+		background: var(--color-surface-subtle);
+		color: var(--color-text);
+		font: inherit;
+		font-size: 0.78rem;
+	}
+
+	.explore-controls input {
+		padding: 0.55rem 0.7rem;
+	}
+
+	.explore-controls select {
+		padding: 0.55rem 0.55rem;
+	}
+
+	.explore-controls input:focus-visible,
+	.explore-controls select:focus-visible,
+	.clear-filters:focus-visible,
+	.preview-close:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.field-hint {
+		color: var(--color-text-muted);
+		font-size: 0.66rem;
+	}
+
+	.explore-control-actions {
+		display: flex;
+		align-items: end;
+		min-height: 2.4rem;
+	}
+
+	.clear-filters {
+		border: 0;
+		border-bottom: 1px solid var(--color-border-strong);
+		padding: 0.45rem 0.1rem;
+		background: transparent;
+		color: var(--color-text-secondary);
+		font: inherit;
+		font-size: 0.73rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.clear-filters:hover {
+		border-color: var(--color-accent);
+		color: var(--color-accent-strong);
+	}
+
+	.results-bar {
+		align-items: center;
+		padding-top: 0.8rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.results-bar p:first-child {
+		color: var(--color-text-secondary);
+		font-weight: 700;
+	}
+
+	.results-bar strong {
+		color: var(--color-text-secondary);
+	}
+
+	.explore-content {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		align-items: start;
+		gap: 1.25rem;
+	}
+
+	.explore-content.has-preview {
+		grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem);
+	}
+
+	.explore-shelves {
+		display: grid;
+		gap: 2.25rem;
+		min-width: 0;
+	}
+
+	.dataset-shelf {
+		display: grid;
+		gap: 0.9rem;
+		min-width: 0;
+	}
+
+	.shelf-heading {
+		align-items: baseline;
+		padding-bottom: 0.65rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.shelf-heading h2 {
+		margin: 0.35rem 0 0;
+		font-family: var(--font-heading-stack);
+		font-size: 1.35rem;
+		line-height: 1;
+	}
+
+	.dataset-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+		gap: 0.85rem;
+		min-width: 0;
+	}
+
+	.dataset-preview-panel {
+		position: sticky;
+		top: 5.65rem;
+		display: grid;
+		gap: 1.2rem;
+		max-height: calc(100vh - 7rem);
+		overflow: auto;
+		padding: 1.15rem;
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-card);
+		background: var(--color-card);
+		box-shadow: 0 20px 44px color-mix(in srgb, var(--color-text) 11%, transparent);
+	}
+
+	.preview-panel-header {
+		align-items: flex-start;
+		padding-bottom: 0.8rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.preview-panel-hint {
+		max-width: 18rem;
+		margin-top: 0.35rem;
+	}
+
+	.preview-close {
+		flex: 0 0 auto;
+		width: 2rem;
+		height: 2rem;
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-inline);
+		background: transparent;
+		color: var(--color-text-secondary);
+		font: inherit;
+		font-size: 1.25rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.preview-close:hover {
+		border-color: var(--color-accent);
+		color: var(--color-accent-strong);
+	}
+
+	.explore-empty {
+		padding: 2rem 1.25rem;
+		border: 1px dashed var(--color-border-strong);
+		border-radius: var(--radius-card);
+		background: var(--color-card);
+		text-align: center;
+	}
+
+	.explore-empty h2 {
+		margin: 0.45rem 0;
+		font-family: var(--font-heading-stack);
+	}
+
+	.explore-empty p:not(.explore-eyebrow) {
+		margin: 0 auto 1rem;
+		max-width: 32rem;
+		color: var(--color-text-muted);
+		font-size: 0.85rem;
+	}
+
+	.empty-clear {
+		border: 1px solid var(--color-border-strong);
+		padding: 0.55rem 0.8rem;
+	}
+
+	.catalogue-diagnostics,
+	.no-script-note {
+		margin: 0;
+		padding: 0.75rem 0.85rem;
+		border-left: 3px solid var(--color-yellow);
+		background: var(--color-warm-soft);
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		line-height: 1.45;
+	}
+
+	.preview-templates {
+		display: none;
+	}
+
+	.no-script-note {
+		border-left-color: var(--color-accent);
+	}
+
+	@media (max-width: 1160px) {
+		.explore-controls {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+
+		.explore-search-field {
+			grid-column: span 3;
+		}
+
+		.explore-control-actions {
+			justify-content: flex-start;
+		}
+	}
+
+	@media (max-width: 980px) {
+		.explore-hero {
+			grid-template-columns: 1fr;
+			gap: 1.25rem;
+		}
+
+		.explore-hero-stats {
+			max-width: 34rem;
+		}
+
+		.explore-content.has-preview {
+			grid-template-columns: 1fr;
+		}
+
+		.dataset-preview-panel {
+			position: static;
+			max-height: none;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.explore-main {
+			padding-top: 1.75rem;
+		}
+
+		.explore-page {
+			gap: 1.35rem;
+		}
+
+		.explore-hero h1 {
+			font-size: clamp(2.35rem, 15vw, 3.8rem);
+		}
+
+		.explore-controls-shell {
+			padding: 1rem;
+		}
+
+		.controls-heading,
+		.results-bar,
+		.shelf-heading {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.controls-note {
+			max-width: none;
+			text-align: left;
+		}
+
+		.explore-controls {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.explore-search-field {
+			grid-column: span 2;
+		}
+
+		.explore-audience-field {
+			grid-column: span 2;
+		}
+
+		.explore-control-actions {
+			grid-column: span 2;
+		}
+
+		.results-bar {
+			gap: 0.35rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.dataset-preview-panel {
+			scroll-behavior: auto;
+		}
+	}
+</style>

@@ -1,52 +1,31 @@
-/// <reference path="./wasm-assets.d.ts" />
-import { readFileSync } from "node:fs"
 import rustGrammarWasmPath from "tree-sitter-rust/tree-sitter-rust.wasm" with { type: "file" }
-import { Language, Parser, type Tree } from "web-tree-sitter"
-import webTreeSitterWasmPath from "web-tree-sitter/web-tree-sitter.wasm" with { type: "file" }
+import type { Language, Parser } from "web-tree-sitter"
+import {
+  createTreeSitterParser,
+  loadTreeSitterLanguage,
+  type ParsedTreeSitterSource,
+  parseTreeSitterSource,
+  type TreeSitterLanguageAdapter,
+} from "../tree-sitter/TreeSitterRuntime.js"
 
-await Parser.init({
-  locateFile(scriptName: string) {
-    if (scriptName === "web-tree-sitter.wasm") {
-      return webTreeSitterWasmPath
-    }
+export const RUST_TREE_SITTER_LANGUAGE_ADAPTER = {
+  id: "rust",
+  displayName: "Rust",
+  grammarWasmPath: rustGrammarWasmPath,
+} satisfies TreeSitterLanguageAdapter
 
-    return scriptName
-  },
-})
+const rustLanguage = await loadTreeSitterLanguage(RUST_TREE_SITTER_LANGUAGE_ADAPTER)
 
-const rustLanguage = await Language.load(readFileSync(rustGrammarWasmPath))
-
-export interface ParsedRustSource {
-  readonly parser: Parser
-  readonly tree: Tree
-  readonly dispose: () => void
-}
+export type ParsedRustSource = ParsedTreeSitterSource
 
 export function getRustTreeSitterLanguage(): Language {
   return rustLanguage
 }
 
 export function createRustTreeSitterParser(): Parser {
-  const parser = new Parser()
-  parser.setLanguage(rustLanguage)
-  return parser
+  return createTreeSitterParser(rustLanguage)
 }
 
 export function parseRustSource(source: string): ParsedRustSource {
-  const parser = createRustTreeSitterParser()
-  const tree = parser.parse(source)
-
-  if (tree === null) {
-    parser.delete()
-    throw new Error("Failed to parse Rust source with tree-sitter.")
-  }
-
-  return {
-    parser,
-    tree,
-    dispose: () => {
-      tree.delete()
-      parser.delete()
-    },
-  }
+  return parseTreeSitterSource(source, rustLanguage, RUST_TREE_SITTER_LANGUAGE_ADAPTER.displayName)
 }

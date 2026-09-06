@@ -2,16 +2,21 @@ import type { SourceFile } from "../aspects/SourceFile.js";
 import type { CleanedContent } from "../cleaners/CleanedContent.js";
 import { CommentsAndEmptyLinesCleaner } from "../cleaners/CommentsAndEmptyLinesCleaner.js";
 import { SourceCodeCleanerUtils } from "../cleaners/SourceCodeCleanerUtils.js";
-import { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js";
+import type { DependenciesAnalysis } from "../dependencies/DependenciesAnalysis.js";
 import type { MetaDependencyRule } from "../dependencies/MetaDependencyRule.js";
 import type { UnitInfo } from "../units/UnitInfo.js";
 import {
 	FEATURE_ADVANCED_CODE_CLEANING,
+	FEATURE_ADVANCED_DEPENDENCIES_ANALYSIS,
 	FEATURE_ALL_STANDARD_ANALYSES,
 	FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS,
 	FEATURE_UNIT_SIZE_ANALYSIS,
 	type LanguageAnalyzer,
 } from "./LanguageAnalyzer.js";
+import {
+	PythonTreeSitterDependenciesExtractor,
+	PythonTreeSitterUnitsExtractor,
+} from "./python/index.js";
 
 export class PythonAnalyzer implements LanguageAnalyzer {
 	private createCleaner(): CommentsAndEmptyLinesCleaner {
@@ -42,16 +47,14 @@ export class PythonAnalyzer implements LanguageAnalyzer {
 		return SourceCodeCleanerUtils.cleanEmptyLinesWithLineIndexes(content);
 	}
 
-	extractUnits(_sourceFile: SourceFile): UnitInfo[] {
-		// Python unit extraction would use indentation-based heuristics
-		// Placeholder for now — will port PythonHeuristicUnitsExtractor
-		return [];
+	extractUnits(sourceFile: SourceFile): UnitInfo[] {
+		return new PythonTreeSitterUnitsExtractor().extractUnits(sourceFile);
 	}
 
 	extractDependencies(
-		_sourceFiles: readonly SourceFile[],
+		sourceFiles: readonly SourceFile[],
 	): DependenciesAnalysis {
-		return new DependenciesAnalysis();
+		return new PythonTreeSitterDependenciesExtractor().extractDependencies(sourceFiles);
 	}
 
 	getMetaDependencyRules(): MetaDependencyRule[] {
@@ -62,6 +65,7 @@ export class PythonAnalyzer implements LanguageAnalyzer {
 		return [
 			FEATURE_ALL_STANDARD_ANALYSES,
 			FEATURE_ADVANCED_CODE_CLEANING,
+			`${FEATURE_ADVANCED_DEPENDENCIES_ANALYSIS} (tree-sitter Python imports)`,
 			FEATURE_UNIT_SIZE_ANALYSIS,
 			FEATURE_CONDITIONAL_COMPLEXITY_ANALYSIS,
 		];

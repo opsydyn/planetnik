@@ -16,6 +16,25 @@ bun run apps/cli/src/index.ts <command> [options]
 
 All commands support `--help` for detailed option descriptions.
 
+### Standalone executable
+
+The CLI can be packaged as a self-contained Bun executable for CI or local
+distribution:
+
+```bash
+bun run --cwd apps/cli compile
+./apps/cli/dist/planetnik --help
+```
+
+Run the local packaging contract smoke (compile, help parsing, and a temporary
+Python report) with:
+
+```bash
+bun run --cwd apps/cli compile:smoke
+```
+
+The smoke intentionally uses a temporary fixture and does not contact GitHub.
+
 ---
 
 ## Commands
@@ -45,6 +64,7 @@ planetnik analyzeRemote --repo facebook/react --keep
 | `--outputFolder` | `./planetnik-report` | Where to write reports and data |
 | `--name` | *(auto-detected)* | Project name override |
 | `--keep` | `false` | Keep cloned repository after analysis |
+| `--emitLegacyProjections` | *(off)* | Also emit legacy TXT projections and HTML reports |
 
 The command outputs a `data/` subdirectory in the output folder, which can be consumed by the Astro site via `PLANETNIK_DATA_DIR`.
 
@@ -74,6 +94,11 @@ planetnik analyzeLandscape \
   --outputFolder ./datasets/my-landscape \
   --name "Platform Landscape" \
   --concurrency 8
+
+# Restore the legacy landscape TXT and HTML projections when needed
+planetnik analyzeLandscape \
+  --config ./landscape-config.json \
+  --emitLegacyProjections
 
 # Re-run — only analyzes new/changed repos
 planetnik analyzeLandscape --config ./landscape-config.json --skipExisting
@@ -109,6 +134,7 @@ bun run --cwd apps/cli dev analyzeLandscape --config ../../landscape-config.json
 | `--name` | *(auto)* | Landscape name override |
 | `--concurrency` | `4` | Parallel repo analysis |
 | `--skipExisting` | `true` | Skip repos with existing `analysisResults.json` |
+| `--emitLegacyProjections` | *(off)* | Also emit landscape TXT projections and the legacy HTML overview |
 
 **Config format** (`landscape-config.json`):
 
@@ -123,6 +149,7 @@ bun run --cwd apps/cli dev analyzeLandscape --config ../../landscape-config.json
     "fetchAlerts": true,
     "fetchSBOM": false
   },
+  "emitLegacyProjections": false,
   "githubOrgs": ["my-org"],
   "ignore": [
     { "org": "", "repo": ".*[-]builds" }
@@ -141,14 +168,14 @@ landscape-report/
   my-org/                        # Per-repo analysis results
     repo-a/
       data/analysisResults.json
-      html/...
+      html/...                    # only with emitLegacyProjections: true
     repo-b/
       data/analysisResults.json
-      html/...
+      html/...                    # only with emitLegacyProjections: true
   _planetnik_landscape/
     config.json                  # Auto-generated landscape config
     reports/
-      index.html                 # Landscape overview report
+      index.html                 # Optional legacy landscape overview (--emitLegacyProjections)
       data/
         landscapeAnalysisResults.json
         landscape_dependency_alerts.json   # present only when security alerts were fetched
@@ -198,32 +225,64 @@ Output format (one line per file change):
 
 ### `generateReports`
 
-Run the full analysis pipeline on an already-initialized project and generate HTML reports and data exports.
+Run the full analysis pipeline on an already-initialized project and generate
+canonical JSON data exports. Legacy TXT projections and Sokrates-era HTML
+reports are available as an explicit opt-in.
 
 ```bash
 planetnik generateReports --confFile /path/to/_planetnik/config.json
 planetnik generateReports --confFile ./config.json --outputFolder ./reports
+planetnik generateReports --confFile ./config.json --emitLegacyProjections
+planetnik generateReports --confFile ./config.json --outputFolder ./datasets/requests/data --retainSnapshots 3
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--confFile` | `_planetnik/config.json` | Path to configuration file |
 | `--outputFolder` | `_planetnik/reports` | Output directory for reports |
+| `--emitLegacyProjections` | *(off)* | Also emit legacy TXT projections and HTML reports |
+| `--retainSnapshots` | *(off)* | Retain up to N canonical snapshots, including the current export |
 
 Generates:
-- `html/` — standalone HTML report pages
-- `data/` — JSON and text data exports (consumed by the Astro site)
-- `index.html` — report index page
+- `data/` — canonical JSON exports (consumed by the Astro site)
+- `html/` and `index.html` — only when legacy projections are enabled
 
 Optional config fields:
 
-- `findingsHtmlPath` — relative path from the config file to a manual findings HTML fragment. This feeds the `Notes & Findings` report and `data/findings.json`.
+- `findingsPath` — relative path from the config file to the canonical structured findings JSON. If omitted, `findings.json` beside the config is used when present. Each item requires a stable `id`, `summary`, and Markdown/plain-text `body`.
+- When `emitLegacyProjections` is enabled, the legacy findings HTML report is derived from the canonical findings JSON; HTML fragments are no longer accepted as input.
+- `emitLegacyProjections` — set to `true` to emit legacy TXT projections and HTML reports. The default is `false`; the CLI flag overrides the config value when supplied.
+- `retainSnapshots` — set to an integer of at least `2` to archive the previous canonical snapshot before each export, write a portable `data/snapshot-history.json` manifest after a successful export, and prune older archives. Only the `report_context.json` file and declared canonical JSON shards are retained; TXT and HTML projections are never copied.
 
 Example:
 
 ```json
 {
-  "findingsHtmlPath": "findings.html"
+  "findingsPath": "findings.json",
+  "emitLegacyProjections": false,
+  "retainSnapshots": 3
+}
+```
+
+Retention is deliberately opt-in so ordinary report generation remains a
+single current snapshot. On the first retained export the manifest contains
+only `dataDir: "."`; the second and later exports add archives beneath
+`history/<snapshotId>` and keep the newest N snapshots in total. If an export
+fails after rotation begins, the interim manifest omits the current entry so
+readers fail closed instead of treating a partial write as a valid trend.
+
+Canonical `findings.json` example:
+
+```json
+{
+  "title": "Notes & Findings",
+  "items": [
+    {
+      "id": "validation-gap",
+      "summary": "Validation gap",
+      "body": "**Checkout** skips validation in one path.\n\nReview the fallback."
+    }
+  ]
 }
 ```
 
@@ -284,11 +343,12 @@ planetnik updateConfig --confFile ./config.json --enableDuplication
 
 ### `updateLandscape`
 
-Run landscape analysis across multiple repositories in a directory. Generates a landscape HTML report showing cross-repository metrics.
+Regenerate canonical landscape JSON from multiple repository analyses in a directory. The legacy landscape HTML report and TXT projections are opt-in.
 
 ```bash
 planetnik updateLandscape --analysisRoot /path/to/repos
 planetnik updateLandscape --analysisRoot . --name "Platform Landscape"
+planetnik updateLandscape --analysisRoot . --emitLegacyProjections
 ```
 
 | Option | Default | Description |
@@ -297,8 +357,9 @@ planetnik updateLandscape --analysisRoot . --name "Platform Landscape"
 | `--confFile` | *(auto)* | Landscape configuration file |
 | `--name` | *(auto)* | Landscape name |
 | `--description` | *(empty)* | Landscape description |
+| `--emitLegacyProjections` | *(off)* | Also emit landscape TXT projections and the legacy HTML overview |
 
-`updateLandscape` rebuilds landscape-level HTML and JSON from an existing analysis root. It does not perform GitHub discovery, clone repositories, or fetch Dependabot alerts.
+`updateLandscape` rebuilds canonical landscape JSON from an existing analysis root. Pass `--emitLegacyProjections` (or set `emitLegacyProjections: true` in the landscape config) to restore the legacy HTML overview and TXT projections. It does not perform GitHub discovery, clone repositories, or fetch Dependabot alerts.
 
 ---
 
@@ -438,23 +499,23 @@ After analysis, the output folder contains:
 
 ```
 report/
-  index.html              # HTML report index
-  html/                   # Standalone HTML report pages
-    SourceCodeOverview.html
-    Components.html
-    Contributors.html
-    ...
-  data/                   # Machine-readable exports
+  data/                   # Canonical machine-readable exports
     analysisResults.json   # Full analysis summary
     files_main.json        # Main source files
     files_test.json        # Test files
     units.json             # Functions/methods
     duplicates.json        # Duplicate code blocks
-    metrics.txt            # Key-value metrics
-    contributors.txt       # Contributor statistics
-    controls.txt           # Goals and controls
-    temporal_dependencies.txt
+    metrics.json           # Key-value metrics
+    contributors.json      # Contributor statistics
+    controls.json           # Goals and controls
+    temporal_dependencies.json
     ...
+  html/                   # Optional legacy HTML reports (--emitLegacyProjections)
+    SourceCodeOverview.html
+    Components.html
+    Contributors.html
+    ...
+  index.html              # Optional legacy report index
 ```
 
-The `data/` directory is the bridge between the CLI analysis and the Astro frontend. Point `PLANETNIK_DATA_DIR` at it to build the static site.
+The `data/` directory is the bridge between the CLI analysis and the Astro frontend. Point `PLANETNIK_DATA_DIR` at it to build the static site. Legacy TXT projections are also emitted under `data/` only when `--emitLegacyProjections` (or `emitLegacyProjections: true` in the config) is enabled. Existing legacy files are preserved when an output folder is reused; use a fresh output folder when you need a physically JSON-only artifact set.

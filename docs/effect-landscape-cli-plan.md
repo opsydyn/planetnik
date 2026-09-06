@@ -1,5 +1,8 @@
 # Effect Structured Concurrency Plan for Landscape CLI
 
+> **Status:** Phase 5 compiled executable validation delivered 2026-09-04. The
+> separate `analyzeRemote` lifecycle remains a follow-on decision.
+
 ## Goal
 
 Refactor `planetnik analyzeLandscape` to use Effect's first-class structured concurrency and scoped resource management so large multi-repository runs are more reliable, easier to cancel, and easier to extend.
@@ -15,12 +18,14 @@ Target operating model:
 
 ## Why This Matters
 
-The current implementation already uses `Effect`, but the concurrency model is still mostly imperative:
+The current implementation now has an Effect-scoped worker, bounded
+`Effect.forEach` traversal, an atomic `Ref` summary for concurrent run state,
+a targeted retry/cancellation policy, and a validated compiled executable
+smoke. Remaining orchestration work is the separate `analyzeRemote` lifecycle
+and a future CI handoff:
 
-- manual array batching
-- `Promise.all`
-- mutable counters
-- ad hoc cleanup through `try/finally`
+- ad hoc cleanup still present in `analyzeRemote`
+- GitHub Actions still invokes the source-driven CLI path
 
 That works for modest runs, but a large landscape run amplifies the weaknesses:
 
@@ -113,6 +118,11 @@ Recommended primitives:
 - `Ref` for counters and summary state
 - `Queue` for ordered progress/log events if we want richer live reporting
 
+The current Phase 3 slice uses `Ref` for counts and completion progress. The
+ordered tagged outcomes remain the sole detailed failure collection used to
+write `_failures.json`; a second mutable failure array is intentionally not
+introduced.
+
 ### 4. Add retry policies only around unstable edges
 
 Use retry schedules for:
@@ -178,7 +188,7 @@ Encapsulate one repo analysis as a single scoped `Effect`.
 
 - `S`
 
-## Phase 2: Bounded Concurrent Traversal
+## Phase 2: Bounded Concurrent Traversal — DONE (2026-09-04)
 
 ### Objective
 
@@ -186,21 +196,26 @@ Replace manual batch orchestration with Effect concurrency primitives.
 
 ### Work
 
-- replace the nested `for` + `Promise.all` batching logic
-- run repo workers with `Effect.forEach(..., { concurrency })`
-- keep `skipExisting` behavior unchanged
+- [x] replace the nested batch traversal with one flat task list
+- [x] run repo workers with `Effect.forEach(..., { concurrency })`
+- [x] keep `skipExisting` behavior unchanged
+- [x] replace fixed-size Dependabot batches with bounded `Effect.forEach`
+- [x] provide the worker through a thin `Layer` and keep clone cleanup scoped
 
 ### Verification
 
-- concurrency flag still controls parallel repo processing
-- skipped repos still do not run analysis
-- summary counts remain correct
+- [x] concurrency flag still controls parallel repo processing
+- [x] skipped repos still do not run analysis
+- [x] summary counts remain correct for the concurrent `Ref` state
+
+Compiled executable validation was intentionally left to Phase 5; retry and
+interruption semantics are now delivered in Phase 4.
 
 ### Size
 
 - `M`
 
-## Phase 3: Structured Progress and Failure State
+## Phase 3: Structured Progress and Failure State — DONE (2026-09-04)
 
 ### Objective
 
@@ -208,21 +223,26 @@ Stop mutating orchestration state ad hoc.
 
 ### Work
 
-- move counters into `Ref`
-- move failures into structured Effect-managed state
-- optionally introduce `Queue` for ordered progress events
+- [x] move total/completed/analyzed/skipped/failed counters into a `Ref`
+- [x] update the summary atomically from each concurrent worker outcome
+- [x] read the final summary with `Ref.get` after traversal completes
+- [x] preserve ordered tagged outcomes as the single detailed failure collection
+- [x] keep `_failures.json` shape and source unchanged
 
 ### Verification
 
-- final summary matches actual run results
-- `_failures.json` remains correct
-- progress logging stays readable
+- [x] final summary matches done, skipped, and failed fixture outcomes
+- [x] `_failures.json` remains derived from tagged outcomes
+- [x] progress summary is concurrency-safe and does not add a second failure list
+
+`Queue` remains optional future work for richer streaming progress events; it is
+not needed for the current bounded traversal.
 
 ### Size
 
 - `M`
 
-## Phase 4: Retry and Cancellation Semantics
+## Phase 4: Retry and Cancellation Semantics — DONE (2026-09-04)
 
 ### Objective
 
@@ -230,20 +250,22 @@ Make the command robust during long-running or flaky landscape runs.
 
 ### Work
 
-- add retry schedules for discovery and clone
-- keep analysis failures non-retriable
-- ensure interruption stops active fibers and still releases clone dirs
+- [x] add bounded exponential retry schedules for discovery and clone
+- [x] keep analysis failures non-retriable through an explicit transient-error classifier
+- [x] pass abort signals to GitHub fetches and simple-git
+- [x] recreate partial clone directories between retry attempts
+- [x] ensure interruption releases clone dirs through the existing scoped finalizer
 
 ### Verification
 
-- clone retry works on transient failure fixtures or mocked failure
-- cancellation does not leave clone temp dirs behind
+- [x] retry policy fixtures cover transient success, permanent first-failure, and schedule exhaustion
+- [x] cancellation test proves an interrupted scope does not leave a clone temp dir behind
 
 ### Size
 
 - `M`
 
-## Phase 5: Compile-Friendly CLI Packaging Path
+## Phase 5: Compile-Friendly CLI Packaging Path — DONE (2026-09-04)
 
 ### Objective
 
@@ -251,16 +273,21 @@ Prepare the command for invocation as a Bun single-file executable in CI.
 
 ### Work
 
-- document the expected compiled entrypoint contract
-- verify `analyzeLandscape` and `analyzeRemote` do not depend on source-relative imports or filesystem assumptions that break when compiled
-- add a packaging spike command such as:
-  - `bun build --compile apps/cli/src/index.ts --outfile dist/planetnik`
-- record any compatibility blockers
+- [x] document the expected compiled entrypoint contract
+- [x] verify the compiled entrypoint loads all command modules without source-relative runtime assumptions
+- [x] add a reproducible `compile` package script:
+  - `bun build --compile ./src/index.ts --outfile ./dist/planetnik`
+- [x] add a `compile:smoke` script that builds an isolated executable, checks
+  `--help`, and runs `init` plus `generateReports` against a temporary Python
+  fixture
+- [x] no packaging compatibility blockers were found; CI handoff remains
+  deliberately separate
 
 ### Verification
 
-- a compiled executable can parse CLI args and run at least a smoke path
-- the output contract remains identical to the source-run path
+- [x] a compiled executable parses CLI args and runs the smoke path
+- [x] the smoke report contains the same `data/analysisResults.json` contract
+  and positive file/LOC measurements as the source-run path
 
 ### Size
 
@@ -312,7 +339,11 @@ This should only happen after the simpler single-stage structured version is pro
 - retries are targeted and explicit
 - summary/failure state is structured
 - existing CLI behavior remains intact for users
-- the command remains compatible with a future compiled Bun executable path
+- the command remains compatible with the compiled Bun executable path
+
+The Phase 5 smoke does not switch GitHub Actions to the executable or claim a
+live multi-repository landscape run; those are deployment and operational
+follow-ups after the local packaging contract is accepted.
 
 ## Workflow Review Note
 

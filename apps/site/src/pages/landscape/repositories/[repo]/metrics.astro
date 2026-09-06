@@ -1,13 +1,13 @@
 ---
 import RepositoryMetricsView from "@planetnik/report-ui/views/RepositoryMetricsView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { readLandscapeRepoText } from "../../../../lib/landscape";
+import { readLandscapeRepoJson } from "../../../../lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { getMetric, parseMetricsText } from "../../../../lib/metrics";
+import { getMetric, parseMetricsJson } from "../../../../lib/metrics";
 import { route } from "../../../../lib/route";
 
 export async function getStaticPaths() {
@@ -22,8 +22,8 @@ if (reportContext?.data.reportMode !== "landscape") {
 	return Astro.redirect(route("/"));
 }
 
-const metrics = parseMetricsText(
-	readLandscapeRepoText(props.repoKey, "metrics.txt"),
+const metrics = parseMetricsJson(
+	readLandscapeRepoJson(props.repoKey, "metrics.json"),
 );
 
 const metricById = new Map(

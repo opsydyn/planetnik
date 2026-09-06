@@ -47,7 +47,8 @@ export class CodeConfiguration {
 
 	fileHistoryPath: string = "";
 	fileHistoryAdditionalPaths: string[] = [];
-	findingsHtmlPath: string = "";
+	/** Relative path to the canonical structured findings authoring document. */
+	findingsPath: string = "";
 
 	static getAbsoluteSrcRoot(srcRoot: string, configFilePath: string): string {
 		if (path.isAbsolute(srcRoot)) return srcRoot;

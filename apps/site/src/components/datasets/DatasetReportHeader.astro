@@ -1,0 +1,217 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common"
+import { getDatasetStatusLabel } from "../../lib/datasets/explore"
+import { route } from "../../lib/route"
+
+interface Props {
+  dataset: DatasetDescriptor
+  activeView: "overview" | "code-city" | "trends"
+  overviewHref: string | null
+  codeCityHref: string | null
+  trendsHref: string | null
+}
+
+const { dataset, activeView, overviewHref, codeCityHref, trendsHref } = Astro.props
+const snapshotDate = dataset.snapshot?.generatedAt.slice(0, 10)
+---
+
+<div class="dataset-report-chrome">
+  <nav class="dataset-report-breadcrumb" aria-label="Breadcrumb">
+    <a href={route("/explore")}>Explore datasets</a>
+    <span aria-hidden="true">/</span>
+    <a href={route(`/datasets/${dataset.slug}`)}>{dataset.title}</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{activeView === "overview" ? "Overview" : activeView === "code-city" ? "Code City" : "Trends"}</span>
+  </nav>
+
+  <header class="dataset-report-header">
+    <div class="dataset-report-heading">
+      <p class="dataset-report-eyebrow">
+        {dataset.mode === "landscape" ? "Landscape" : "Repository"} report · {getDatasetStatusLabel(dataset.availability)}
+      </p>
+      <h1>{dataset.title} <span>{activeView === "overview" ? "Overview" : activeView === "code-city" ? "Code City" : "Trends"}</span></h1>
+      <p>
+        Frozen canonical v2 evidence{snapshotDate ? ` captured ${snapshotDate}` : ""}. The catalogue identity and
+        snapshot boundary stay visible as you move between views.
+      </p>
+    </div>
+
+    <dl class="dataset-report-snapshot">
+      <div>
+        <dt>Snapshot</dt>
+        <dd><code>{dataset.snapshot?.snapshotId ?? "Unavailable"}</code></dd>
+      </div>
+      <div>
+        <dt>Source</dt>
+        <dd>{dataset.provenance.sourceRef ?? "Canonical JSON"}</dd>
+      </div>
+    </dl>
+  </header>
+
+  <nav class="dataset-report-tabs" aria-label="Dataset report views">
+    {overviewHref ? (
+      <a href={overviewHref} aria-current={activeView === "overview" ? "page" : undefined}>Overview</a>
+    ) : (
+      <span aria-disabled="true">Overview unavailable</span>
+    )}
+    {codeCityHref ? (
+      <a
+        href={codeCityHref}
+        aria-current={activeView === "code-city" ? "page" : undefined}
+        data-astro-reload
+      >Code City</a>
+    ) : (
+      <span aria-disabled="true">Code City unavailable</span>
+    )}
+    {trendsHref ? (
+      <a href={trendsHref} aria-current={activeView === "trends" ? "page" : undefined}>Trends</a>
+    ) : (
+      <span aria-disabled="true">Trends unavailable</span>
+    )}
+    <a href={route(`/datasets/${dataset.slug}`)}>Snapshot details</a>
+  </nav>
+</div>
+
+<style>
+  .dataset-report-chrome {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .dataset-report-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.74rem;
+  }
+
+  .dataset-report-breadcrumb a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+
+  .dataset-report-breadcrumb a:hover {
+    color: var(--color-accent-strong);
+    text-decoration: underline;
+  }
+
+  .dataset-report-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.38fr);
+    gap: 2rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .dataset-report-heading {
+    min-width: 0;
+  }
+
+  .dataset-report-eyebrow {
+    margin: 0 0 0.45rem;
+    color: var(--color-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .dataset-report-heading h1 {
+    margin: 0;
+    font-family: var(--font-heading-stack);
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
+  }
+
+  .dataset-report-heading h1 span {
+    color: var(--color-text-muted);
+  }
+
+  .dataset-report-heading > p:last-child {
+    max-width: 48rem;
+    margin: 0.85rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .dataset-report-snapshot {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
+
+  .dataset-report-snapshot div {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .dataset-report-snapshot dt {
+    color: var(--color-text-muted);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .dataset-report-snapshot dd {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+
+  .dataset-report-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .dataset-report-tabs a,
+  .dataset-report-tabs span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    color: var(--color-text-secondary);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .dataset-report-tabs a:hover,
+  .dataset-report-tabs a[aria-current="page"] {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+
+  .dataset-report-tabs span[aria-disabled="true"] {
+    color: var(--color-text-muted);
+    opacity: 0.7;
+  }
+
+  .dataset-report-breadcrumb a:focus-visible,
+  .dataset-report-tabs a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 720px) {
+    .dataset-report-header {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+</style>

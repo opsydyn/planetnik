@@ -8,6 +8,8 @@
 	},
 	"scripts": {
 		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
+		"compile": "bun build --compile ./src/index.ts --outfile ./dist/planetnik",
+		"compile:smoke": "bun run ./scripts/compile-smoke.ts",
 		"dev": "bun run ./src/index.ts",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit"

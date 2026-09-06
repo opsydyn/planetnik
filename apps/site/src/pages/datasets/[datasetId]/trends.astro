@@ -1,0 +1,150 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common"
+import DatasetReportHeader from "../../../components/datasets/DatasetReportHeader.astro"
+import SnapshotTrendsPanel from "../../../components/trends/SnapshotTrendsPanel.astro"
+import ExploreLayout from "../../../layouts/ExploreLayout.astro"
+import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
+import { getDatasetViewPath } from "../../../lib/datasets/explore"
+import { readDatasetSnapshotHistory } from "../../../lib/datasets/snapshotHistory"
+import { route } from "../../../lib/route"
+
+interface Props {
+  dataset: DatasetDescriptor
+}
+
+export function getStaticPaths() {
+  const { catalog } = loadDatasetCatalog()
+  return catalog.datasets.flatMap((dataset) => {
+    const trendsPath = getDatasetViewPath(dataset, "trends")
+    return trendsPath
+      ? [{ params: { datasetId: dataset.slug }, props: { dataset } }]
+      : []
+  })
+}
+
+const { dataset } = Astro.props as Props
+const overviewPath = getDatasetViewPath(dataset, "overview")
+const codeCityPath = getDatasetViewPath(dataset, "code-city")
+const trendsPath = getDatasetViewPath(dataset, "trends")
+const overviewHref = overviewPath ? route(overviewPath) : null
+const codeCityHref = codeCityPath ? route(codeCityPath) : null
+const trendsHref = trendsPath ? route(trendsPath) : null
+const history = readDatasetSnapshotHistory(dataset.id)
+---
+
+<ExploreLayout title={`${dataset.title} Trends`} description={`Longitudinal canonical evidence for ${dataset.title}.`}>
+  <div class="dataset-trends-page" data-dataset-report="trends" data-dataset-history={dataset.slug}>
+    <DatasetReportHeader
+      dataset={dataset}
+      activeView="trends"
+      overviewHref={overviewHref}
+      codeCityHref={codeCityHref}
+      trendsHref={trendsHref}
+    />
+
+    <section class="dataset-trends-intro" aria-labelledby="dataset-trends-title">
+      <div>
+        <p class="trends-eyebrow">Dataset-scoped longitudinal evidence</p>
+        <h2 id="dataset-trends-title">What changed in {dataset.title}?</h2>
+        <p>
+          This view compares the two newest compatible canonical v2 snapshots for this dataset. The active report
+          environment stays untouched while the evidence boundary follows the catalogue selection.
+        </p>
+      </div>
+      <dl class="dataset-trends-source">
+        <div>
+          <dt>Dataset</dt>
+          <dd><code>{dataset.slug}</code></dd>
+        </div>
+        <div>
+          <dt>History source</dt>
+          <dd><code>snapshot-history.json</code></dd>
+        </div>
+      </dl>
+    </section>
+
+    <SnapshotTrendsPanel result={history} />
+  </div>
+</ExploreLayout>
+
+<style>
+  .dataset-trends-page {
+    display: grid;
+    gap: 1.35rem;
+    max-width: 76rem;
+    margin: 0 auto;
+  }
+
+  .dataset-trends-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.38fr);
+    gap: 2rem;
+    align-items: start;
+    padding: 1.35rem 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    background: radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 48%);
+  }
+
+  .trends-eyebrow {
+    margin: 0 0 0.45rem;
+    color: var(--color-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .dataset-trends-intro h2 {
+    margin: 0;
+    font-family: var(--font-heading-stack);
+    font-size: clamp(1.65rem, 4vw, 2.8rem);
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
+  }
+
+  .dataset-trends-intro p:not(.trends-eyebrow) {
+    max-width: 48rem;
+    margin: 0.75rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  .dataset-trends-source {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
+
+  .dataset-trends-source div {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .dataset-trends-source dt {
+    color: var(--color-text-muted);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .dataset-trends-source dd {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 720px) {
+    .dataset-trends-intro {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+</style>

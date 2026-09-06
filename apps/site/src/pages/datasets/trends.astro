@@ -1,0 +1,163 @@
+---
+import PortfolioTrendsPanel from "../../components/trends/PortfolioTrendsPanel.astro"
+import ExploreLayout from "../../layouts/ExploreLayout.astro"
+import { loadDatasetCatalog } from "../../lib/datasets/catalogSource"
+import { readDatasetPortfolioTrends } from "../../lib/datasets/portfolioTrends"
+import { route } from "../../lib/route"
+
+const { catalog, diagnostics } = loadDatasetCatalog()
+const trends = readDatasetPortfolioTrends({ catalog })
+---
+
+<ExploreLayout title="Portfolio trends" description="Compare canonical v2 snapshot evidence across the Planetnik showcase.">
+  <div class="portfolio-trends-page">
+    <nav class="portfolio-breadcrumb" aria-label="Breadcrumb">
+      <a href={route("/explore")}>Explore datasets</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">Portfolio trends</span>
+    </nav>
+
+    <section class="portfolio-hero" aria-labelledby="portfolio-title">
+      <div>
+        <p class="portfolio-eyebrow">Phase 3 · cross-repository evidence</p>
+        <h1 id="portfolio-title">Portfolio trends.</h1>
+        <p>
+          See the current shape of the showcase at a glance, then follow each number back to the repository snapshot and
+          its exact comparison window.
+        </p>
+      </div>
+      <div class="portfolio-hero-actions">
+        <a href={route("/explore")}>Browse datasets <span aria-hidden="true">→</span></a>
+        <span>Static · canonical JSON</span>
+      </div>
+    </section>
+
+    <PortfolioTrendsPanel trends={trends} />
+
+    {diagnostics.length > 0 ? (
+      <details class="portfolio-diagnostics">
+        <summary>{diagnostics.length} catalogue diagnostic{diagnostics.length === 1 ? "" : "s"}</summary>
+        <ul>
+          {diagnostics.map((diagnostic) => <li><code>{diagnostic.datasetId}</code> — {diagnostic.reason}</li>)}
+        </ul>
+      </details>
+    ) : null}
+  </div>
+</ExploreLayout>
+
+<style>
+  .portfolio-trends-page {
+    display: grid;
+    gap: 1.35rem;
+    max-width: 78rem;
+    margin: 0 auto;
+  }
+
+  .portfolio-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.76rem;
+  }
+
+  .portfolio-breadcrumb a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+
+  .portfolio-breadcrumb a:hover {
+    color: var(--color-accent-strong);
+    text-decoration: underline;
+  }
+
+  .portfolio-hero {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    background: radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 48%);
+  }
+
+  .portfolio-eyebrow {
+    margin: 0 0 0.45rem;
+    color: var(--color-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .portfolio-hero h1 {
+    margin: 0;
+    font-family: var(--font-heading-stack);
+    font-size: clamp(2.2rem, 6vw, 4.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.05em;
+  }
+
+  .portfolio-hero p:not(.portfolio-eyebrow) {
+    max-width: 48rem;
+    margin: 0.85rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.93rem;
+    line-height: 1.6;
+  }
+
+  .portfolio-hero-actions {
+    display: grid;
+    justify-items: end;
+    gap: 0.55rem;
+    flex: 0 0 auto;
+  }
+
+  .portfolio-hero-actions a {
+    color: var(--color-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .portfolio-hero-actions a:hover {
+    text-decoration: underline;
+  }
+
+  .portfolio-hero-actions span {
+    color: var(--color-text-muted);
+    font-size: 0.67rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .portfolio-diagnostics {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+  }
+
+  .portfolio-diagnostics summary {
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .portfolio-diagnostics ul {
+    margin: 0.7rem 0 0;
+    padding-left: 1.1rem;
+  }
+
+  @media (max-width: 720px) {
+    .portfolio-hero {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .portfolio-hero-actions {
+      justify-items: start;
+    }
+  }
+</style>

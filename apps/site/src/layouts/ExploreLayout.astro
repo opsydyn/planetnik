@@ -1,0 +1,228 @@
+---
+import "@planetnik/report-ui/theme/dashboard-shell.css";
+import { ClientRouter } from "astro:transitions";
+import { Font, Image } from "astro:assets";
+import ThemeSwitcher from "../components/theme-switcher/ThemeSwitcher.astro";
+import { route } from "../lib/route";
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = "Explore codebases",
+	description = "Browse frozen, evidence-backed Planetnik snapshots.",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-theme="light" data-theme-preference="system">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="color-scheme" content="light dark" />
+		<meta name="description" content={description} />
+		<title>{title} — Planetnik</title>
+		<Font cssVariable="--font-body" />
+		<Font cssVariable="--font-heading" />
+		<script is:inline data-astro-rerun>
+			(() => {
+				const THEME_ATTR = "data-theme"
+				const PREFERENCE_ATTR = "data-theme-preference"
+				const STORAGE_KEY = "planetnik-theme-preference"
+				const root = document.documentElement
+				const isPreference = (value) => value === "light" || value === "dark" || value === "system"
+				const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+				const storedPreference = localStorage.getItem(STORAGE_KEY)
+				const preference = isPreference(storedPreference) ? storedPreference : "system"
+				const effectiveTheme = preference === "system" ? systemTheme : preference
+
+				root.setAttribute(PREFERENCE_ATTR, preference)
+				root.setAttribute(THEME_ATTR, effectiveTheme)
+				root.style.colorScheme = effectiveTheme
+			})()
+		</script>
+		<ClientRouter />
+	</head>
+	<body class="explore-site">
+		<header class="explore-header">
+			<div class="explore-header-inner">
+				<a class="explore-brand" href={route("/explore")} aria-label="Planetnik Explore">
+					<Image src={route("/planetnik-logo-2.webp")} alt="Planetnik" width={112} height={112} class="explore-brand-logo" />
+					<span class="explore-brand-copy">
+						<strong>Planetnik</strong>
+						<span>Explore codebases</span>
+					</span>
+				</a>
+				<div class="explore-header-actions">
+					<a class="explore-portfolio-link" href={route("/datasets/trends")}>Portfolio trends</a>
+					<a class="explore-report-link" href={route("/")}>Current report <span aria-hidden="true">↗</span></a>
+					<ThemeSwitcher />
+				</div>
+			</div>
+		</header>
+
+		<main class="explore-main">
+			<slot />
+		</main>
+
+		<script is:inline data-astro-rerun>
+			(() => {
+				const copyText = async (value) => {
+					if (!navigator.clipboard?.writeText) return false
+					await navigator.clipboard.writeText(value)
+					return true
+				}
+
+				document.addEventListener("click", async (event) => {
+					const target = event.target instanceof Element ? event.target.closest("[data-copy-link]") : null
+					if (!(target instanceof HTMLButtonElement)) return
+					const value = target.getAttribute("data-copy-link")
+					if (!value) return
+					const original = target.textContent
+					try {
+						const copied = await copyText(new URL(value, window.location.href).href)
+						target.textContent = copied ? "Copied" : "Copy failed"
+					} catch {
+						target.textContent = "Copy failed"
+					}
+					window.setTimeout(() => {
+						target.textContent = original
+					}, 1600)
+				})
+			})()
+		</script>
+	</body>
+</html>
+
+<style>
+	.explore-site {
+		min-height: 100vh;
+		background:
+			radial-gradient(circle at 8% -10%, var(--color-accent-soft), transparent 32rem),
+			var(--color-bg);
+	}
+
+	.explore-header {
+		position: sticky;
+		top: 0;
+		z-index: 100;
+		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+		background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+		backdrop-filter: blur(14px);
+	}
+
+	.explore-header-inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		width: min(1240px, 100%);
+		min-height: 4.4rem;
+		margin: 0 auto;
+		padding: 0.75rem 1.25rem;
+	}
+
+	.explore-brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.7rem;
+		color: var(--color-text);
+		text-decoration: none;
+	}
+
+	.explore-brand-logo {
+		width: 2.5rem;
+		height: 2.5rem;
+		object-fit: contain;
+	}
+
+	.explore-brand-copy {
+		display: grid;
+		gap: 0.1rem;
+	}
+
+	.explore-brand-copy strong {
+		font-family: var(--font-heading-stack);
+		font-size: 1rem;
+		line-height: 1;
+	}
+
+	.explore-brand-copy span {
+		color: var(--color-text-muted);
+		font-size: 0.7rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.explore-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.explore-report-link {
+		color: var(--color-text-secondary);
+		font-size: 0.76rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.explore-portfolio-link {
+		color: var(--color-accent-strong);
+		font-size: 0.76rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.explore-portfolio-link:hover,
+	.explore-portfolio-link:focus-visible {
+		text-decoration: underline;
+	}
+
+	.explore-report-link:hover {
+		color: var(--color-accent-strong);
+		text-decoration: underline;
+	}
+
+	.explore-main {
+		width: min(1240px, 100%);
+		min-height: calc(100vh - 4.4rem);
+		margin: 0 auto;
+		padding: 2.5rem 1.25rem 4rem;
+	}
+
+	@media (min-width: 768px) {
+		.explore-main {
+			padding: 3.75rem 2rem 5rem;
+		}
+	}
+
+	.explore-header a:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 4px;
+	}
+
+	@media (max-width: 560px) {
+		.explore-header-inner {
+			padding-inline: 1rem;
+		}
+
+		.explore-report-link {
+			font-size: 0;
+		}
+
+		.explore-report-link span {
+			font-size: 1rem;
+		}
+
+		.explore-portfolio-link {
+			font-size: 0.68rem;
+		}
+
+		.explore-main {
+			padding-inline: 1rem;
+		}
+	}
+</style>

@@ -623,14 +623,20 @@ describe("ConcernsReportGenerator", () => {
 });
 
 describe("FindingsReportGenerator", () => {
-	test("renders findings from HTML", () => {
+	test("renders findings from canonical structured input", () => {
 		const {
 			FindingsReportGenerator,
 		} = require("../generators/FindingsReportGenerator.js");
 		const report = new RichTextReport();
-		const html =
-			"<finding><summary>Bug found</summary><body>Details here</body></finding>";
-		FindingsReportGenerator.addFindingsToReport(report, html);
+		FindingsReportGenerator.addFindingsToReport(report, {
+			items: [
+				{
+					id: "bug-found",
+					summary: "Bug found",
+					body: "Details here",
+				},
+			],
+		});
 		const rendered = renderToString(report);
 		expect(rendered).toContain("Bug found");
 		expect(rendered).toContain("Details here");

@@ -28,6 +28,7 @@ import {
 	metricsLoader,
 	peopleDependenciesLoader,
 	reportContextLoader,
+	resolveDatasetsRoot,
 	temporalDepsLoader,
 	unitsLoader,
 } from "../../loaders/planetnik-loader.js";
@@ -36,6 +37,7 @@ type StoredEntry = { id: string; data: Record<string, unknown> };
 
 const temporaryRoots: string[] = [];
 const previousDataDir = process.env.PLANETNIK_DATA_DIR;
+const previousDatasetsRoot = process.env.PLANETNIK_DATASETS_ROOT;
 
 function createDataDir(): string {
 	const root = mkdtempSync(join(tmpdir(), "planetnik-site-loader-"));
@@ -274,9 +276,20 @@ afterEach(() => {
 	} else {
 		process.env.PLANETNIK_DATA_DIR = previousDataDir;
 	}
+	if (previousDatasetsRoot === undefined) {
+		delete process.env.PLANETNIK_DATASETS_ROOT;
+	} else {
+		process.env.PLANETNIK_DATASETS_ROOT = previousDatasetsRoot;
+	}
 });
 
 describe("Planetnik static loaders", () => {
+	test("resolves the explicitly configured dataset root", () => {
+		process.env.PLANETNIK_DATASETS_ROOT = "/tmp/planetnik-datasets";
+
+		expect(resolveDatasetsRoot()).toBe("/tmp/planetnik-datasets");
+	});
+
 	test("loads metrics JSON before a conflicting TXT projection", async () => {
 		const dataDir = createDataDir();
 		writeFileSync(
@@ -290,13 +303,20 @@ describe("Planetnik static loaders", () => {
 		]);
 	});
 
-	test("falls back to metrics TXT when the JSON shard is absent", async () => {
+	test("does not fall back to metrics TXT for a valid v2 context with a malformed JSON shape", async () => {
+		const dataDir = createDataDir();
+		writeStaticSingleRepositoryJsonFixture(dataDir);
+		writeJson(join(dataDir, "metrics.json"), { legacyMetrics: [{ id: "JSON_METRIC", value: 7 }] });
+		writeFileSync(join(dataDir, "metrics.txt"), "TXT_METRIC: 99\n");
+
+		await expect(collect(metricsLoader())).resolves.toEqual([]);
+	});
+
+	test("ignores metrics TXT when the JSON shard is absent", async () => {
 		const dataDir = createDataDir();
 		writeFileSync(join(dataDir, "metrics.txt"), "TXT_METRIC: 99\n");
 
-		await expect(collect(metricsLoader())).resolves.toEqual([
-			{ id: "TXT_METRIC", data: { id: "TXT_METRIC", value: 99 } },
-		]);
+		await expect(collect(metricsLoader())).resolves.toEqual([]);
 	});
 
 	test("loads contributor JSON before a conflicting TXT projection", async () => {
@@ -348,7 +368,22 @@ describe("Planetnik static loaders", () => {
 		]);
 	});
 
-	test("falls back to contributor TXT when the JSON shard is absent", async () => {
+	test("does not fall back to contributors TXT for a valid v2 context with a malformed JSON shape", async () => {
+		const dataDir = createDataDir();
+		writeStaticSingleRepositoryJsonFixture(dataDir);
+		writeJson(join(dataDir, "contributors.json"), { legacyContributors: [] });
+		writeFileSync(
+			join(dataDir, "contributors.txt"),
+			[
+				"Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit\tpercentage",
+				"text@example.com\t3\t1\t2\t3\t3\t2024-01-01\t2024-02-01\t100%",
+			].join("\n"),
+		);
+
+		await expect(collect(contributorsLoader())).resolves.toEqual([]);
+	});
+
+	test("ignores contributor TXT when the JSON shard is absent", async () => {
 		const dataDir = createDataDir();
 		writeFileSync(
 			join(dataDir, "contributors.txt"),
@@ -358,25 +393,7 @@ describe("Planetnik static loaders", () => {
 			].join("\n"),
 		);
 
-		await expect(collect(contributorsLoader())).resolves.toEqual([
-			{
-				id: "text@example.com",
-				data: {
-					email: "text@example.com",
-					commitsAllTime: 3,
-					commits30Days: 1,
-					commits90Days: 2,
-					commits180Days: 3,
-					commits365Days: 3,
-					firstCommit: "2024-01-01",
-					lastCommit: "2024-02-01",
-					percentage: "100%",
-					userName: "Text User",
-					isRookie: false,
-					isActive: true,
-				},
-			},
-		]);
+		await expect(collect(contributorsLoader())).resolves.toEqual([]);
 	});
 
 	test("falls back to the derived v1 context when a v2 manifest is invalid", async () => {
@@ -408,7 +425,7 @@ describe("Planetnik static loaders", () => {
 		]);
 	});
 
-	test("accepts a legacy v1 context alongside TXT projections", async () => {
+	test("accepts legacy v1 context without reading TXT projections", async () => {
 		const dataDir = createDataDir();
 		writeFileSync(
 			join(dataDir, "report_context.json"),

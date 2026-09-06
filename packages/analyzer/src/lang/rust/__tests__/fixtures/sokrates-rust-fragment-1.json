@@ -1,0 +1,57 @@
+{
+  "fixtureVersion": 1,
+  "id": "sokrates-rust-fragment-1",
+  "source": {
+    "relativePath": "RustCodeSamples.rs",
+    "language": "rust",
+    "content": "fn main() {\n    // I’m feeling lucky today\n    let lucky_number = 7;\n}\nfn a(x: i32, y: i32) {\n    let number = 3;\n\n    if number < 5 {\n        println!(\"condition was true\");\n    } else {\n        println!(\"condition was false\");\n    }\n}\nfn b(z: i32) {\n    loop {\n        println!(\"again!\");\n    }\n}"
+  },
+  "reference": {
+    "engine": "sokrates-java",
+    "repository": "https://github.com/zeljkoobrenovic/sokrates",
+    "commit": "f400eb7235a755146e854a1bf4bd90cbe1ee5086",
+    "analyzer": "nl.obren.sokrates.sourcecode.lang.rust.RustAnalyzer",
+    "capturedFrom": [
+      "codeanalyzer/src/test/java/nl/obren/sokrates/sourcecode/lang/rust/RustCodeSamples.java#FRAGMENT_1",
+      "codeanalyzer/src/test/java/nl/obren/sokrates/sourcecode/lang/rust/RustAnalyzerTest.java#extractUnits"
+    ],
+    "captureMethod": "upstream-test-expectations",
+    "runtimeExecuted": false,
+    "sourcePathSemantics": "extensionless-test-helper",
+    "notes": "Raw unit values are copied from the upstream RustAnalyzerTest assertions. The Java runtime was not available in the capture environment, so this is a source/test-derived reference rather than a fresh Java execution trace.",
+    "units": [
+      {
+        "shortName": "fn main()",
+        "startLine": 1,
+        "endLine": 4,
+        "linesOfCode": 4,
+        "mcCabeIndex": 1,
+        "numberOfParameters": 0
+      },
+      {
+        "shortName": "fn a()",
+        "startLine": 5,
+        "endLine": 13,
+        "linesOfCode": 8,
+        "mcCabeIndex": 2,
+        "numberOfParameters": 2
+      },
+      {
+        "shortName": "fn b()",
+        "startLine": 14,
+        "endLine": 18,
+        "linesOfCode": 5,
+        "mcCabeIndex": 2,
+        "numberOfParameters": 1
+      }
+    ],
+    "normalizedSnapshot": {
+      "unitNames": ["main", "a", "b"],
+      "dependencyPaths": []
+    },
+    "normalization": {
+      "unitIdentity": "Rust function identifier without the legacy fn/signature display wrapper",
+      "lineNumbers": "Reference lines are one-based; Planetnik UnitInfo spans are zero-based"
+    }
+  }
+}

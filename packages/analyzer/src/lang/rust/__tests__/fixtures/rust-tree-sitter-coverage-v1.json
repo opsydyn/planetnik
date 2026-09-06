@@ -1,0 +1,63 @@
+{
+  "fixtureVersion": 1,
+  "id": "rust-tree-sitter-coverage-v1",
+  "source": {
+    "relativePath": "coverage.rs",
+    "language": "rust",
+    "content": "#[cfg(feature = \"runtime\")]\npub async fn boot<T: Send>(input: T) -> Result<(), Error> {\n    if let Some(value) = Some(input) {\n        let _ = value;\n    }\n    while false {\n        break;\n    }\n    Ok(())\n}\n\npub trait Service {\n    fn required(&self);\n\n    #[cfg(feature = \"extended\")]\n    fn optional(&self) {\n        if true {\n            return;\n        }\n    }\n}\n\npub struct Worker;\n\nimpl Service for Worker {\n    fn required(&self) {}\n}\n\nimpl Worker {\n    pub unsafe fn execute(&mut self, items: &[usize]) -> usize {\n        let mut total = 0;\n        for item in items {\n            if *item > 0 && *item < 10 || *item == 42 {\n                total += *item;\n            }\n        }\n        match total {\n            0 => 0,\n            1..=3 => 1,\n            _ => total,\n        }\n    }\n}\n\nmod nested {\n    mod private {\n        pub fn helper() {}\n    }\n}\n\nextern \"C\" {\n    fn ffi();\n}\n\nmacro_rules! generated {\n    () => { fn generated() {} };\n}\n"
+  },
+  "syntaxCases": [
+    "cfg-gated-function",
+    "trait-signature",
+    "trait-default-method",
+    "trait-impl-method",
+    "inherent-method",
+    "nested-module",
+    "extern-declaration",
+    "macro-token-tree",
+    "if-let",
+    "while-let",
+    "boolean-branches",
+    "match-arms"
+  ],
+  "expected": {
+    "units": [
+      {
+        "shortName": "boot",
+        "startLine": 1,
+        "endLine": 9,
+        "numberOfParameters": 1,
+        "mcCabeIndex": 3
+      },
+      {
+        "shortName": "Service::optional",
+        "startLine": 15,
+        "endLine": 19,
+        "numberOfParameters": 1,
+        "mcCabeIndex": 2
+      },
+      {
+        "shortName": "Worker::required",
+        "startLine": 25,
+        "endLine": 25,
+        "numberOfParameters": 1,
+        "mcCabeIndex": 1
+      },
+      {
+        "shortName": "Worker::execute",
+        "startLine": 29,
+        "endLine": 41,
+        "numberOfParameters": 2,
+        "mcCabeIndex": 8
+      },
+      {
+        "shortName": "nested::private::helper",
+        "startLine": 46,
+        "endLine": 46,
+        "numberOfParameters": 0,
+        "mcCabeIndex": 1
+      }
+    ],
+    "excludedUnitNames": ["Service::required", "ffi", "generated"]
+  }
+}

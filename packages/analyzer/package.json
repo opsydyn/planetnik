@@ -8,6 +8,8 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "benchmark:tree-sitter": "bun run ./scripts/benchmark-tree-sitter.ts",
+    "capture:sokrates:rust": "bun run ./scripts/capture-sokrates-rust.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
@@ -16,6 +18,7 @@
     "@effect/schema": "catalog:",
     "@planetnik/common": "workspace:*",
     "effect": "catalog:",
+    "tree-sitter-python": "^0.25.0",
     "tree-sitter-rust": "^0.24.0",
     "web-tree-sitter": "^0.26.8"
   }

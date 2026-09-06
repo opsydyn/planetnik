@@ -1,22 +1,31 @@
 ---
 import { getEntry } from "astro:content";
+import SnapshotTrendsPanel from "../components/trends/SnapshotTrendsPanel.astro";
 import Dashboard from "../layouts/Dashboard.astro";
+import { resolveDataDir } from "../loaders/planetnik-loader.js";
+import { readSnapshotHistory } from "../lib/datasets/snapshotHistory.js";
 
 const summary = await getEntry("analysis", "summary");
-const projectName = summary?.data.metadata.name ?? "Unknown";
+const reportContext = await getEntry("reportContext", "context");
+const projectName = reportContext?.data.title ?? summary?.data.metadata.name ?? "Unknown";
+const history = readSnapshotHistory(resolveDataDir());
 ---
 
 <Dashboard title="Trend" projectName={projectName}>
-  <h2>Trend</h2>
-  <div class="empty">
-    <p>Trend data requires multiple analysis snapshots over time.</p>
-    <p class="hint">Run <code>planetnik generateReports</code> periodically. Each run adds a snapshot to the trend baseline.</p>
+  <div class="trend-page">
+    <header class="trend-page-header">
+      <p class="trend-eyebrow">Quality / longitudinal evidence</p>
+      <h2>Trend</h2>
+      <p>Compare the two newest canonical snapshots without losing the source identity behind each movement.</p>
+    </header>
+    <SnapshotTrendsPanel result={history} />
   </div>
 </Dashboard>
 
 <style>
-  .empty { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 2rem; text-align: center; }
-  .empty p { color: var(--color-text-muted); margin-bottom: 0.5rem; }
-  .hint { font-size: 0.85rem; }
-  code { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.85em; background: var(--color-surface-muted, #f1f5f9); color: var(--color-text, inherit); padding: 0.15em 0.4em; border-radius: var(--radius-inline); }
+  .trend-page { display: grid; gap: 1.25rem; }
+  .trend-page-header { display: grid; gap: 0.45rem; }
+  .trend-eyebrow { margin: 0; color: var(--color-accent-strong); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .trend-page-header h2 { margin: 0; font-family: var(--font-heading-stack); font-size: clamp(1.75rem, 4vw, 2.6rem); letter-spacing: -0.04em; }
+  .trend-page-header p:last-child { max-width: 48rem; margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.55; }
 </style>

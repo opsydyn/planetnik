@@ -10,16 +10,6 @@ function readJson(filename: string): unknown | null {
   return JSON.parse(readFileSync(path, "utf-8"))
 }
 
-function readTsv(filename: string): string[][] {
-  if (!DATA_DIR) return []
-  const path = join(DATA_DIR, filename)
-  if (!existsSync(path)) return []
-  const lines = readFileSync(path, "utf-8")
-    .split("\n")
-    .filter((l) => l.trim())
-  return lines.map((line) => line.split("\t"))
-}
-
 // ── Analysis summary ──
 
 export interface AnalysisSummary {
@@ -156,39 +146,23 @@ export interface Contributor {
 
 export function getContributors(): Contributor[] {
   const raw = readJson("contributors.json") as Record<string, unknown> | null
-  if (Array.isArray(raw?.contributors)) {
-    return raw.contributors
-      .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-      .map((entry) => ({
-        email: String(entry.email ?? ""),
-        commitsAllTime: Number(entry.commitsCount ?? 0),
-        commits30Days: Number(entry.commitsCount30Days ?? 0),
-        commits90Days: Number(entry.commitsCount90Days ?? 0),
-        commits180Days: Number(entry.commitsCount180Days ?? 0),
-        commits365Days: Number(entry.commitsCount365Days ?? 0),
-        firstCommit: String(entry.firstCommitDate ?? ""),
-        lastCommit: String(entry.latestCommitDate ?? ""),
-        userName: String(entry.userName ?? ""),
-        isRookie: entry.isRookie === true,
-        isActive: entry.isActive === true,
-      }))
-  }
+  if (!Array.isArray(raw?.contributors)) return []
 
-  const rows = readTsv("contributors.txt")
-  if (rows.length < 2) return []
-  return rows.slice(1).map((cols) => ({
-    email: cols[0]?.trim() ?? "",
-    commitsAllTime: parseInt(cols[1] ?? "0", 10) || 0,
-    commits30Days: parseInt(cols[2] ?? "0", 10) || 0,
-    commits90Days: parseInt(cols[3] ?? "0", 10) || 0,
-    commits180Days: parseInt(cols[4] ?? "0", 10) || 0,
-    commits365Days: parseInt(cols[5] ?? "0", 10) || 0,
-    firstCommit: cols[6]?.trim() ?? "",
-    lastCommit: cols[7]?.trim() ?? "",
-    userName: cols[9]?.trim() ?? "",
-    isRookie: cols[10]?.trim() === "true",
-    isActive: cols[11]?.trim() === "true",
-  }))
+  return raw.contributors
+    .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
+    .map((entry) => ({
+      email: String(entry.email ?? ""),
+      commitsAllTime: Number(entry.commitsCount ?? 0),
+      commits30Days: Number(entry.commitsCount30Days ?? 0),
+      commits90Days: Number(entry.commitsCount90Days ?? 0),
+      commits180Days: Number(entry.commitsCount180Days ?? 0),
+      commits365Days: Number(entry.commitsCount365Days ?? 0),
+      firstCommit: String(entry.firstCommitDate ?? ""),
+      lastCommit: String(entry.latestCommitDate ?? ""),
+      userName: String(entry.userName ?? ""),
+      isRookie: entry.isRookie === true,
+      isActive: entry.isActive === true,
+    }))
 }
 
 // ── Impact ──

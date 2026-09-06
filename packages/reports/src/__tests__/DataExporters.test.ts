@@ -443,7 +443,9 @@ describe("DataExporter", () => {
 		);
 
 		try {
-			new DataExporter(results, reportsFolder).exportData();
+			new DataExporter(results, reportsFolder, {
+				emitCompatibilityProjections: true,
+			}).exportData();
 
 			const jsonPath = join(
 				reportsFolder,
@@ -670,22 +672,28 @@ describe("DataExporter", () => {
 		}
 	});
 
-	test("exportData writes structured findings JSON from manual findings HTML", () => {
+	test("exportData writes structured findings JSON from canonical findings", () => {
 		const results = new CodeAnalysisResults();
 		const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-findings-"));
-		const findingsHtml = `
-<finding>
-  <summary>Risky payment shortcut</summary>
-  <body><p>Checkout bypasses normal validation in one path.</p><p>Review the fallback branch.</p></body>
-</finding>
-<finding>
-  <summary>Legacy retry loop</summary>
-  <body><p>There is a retry loop with unclear backoff behavior.</p></body>
-</finding>
-`;
 
 		try {
-			new DataExporter(results, reportsFolder, findingsHtml).exportData();
+			new DataExporter(results, reportsFolder, {
+				findings: {
+					title: "Notes & Findings",
+					items: [
+						{
+							id: "payment-shortcut",
+							summary: "Risky payment shortcut",
+							body: "Checkout bypasses normal validation in one path.\n\nReview the fallback branch.",
+						},
+						{
+							id: "retry-loop",
+							summary: "Retry loop",
+							body: "There is a retry loop with unclear backoff behavior.",
+						},
+					],
+				},
+			}).exportData();
 
 			const exportPath = join(reportsFolder, "data", "findings.json");
 			expect(existsSync(exportPath)).toBe(true);
@@ -695,6 +703,7 @@ describe("DataExporter", () => {
 				items: Array<{
 					id: string;
 					summary: string;
+					bodyMarkdown: string;
 					bodyHtml: string;
 					bodyText: string;
 				}>;
@@ -704,9 +713,12 @@ describe("DataExporter", () => {
 			expect(exported.items).toHaveLength(2);
 			expect(exported.items[0]).toEqual(
 				expect.objectContaining({
-					id: "finding-1",
+					id: "payment-shortcut",
 					summary: "Risky payment shortcut",
 				}),
+			);
+			expect(exported.items[0]!.bodyMarkdown).toContain(
+				"Review the fallback branch.",
 			);
 			expect(exported.items[0]!.bodyHtml).toContain(
 				"Checkout bypasses normal validation",
@@ -714,7 +726,7 @@ describe("DataExporter", () => {
 			expect(exported.items[0]!.bodyText).toContain(
 				"Review the fallback branch.",
 			);
-			expect(exported.items[1]!.summary).toBe("Legacy retry loop");
+			expect(exported.items[1]!.summary).toBe("Retry loop");
 		} finally {
 			rmSync(reportsFolder, { recursive: true, force: true });
 		}
@@ -1383,7 +1395,9 @@ describe("DataExporter", () => {
 		const reportsFolder = mkdtempSync(join(tmpdir(), "planetnik-data-export-"));
 
 		try {
-			new DataExporter(results, reportsFolder).exportData();
+			new DataExporter(results, reportsFolder, {
+				emitCompatibilityProjections: true,
+			}).exportData();
 
 			const summary = JSON.parse(
 				readFileSync(

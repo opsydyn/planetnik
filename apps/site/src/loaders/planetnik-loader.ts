@@ -69,6 +69,15 @@ function getLoadedEnv(): Record<string, string> {
 	return env;
 }
 
+export function resolveDatasetsRoot(): string {
+	const env = getLoadedEnv();
+	return (
+		process.env.PLANETNIK_DATASETS_ROOT ??
+		env.PLANETNIK_DATASETS_ROOT ??
+		defaultDatasetsRoot
+	);
+}
+
 export function resolveDataDir(): string {
 	const env = getLoadedEnv();
 	const explicitDataDir =
@@ -77,10 +86,7 @@ export function resolveDataDir(): string {
 		process.env.PLANETNIK_LANDSCAPE_DATA_DIR ??
 		env.PLANETNIK_LANDSCAPE_DATA_DIR;
 	const datasetName = process.env.PLANETNIK_DATASET ?? env.PLANETNIK_DATASET;
-	const datasetsRoot =
-		process.env.PLANETNIK_DATASETS_ROOT ??
-		env.PLANETNIK_DATASETS_ROOT ??
-		defaultDatasetsRoot;
+	const datasetsRoot = resolveDatasetsRoot();
 	const namedDatasetDir = resolveNamedDatasetDataDir(datasetName, datasetsRoot);
 
 	const dir =
@@ -116,12 +122,6 @@ function readJsonFile(filename: string): unknown | null {
 	const path = join(resolveDataDir(), filename);
 	if (!existsSync(path)) return null;
 	return JSON.parse(readFileSync(path, "utf-8"));
-}
-
-function readTextFile(filename: string): string | null {
-	const path = join(resolveDataDir(), filename);
-	if (!existsSync(path)) return null;
-	return readFileSync(path, "utf-8");
 }
 
 const entityIdPolicyKeys = [
@@ -163,7 +163,7 @@ function isIsoTimestamp(value: string): boolean {
 	return new Date(value).toISOString() === value;
 }
 
-function isValidV2ReportContext(
+export function isValidV2ReportContext(
 	dataDir: string,
 	raw: Record<string, unknown>,
 ): boolean {
@@ -546,21 +546,6 @@ export function metricsLoader(): Loader {
 					const data = await parseData({ id, data: { id, value } });
 					store.set({ id, data });
 				}
-				return;
-			}
-
-			const text = readTextFile("metrics.txt");
-			if (!text) return;
-			for (const line of text.split("\n")) {
-				const trimmed = line.trim();
-				if (!trimmed) continue;
-				const colonIdx = trimmed.indexOf(":");
-				if (colonIdx < 0) continue;
-				const id = trimmed.substring(0, colonIdx).trim();
-				const value = parseFloat(trimmed.substring(colonIdx + 1).trim());
-				if (Number.isNaN(value)) continue;
-				const data = await parseData({ id, data: { id, value } });
-				store.set({ id, data });
 			}
 		},
 	};
@@ -742,35 +727,6 @@ export function contributorsLoader(): Loader {
 					const dataWithSchema = await parseData({ id: email, data });
 					store.set({ id: email, data: dataWithSchema });
 				}
-				return;
-			}
-
-			const text = readTextFile("contributors.txt");
-			if (!text) return;
-			const lines = text.split("\n").filter((l) => l.trim());
-			if (lines.length < 2) return;
-			// Skip header row
-			for (let i = 1; i < lines.length; i++) {
-				const cols = lines[i].split("\t");
-				if (cols.length < 8) continue;
-				const email = cols[0].trim();
-				const rec: Record<string, unknown> = {
-					email,
-					commitsAllTime: parseInt(cols[1], 10) || 0,
-					commits30Days: parseInt(cols[2], 10) || 0,
-					commits90Days: parseInt(cols[3], 10) || 0,
-					commits180Days: parseInt(cols[4], 10) || 0,
-					commits365Days: parseInt(cols[5], 10) || 0,
-					firstCommit: cols[6].trim(),
-					lastCommit: cols[7].trim(),
-					percentage: cols[8] ? cols[8].trim() : "",
-				};
-				// New columns: userName, isRookie, isActive
-				if (cols[9] !== undefined) rec.userName = cols[9].trim();
-				if (cols[10] !== undefined) rec.isRookie = cols[10].trim() === "true";
-				if (cols[11] !== undefined) rec.isActive = cols[11].trim() === "true";
-				const data = await parseData({ id: email, data: rec });
-				store.set({ id: email, data });
 			}
 		},
 	};

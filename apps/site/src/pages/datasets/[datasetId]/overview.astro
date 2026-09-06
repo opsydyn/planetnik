@@ -1,0 +1,427 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common"
+import DonutChart from "../../../components/charts/DonutChart"
+import HorizontalBarChart from "../../../components/charts/HorizontalBarChart"
+import TreemapChart from "../../../components/charts/Treemap"
+import DatasetReportHeader from "../../../components/datasets/DatasetReportHeader.astro"
+import TechnologyIcon from "../../../components/icons/TechnologyIcon.astro"
+import StaticReportTable from "../../../components/tables/StaticReportTable.astro"
+import ExploreLayout from "../../../layouts/ExploreLayout.astro"
+import { chartHelp } from "../../../lib/chartHelp"
+import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
+import { getDatasetViewPath } from "../../../lib/datasets/explore"
+import { readDatasetReport, type DatasetReportSnapshot } from "../../../lib/datasets/reportReader"
+import { route } from "../../../lib/route"
+
+interface Props {
+  dataset: DatasetDescriptor
+}
+
+export function getStaticPaths() {
+  const { catalog } = loadDatasetCatalog()
+  return catalog.datasets.flatMap((dataset) => {
+    const overviewPath = getDatasetViewPath(dataset, "overview")
+    return overviewPath
+      ? [{ params: { datasetId: dataset.slug }, props: { dataset } }]
+      : []
+  })
+}
+
+const { dataset } = Astro.props as Props
+const overviewPath = getDatasetViewPath(dataset, "overview")
+const codeCityPath = getDatasetViewPath(dataset, "code-city")
+const trendsPath = getDatasetViewPath(dataset, "trends")
+const overviewHref = overviewPath ? route(overviewPath) : null
+const codeCityHref = codeCityPath ? route(codeCityPath) : null
+const trendsHref = trendsPath ? route(trendsPath) : null
+const report = readDatasetReport(dataset.id)
+const snapshot = report.tag === "ready" ? report.snapshot : null
+
+type LanguageRow = {
+  extension: string
+  files: number
+  loc: number
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined
+}
+
+function extensionFor(value: unknown): string {
+  if (typeof value !== "string") return "unknown"
+  const extension = value.replace(/^\*?\.?/u, "").trim().toLowerCase()
+  return extension || "unknown"
+}
+
+function rowsFromFiles(files: DatasetReportSnapshot["filesMain"]): LanguageRow[] {
+  const byExtension = new Map<string, LanguageRow>()
+  for (const file of files) {
+    const extension = extensionFor(file.extension)
+    const row = byExtension.get(extension) ?? { extension, files: 0, loc: 0 }
+    row.files += 1
+    row.loc += asNumber(file.linesOfCode) ?? 0
+    byExtension.set(extension, row)
+  }
+  return [...byExtension.values()].sort((left, right) => right.loc - left.loc || left.extension.localeCompare(right.extension))
+}
+
+function rowsFromSummary(summary: DatasetReportSnapshot["summary"], key: string): LanguageRow[] {
+  const aspect = asRecord(summary?.[key])
+  const extensions = aspect?.linesOfCodePerExtension
+  if (!Array.isArray(extensions)) return []
+  return extensions
+    .flatMap((value): LanguageRow[] => {
+      const record = asRecord(value)
+      const extension = extensionFor(record?.extension)
+      const loc = asNumber(record?.linesOfCode)
+      return loc === undefined ? [] : [{ extension, files: 0, loc }]
+    })
+    .sort((left, right) => right.loc - left.loc || left.extension.localeCompare(right.extension))
+}
+
+function totalFor(rows: readonly LanguageRow[]): number {
+  return rows.reduce((total, row) => total + row.loc, 0)
+}
+
+function metricValue(snapshotValue: DatasetReportSnapshot | null, id: string): number | undefined {
+  return snapshotValue?.metrics.find((metric) => metric.id === id)?.value
+}
+
+const fileMainRows = snapshot ? rowsFromFiles(snapshot.filesMain) : []
+const fileTestRows = snapshot ? rowsFromFiles(snapshot.filesTest) : []
+const mainRows = snapshot
+  ? fileMainRows.length > 0
+    ? fileMainRows
+    : rowsFromSummary(snapshot.summary, "mainAspectAnalysisResults")
+  : []
+const testRows = snapshot
+  ? fileTestRows.length > 0
+    ? fileTestRows
+    : rowsFromSummary(snapshot.summary, "testAspectAnalysisResults")
+  : []
+const summaryFiles = asNumber(snapshot?.summary?.filesCount)
+const summaryLoc = asNumber(snapshot?.summary?.linesOfCode)
+const mainFiles = summaryFiles ?? (snapshot?.filesMain.length || dataset.stats.files || 0)
+const mainLoc = summaryLoc ?? (totalFor(mainRows) || dataset.stats.loc || 0)
+const testFiles = snapshot?.filesTest.length || asNumber(asRecord(snapshot?.summary?.testAspectAnalysisResults)?.filesCount) || 0
+const testLoc =
+  asNumber(asRecord(snapshot?.summary?.testAspectAnalysisResults)?.linesOfCode) ??
+  metricValue(snapshot, "LINES_OF_CODE_TEST") ??
+  totalFor(testRows)
+const unitCount = snapshot?.units.length || dataset.stats.units || 0
+const overviewCards = [
+  { label: "Main files", value: mainFiles },
+  { label: "Main LOC", value: mainLoc },
+  { label: "Test files", value: testFiles },
+  { label: "Test LOC", value: testLoc },
+  { label: "Units", value: unitCount },
+].filter((card) => card.value !== undefined)
+const mainChartData = mainRows.map((row) => ({ label: `.${row.extension}`, value: row.loc }))
+const testChartData = testRows.map((row) => ({ label: `.${row.extension}`, value: row.loc }))
+const reportError = report.tag === "ready" ? null : report.message
+---
+
+<ExploreLayout title={`${dataset.title} Overview`} description={`Canonical Overview for ${dataset.title}.`}>
+  <div class="dataset-report-page" data-dataset-report="overview">
+    <DatasetReportHeader
+      dataset={dataset}
+      activeView="overview"
+      overviewHref={overviewHref}
+      codeCityHref={codeCityHref}
+      trendsHref={trendsHref}
+    />
+
+    {snapshot ? (
+      <>
+        <section class="report-boundary" aria-labelledby="report-boundary-title">
+          <div>
+            <p class="report-eyebrow">Source of truth</p>
+            <h2 id="report-boundary-title">This Overview reads the selected snapshot.</h2>
+            <p>
+              The figures below come from <code>{snapshot.context.canonicalShards?.summary ?? "analysisResults.json"}</code>
+              {" "}and <code>{snapshot.context.canonicalShards?.filesMain ?? "files_main.json"}</code>, not from the
+              currently selected report environment.
+            </p>
+          </div>
+          <span class={`coverage-badge is-${dataset.availability}`}>
+            {dataset.availability === "partial" ? "Partial evidence" : "Verified evidence"}
+          </span>
+        </section>
+
+        <section class="overview-section" aria-labelledby="overview-summary-title">
+          <div class="section-heading">
+            <div>
+              <p class="report-eyebrow">At a glance</p>
+              <h2 id="overview-summary-title">Source Code Overview</h2>
+            </div>
+            <p>Start with the shape of the system, then move into Code City for structure and signals.</p>
+          </div>
+          <div class="overview-cards">
+            {overviewCards.map((card) => (
+              <div class="overview-card">
+                <strong>{card.value.toLocaleString("en-GB")}</strong>
+                <span>{card.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {mainRows.length > 0 ? (
+          <section class="overview-section" aria-labelledby="main-scope-title">
+            <div class="section-heading">
+              <div>
+                <p class="report-eyebrow">Main scope</p>
+                <h2 id="main-scope-title">Language footprint</h2>
+              </div>
+              <p>Use the dominant language slices to focus standards, ownership, and health work.</p>
+            </div>
+            <div class="chart-grid">
+              <DonutChart client:load data={mainChartData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageMix} />
+              <TreemapChart client:load data={mainChartData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageTreemap} />
+            </div>
+            <HorizontalBarChart client:load data={mainChartData} valueLabel="LOC" helpText={chartHelp.overview.mainLanguageBars} />
+            <StaticReportTable ariaLabel="Dataset main scope by language">
+              <thead>
+                <tr><th><span>Extension</span></th><th><span>Files</span></th><th><span>LOC</span></th><th><span>%</span></th></tr>
+              </thead>
+              <tbody>
+                {mainRows.map((row) => (
+                  <tr>
+                    <td>
+                      <span class="language-cell">
+                        <TechnologyIcon extension={row.extension} size={18} class="language-icon" />
+                        <code class="report-static-table__code">.{row.extension}</code>
+                      </span>
+                    </td>
+                    <td class="report-static-table__num">{row.files ? row.files.toLocaleString("en-GB") : "—"}</td>
+                    <td class="report-static-table__num">{row.loc.toLocaleString("en-GB")}</td>
+                    <td class="report-static-table__num">{mainLoc > 0 ? ((row.loc / mainLoc) * 100).toFixed(1) : "0.0"}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </StaticReportTable>
+          </section>
+        ) : (
+          <section class="report-empty" aria-labelledby="main-scope-empty-title">
+            <p class="report-eyebrow">Main scope</p>
+            <h2 id="main-scope-empty-title">No language rows are present.</h2>
+            <p>The snapshot is valid, but it does not contain a usable main-file language breakdown.</p>
+          </section>
+        )}
+
+        {testRows.length > 0 ? (
+          <section class="overview-section" aria-labelledby="test-scope-title">
+            <div class="section-heading">
+              <div>
+                <p class="report-eyebrow">Test scope</p>
+                <h2 id="test-scope-title">Test language footprint</h2>
+              </div>
+              <p>Test evidence stays separate so coverage gaps remain visible rather than being folded into main LOC.</p>
+            </div>
+            <HorizontalBarChart client:load data={testChartData} valueLabel="LOC" barColor="#8b5cf6" helpText={chartHelp.overview.testLanguageBars} />
+            <StaticReportTable ariaLabel="Dataset test scope by language">
+              <thead>
+                <tr><th><span>Extension</span></th><th><span>Files</span></th><th><span>LOC</span></th></tr>
+              </thead>
+              <tbody>
+                {testRows.map((row) => (
+                  <tr>
+                    <td>
+                      <span class="language-cell">
+                        <TechnologyIcon extension={row.extension} size={18} class="language-icon" />
+                        <code class="report-static-table__code">.{row.extension}</code>
+                      </span>
+                    </td>
+                    <td class="report-static-table__num">{row.files ? row.files.toLocaleString("en-GB") : "—"}</td>
+                    <td class="report-static-table__num">{row.loc.toLocaleString("en-GB")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </StaticReportTable>
+          </section>
+        ) : null}
+      </>
+    ) : (
+      <section class="report-invalid" aria-labelledby="report-invalid-title">
+        <p class="report-eyebrow">Snapshot unavailable</p>
+        <h2 id="report-invalid-title">Overview could not read this dataset.</h2>
+        <p>{reportError}</p>
+        <a href={route(`/datasets/${dataset.slug}`)}>Return to snapshot details</a>
+      </section>
+    )}
+  </div>
+</ExploreLayout>
+
+<style>
+  .dataset-report-page {
+    display: grid;
+    gap: 1.35rem;
+    max-width: 76rem;
+    margin: 0 auto;
+  }
+
+  .report-boundary,
+  .overview-section,
+  .report-empty,
+  .report-invalid {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
+
+  .report-boundary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    background:
+      radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 45%),
+      var(--color-card);
+  }
+
+  .report-boundary h2,
+  .overview-section h2,
+  .report-empty h2,
+  .report-invalid h2 {
+    margin: 0;
+    font-family: var(--font-heading-stack);
+    font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  .report-boundary p:last-child,
+  .section-heading > p,
+  .report-empty p:last-child,
+  .report-invalid p:not(.report-eyebrow) {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.6;
+  }
+
+  .report-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--color-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .coverage-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .coverage-badge.is-ready {
+    border-color: color-mix(in srgb, var(--color-green) 45%, var(--color-border));
+    color: var(--color-green);
+  }
+
+  .coverage-badge.is-partial {
+    border-color: color-mix(in srgb, var(--color-warm) 50%, var(--color-border));
+    color: var(--color-warm);
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .section-heading > p {
+    max-width: 28rem;
+    text-align: right;
+  }
+
+  .overview-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 0.55rem;
+  }
+
+  .overview-card {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.8rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+  }
+
+  .overview-card strong {
+    color: var(--color-accent);
+    font-family: var(--font-heading-stack);
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .overview-card span {
+    color: var(--color-text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .language-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .language-icon {
+    flex: none;
+  }
+
+  .report-invalid a {
+    justify-self: start;
+    color: var(--color-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .report-invalid a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 760px) {
+    .report-boundary,
+    .section-heading {
+      grid-template-columns: 1fr;
+      align-items: start;
+      flex-direction: column;
+    }
+
+    .section-heading > p {
+      text-align: left;
+    }
+
+    .chart-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

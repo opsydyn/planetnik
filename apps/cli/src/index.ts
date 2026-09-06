@@ -4,7 +4,7 @@
 import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Effect, Layer } from "effect";
-import { analyzeLandscapeCommand } from "./commands/analyzeLandscape.js";
+import { analyzeLandscapeCommand, LandscapeRepoWorkerLive } from "./commands/analyzeLandscape.js";
 import { analyzeRemoteCommand } from "./commands/analyzeRemote.js";
 import { exportConventionsCommand } from "./commands/exportConventions.js";
 import { extractFilesCommand } from "./commands/extractFiles.js";
@@ -47,6 +47,7 @@ const AppLayer = Layer.mergeAll(
 	NodeContext.layer,
 	PlanetnikLoggerLayer,
 	CliConfig.layer,
+	LandscapeRepoWorkerLive,
 );
 
 cli(process.argv).pipe(Effect.provide(AppLayer), NodeRuntime.runMain);

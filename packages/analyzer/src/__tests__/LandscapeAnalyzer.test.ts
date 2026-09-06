@@ -385,12 +385,39 @@ describe("LandscapeAnalyzer", () => {
 			}),
 		);
 		writeFileSync(
+			join(WORKSPACE, "repos", "repoSplit", "data", "contributors.json"),
+			JSON.stringify({
+				contributors: [
+					{
+						email: "alice@example.com",
+						commitsCount: 4,
+						commitsCount30Days: 2,
+						commitsCount90Days: 4,
+						commitsCount180Days: 4,
+						commitsCount365Days: 4,
+						firstCommitDate: "2024-06-01",
+						latestCommitDate: "2024-06-15",
+						userName: "Alice",
+						isBot: false,
+					},
+					{
+						email: "bob@example.com",
+						commitsCount: 2,
+						commitsCount30Days: 1,
+						commitsCount90Days: 2,
+						commitsCount180Days: 2,
+						commitsCount365Days: 2,
+						firstCommitDate: "2024-06-05",
+						latestCommitDate: "2024-06-12",
+						userName: "Bob",
+						isBot: false,
+					},
+				],
+			}),
+		);
+		writeFileSync(
 			join(WORKSPACE, "repos", "repoSplit", "data", "contributors.txt"),
-			[
-				"Contributor\t#commits (all time)\t#commits (30 days)\t#commits (90 days)\t#commits (180 days)\t#commits (365 days)\tfirst commit\tlast commit\tpercentage\tuserName\tisRookie\tisActive",
-				"alice@example.com\t4\t2\t4\t4\t4\t2024-06-01\t2024-06-15\t50%\tAlice\tfalse\ttrue",
-				"bob@example.com\t2\t1\t2\t2\t2\t2024-06-05\t2024-06-12\t25%\tBob\tfalse\ttrue",
-			].join("\n"),
+			"Contributor\t#commits\nalice@example.com\t999\n",
 		);
 		writeFileSync(
 			join(WORKSPACE, "repos", "repoSplit", "data", "people_dependencies.json"),

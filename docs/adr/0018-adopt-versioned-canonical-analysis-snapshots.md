@@ -59,6 +59,36 @@ new consumer code. This option is chosen because it preserves existing
 portable exports while removing text parsing from the critical path, with less
 migration risk than a one-file rewrite or database-first ingestion.
 
+### Amendment — canonical JSON is the default projection (2026-09-05)
+
+The migration gate has now moved the default from dual export to canonical JSON
+only. `DataExporter` and `LandscapeDataExport` emit legacy TXT projections only
+when `emitCompatibilityProjections` is explicitly enabled. The landscape CLI
+commands accept `--emitLegacyProjections` (or the matching config field), and
+pass that decision through to per-repository analysis and the legacy landscape
+HTML overview. Reused output folders may retain old files, but a v2 manifest
+does not advertise them unless the current export explicitly opted in.
+
+Structured findings authoring follows the same boundary. A `findings.json`
+document beside the analysis config (or the configured `findingsPath`) is the
+canonical input and requires stable item IDs, summaries, and Markdown/plain-
+text bodies. The exporter derives `bodyMarkdown`, `bodyHtml`, and `bodyText`
+for the existing consumers. Legacy findings HTML is derived from that canonical
+document only when the explicit legacy report projection is enabled; HTML
+fragments are no longer accepted as input.
+
+### Amendment — retire reader-side TXT fallbacks (2026-09-05)
+
+The compatibility window for report readers is now closed. Static loaders,
+hosted report summaries, Copilot contributor data, repo-scoped landscape pages,
+and the landscape analyzer consume canonical JSON shards only. Missing or
+malformed `metrics.json` or `contributors.json` data produces an empty or
+unavailable result; no reader consults `metrics.txt` or `contributors.txt`.
+Legacy v1 context metadata remains recognisable for navigation compatibility,
+but v1 report data is not reconstructed from TXT. Writers may still emit TXT or
+HTML projections when the explicit compatibility/legacy projection option is
+enabled.
+
 ### Snapshot manifest
 
 Both single-repository and landscape exporters will emit a
@@ -103,13 +133,15 @@ v2 context as usable:
   keys are `summary`, `metrics`, and `contributors` for single-repository
   snapshots, and `analysis` and `overview` for landscape snapshots.
 - Declared compatibility projections must also be safe relative paths to
-  existing files. Invalid v2 contexts are rejected or reduced to the existing
-  v1 fallback; v1 contexts retain their current behaviour.
+  existing files. Invalid v2 contexts are rejected or reduced to legacy
+  metadata; v1 contexts remain navigable, but report-data readers require
+  canonical JSON shards.
 
 `dataVersion: 1` remains the legacy manifest format. Readers must continue to
-accept v1 datasets while preferring v2 JSON shards. A future incompatible
-contract requires a new data version; additive fields do not require a new
-version. The first slice does not remove or rewrite existing JSON shard shapes.
+accept v1 context metadata while consuming canonical JSON shards when present.
+A future incompatible contract requires a new data version; additive fields do
+not require a new version. The first slice does not remove or rewrite existing
+JSON shard shapes.
 
 ### Canonical shard migration
 
@@ -117,13 +149,14 @@ version. The first slice does not remove or rewrite existing JSON shard shapes.
   `{ title, timestamp, metrics: [{ id, value }] }`.
 - `contributors.json` remains the existing object-shaped contract and gains
   only additive status/percentage fields needed by JSON-first consumers.
-- Static, hosted, and copilot contributor readers will use `contributors.json`
-  before falling back to `contributors.txt`.
-- Static and hosted metrics readers will use `metrics.json` before falling back
-  to `metrics.txt`.
-- Exporters will continue writing both JSON and TXT for the migration period;
-  an empty contributor analysis will still produce an empty canonical JSON
-  shard so the manifest cannot point at stale data.
+- Static, hosted, and Copilot contributor readers use `contributors.json` as
+  their only report-data input.
+- Static, hosted, and repo-scoped landscape metrics readers use `metrics.json`
+  as their only report-data input.
+- Exporters write canonical JSON by default; legacy TXT projections remain
+  available as an explicit migration opt-in. An empty contributor analysis
+  still produces an empty canonical JSON shard so the manifest cannot point at
+  stale data.
 
 Entity-level IDs are now formalized and additive. The exporters publish the
 policy in every v2 manifest:
@@ -185,7 +218,8 @@ the manifest shape.
 ### Costs and risks
 
 - Exporters temporarily write duplicate JSON and TXT representations.
-- v1 fallback paths must remain covered until old datasets age out.
+- legacy v1 contexts can still open for navigation, but missing canonical data
+  is now explicit rather than reconstructed from text.
 - A UUID makes identical re-exports distinct; trend and ingestion work must
   define deduplication policy separately.
 - The manifest will grow as additional domains become canonical; each new
@@ -196,7 +230,8 @@ the manifest shape.
 - Implementing longitudinal trends or comparison queries.
 - Persisting snapshots in Neon/Postgres or adding semantic retrieval.
 - Porting another parser or changing Tree-sitter analysis semantics.
-- Removing legacy TXT/HTML generation in this slice.
+- Removing legacy TXT/HTML generation entirely; compatibility output remains
+  available for intentional migration runs.
 - Redesigning existing files, units, dependency, quality, or security JSON
   payloads.
 
@@ -219,19 +254,20 @@ the manifest shape.
    current navigation and mode fields.
 2. Extend `DataExporter` with `metrics.json`, a single-repository
    `report_context.json`, and an always-present empty-safe `contributors.json`.
-   Keep the existing TXT writes as projections and preserve current JSON field
-   names, adding only the status/percentage fields required by readers.
+   Keep the existing TXT writes as explicitly opted-in projections and preserve
+   current JSON field names, adding only the status/percentage fields required
+   by readers.
 3. Update the static loader and schema in
    `apps/site/src/loaders/planetnik-loader.ts` and
-   `apps/site/src/content.config.ts` to prefer canonical JSON and accept legacy
-   v1 contexts/TXT fallbacks.
+   `apps/site/src/content.config.ts` to consume canonical JSON and keep legacy
+   v1 context metadata navigable without TXT report-data parsing.
 4. Update the hosted readers and response schema in
    `apps/runtime/src/lib/report-datasets.ts` and
    `apps/runtime/src/routes/reports/index.ts` to expose optional v2 manifest
-   metadata and use JSON-first metrics/contributors for root and repo-scoped
-   data directories.
-5. Update `apps/copilot-runtime/src/data.ts` to read the existing contributor
-   JSON contract before its TSV fallback.
+   metadata and consume JSON metrics/contributors for root and repo-scoped data
+   directories.
+5. Update `apps/copilot-runtime/src/data.ts` to consume the existing
+   contributor JSON contract without a TSV fallback.
 6. Add exporter-to-loader contract tests in
    `packages/reports/src/__tests__/DataExporters.test.ts`,
    `packages/reports/src/__tests__/LandscapeDataExport.test.ts`,
@@ -248,11 +284,13 @@ the manifest shape.
 
 - **Dependencies:** none. Use Bun's built-in `crypto.randomUUID()` and the
   existing filesystem/JSON helpers.
-- **Configuration:** none. The manifest is generated from the existing export
-  commands and requires no new environment variables or feature flags.
-- **Migration:** emit v2 JSON and the current TXT projections together; make
-  all named consumers JSON-first; retain v1/TXT fallbacks until the fixture and
-  dataset inventory proves they are no longer needed.
+- **Configuration:** `emitLegacyProjections` is an optional CLI/config flag for
+  migration output. It defaults to `false` and does not change the canonical
+  JSON contract.
+- **Migration:** emit v2 JSON by default; enable the current TXT/HTML
+  projections only for intentional compatibility runs; make all named
+  consumers JSON-only; keep v1 context recognition limited to navigation and
+  metadata while missing canonical report data remains explicit.
 
 ### Patterns to follow
 
@@ -278,7 +316,8 @@ the manifest shape.
 - [x] `LandscapeDataExport` emits the same v2 identity metadata while retaining
       its existing landscape fields and navigation.
 - [x] JSON-first exporter/loader contract tests pass with TXT files removed;
-      the same tests pass with JSON removed and TXT fixtures retained.
+      explicit negative fixtures prove that TXT is ignored when JSON is absent
+      or malformed.
 - [x] Empty contributor analyses produce an empty canonical JSON shard rather
       than leaving stale contributor data behind.
 - [x] Static and hosted typechecks pass, including the response schema for
@@ -287,8 +326,11 @@ the manifest shape.
       canonical records, and the identity policy is present in v2 manifests.
 - [x] Manifest inventories are derived from emitted files; staged landscape
       export refreshes preserve one snapshot identity through completion.
-- [x] Runtime and static readers reject invalid v2 manifests while retaining
-      v1/TXT compatibility fixtures.
+- [x] Runtime and static readers reject invalid v2 manifests; legacy v1 context
+      metadata remains accepted without TXT report-data reconstruction.
+- [x] Landscape exporter and CLI commands default to canonical JSON and expose
+      legacy TXT/HTML projections only through the explicit opt-in; focused
+      tests cover fresh and stale-output-folder contexts.
 - [x] JSON-only compatibility-removal matrix covers 19 single-repository
       hosted readers, 8 landscape-root readers, 19 landscape repository
       readers, and 29 static loader collections without any TXT projections;

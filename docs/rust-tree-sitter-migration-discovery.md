@@ -20,7 +20,7 @@ It also defines what “feature complete with the legacy implementation” shoul
 - `RustAnalyzer` kept its existing public analyzer contract while switching internals to syntax-tree-backed unit extraction and conservative `use`-based dependency extraction.
 - The migration materially improved correctness on a real Rust corpus.
 - The current implementation already exceeds the Java Sokrates Rust baseline in several important areas, especially dependency extraction and false-positive reduction.
-- The remaining work is not “match the old heuristic behavior line for line.” It is to harden coverage, benchmark the adapter, add parity-diff automation, and close the remaining report-contract gap discovered in the hosted product flow.
+- The remaining work is not “match the old heuristic behavior line for line.” The adapter now has a repeatable benchmark baseline and a checked-in Rust coverage matrix; the remaining parity work is a runtime-executed Java capture when the toolchain is available.
 
 ## Legacy baseline versus Planetnik now
 
@@ -57,6 +57,20 @@ The pilot introduced these main implementation pieces:
 - `packages/analyzer/src/lang/rust/TreeSitterRustParser.ts`
 - `packages/analyzer/src/lang/rust/RustTreeSitterUnitsExtractor.ts`
 - `packages/analyzer/src/lang/rust/RustTreeSitterDependenciesExtractor.ts`
+
+### First hardening slice (2026-09-05)
+
+Rust unit extraction now carries syntax scope through nested modules and
+trait/impl bodies. This keeps names such as `transport::Service::default`,
+`transport::Worker::default`, and `transport::private::run` distinct without
+changing the public `UnitInfo` contract. The fixture also protects the
+conservative boundary: declaration-only trait/foreign signatures and functions
+inside macro token trees are not reported as executable units.
+
+The remaining hardening work is intentionally separate: a runtime-executed
+reference refresh. The shared adapter lifecycle contract, repeatable benchmark
+command, and broader Rust syntax fixture matrix are now documented and
+exercised.
 
 The current integration pattern is:
 
@@ -204,38 +218,101 @@ From a strict Java-legacy baseline, the Rust feature is already at or above pari
 
 From a production-complete parity-and-hardening baseline, there is still meaningful work left.
 
-### 1. Close the adapter-hardening slice from the pilot checklist
+### 1. Continue the adapter-hardening slice from the pilot checklist
 
-Still missing from the original checklist shape:
+The shared runtime contract is now documented in
+[`docs/tree-sitter-runtime-contract.md`](./tree-sitter-runtime-contract.md), and
+its fixtures cover initialization through the embedded WASM asset, language
+caching, idempotent disposal, syntax-error preservation, and recovery after a
+failed grammar load. The Rust fixture slice also records scope-aware traversal
+and the no-inference boundary.
 
-- extract any shared parser adapter utilities worth reusing
-- document parser initialization and fallback behavior explicitly
-- benchmark parser overhead and record expected bounds on representative corpora
-
-This is the work that turns “working Rust pilot” into “repeatable parser integration pattern.”
+The repeatable benchmark command now records adapter load, parse outcomes,
+timings, sampled RSS, emitted units, and dependency evidence for a chosen
+language/corpus. A Tokio reference run is recorded in the shared runtime
+contract. Remaining work is to extract more shared traversal utilities only
+where a second language proves the abstraction is real. This is the work that
+turns “working Rust pilot” into “repeatable parser integration pattern.”
 
 ### 2. Expand verified Rust syntax coverage beyond the currently tested node set
 
 Current unit extraction is centered on `function_item` and `impl_item` paths.
-That is already much better than heuristics, but it is not the same as saying the Rust surface is comprehensively covered.
+That is already much better than heuristics, but it is not the same as saying
+the Rust surface is comprehensively covered. The checked-in
+`rust-tree-sitter-coverage-v1` fixture now protects the highest-value syntax
+edges without widening the semantic claim.
 
-Next fixture candidates should include:
+The verified matrix now includes:
 
-- trait methods and trait signatures
-- foreign functions / extern blocks
-- nested modules and more `mod` layouts
+- trait methods and declaration-only signatures
+- foreign functions / extern blocks (explicitly excluded as units)
+- nested modules and qualified trait/inherent impl methods
 - cfg-gated items where syntax still exists but inclusion can vary
-- more complexity-heavy control-flow variants where we care about stable counts
-- macro-heavy files where we should prove conservative behavior rather than overclaim support
+- `if let`, `while let`, boolean operators, and nested match-arm complexity
+- macro-heavy files where token-tree functions remain excluded
 
-### 3. Add a legacy-comparison harness instead of relying on memory
+The fixture records exact zero-based ranges, parameter counts, and McCabe
+values. A three-arm match now contributes three branch points through its
+`match_block`; the focused regression test prevents it from collapsing to one.
+Remaining candidates should be added only when a concrete Rust report gap is
+identified.
 
-We should automate the comparison between:
+### 3. Extend the legacy-comparison harness instead of relying on memory
+
+The first local harness slice is now in
+`packages/analyzer/src/lang/rust/RustParity.ts`. It compares unit-name and
+dependency-path multisets, classifies every difference as an explicitly
+accepted improvement, neutral difference, or fail-closed regression, and is
+wired to a live `RustAnalyzer` fixture against the historical
+`CStyleHeuristicUnitsExtractor` baseline. The latter is a local proxy for the
+old Planetnik/Sokrates-style heuristic path; it is not a claim that the Java
+runtime has been executed in CI.
+
+The runtime-capture lane is now implemented as a Bun command plus a disposable
+Java probe. It builds the pinned Sokrates CLI, invokes
+`nl.obren.sokrates.sourcecode.lang.rust.RustAnalyzer` directly, and emits a
+normalized JSON fixture without scraping HTML or copying test logs. The command
+verifies the checkout commit and fails closed when Java 17+, `javac`, or Maven
+is unavailable. It also has an explicit `--docker` mode using the digest-pinned
+`maven:3.9.9-eclipse-temurin-17` image, so a host without a JDK can still run
+the same probe.
+
+When the toolchain is available, run:
+
+```sh
+bun run --cwd packages/analyzer capture:sokrates:rust \
+  --sokrates-root /path/to/pinned/sokrates/checkout \
+  --docker \
+  --output /path/to/sokrates-rust-fragment-1.runtime.json
+```
+
+The checkout must be at commit
+`f400eb7235a755146e854a1bf4bd90cbe1ee5086`; the command verifies that before
+building.
+
+The first Docker-backed runtime capture completed on 2026-09-05 with Temurin
+17.0.15: 3 units and 0 dependencies. It is retained as
+`sokrates-rust-fragment-1-runtime-v1.json`. The capture reports `main` as 3 LOC
+when loaded from the `.rs` source path, while the upstream JUnit assertion says
+4 because its `SourceFile` is extensionless and therefore selects a different
+cleaner. The Docker image is pinned by digest in
+`SOKRATES_CAPTURE_DOCKER_IMAGE`.
+
+ADR-0021 now defines `real-file-extension` as the authoritative report
+semantics and records the extensionless JUnit setup as historical evidence.
+`SokratesRustMetricPolicy.ts` classifies this exact `main` 4 → 3 LOC change as
+an explicit `neutral-difference`; any other metric change remains a
+fail-closed regression until evidence and policy are added. The runtime fixture
+records the same policy metadata, while the original source/test-derived
+fixture remains unchanged and labelled `runtimeExecuted: false`.
+
+The parity boundary therefore keeps both references visible:
 
 - Java Sokrates Rust output
 - Planetnik Rust output
 
-on a shared fixture set and at least one representative real corpus.
+on a shared fixture set and at least one representative real corpus, with the
+runtime `.rs` capture authoritative for report-path metrics.
 
 The goal is not bug-for-bug matching.
 The goal is to classify diffs into:
@@ -246,15 +323,52 @@ The goal is to classify diffs into:
 
 That gives us a defensible parity story instead of a vibes-based one. Charming, but not enough.
 
-### 4. Finish the report-contract path for Rust-produced outputs
+#### Captured upstream fixture (2026-09-05)
 
-The hosted overview gap showed that analyzer improvement is not the same thing as report-contract completeness.
+The first provenance-backed fixture is now checked in at
+`packages/analyzer/src/lang/rust/__tests__/fixtures/sokrates-rust-fragment-1.json`.
+It pins the source sample and the Rust `extractUnits` expectations from the
+upstream Sokrates test suite to commit
+`f400eb7235a755146e854a1bf4bd90cbe1ee5086`.
 
-To close that gap, we should:
+The parity test runs the fixture through the current `RustAnalyzer` and the
+same fail-closed classifier used by the local proxy comparison. The fixture
+keeps the raw Java display names, one-based line numbers, and expected metric
+values, alongside the normalized identity snapshot used for cross-implementation
+comparison.
 
-- ensure Rust analysis exports populate the canonical summary/context expected by the overview layer
-- add contract tests around Rust-generated report snapshots
-- verify the same output shape works in CLI, static-site, and hosted-runtime consumers
+This checked-in capture remains deliberately marked `runtimeExecuted: false`:
+its reference values are copied from upstream test assertions rather than
+produced by a fresh Java execution trace. Its
+`sourcePathSemantics` is `extensionless-test-helper`; it remains useful
+historical evidence, but it is not the report-metric authority.
+
+#### Runtime capture fixture (2026-09-05)
+
+The Docker-backed execution is checked in at
+`packages/analyzer/src/lang/rust/__tests__/fixtures/sokrates-rust-fragment-1-runtime-v1.json`.
+It is marked `runtimeExecuted: true`, records
+`sourcePathSemantics: real-file-extension`, and embeds the accepted metric
+policy. The capture runner emits this metadata on every future recapture so a
+new runtime reference cannot silently lose its provenance.
+
+### 4. Report-contract path for Rust-produced outputs
+
+The hosted overview gap showed that analyzer improvement is not the same thing as report-contract completeness. The exporter boundary is now closed for Rust output.
+
+The exporter boundary is now covered by a Rust-specific integration fixture in
+`apps/cli/src/__tests__/GenerateReports.test.ts`. It runs a small multi-file
+Rust workspace through `runAnalysis` and asserts the v2 context, stable
+snapshot identity, `units.json`, `dependencies.json`, and the absence of
+compatibility projections. The static-site and hosted suites continue to
+exercise the same canonical v2 reader contract with language-neutral fixtures;
+the Rust check therefore stays at the shared exporter boundary rather than
+duplicating every consumer test.
+
+The remaining guard is maintenance rather than a new implementation slice:
+
+- keep the Rust-generated exporter fixture green as the canonical shard map evolves
+- retain the language-neutral static-site and hosted-runtime reader gates for the shared v2 shape
 
 ### 5. Decide and document the phase boundary explicitly
 
@@ -271,24 +385,21 @@ If we do not state that explicitly, future work risks drifting into accidental s
 
 If the goal is to call this feature complete with respect to legacy behavior **and** safe for future expansion, the best sequence is:
 
-1. **Create a Rust parity fixture suite**
-   - compare Java Sokrates and Planetnik outputs on shared fixtures
-   - snapshot accepted diffs as intentional improvements
-
-2. **Finish adapter hardening**
+1. **Extend adapter hardening beyond the baseline**
    - extract reusable parser helpers where they are genuinely shared
-   - document WASM initialization and failure behavior
-   - record Tokio benchmark expectations
+   - keep the documented WASM initialization and failure behavior green
+   - rerun the benchmark command when adapter or grammar revisions change
 
-3. **Expand Rust coverage tests deliberately**
-   - add fixtures for still-uncovered Rust constructs
+2. **Expand Rust coverage tests deliberately**
+   - the current matrix is delivered for the identified high-value constructs
+   - add another fixture only for a demonstrated report gap
    - keep the extractor conservative where syntax does not justify certainty
 
-4. **Close the product contract gap**
-   - make the hosted overview summary populate from canonical artifacts
-   - add regression tests for the overview-facing contract
+3. **Keep the product contract green**
+   - retain the language-neutral static-site and hosted-runtime v2 reader gates
+   - keep the Rust exporter fixture aligned with any canonical shard-map changes
 
-5. **Declare the semantic ceiling for this phase**
+4. **Declare the semantic ceiling for this phase**
    - ship the parser-backed Rust analyzer as syntax-accurate, not semantically omniscient
 
 ## Suggested definition of done for “feature complete with legacy”

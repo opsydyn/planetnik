@@ -296,6 +296,7 @@ export const collections = {
     loader: findingsLoader(),
     schema: z.object({
       summary: z.string(),
+      bodyMarkdown: z.string().optional(),
       bodyHtml: z.string(),
       bodyText: z.string(),
     }),

@@ -1,0 +1,433 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common";
+import {
+	formatExploreMetric,
+	getDatasetModeLabel,
+	getDatasetRecommendedView,
+	getDatasetStatusLabel,
+	type ExploreAudience,
+} from "../../lib/datasets/explore";
+
+interface Props {
+	dataset: DatasetDescriptor;
+	audience: ExploreAudience;
+	href: string;
+	compact?: boolean;
+}
+
+const { dataset, audience, href, compact = false } = Astro.props;
+const recommendedView = getDatasetRecommendedView(dataset, audience);
+const audienceLabel =
+	audience === "architecture-review"
+		? "Architecture Review"
+		: audience === "stakeholder"
+			? "Stakeholder"
+			: "Onboarding";
+const recommendedLabel =
+	recommendedView === "code-city"
+		? "Code City"
+		: recommendedView === "overview"
+			? "Overview"
+			: "Snapshot details";
+
+const capabilityLabels = [
+	{ keys: ["summary", "analysis", "overview"], label: "Overview" },
+	{ keys: ["filesMain", "code-city"], label: "Code City" },
+	{ keys: ["metrics"], label: "Metrics" },
+	{ keys: ["impact"], label: "Impact" },
+	{ keys: ["contributors"], label: "Contributors" },
+	{ keys: ["dependencies", "componentDependencies"], label: "Dependencies" },
+	{ keys: ["temporalDependencies"], label: "Trends" },
+];
+const capabilityNames = capabilityLabels
+	.filter((capability) => capability.keys.some((key) => dataset.capabilities.includes(key)))
+	.map((capability) => capability.label);
+const stats = [
+	{ label: "Repositories", value: dataset.stats.repositories },
+	{ label: "LOC", value: dataset.stats.loc },
+	{ label: "Files", value: dataset.stats.files },
+	{ label: "Units", value: dataset.stats.units },
+	{ label: "Contributors", value: dataset.stats.contributors },
+	{ label: "Commits", value: dataset.stats.commits },
+	{ label: "Dependencies", value: dataset.stats.dependencies },
+].filter((entry) => entry.value !== undefined);
+const snapshotDate = dataset.snapshot?.generatedAt.slice(0, 10);
+const sourceLabel = dataset.provenance.sourceUrl
+	? (() => {
+			try {
+				return new URL(dataset.provenance.sourceUrl).hostname.replace(/^www\./u, "");
+			} catch {
+				return dataset.provenance.sourceUrl;
+			}
+		})()
+	: undefined;
+---
+
+<div class:list={["dataset-preview-content", compact && "is-compact"]}>
+	<div class="preview-heading">
+		<div>
+			<p class="preview-eyebrow">{getDatasetModeLabel(dataset.mode)} · {getDatasetStatusLabel(dataset.availability)}</p>
+			<h2>{dataset.title}</h2>
+		</div>
+		<span class="preview-mark" aria-hidden="true">{dataset.id.slice(0, 2).toUpperCase()}</span>
+	</div>
+
+	<p class="preview-description">{dataset.description}</p>
+
+	<div class="preview-recommendation">
+		<span class="preview-recommendation-label" data-preview-audience>For {audienceLabel}</span>
+		<strong data-preview-recommendation>Start with {recommendedLabel}</strong>
+		<span>Use the evidence view that best matches this audience.</span>
+	</div>
+
+	{stats.length > 0 ? (
+		<dl class="preview-stat-grid">
+			{stats.map((stat) => (
+				<div>
+					<dt>{stat.label}</dt>
+					<dd>{formatExploreMetric(stat.value)}</dd>
+				</div>
+			))}
+		</dl>
+	) : (
+		<div class="preview-empty-metrics">
+			<strong>Planned example</strong>
+			<span>Snapshot metrics will appear after a verified analysis is generated.</span>
+		</div>
+	)}
+
+	<section class="preview-section" aria-labelledby={`capabilities-${dataset.id}`}>
+		<div class="preview-section-heading">
+			<h3 id={`capabilities-${dataset.id}`}>Available views</h3>
+			<span>{capabilityNames.length} advertised</span>
+		</div>
+		{capabilityNames.length > 0 ? (
+			<ul class="preview-capabilities">
+				{capabilityNames.map((name) => <li>{name}</li>)}
+			</ul>
+		) : (
+			<p class="preview-muted">No report views are available until this planned snapshot is generated.</p>
+		)}
+	</section>
+
+	{dataset.availability === "partial" ? (
+		<div class="preview-coverage" role="note">
+			<strong>Partial coverage</strong>
+			<span>Some optional evidence lenses are not present in this snapshot. The available views above are the source of truth.</span>
+		</div>
+	) : null}
+
+	<section class="preview-section preview-provenance" aria-labelledby={`provenance-${dataset.id}`}>
+		<div class="preview-section-heading">
+			<h3 id={`provenance-${dataset.id}`}>Provenance</h3>
+			{snapshotDate ? <span>Verified {snapshotDate}</span> : <span>Not generated</span>}
+		</div>
+		<dl class="preview-provenance-list">
+			{sourceLabel ? (
+				<div><dt>Source</dt><dd>{sourceLabel}</dd></div>
+			) : null}
+			{dataset.provenance.sourceRef ? (
+				<div><dt>Ref</dt><dd><code>{dataset.provenance.sourceRef}</code></dd></div>
+			) : null}
+			{dataset.provenance.license ? (
+				<div><dt>Licence</dt><dd>{dataset.provenance.license}</dd></div>
+			) : null}
+			{dataset.snapshot ? (
+				<div><dt>Snapshot</dt><dd><code>{dataset.snapshot.snapshotId}</code></dd></div>
+			) : null}
+		</dl>
+	</section>
+
+	<div class="preview-actions">
+		{dataset.availability === "planned" ? (
+			<span class="preview-planned-action">Planned — no report link yet</span>
+		) : (
+			<a class="preview-primary-action" href={href}>Open snapshot details <span aria-hidden="true">→</span></a>
+		)}
+		{dataset.provenance.sourceUrl ? (
+			<a class="preview-secondary-action" href={dataset.provenance.sourceUrl} target="_blank" rel="noopener noreferrer">
+				View source
+			</a>
+		) : null}
+		<button class="preview-copy-action" type="button" data-copy-link={href}>Copy link</button>
+	</div>
+</div>
+
+<style>
+	.dataset-preview-content {
+		display: grid;
+		gap: 1.15rem;
+		min-width: 0;
+	}
+
+	.preview-heading {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.preview-eyebrow {
+		margin: 0 0 0.35rem;
+		color: var(--color-accent-strong);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.preview-heading h2 {
+		margin: 0;
+		font-family: var(--font-heading-stack);
+		font-size: clamp(1.25rem, 2.3vw, 1.8rem);
+		line-height: 1.05;
+		text-wrap: balance;
+	}
+
+	.preview-mark {
+		display: grid;
+		place-items: center;
+		flex: 0 0 2.7rem;
+		height: 2.7rem;
+		border-radius: 0.7rem;
+		background: var(--color-surface-muted);
+		color: var(--color-accent-strong);
+		font-family: var(--font-heading-stack);
+		font-size: 0.8rem;
+		font-weight: 700;
+	}
+
+	.preview-description {
+		margin: 0;
+		color: var(--color-text-secondary);
+		font-size: 0.9rem;
+		line-height: 1.55;
+	}
+
+	.preview-recommendation {
+		display: grid;
+		gap: 0.18rem;
+		padding: 0.8rem 0.9rem;
+		border-left: 3px solid var(--color-accent);
+		background: var(--color-accent-soft);
+	}
+
+	.preview-recommendation-label {
+		color: var(--color-text-muted);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.preview-recommendation strong {
+		font-family: var(--font-heading-stack);
+		font-size: 1rem;
+	}
+
+	.preview-recommendation > span:last-child {
+		color: var(--color-text-secondary);
+		font-size: 0.76rem;
+	}
+
+	.preview-stat-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.5rem;
+		margin: 0;
+	}
+
+	.preview-stat-grid div {
+		display: grid;
+		gap: 0.15rem;
+		padding: 0.6rem 0.7rem;
+		border: 1px solid var(--color-border);
+		background: var(--color-surface-subtle);
+	}
+
+	.preview-stat-grid dt {
+		color: var(--color-text-muted);
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+	}
+
+	.preview-stat-grid dd {
+		margin: 0;
+		color: var(--color-text);
+		font-family: var(--font-heading-stack);
+		font-size: 1.05rem;
+		font-weight: 700;
+	}
+
+	.preview-empty-metrics,
+	.preview-coverage {
+		display: grid;
+		gap: 0.25rem;
+		padding: 0.8rem 0.9rem;
+		border: 1px dashed var(--color-border-strong);
+		color: var(--color-text-secondary);
+		font-size: 0.78rem;
+		line-height: 1.45;
+	}
+
+	.preview-empty-metrics strong,
+	.preview-coverage strong {
+		color: var(--color-text);
+	}
+
+	.preview-section {
+		display: grid;
+		gap: 0.65rem;
+	}
+
+	.preview-section-heading {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.preview-section-heading h3 {
+		margin: 0;
+		font-size: 0.9rem;
+	}
+
+	.preview-section-heading span {
+		color: var(--color-text-muted);
+		font-size: 0.72rem;
+	}
+
+	.preview-capabilities {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.preview-capabilities li {
+		padding: 0.32rem 0.55rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-pill);
+		background: var(--color-surface-subtle);
+		color: var(--color-text-secondary);
+		font-size: 0.73rem;
+	}
+
+	.preview-muted {
+		margin: 0;
+		color: var(--color-text-muted);
+		font-size: 0.78rem;
+	}
+
+	.preview-provenance-list {
+		display: grid;
+		gap: 0.45rem;
+		margin: 0;
+	}
+
+	.preview-provenance-list div {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-bottom: 0.45rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.preview-provenance-list dt {
+		color: var(--color-text-muted);
+		font-size: 0.72rem;
+	}
+
+	.preview-provenance-list dd {
+		max-width: 70%;
+		margin: 0;
+		color: var(--color-text-secondary);
+		font-size: 0.72rem;
+		text-align: right;
+		word-break: break-word;
+	}
+
+	.preview-provenance-list code {
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+	}
+
+	.preview-actions {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+		padding-top: 0.25rem;
+	}
+
+	.preview-primary-action,
+	.preview-secondary-action,
+	.preview-copy-action {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		min-height: 2rem;
+		padding: 0.42rem 0.7rem;
+		border-radius: var(--radius-inline);
+		font: inherit;
+		font-size: 0.74rem;
+		font-weight: 700;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.preview-primary-action {
+		border: 1px solid var(--color-accent);
+		background: var(--color-accent);
+		color: #fff;
+	}
+
+	.preview-primary-action:hover {
+		background: var(--color-accent-strong);
+	}
+
+	.preview-secondary-action,
+	.preview-copy-action {
+		border: 1px solid var(--color-border-strong);
+		background: transparent;
+		color: var(--color-text-secondary);
+	}
+
+	.preview-secondary-action:hover,
+	.preview-copy-action:hover {
+		border-color: var(--color-accent);
+		background: var(--color-accent-soft);
+		color: var(--color-accent-strong);
+	}
+
+	.preview-planned-action {
+		color: var(--color-text-muted);
+		font-size: 0.75rem;
+		font-weight: 700;
+	}
+
+	.preview-primary-action:focus-visible,
+	.preview-secondary-action:focus-visible,
+	.preview-copy-action:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
+	.dataset-preview-content.is-compact {
+		gap: 0.85rem;
+	}
+
+	.dataset-preview-content.is-compact .preview-provenance-list div:nth-child(n + 3) {
+		display: none;
+	}
+
+	@media (min-width: 560px) {
+		.preview-stat-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+</style>

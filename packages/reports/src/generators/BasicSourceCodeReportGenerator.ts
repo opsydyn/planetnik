@@ -3,6 +3,7 @@ import type {
 	CodeAnalyzerSettingsType,
 } from "@planetnik/analyzer";
 import { RichTextReport } from "../core/RichTextReport.js";
+import type { FindingsAuthoringDocument } from "../findings/FindingsAuthoring.js";
 import { CommitsReportGenerator } from "./CommitsReportGenerator.js";
 import { ConcernsReportGenerator } from "./ConcernsReportGenerator.js";
 import { ConditionalComplexityReportGenerator } from "./ConditionalComplexityReportGenerator.js";
@@ -23,7 +24,7 @@ import { UnitsSizeReportGenerator } from "./UnitsSizeReportGenerator.js";
 export class BasicSourceCodeReportGenerator {
 	private analysisResults: CodeAnalysisResults;
 	private settings: CodeAnalyzerSettingsType;
-	private findingsHtml: string | null;
+	private findings: FindingsAuthoringDocument | null;
 
 	private overviewReport = new RichTextReport(
 		"overview",
@@ -73,11 +74,11 @@ export class BasicSourceCodeReportGenerator {
 	constructor(
 		settings: CodeAnalyzerSettingsType,
 		analysisResults: CodeAnalysisResults,
-		findingsHtml: string | null = null,
+		findings: FindingsAuthoringDocument | null = null,
 	) {
 		this.settings = settings;
 		this.analysisResults = analysisResults;
-		this.findingsHtml = findingsHtml;
+		this.findings = findings;
 
 		this.overviewReport.displayName = "Source Code Overview";
 		this.logicalComponentsReport.displayName = "Components";
@@ -228,7 +229,7 @@ export class BasicSourceCodeReportGenerator {
 		if (this.settings.analyzeFindings) {
 			FindingsReportGenerator.addFindingsToReport(
 				this.findingsReport,
-				this.findingsHtml,
+				this.findings,
 			);
 		}
 

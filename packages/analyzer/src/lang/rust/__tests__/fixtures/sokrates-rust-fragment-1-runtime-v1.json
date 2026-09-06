@@ -1,0 +1,86 @@
+{
+  "fixtureVersion": 1,
+  "id": "sokrates-rust-fragment-1-runtime-v1",
+  "source": {
+    "relativePath": "RustCodeSamples.rs",
+    "language": "rust",
+    "content": "fn main() {\n    // I’m feeling lucky today\n    let lucky_number = 7;\n}\nfn a(x: i32, y: i32) {\n    let number = 3;\n\n    if number < 5 {\n        println!(\"condition was true\");\n    } else {\n        println!(\"condition was false\");\n    }\n}\nfn b(z: i32) {\n    loop {\n        println!(\"again!\");\n    }\n}"
+  },
+  "reference": {
+    "engine": "sokrates-java",
+    "repository": "https://github.com/zeljkoobrenovic/sokrates",
+    "commit": "f400eb7235a755146e854a1bf4bd90cbe1ee5086",
+    "analyzer": "nl.obren.sokrates.sourcecode.lang.rust.RustAnalyzer",
+    "capturedFrom": [
+      "packages/analyzer/scripts/SokratesRustCapture.java",
+      "packages/analyzer/scripts/capture-sokrates-rust.ts"
+    ],
+    "captureMethod": "runtime-executed-java-harness",
+    "runtimeExecuted": true,
+    "sourcePathSemantics": "real-file-extension",
+    "notes": "Docker-backed Java 17 capture with the source loaded as RustCodeSamples.rs. The upstream test assertion for main is 4 when its SourceFile has no extension; the real .rs path cleans the comment and reports 3.",
+    "runtime": {
+      "java": "openjdk version \"17.0.15\" 2025-04-15",
+      "dockerImage": "maven:3.9.9-eclipse-temurin-17@sha256:f58d59b6273e785ac0a4477f6e9b5ba1d7731c75b906c0f7b34076f1851318cc"
+    },
+    "units": [
+      {
+        "shortName": "fn main()",
+        "startLine": 1,
+        "endLine": 4,
+        "linesOfCode": 3,
+        "mcCabeIndex": 1,
+        "numberOfParameters": 0,
+        "numberOfLiterals": 0,
+        "numberOfStatements": 0,
+        "numberOfExpressions": 0
+      },
+      {
+        "shortName": "fn a()",
+        "startLine": 5,
+        "endLine": 13,
+        "linesOfCode": 8,
+        "mcCabeIndex": 2,
+        "numberOfParameters": 2,
+        "numberOfLiterals": 0,
+        "numberOfStatements": 0,
+        "numberOfExpressions": 0
+      },
+      {
+        "shortName": "fn b()",
+        "startLine": 14,
+        "endLine": 18,
+        "linesOfCode": 5,
+        "mcCabeIndex": 2,
+        "numberOfParameters": 1,
+        "numberOfLiterals": 0,
+        "numberOfStatements": 0,
+        "numberOfExpressions": 0
+      }
+    ],
+    "normalizedSnapshot": {
+      "unitNames": ["main", "a", "b"],
+      "dependencyPaths": []
+    },
+    "metricPolicy": {
+      "authoritativeSourcePathSemantics": "real-file-extension",
+      "historicalSourcePathSemantics": "extensionless-test-helper",
+      "neutralDifferences": [
+        {
+          "unitName": "main",
+          "metric": "linesOfCode",
+          "referenceValue": 4,
+          "authoritativeValue": 3,
+          "referenceSourcePathSemantics": "extensionless-test-helper",
+          "authoritativeSourcePathSemantics": "real-file-extension",
+          "classification": "neutral-difference",
+          "reason": "The extensionless upstream test SourceFile selects a generic cleaner; the real .rs report path selects the Rust cleaner and removes the comment line."
+        }
+      ]
+    },
+    "normalization": {
+      "unitIdentity": "Rust function identifier without the legacy fn/signature display wrapper",
+      "lineNumbers": "Reference lines are one-based; Planetnik UnitInfo spans are zero-based"
+    }
+  }
+}

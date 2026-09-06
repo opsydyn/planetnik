@@ -1,27 +1,34 @@
 # Roadmap: Effect Structured Concurrency (ADR-0010)
 
-**Status:** In progress — Phase 1 complete (2026-03-22)
+**Status:** In progress — Phases 1–5 complete (2026-09-04)
 **ADR:** [0010-adopt-effect-structured-concurrency-for-landscape-analysis](../adr/0010-adopt-effect-structured-concurrency-for-landscape-analysis.md)
 
 ## Current State
 
-Phase 1 is complete. The `analyzeRepo` async function has been replaced with an Effect-native `analyzeRepoWorker` using `Effect.scoped` and `Effect.acquireRelease` for temp directory lifecycle. The nested `Effect.runPromise` call has been removed, and batch concurrency uses `Effect.all` instead of `Promise.all`.
+Phases 1–5 are complete. The `analyzeRepo` async function has been replaced
+with an Effect-native `analyzeRepoWorker` using `Effect.scoped` and
+`Effect.acquireRelease` for temp directory lifecycle. The landscape command now
+builds one task list, uses `Effect.forEach` for bounded traversal, and records
+concurrent progress in an Effect `Ref`; the nested `Effect.runPromise` call and
+manual analysis/security batches are gone.
 
-### Resolved (Phase 1)
+### Resolved foundations (Phases 1–5)
 
 | Area | Before | After |
 |---|---|---|
 | **Temp dir cleanup** | `try/finally` + `rmSync` in a plain `async function` | `Effect.acquireRelease` — guaranteed cleanup on success, failure, or interruption |
 | **Resource lifecycle** | `analyzeRepo` is a plain `async function` calling `Effect.runPromise` inside an existing Effect runtime | `analyzeRepoWorker` is an `Effect.Effect` — scoped, composable, observable by the parent fibre |
-| **Batch concurrency** | `Promise.all` | `Effect.all(batchEffects, { concurrency: "unbounded" })` |
+| **Batch concurrency** | `Promise.all` | `Effect.forEach(tasks, worker, { concurrency })` |
+| **Run state** | Local mutable counters and ad hoc failure accumulation | Atomic `Ref` summary for progress/counts; ordered tagged outcomes remain the detailed failure source |
+| **External resilience** | No retry or abort policy around network edges | Bounded, transient-only retry for discovery/clone; abort signals and scoped cleanup preserve interruption safety |
+| **Packaging** | Source-driven CLI only | Standalone Bun executable plus a deterministic local compile/report smoke |
 
-### Remaining anti-patterns
+### Remaining follow-ons
 
 | Area | Pattern | Risk |
 |---|---|---|
-| **Concurrency** | Manual `repos.slice(i, i + concurrency)` batching | Uneven batch utilisation; no work-stealing; a slow repo blocks the entire batch |
-| **State tracking** | `let analyzed = 0; analyzed++` from concurrent branches | Mutation from concurrent fibres — safe only because JS is single-threaded, but semantically wrong |
-| **Retry policy** | None | A single transient `git clone` or GitHub API failure fails the entire repo with no retry |
+| **analyzeRemote lifecycle** | Imperative `try/finally` cleanup remains | The same scoped worker/retry boundary has not yet been applied to the single-repository remote command |
+| **CI handoff** | Workflows still invoke TypeScript directly | Switching deployment to the validated executable needs an explicit rollout and hosted-run proof |
 
 ## Target State
 
@@ -47,7 +54,7 @@ const analyzeRepoWorker = (repo: GitHubRepo) =>
       yield* extractHistory(cloneDir)
       yield* runAnalysis(cloneDir, outputDir)
 
-      yield* Ref.update(counters, (c) => ({ ...c, analyzed: c.analyzed + 1 }))
+      yield* Ref.update(runSummary, (summary) => ({ ...summary, analyzed: summary.analyzed + 1 }))
     })
   )
 ```
@@ -70,55 +77,74 @@ const analyzeRepoWorker = (repo: GitHubRepo) =>
 - [x] Scoped cleanup verified — finalizer removes temp dir on success, failure, and concurrent use
 - [x] Existing behaviour unchanged for successful runs (typecheck passes)
 
-### Phase 2: Effect.forEach with bounded concurrency
+### Phase 2: Effect.forEach with bounded concurrency — DONE (2026-09-04)
 
 **Effort:** Medium
 **Impact:** Better utilisation, cleaner code, no batch stalling
 
-- Replace `slice` + `Promise.all` loop with `Effect.forEach(repos, worker, { concurrency })`
-- Remove manual batch index arithmetic
-- `--concurrency` and `--skipExisting` behaviour preserved
+- [x] Replace `slice` + `Effect.all` loops with one `Effect.forEach` traversal
+- [x] Remove manual batch index arithmetic from analysis and security paths
+- [x] `--concurrency` and `--skipExisting` behaviour preserved
+- [x] Add the `LandscapeRepoWorker` layer boundary while keeping per-repo scopes
+- [x] Reject non-positive concurrency before discovery or worker startup
 
 **Verification:**
-- [ ] `--concurrency 4` still bounds parallel work
-- [ ] `--skipExisting` still skips repos with existing results
-- [ ] Per-org log grouping preserved
+- [x] `--concurrency 4` still bounds parallel work
+- [x] `--skipExisting` still skips repos with existing results
+- [x] Per-org context remains attached to worker logs
 
-### Phase 3: Ref-based state tracking
+Focused coverage lives in `apps/cli/src/__tests__/LandscapeConcurrency.test.ts`:
+it proves the active-worker ceiling, ordered outcomes, skip preservation,
+invalid-limit rejection, and atomic analyzed/skipped/failed summary updates
+with a supplied test layer. The repository-root CLI suite passes 147 tests,
+including the retry and interruption fixtures.
+
+### Phase 3: Ref-based state tracking — DONE (2026-09-04)
 
 **Effort:** Small
 **Impact:** Correct concurrent state; cleaner summary
 
-- Replace `let analyzed/skipped/failed` with `Ref.make({ analyzed: 0, skipped: 0, failed: 0, failures: [] })`
-- Update via `Ref.update` from each worker
-- Read final state with `Ref.get` after `Effect.forEach` completes
+- [x] Create a `Ref` summary with total, completed, analyzed, skipped, and failed counts
+- [x] Update the summary atomically as each tagged worker outcome completes
+- [x] Read final state with `Ref.get` after `Effect.forEach` completes
+- [x] Keep ordered outcomes as the single detailed failure-evidence collection
 
 **Verification:**
-- [ ] Final counts match actual results
-- [ ] `_failures.json` still written correctly
+- [x] Final counts match actual results for done, skipped, and failed fixtures
+- [x] `_failures.json` remains derived from tagged outcomes and keeps its existing shape
 
-### Phase 4: Retry policies
+The summary `Ref` deliberately contains counts, not a second failure list. This
+keeps live progress state concurrency-safe while preserving one canonical source
+for per-repository failure details and deterministic output ordering.
+
+### Phase 4: Retry policies — DONE (2026-09-04)
 
 **Effort:** Medium
 **Impact:** Resilience to transient network failures
 
-- Add `Effect.retry(cloneEffect, Schedule.exponential("1 second").pipe(Schedule.compose(Schedule.recurs(3))))` for git clones
-- Add similar retry for GitHub API discovery calls
-- Do not retry deterministic analysis failures
+- [x] Add bounded exponential `Effect.retry` for git clones
+- [x] Add the same targeted policy for GitHub API discovery calls
+- [x] Do not retry deterministic analysis failures
+- [x] Pass Effect abort signals into GitHub fetches and simple-git so interruption can cancel active external work
+- [x] Recreate a partial clone directory before a retry, while retaining the outer scoped finalizer
 
 **Verification:**
-- [ ] Transient clone failure retries and succeeds
-- [ ] Permanent failure still fails after bounded retries
-- [ ] Discovery API retries on rate-limit / network error
+- [x] Transient external failure retries and succeeds under a bounded fixture schedule
+- [x] Permanent failure still fails on its first attempt
+- [x] Transient failure exhausts after the bounded schedule
+- [x] Interrupted scoped work releases its temporary clone directory
 
-### Phase 5: Apply to analyzeRemote
+### Phase 5: Compile-friendly CLI packaging path — DONE (2026-09-04)
 
 **Effort:** Small
-**Impact:** Consistency across CLI commands
+**Impact:** A stable, self-contained CI invocation
 
-- `analyzeRemote.ts` has the same `try/finally` + `rmSync` pattern
-- Apply `Effect.acquireRelease` for its temp dir
-- Add clone retry policy
+- [x] verify the CLI entrypoint under `bun build --compile`
+- [x] record the executable invocation and output-contract smoke path
+- [x] preserve static Tree-sitter asset loading by running a temporary Python
+  report through the compiled executable
+- [x] keep the proof reproducible with `bun run --cwd apps/cli compile:smoke`
+- [ ] decide whether the shared scoped clone/retry boundary should then be applied to `analyzeRemote.ts`
 
 ## Dependencies
 

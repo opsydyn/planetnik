@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Command, Options } from "@effect/cli";
 import {
 	CodeAnalyzer,
@@ -15,15 +15,29 @@ import {
 import {
 	BasicSourceCodeReportGenerator,
 	DataExporter,
+	parseFindingsAuthoringDocument,
 	ReportFileExporter,
+	type FindingsAuthoringDocument,
 } from "@planetnik/reports";
 import { Effect } from "effect";
+import { beginSnapshotRetention, finishSnapshotRetention } from "../snapshots/snapshotRetention.js";
+
+export interface RunAnalysisOptions {
+	/** Emit legacy TXT projections and RichText HTML reports in addition to JSON. */
+	readonly emitLegacyProjections?: boolean;
+	/** Retain up to this many canonical snapshots, including the current export. */
+	readonly retainSnapshots?: number;
+}
 
 /**
  * Shared analysis pipeline: load config, analyze, export data, generate reports.
  * Used by both `generateReports` and `analyzeRemote` commands.
  */
-export function runAnalysis(configPath: string, reportsFolder: string) {
+export function runAnalysis(
+	configPath: string,
+	reportsFolder: string,
+	options: RunAnalysisOptions = {},
+) {
 	return Effect.gen(function* () {
 		if (!existsSync(configPath)) {
 			yield* Effect.logError(
@@ -36,6 +50,8 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
 
 		const jsonContent = readFileSync(configPath, "utf-8");
 		const parsed = JSON.parse(jsonContent);
+		const emitLegacyProjections =
+			options.emitLegacyProjections ?? parsed.emitLegacyProjections === true;
 		const codeConfiguration = new CodeConfiguration();
 		Object.assign(codeConfiguration, parsed);
 
@@ -102,8 +118,13 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
 		}
 
 		yield* Effect.log(`Reports folder: ${reportsFolder}`);
+		const retainSnapshots =
+			options.retainSnapshots ??
+			(typeof parsed.retainSnapshots === "number"
+				? parsed.retainSnapshots
+				: undefined);
 
-		const findingsHtml = readFindingsHtml(configPath, parsed);
+		const findingsDocument = readFindingsInput(configPath, parsed);
 
 		const settings = CodeAnalyzerSettings.selectAll();
 
@@ -116,31 +137,56 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
 		const analysisResults = codeAnalyzer.analyze();
 
 		yield* Effect.log("Exporting data...");
+		const retentionSession =
+			retainSnapshots === undefined
+				? undefined
+				: beginSnapshotRetention(join(reportsFolder, "data"), retainSnapshots);
+		if (retentionSession?.previousSnapshotId) {
+			yield* Effect.log(
+				`Archived previous canonical snapshot ${retentionSession.previousSnapshotId} before export.`,
+			);
+		}
 		const dataExporter = new DataExporter(
 			analysisResults,
 			reportsFolder,
-			findingsHtml,
+			{
+				emitCompatibilityProjections: emitLegacyProjections,
+				findings: findingsDocument,
+			},
 		);
 		dataExporter.exportData();
 
-		yield* Effect.log("Generating reports...");
-		const generator = new BasicSourceCodeReportGenerator(
-			settings,
-			analysisResults,
-			findingsHtml,
-		);
-		const reports = generator.report();
+		if (emitLegacyProjections) {
+			yield* Effect.log("Generating legacy HTML reports...");
+			const generator = new BasicSourceCodeReportGenerator(
+				settings,
+				analysisResults,
+				findingsDocument,
+			);
+			const reports = generator.report();
 
-		for (const report of reports) {
-			yield* Effect.log(`  Generating '${report.id}' report...`);
-			ReportFileExporter.exportHtml(reportsFolder, "html", report);
+			for (const report of reports) {
+				yield* Effect.log(`  Generating '${report.id}' report...`);
+				ReportFileExporter.exportHtml(reportsFolder, "html", report);
+			}
+
+			if (settings.updateIndex) {
+				ReportFileExporter.exportReportsIndex(
+					reportsFolder,
+					reports,
+					codeConfiguration.metadata.name,
+				);
+			}
+		} else {
+			yield* Effect.log(
+				"Skipping legacy TXT/HTML projections (canonical JSON is default).",
+			);
 		}
 
-		if (settings.updateIndex) {
-			ReportFileExporter.exportReportsIndex(
-				reportsFolder,
-				reports,
-				codeConfiguration.metadata.name,
+		if (retentionSession) {
+			const retained = finishSnapshotRetention(retentionSession);
+			yield* Effect.log(
+				`Retained ${retained.snapshotCount} canonical snapshot${retained.snapshotCount === 1 ? "" : "s"} (${retained.currentSnapshotId} is current).`,
 			);
 		}
 
@@ -148,33 +194,61 @@ export function runAnalysis(configPath: string, reportsFolder: string) {
 	});
 }
 
-function readFindingsHtml(
+function readFindingsInput(
 	configPath: string,
 	parsed: Record<string, unknown>,
-): string | null {
-	const findingsHtmlPath =
-		typeof parsed.findingsHtmlPath === "string" &&
-		parsed.findingsHtmlPath.trim().length > 0
-			? parsed.findingsHtmlPath.trim()
+): FindingsAuthoringDocument | null {
+	const configuredFindingsPath =
+		typeof parsed.findingsPath === "string" &&
+		parsed.findingsPath.trim().length > 0
+			? parsed.findingsPath.trim()
 			: "";
+	const defaultFindingsPath = join(dirname(configPath), "findings.json");
+	const findingsPath = configuredFindingsPath
+		? resolve(dirname(configPath), configuredFindingsPath)
+		: existsSync(defaultFindingsPath)
+			? defaultFindingsPath
+			: null;
 
-	if (!findingsHtmlPath) return null;
+	if (findingsPath) {
+		if (!existsSync(findingsPath)) {
+			throw new Error(`Findings JSON file not found: ${findingsPath}`);
+		}
 
-	const absolutePath = resolve(dirname(configPath), findingsHtmlPath);
-	if (!existsSync(absolutePath)) {
-		console.warn(`[planetnik] Findings HTML file not found: ${absolutePath}`);
-		return null;
+		let raw: unknown;
+		try {
+			raw = JSON.parse(readFileSync(findingsPath, "utf-8"));
+		} catch (error) {
+			throw new Error(
+				`Failed to parse findings JSON at ${findingsPath}: ${String(error)}`,
+			);
+		}
+
+		const document = parseFindingsAuthoringDocument(raw, findingsPath);
+		return document;
 	}
 
-	return readFileSync(absolutePath, "utf-8");
+	return null;
 }
 
 const confFile = Options.text("confFile").pipe(Options.optional);
 const outputFolder = Options.text("outputFolder").pipe(Options.optional);
+const emitLegacyProjections = Options.boolean("emitLegacyProjections").pipe(
+	Options.optional,
+	Options.withDescription(
+		"Emit legacy TXT and HTML projections (default: canonical JSON only)",
+	),
+);
+const retainSnapshots = Options.integer("retainSnapshots").pipe(
+	Options.optional,
+	Options.withDescription(
+		"Retain up to N canonical snapshots including the current export",
+	),
+);
 
 export const generateReportsCommand = Command.make(
 	"generateReports",
-	{ confFile, outputFolder },
+	{ confFile, outputFolder, emitLegacyProjections, retainSnapshots },
 	(args) =>
 		Effect.gen(function* () {
 			const configPath =
@@ -187,6 +261,15 @@ export const generateReportsCommand = Command.make(
 					? resolve(args.outputFolder.value)
 					: resolve(DEFAULT_CONFIGURATION_FOLDER, "reports");
 
-			yield* runAnalysis(configPath, reportsFolder);
+			const options: RunAnalysisOptions = {
+				...(args.emitLegacyProjections._tag === "Some" &&
+				args.emitLegacyProjections.value === true
+					? { emitLegacyProjections: true }
+					: {}),
+				...(args.retainSnapshots._tag === "Some"
+					? { retainSnapshots: args.retainSnapshots.value }
+					: {}),
+			};
+			yield* runAnalysis(configPath, reportsFolder, options);
 		}),
 );

@@ -40,6 +40,23 @@ describe("acquireTempDir", () => {
 		expect(existsSync(capturedDir)).toBe(false);
 	});
 
+	test("cleans up the directory when the scoped effect is interrupted", async () => {
+		let capturedDir = "";
+
+		const result = await Effect.runPromise(
+			Effect.scoped(
+				Effect.gen(function* () {
+					capturedDir = yield* acquireTempDir("test-interrupt");
+					yield* Effect.never;
+				}),
+			).pipe(Effect.timeout("10 millis"), Effect.either),
+		);
+
+		expect(result._tag).toBe("Left");
+		expect(capturedDir).not.toBe("");
+		expect(existsSync(capturedDir)).toBe(false);
+	});
+
 	test("creates unique directories for concurrent scopes", async () => {
 		const dirs: string[] = [];
 

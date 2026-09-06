@@ -28,6 +28,12 @@ const keep = Options.boolean("keep").pipe(
 	Options.withDefault(false),
 	Options.withDescription("Keep cloned repository after analysis"),
 );
+const emitLegacyProjections = Options.boolean("emitLegacyProjections").pipe(
+	Options.optional,
+	Options.withDescription(
+		"Emit legacy TXT and HTML projections (default: canonical JSON only)",
+	),
+);
 
 function resolveRepoUrl(input: string): string {
 	if (
@@ -46,7 +52,7 @@ function resolveRepoUrl(input: string): string {
 
 export const analyzeRemoteCommand = Command.make(
 	"analyzeRemote",
-	{ repo, ref, outputFolder, name, keep },
+	{ repo, ref, outputFolder, name, keep, emitLegacyProjections },
 	(args) =>
 		Effect.gen(function* () {
 			const repoUrl = resolveRepoUrl(args.repo);
@@ -94,7 +100,14 @@ export const analyzeRemoteCommand = Command.make(
 				}
 
 				yield* Effect.log("Running analysis and generating reports...");
-				yield* runAnalysis(confFile, outDir);
+				yield* runAnalysis(
+					confFile,
+					outDir,
+					args.emitLegacyProjections._tag === "Some" &&
+					args.emitLegacyProjections.value === true
+						? { emitLegacyProjections: true }
+						: undefined,
+				);
 
 				yield* Effect.log(`Reports saved to ${outDir}`);
 				yield* Effect.log(`Data directory: ${join(outDir, "data")}`);

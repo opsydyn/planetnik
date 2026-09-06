@@ -6,6 +6,10 @@
 > into the [canonical product roadmap](./product-roadmap.md). Preserve it as
 > architectural evidence, but do not use its phase numbering for current
 > sequencing.
+>
+> The static/hosted/Copilot/landscape reader holdouts described below were
+> retired on 2026-09-05. Their TXT artifacts remain writer-only compatibility
+> projections; see the canonical roadmap and ADR-0018 for current policy.
 
 ## Why this discovery exists
 

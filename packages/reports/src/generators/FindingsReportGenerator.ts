@@ -1,9 +1,14 @@
 import type { RichTextReport } from "../core/RichTextReport.js";
+import {
+	escapeFindingsHtml,
+	normalizeFindingsAuthoringDocument,
+	type FindingsAuthoringDocument,
+} from "../findings/FindingsAuthoring.js";
 
 export class FindingsReportGenerator {
 	static addFindingsToReport(
 		report: RichTextReport,
-		findingsHtml: string | null,
+		findings: FindingsAuthoringDocument | null,
 	): void {
 		report.startSection("Intro", "");
 		report.startUnorderedList();
@@ -13,46 +18,30 @@ export class FindingsReportGenerator {
 		report.endUnorderedList();
 		report.endSection();
 
-		if (!findingsHtml || findingsHtml.trim() === "") {
+		const normalized = findings
+			? normalizeFindingsAuthoringDocument(findings)
+			: null;
+		if (!normalized || normalized.items.length === 0) {
 			report.addParagraph("No manual findings have been added.");
 			return;
 		}
 
-		// Extract summary items
-		const summaryRegex = /<summary>(.*?)<\/summary>/gs;
-		const summaries: string[] = [];
-		for (
-			let match = summaryRegex.exec(findingsHtml);
-			match !== null;
-			match = summaryRegex.exec(findingsHtml)
-		) {
-			summaries.push(match[1]!);
+		report.addLevel2Header("Summary");
+		report.startUnorderedList();
+		for (const item of normalized.items) {
+			report.addListItem(escapeFindingsHtml(item.summary));
 		}
-
-		if (summaries.length > 0) {
-			report.addLevel2Header("Summary");
-			report.startUnorderedList();
-			for (const item of summaries) {
-				report.addListItem(item);
-			}
-			report.endUnorderedList();
-			report.addLineBreak();
-		}
+		report.endUnorderedList();
+		report.addLineBreak();
 
 		report.addLevel2Header("Details");
 
-		// Transform custom tags to HTML divs
-		let html = findingsHtml;
-		html = html.replace(/<finding>/g, "<div class='section'>");
-		html = html.replace(/<\/finding>/g, "</div>");
-		html = html.replace(
-			/<summary>/g,
-			"<div class='sectionHeader sectionTitle'>",
-		);
-		html = html.replace(/<\/summary>/g, "</div>");
-		html = html.replace(/<body>/g, "<div class='sectionBody'>");
-		html = html.replace(/<\/body>/g, "</div>");
-
+		const html = normalized.items
+			.map(
+				(item) =>
+					`<div class='section'><div class='sectionHeader sectionTitle'>${escapeFindingsHtml(item.summary)}</div><div class='sectionBody'>${item.bodyHtml}</div></div>`,
+			)
+			.join("");
 		report.addHtmlContent(html);
 	}
 }

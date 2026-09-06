@@ -1,0 +1,228 @@
+---
+import {
+  buildCodeCityModel,
+  CodeCityInputError,
+} from "@planetnik/common"
+import {
+  CodeCityView,
+  parseCodeCityUrlState,
+  resolveCodeCityRouteState,
+  type CodeCityRouteResolution,
+  type CodeCityRouteState,
+} from "@planetnik/report-ui"
+import type { DatasetDescriptor } from "@planetnik/common"
+import DatasetReportHeader from "../../../components/datasets/DatasetReportHeader.astro"
+import ExploreLayout from "../../../layouts/ExploreLayout.astro"
+import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
+import { getDatasetViewPath } from "../../../lib/datasets/explore"
+import {
+  readDatasetReport,
+  toDatasetCodeCitySnapshotInput,
+} from "../../../lib/datasets/reportReader"
+import { route } from "../../../lib/route"
+
+interface Props {
+  dataset: DatasetDescriptor
+}
+
+export function getStaticPaths() {
+  const { catalog } = loadDatasetCatalog()
+  return catalog.datasets.flatMap((dataset) => {
+    const codeCityPath = getDatasetViewPath(dataset, "code-city")
+    return codeCityPath
+      ? [{ params: { datasetId: dataset.slug }, props: { dataset } }]
+      : []
+  })
+}
+
+const { dataset } = Astro.props as Props
+const overviewPath = getDatasetViewPath(dataset, "overview")
+const codeCityPath = getDatasetViewPath(dataset, "code-city")
+const trendsPath = getDatasetViewPath(dataset, "trends")
+const overviewHref = overviewPath ? route(overviewPath) : null
+const codeCityHref = codeCityPath ? route(codeCityPath) : null
+const trendsHref = trendsPath ? route(trendsPath) : null
+const report = readDatasetReport(dataset.id)
+
+const pageState: CodeCityRouteState =
+  report.tag !== "ready"
+    ? { tag: "invalid", message: report.message }
+    : (() => {
+        let resolution: CodeCityRouteResolution
+        try {
+          resolution = {
+            tag: "model",
+            model: buildCodeCityModel(toDatasetCodeCitySnapshotInput(report.snapshot)),
+          }
+        } catch (error) {
+          if (!(error instanceof CodeCityInputError)) throw error
+          resolution = { tag: "invalid", message: error.message }
+        }
+        return resolveCodeCityRouteState({
+          title: dataset.title,
+          reportMode: report.snapshot.context.reportMode,
+          resolution,
+        })
+      })()
+
+const cityModel =
+  pageState.tag === "ready" || pageState.tag === "partial" ? pageState.model : null
+const invalidMessage = pageState.tag === "invalid" ? pageState.message : ""
+const initialPresentationState = parseCodeCityUrlState(Astro.url)
+---
+
+<ExploreLayout title={`${dataset.title} Code City`} description={`Code City for ${dataset.title}.`}>
+  <div class="dataset-report-page" data-dataset-report="code-city">
+    <DatasetReportHeader
+      dataset={dataset}
+      activeView="code-city"
+      overviewHref={overviewHref}
+      codeCityHref={codeCityHref}
+      trendsHref={trendsHref}
+    />
+
+    {cityModel ? (
+      <>
+        <section class="code-city-state code-city-state--summary" aria-labelledby="code-city-state-title">
+          <div>
+            <p class="report-eyebrow">Canonical model</p>
+            <h2 id="code-city-state-title">{dataset.title} Code City</h2>
+            <p>
+              Snapshot <code>{cityModel.snapshot.snapshotId ?? "current"}</code> contains
+              {" "}{cityModel.coverage.counts.files} files, {" "}{cityModel.coverage.counts.districts} contexts, and
+              {" "}{cityModel.coverage.counts.diagnostics} diagnostics.
+            </p>
+          </div>
+          {pageState.tag === "partial" ? (
+            <div class="code-city-coverage" role="note">
+              <strong>Partial evidence</strong>
+              <span>
+                Optional canonical shards are unavailable: <code>{cityModel.coverage.missingOptionalShards.join(", ")}</code>.
+                The table and available signals remain usable.
+              </span>
+            </div>
+          ) : (
+            <p class="code-city-coverage" role="note">
+              All optional Code City shards advertised by this snapshot are available.
+            </p>
+          )}
+        </section>
+        <CodeCityView
+          client:load
+          model={cityModel}
+          evidenceBasePath={route(`/datasets/${dataset.slug}`)}
+          initialAudience={initialPresentationState.audience}
+          initialStoryId={initialPresentationState.story}
+        />
+      </>
+    ) : pageState.tag === "unsupported-landscape" ? (
+      <section class="code-city-state" aria-labelledby="code-city-state-title">
+        <p class="report-eyebrow">View unavailable</p>
+        <h2 id="code-city-state-title">Code City is not available for landscape snapshots.</h2>
+        <p>This view maps one repository at a time. Return to the dataset details to inspect the available landscape evidence.</p>
+        <a href={route(`/datasets/${dataset.slug}`)}>Return to snapshot details</a>
+      </section>
+    ) : pageState.tag === "empty" ? (
+      <section class="code-city-state" aria-labelledby="code-city-state-title">
+        <p class="report-eyebrow">No buildings</p>
+        <h2 id="code-city-state-title">{dataset.title} has no buildings to map.</h2>
+        <p>The canonical snapshot is valid, but its <code>files_main</code> shard contains no usable files.</p>
+        {overviewHref ? <a href={overviewHref}>Review the dataset Overview</a> : null}
+      </section>
+    ) : (
+      <section class="code-city-state" aria-labelledby="code-city-state-title">
+        <p class="report-eyebrow">Snapshot unavailable</p>
+        <h2 id="code-city-state-title">Code City could not use this dataset.</h2>
+        <p>{invalidMessage}</p>
+        <a href={route(`/datasets/${dataset.slug}`)}>Return to snapshot details</a>
+      </section>
+    )}
+  </div>
+</ExploreLayout>
+
+<style>
+  .dataset-report-page {
+    display: grid;
+    gap: 1.35rem;
+    max-width: 76rem;
+    margin: 0 auto;
+  }
+
+  .code-city-state {
+    display: grid;
+    gap: 0.8rem;
+    max-width: 52rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
+
+  .code-city-state h2 {
+    margin: 0;
+    font-family: var(--font-heading-stack);
+    font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  .code-city-state p:not(.report-eyebrow),
+  .code-city-coverage span {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.6;
+  }
+
+  .report-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--color-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .code-city-state--summary {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.5fr);
+    align-items: start;
+    max-width: none;
+    background:
+      radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 44%),
+      var(--color-card);
+  }
+
+  .code-city-state--summary h2 {
+    margin-bottom: 0.6rem;
+  }
+
+  .code-city-coverage {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.8rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
+  }
+
+  .code-city-coverage strong {
+    color: var(--color-text);
+    font-size: 0.76rem;
+  }
+
+  .code-city-state a {
+    justify-self: start;
+    color: var(--color-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .code-city-state a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 760px) {
+    .code-city-state--summary {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

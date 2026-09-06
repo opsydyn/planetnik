@@ -77,8 +77,7 @@ This should become the standard place for all local, reusable report outputs.
 datasets/
   sokrates/
     data/
-    html/
-    index.html
+    # html/ and index.html are optional legacy projections
 
   effect-ts/
     _discovery/
@@ -89,7 +88,7 @@ datasets/
     _planetnik_landscape/
       config.json
       reports/
-        index.html
+        index.html # optional legacy projection
         data/
 
   alanpcurrie/
@@ -100,7 +99,7 @@ datasets/
     _planetnik_landscape/
       config.json
       reports/
-        index.html
+        index.html # optional legacy projection
         data/
 ```
 
@@ -200,6 +199,8 @@ Single repository:
 bun run apps/cli/src/index.ts generateReports \
   --confFile ./planetnik.config.json \
   --outputFolder ./datasets/sokrates
+
+# Add --emitLegacyProjections only when a legacy TXT/HTML bundle is needed.
 ```
 
 Landscape:
@@ -209,6 +210,8 @@ bun run apps/cli/src/index.ts analyzeLandscape \
   --config ./landscape-config.json \
   --outputFolder ./datasets/effect-ts \
   --name "Effect Ecosystem"
+
+# Add --emitLegacyProjections only when a legacy landscape TXT/HTML bundle is needed.
 ```
 
 ### Avoid in docs
@@ -284,8 +287,7 @@ Longer term, consider making landscape output look more like single-repo output:
 ```text
 datasets/effect-ts/
   data/
-  html/
-  index.html
+  # html/ and index.html are optional legacy projections
   repos/
 ```
 
@@ -307,4 +309,3 @@ Adopt this as the local-development standard:
 2. Update docs examples to use `./datasets/<name>`.
 3. Add `PLANETNIK_DATASET` and `PLANETNIK_DATASETS_ROOT` support to the site loader.
 4. Update `apps/site/.env.example` to prefer named dataset selection.
-

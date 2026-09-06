@@ -914,19 +914,6 @@ function readJsonRecord(dataDir: string, fileName: string): Record<string, unkno
   }
 }
 
-function readTextFile(dataDir: string, fileName: string): string | null {
-  const filePath = join(dataDir, fileName)
-  if (!existsSync(filePath)) {
-    return null
-  }
-
-  try {
-    return readFileSync(filePath, "utf-8")
-  } catch {
-    return null
-  }
-}
-
 type ReportFileRecord = {
   readonly relativePath: string
   readonly extension: string
@@ -987,44 +974,19 @@ type ReportUnitRecord = {
 
 function readMetricsMap(dataDir: string): Map<string, number> {
   const raw = readJsonRecord(dataDir, "metrics.json")
-  if (Array.isArray(raw?.metrics)) {
-    const metrics = new Map<string, number>()
-    for (const item of raw.metrics) {
-      if (typeof item !== "object" || item === null) continue
-      const record = item as Record<string, unknown>
-      const id = typeof record.id === "string" ? record.id.trim() : ""
-      const value = record.value
-      if (!id || typeof value !== "number" || Number.isNaN(value)) continue
-      metrics.set(id, value)
-    }
+  const metrics = new Map<string, number>()
+  if (!Array.isArray(raw?.metrics)) {
     return metrics
   }
 
-  const text = readTextFile(dataDir, "metrics.txt")
-  if (!text) {
-    return new Map()
-  }
-
-  const metrics = new Map<string, number>()
-  for (const line of text.split("\n").map((entry) => entry.trim())) {
-    if (line.length === 0) {
-      continue
-    }
-
-    const colonIdx = line.indexOf(":")
-    if (colonIdx < 0) {
-      continue
-    }
-
-    const id = line.substring(0, colonIdx).trim()
-    const value = parseFloat(line.substring(colonIdx + 1).trim())
-    if (id.length === 0 || Number.isNaN(value)) {
-      continue
-    }
-
+  for (const item of raw.metrics) {
+    if (typeof item !== "object" || item === null) continue
+    const record = item as Record<string, unknown>
+    const id = typeof record.id === "string" ? record.id.trim() : ""
+    const value = record.value
+    if (!id || typeof value !== "number" || Number.isNaN(value)) continue
     metrics.set(id, value)
   }
-
   return metrics
 }
 
@@ -1972,110 +1934,50 @@ export function readReportLandscapeTeamsSummary(dataDir: string): ReportLandscap
 export function readReportContributorsSummary(dataDir: string): ReadonlyArray<ReportContributorSummary> {
   const contributorDetailsByEmail = readContributorDetailsByEmail(dataDir)
   const raw = readJsonRecord(dataDir, "contributors.json")
-  if (Array.isArray(raw?.contributors)) {
-    return raw.contributors
-      .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
-      .map((item): ReportContributorSummary | null => {
-        const email = typeof item.email === "string" ? item.email.trim() : ""
-        if (email.length === 0) {
-          return null
-        }
-
-        const userName = typeof item.userName === "string" ? item.userName.trim() : ""
-        const isRookie = typeof item.isRookie === "boolean" ? item.isRookie : false
-        const isActive = typeof item.isActive === "boolean" ? item.isActive : false
-        const detail = contributorDetailsByEmail.get(email)
-        const files = detail?.files
-        const logicalComponents = detail?.logicalComponents
-        const filesTouched = Array.isArray(files) ? files.length : null
-        const componentsTouched = Array.isArray(logicalComponents) ? logicalComponents.length : null
-        const numberField = (key: string): number => (typeof item[key] === "number" ? (item[key] as number) : 0)
-        const firstCommit = typeof item.firstCommitDate === "string" ? item.firstCommitDate : ""
-        const lastCommit = typeof item.latestCommitDate === "string" ? item.latestCommitDate : ""
-
-        return {
-          email,
-          userName,
-          displayName: getContributorDisplayName({ email, userName }),
-          status: getContributorStatus({ isRookie, isActive }),
-          commitsAllTime: numberField("commitsCount"),
-          commits30Days: numberField("commitsCount30Days"),
-          commits90Days: numberField("commitsCount90Days"),
-          commits180Days: numberField("commitsCount180Days"),
-          commits365Days: numberField("commitsCount365Days"),
-          firstCommit,
-          lastCommit,
-          percentage: typeof item.percentage === "string" ? item.percentage : "",
-          filesTouched,
-          componentsTouched,
-          primaryComponent: getPrimaryComponent(detail),
-          knowledgeSignal: getKnowledgeSignal(componentsTouched),
-          repositoryCount: null,
-          latestCommitDate: lastCommit,
-          isBot: typeof item.isBot === "boolean" ? item.isBot : null,
-          repositories: [],
-        }
-      })
-      .filter((contributor): contributor is ReportContributorSummary => contributor !== null)
-      .sort((left, right) => right.commitsAllTime - left.commitsAllTime)
-  }
-
-  const text = readTextFile(dataDir, "contributors.txt")
-  if (!text) {
+  if (!Array.isArray(raw?.contributors)) {
     return []
   }
 
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-
-  if (lines.length < 2) {
-    return []
-  }
-
-  return lines
-    .slice(1)
-    .map((line): ReportContributorSummary | null => {
-      const cols = line.split("\t")
-      if (cols.length < 8) {
-        return null
-      }
-
-      const email = cols[0]?.trim() ?? ""
+  return raw.contributors
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item): ReportContributorSummary | null => {
+      const email = typeof item.email === "string" ? item.email.trim() : ""
       if (email.length === 0) {
         return null
       }
 
-      const userName = cols[9]?.trim() ?? ""
-      const isRookie = cols[10]?.trim() === "true"
-      const isActive = cols[11]?.trim() === "true"
+      const userName = typeof item.userName === "string" ? item.userName.trim() : ""
+      const isRookie = typeof item.isRookie === "boolean" ? item.isRookie : false
+      const isActive = typeof item.isActive === "boolean" ? item.isActive : false
       const detail = contributorDetailsByEmail.get(email)
       const files = detail?.files
       const logicalComponents = detail?.logicalComponents
       const filesTouched = Array.isArray(files) ? files.length : null
       const componentsTouched = Array.isArray(logicalComponents) ? logicalComponents.length : null
+      const numberField = (key: string): number => (typeof item[key] === "number" ? (item[key] as number) : 0)
+      const firstCommit = typeof item.firstCommitDate === "string" ? item.firstCommitDate : ""
+      const lastCommit = typeof item.latestCommitDate === "string" ? item.latestCommitDate : ""
 
       return {
         email,
         userName,
         displayName: getContributorDisplayName({ email, userName }),
         status: getContributorStatus({ isRookie, isActive }),
-        commitsAllTime: parseInt(cols[1] ?? "", 10) || 0,
-        commits30Days: parseInt(cols[2] ?? "", 10) || 0,
-        commits90Days: parseInt(cols[3] ?? "", 10) || 0,
-        commits180Days: parseInt(cols[4] ?? "", 10) || 0,
-        commits365Days: parseInt(cols[5] ?? "", 10) || 0,
-        firstCommit: cols[6]?.trim() ?? "",
-        lastCommit: cols[7]?.trim() ?? "",
-        percentage: cols[8]?.trim() ?? "",
+        commitsAllTime: numberField("commitsCount"),
+        commits30Days: numberField("commitsCount30Days"),
+        commits90Days: numberField("commitsCount90Days"),
+        commits180Days: numberField("commitsCount180Days"),
+        commits365Days: numberField("commitsCount365Days"),
+        firstCommit,
+        lastCommit,
+        percentage: typeof item.percentage === "string" ? item.percentage : "",
         filesTouched,
         componentsTouched,
         primaryComponent: getPrimaryComponent(detail),
         knowledgeSignal: getKnowledgeSignal(componentsTouched),
         repositoryCount: null,
-        latestCommitDate: cols[7]?.trim() ?? "",
-        isBot: null,
+        latestCommitDate: lastCommit,
+        isBot: typeof item.isBot === "boolean" ? item.isBot : null,
         repositories: [],
       }
     })

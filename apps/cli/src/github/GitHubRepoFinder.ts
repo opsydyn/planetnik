@@ -23,11 +23,12 @@ export interface LandscapeConfig {
 
 export async function discoverRepos(
 	config: LandscapeConfig,
+	signal?: AbortSignal,
 ): Promise<Map<string, GitHubRepo[]>> {
 	const results = new Map<string, GitHubRepo[]>();
 
 	for (const org of config.githubOrgs) {
-		const repos = await fetchOrgRepos(org, config);
+		const repos = await fetchOrgRepos(org, config, signal);
 		const filtered = repos
 			.filter((r) => r.language !== null)
 			.filter((r) => !r.archived)
@@ -40,9 +41,20 @@ export async function discoverRepos(
 	return results;
 }
 
+function githubApiError(response: Response, url: string): Error {
+	const rateLimitHint =
+		response.headers.get("x-ratelimit-remaining") === "0" || response.headers.has("retry-after")
+			? " rate limit exceeded"
+			: "";
+	return new Error(
+		`GitHub API error: ${response.status} ${response.statusText}${rateLimitHint} for ${url}`,
+	);
+}
+
 async function fetchOrgRepos(
 	org: string,
 	config: LandscapeConfig,
+	signal?: AbortSignal,
 ): Promise<GitHubRepo[]> {
 	const all: GitHubRepo[] = [];
 	let page = 1;
@@ -50,38 +62,30 @@ async function fetchOrgRepos(
 	// Try /orgs/ first; if 404, fall back to /users/ (personal accounts like alanpcurrie)
 	let prefix = `${config.githubApiUrl}/orgs/${org}`;
 	const probeUrl = `${prefix}/repos?per_page=1`;
-	const probe = await fetch(probeUrl, {
+	const requestInit = (): RequestInit => ({
 		headers: {
 			"User-Agent": "planetnik",
 			...(config.githubToken
 				? { Authorization: `token ${config.githubToken}` }
 				: {}),
 		},
+		...(signal === undefined ? {} : { signal }),
 	});
+
+	const probe = await fetch(probeUrl, requestInit());
 
 	if (probe.status === 404) {
 		prefix = `${config.githubApiUrl}/users/${org}`;
 	} else if (!probe.ok) {
-		throw new Error(
-			`GitHub API error: ${probe.status} ${probe.statusText} for ${probeUrl}`,
-		);
+		throw githubApiError(probe, probeUrl);
 	}
 
 	while (true) {
 		const url = `${prefix}/repos?per_page=100&page=${page}`;
-		const response = await fetch(url, {
-			headers: {
-				"User-Agent": "planetnik",
-				...(config.githubToken
-					? { Authorization: `token ${config.githubToken}` }
-					: {}),
-			},
-		});
+		const response = await fetch(url, requestInit());
 
 		if (!response.ok) {
-			throw new Error(
-				`GitHub API error: ${response.status} ${response.statusText} for ${url}`,
-			);
+			throw githubApiError(response, url);
 		}
 
 		const repos = (await response.json()) as GitHubRepo[];

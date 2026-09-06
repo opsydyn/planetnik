@@ -1047,17 +1047,16 @@ describe("runtime report dataset helpers", () => {
     const repoDataDir = join(root, "acme__web-app", "data")
     mkdirSync(repoDataDir, { recursive: true })
     mkdirSync(dataDir, { recursive: true })
-    writeFileSync(
-      join(repoDataDir, "metrics.txt"),
-      [
-        "LINES_OF_CODE_MAIN: 18450",
-        "LINES_OF_CODE_TEST: 4200",
-        "DUPLICATION_NUMBER_OF_DUPLICATED_LINES: 442",
-        "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE: 22.8",
-        "TOTAL_ANALYSIS_TIME_IN_MILLIS: 960",
-        "NUMBER_OF_FILES_MAIN: 128",
-      ].join("\n"),
-    )
+    writeJson(join(repoDataDir, "metrics.json"), {
+      metrics: [
+        { id: "LINES_OF_CODE_MAIN", value: 18450 },
+        { id: "LINES_OF_CODE_TEST", value: 4200 },
+        { id: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES", value: 442 },
+        { id: "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE", value: 22.8 },
+        { id: "TOTAL_ANALYSIS_TIME_IN_MILLIS", value: 960 },
+        { id: "NUMBER_OF_FILES_MAIN", value: 128 },
+      ],
+    })
 
     expect(readReportLandscapeRepositoryMetricsSummary(dataDir, "acme__web-app")).toEqual({
       totalMetrics: 6,
@@ -1139,10 +1138,12 @@ describe("runtime report dataset helpers", () => {
         ],
       }),
     )
-    writeFileSync(
-      join(repoDataDir, "metrics.txt"),
-      ["FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS: 420", "FILE_CHANGE_HISTORY_ACTIVE_DAYS: 118"].join("\n"),
-    )
+    writeJson(join(repoDataDir, "metrics.json"), {
+      metrics: [
+        { id: "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS", value: 420 },
+        { id: "FILE_CHANGE_HISTORY_ACTIVE_DAYS", value: 118 },
+      ],
+    })
     writeJson(join(repoDataDir, "commits_per_extension.json"), [
       {
         extension: "ts",
@@ -2032,45 +2033,66 @@ describe("runtime report dataset helpers", () => {
     ])
   })
 
-  test("reads contributor summaries from contributors.txt and contributor_details", () => {
+  test("does not fall back to contributors.txt for a valid v2 context with a malformed JSON shape", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeValidV2Context(dataDir)
+    writeJson(join(dataDir, "contributors.json"), { legacyContributors: [] })
+    writeFileSync(
+      join(dataDir, "contributors.txt"),
+      "email\tall_time\t30d\t90d\t180d\t365d\tfirst\tlast\ntext@example.com\t1\t1\t1\t1\t1\t2025-01-01\t2025-01-02\n",
+    )
+
+    expect(readReportContributorsSummary(dataDir)).toEqual([])
+  })
+
+  test("ignores contributors.txt when the canonical shard is absent", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeFileSync(join(dataDir, "contributors.txt"), "email\tall_time\ntext@example.com\t1\n")
+
+    expect(readReportContributorsSummary(dataDir)).toEqual([])
+  })
+
+  test("reads contributor summaries from contributors.json and contributor_details", () => {
     const root = makeTempRoot()
     const dataDir = join(root, "reports", "data")
     const contributorDetailsDir = join(dataDir, "contributor_details")
     mkdirSync(contributorDetailsDir, { recursive: true })
-    writeFileSync(
-      join(dataDir, "contributors.txt"),
-      [
-        [
-          "email",
-          "all_time",
-          "30d",
-          "90d",
-          "180d",
-          "365d",
-          "first_commit",
-          "last_commit",
-          "percentage",
-          "user_name",
-          "is_rookie",
-          "is_active",
-        ].join("\t"),
-        [
-          "alan@example.com",
-          "42",
-          "8",
-          "16",
-          "24",
-          "32",
-          "2024-01-03",
-          "2026-03-31",
-          "14.2",
-          "Alan Currie",
-          "false",
-          "true",
-        ].join("\t"),
-        ["sam@example.com", "8", "8", "8", "8", "8", "2026-02-18", "2026-03-30", "2.7", "", "true", "true"].join("\t"),
-      ].join("\n"),
-    )
+    writeJson(join(dataDir, "contributors.json"), {
+      contributors: [
+        {
+          email: "alan@example.com",
+          commitsCount: 42,
+          commitsCount30Days: 8,
+          commitsCount90Days: 16,
+          commitsCount180Days: 24,
+          commitsCount365Days: 32,
+          firstCommitDate: "2024-01-03",
+          latestCommitDate: "2026-03-31",
+          percentage: "14.2",
+          userName: "Alan Currie",
+          isRookie: false,
+          isActive: true,
+        },
+        {
+          email: "sam@example.com",
+          commitsCount: 8,
+          commitsCount30Days: 8,
+          commitsCount90Days: 8,
+          commitsCount180Days: 8,
+          commitsCount365Days: 8,
+          firstCommitDate: "2026-02-18",
+          latestCommitDate: "2026-03-30",
+          percentage: "2.7",
+          userName: "",
+          isRookie: true,
+          isActive: true,
+        },
+      ],
+    })
     writeJson(join(contributorDetailsDir, "alan@example.com.json"), {
       email: "alan@example.com",
       logicalComponents: [{ name: "runtime", linesOfCode: 4200 }],
@@ -2141,53 +2163,38 @@ describe("runtime report dataset helpers", () => {
     const dataDir = join(root, "reports", "data")
     const contributorDetailsDir = join(dataDir, "contributor_details")
     mkdirSync(contributorDetailsDir, { recursive: true })
-    writeFileSync(
-      join(dataDir, "contributors.txt"),
-      [
-        [
-          "email",
-          "all_time",
-          "30d",
-          "90d",
-          "180d",
-          "365d",
-          "first_commit",
-          "last_commit",
-          "percentage",
-          "user_name",
-          "is_rookie",
-          "is_active",
-        ].join("\t"),
-        [
-          "alan@example.com",
-          "42",
-          "8",
-          "16",
-          "24",
-          "32",
-          "2024-01-03",
-          "2026-03-31",
-          "14.2",
-          "Alan Currie",
-          "false",
-          "true",
-        ].join("\t"),
-        [
-          "sam@example.com",
-          "8",
-          "8",
-          "8",
-          "8",
-          "8",
-          "2026-02-18",
-          "2026-03-30",
-          "2.7",
-          "Sam Example",
-          "true",
-          "true",
-        ].join("\t"),
-      ].join("\n"),
-    )
+    writeJson(join(dataDir, "contributors.json"), {
+      contributors: [
+        {
+          email: "alan@example.com",
+          commitsCount: 42,
+          commitsCount30Days: 8,
+          commitsCount90Days: 16,
+          commitsCount180Days: 24,
+          commitsCount365Days: 32,
+          firstCommitDate: "2024-01-03",
+          latestCommitDate: "2026-03-31",
+          percentage: "14.2",
+          userName: "Alan Currie",
+          isRookie: false,
+          isActive: true,
+        },
+        {
+          email: "sam@example.com",
+          commitsCount: 8,
+          commitsCount30Days: 8,
+          commitsCount90Days: 8,
+          commitsCount180Days: 8,
+          commitsCount365Days: 8,
+          firstCommitDate: "2026-02-18",
+          latestCommitDate: "2026-03-30",
+          percentage: "2.7",
+          userName: "Sam Example",
+          isRookie: true,
+          isActive: true,
+        },
+      ],
+    })
     writeJson(join(contributorDetailsDir, "alan@example.com.json"), {
       email: "alan@example.com",
       userName: "Alan Currie",
@@ -2437,21 +2444,40 @@ describe("runtime report dataset helpers", () => {
     })
   })
 
-  test("reads a metrics summary from metrics.txt", () => {
+  test("does not fall back to metrics.txt for a valid v2 context with a malformed JSON shape", () => {
     const root = makeTempRoot()
     const dataDir = join(root, "reports", "data")
     mkdirSync(dataDir, { recursive: true })
-    writeFileSync(
-      join(dataDir, "metrics.txt"),
-      [
-        "LINES_OF_CODE_MAIN: 52000",
-        "LINES_OF_CODE_TEST: 14000",
-        "DUPLICATION_NUMBER_OF_DUPLICATED_LINES: 910",
-        "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE: 26.9",
-        "TOTAL_ANALYSIS_TIME_IN_MILLIS: 1840",
-        "NUMBER_OF_FILES_MAIN: 240",
-      ].join("\n"),
-    )
+    writeValidV2Context(dataDir)
+    writeJson(join(dataDir, "metrics.json"), { legacyMetrics: [{ id: "LINES_OF_CODE_MAIN", value: 1 }] })
+    writeFileSync(join(dataDir, "metrics.txt"), "LINES_OF_CODE_MAIN: 62000\n")
+
+    expect(readReportMetricsSummary(dataDir)).toBeNull()
+  })
+
+  test("ignores metrics.txt when the canonical shard is absent", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeFileSync(join(dataDir, "metrics.txt"), "LINES_OF_CODE_MAIN: 62000\n")
+
+    expect(readReportMetricsSummary(dataDir)).toBeNull()
+  })
+
+  test("reads a metrics summary from metrics.json", () => {
+    const root = makeTempRoot()
+    const dataDir = join(root, "reports", "data")
+    mkdirSync(dataDir, { recursive: true })
+    writeJson(join(dataDir, "metrics.json"), {
+      metrics: [
+        { id: "LINES_OF_CODE_MAIN", value: 52000 },
+        { id: "LINES_OF_CODE_TEST", value: 14000 },
+        { id: "DUPLICATION_NUMBER_OF_DUPLICATED_LINES", value: 910 },
+        { id: "TEST_VS_MAIN_LINES_OF_CODE_PERCENTAGE", value: 26.9 },
+        { id: "TOTAL_ANALYSIS_TIME_IN_MILLIS", value: 1840 },
+        { id: "NUMBER_OF_FILES_MAIN", value: 240 },
+      ],
+    })
 
     expect(readReportMetricsSummary(dataDir)).toEqual({
       totalMetrics: 6,
@@ -3719,19 +3745,58 @@ describe("runtime report dataset helpers", () => {
     const root = makeTempRoot()
     const dataDir = join(root, "reports", "data")
     mkdirSync(dataDir, { recursive: true })
-    writeFileSync(
-      join(dataDir, "contributors.txt"),
-      [
-        "email\tcommitsAllTime\tcommits30Days\tcommits90Days\tcommits180Days\tcommits365Days\tfirstCommit\tlastCommit\tpercentage\tuserName\tisRookie\tisActive",
-        "alan@example.com\t32\t6\t12\t18\t24\t2024-01-03\t2026-03-31\t50.0\tAlan Currie\tfalse\ttrue",
-        "sam@example.com\t22\t2\t6\t10\t14\t2024-06-10\t2026-03-30\t34.4\tSam Example\tfalse\ttrue",
-        "new@example.com\t10\t0\t1\t2\t4\t2026-02-18\t2026-03-21\t15.6\tNew Dev\ttrue\tfalse",
-      ].join("\n"),
-    )
-    writeFileSync(
-      join(dataDir, "metrics.txt"),
-      ["FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS: 420", "FILE_CHANGE_HISTORY_ACTIVE_DAYS: 118"].join("\n"),
-    )
+    writeJson(join(dataDir, "contributors.json"), {
+      contributors: [
+        {
+          email: "alan@example.com",
+          commitsCount: 32,
+          commitsCount30Days: 6,
+          commitsCount90Days: 12,
+          commitsCount180Days: 18,
+          commitsCount365Days: 24,
+          firstCommitDate: "2024-01-03",
+          latestCommitDate: "2026-03-31",
+          percentage: "50.0",
+          userName: "Alan Currie",
+          isRookie: false,
+          isActive: true,
+        },
+        {
+          email: "sam@example.com",
+          commitsCount: 22,
+          commitsCount30Days: 2,
+          commitsCount90Days: 6,
+          commitsCount180Days: 10,
+          commitsCount365Days: 14,
+          firstCommitDate: "2024-06-10",
+          latestCommitDate: "2026-03-30",
+          percentage: "34.4",
+          userName: "Sam Example",
+          isRookie: false,
+          isActive: true,
+        },
+        {
+          email: "new@example.com",
+          commitsCount: 10,
+          commitsCount30Days: 0,
+          commitsCount90Days: 1,
+          commitsCount180Days: 2,
+          commitsCount365Days: 4,
+          firstCommitDate: "2026-02-18",
+          latestCommitDate: "2026-03-21",
+          percentage: "15.6",
+          userName: "New Dev",
+          isRookie: true,
+          isActive: false,
+        },
+      ],
+    })
+    writeJson(join(dataDir, "metrics.json"), {
+      metrics: [
+        { id: "FILE_CHANGE_HISTORY_TOTAL_AGE_DAYS", value: 420 },
+        { id: "FILE_CHANGE_HISTORY_ACTIVE_DAYS", value: 118 },
+      ],
+    })
     writeJson(join(dataDir, "commits_per_extension.json"), [
       {
         extension: "ts",

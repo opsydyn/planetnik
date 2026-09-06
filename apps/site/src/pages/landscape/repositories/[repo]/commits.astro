@@ -3,14 +3,13 @@ import RepositoryCommitsView from "@planetnik/report-ui/views/RepositoryCommitsV
 import Dashboard from "../../../../layouts/Dashboard.astro";
 import {
 	readLandscapeRepoJson,
-	readLandscapeRepoText,
 } from "../../../../lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { getMetric, parseMetricsText } from "../../../../lib/metrics";
+import { getMetric, parseMetricsJson } from "../../../../lib/metrics";
 import { route } from "../../../../lib/route";
 
 interface RepoContributor {
@@ -62,8 +61,8 @@ const contributors =
 		props.repoKey,
 		"contributors.json",
 	)?.contributors ?? [];
-const metrics = parseMetricsText(
-	readLandscapeRepoText(props.repoKey, "metrics.txt"),
+const metrics = parseMetricsJson(
+	readLandscapeRepoJson(props.repoKey, "metrics.json"),
 );
 const rawExtensions =
 	readLandscapeRepoJson<CommitsPerExtensionEntry[]>(

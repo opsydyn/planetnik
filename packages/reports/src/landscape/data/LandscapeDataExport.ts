@@ -64,6 +64,12 @@ const TOPOLOGY_PERIODS = [
 
 type TopologyPeriodDefinition = (typeof TOPOLOGY_PERIODS)[number];
 
+// ADR-0018: canonical JSON is the default; compatibility projections are opt-in.
+export interface LandscapeDataExportOptions {
+	/** Emit legacy landscape TXT projections alongside the canonical JSON shards. */
+	readonly emitCompatibilityProjections?: boolean;
+}
+
 export class LandscapeDataExport {
 	static readonly REPOSITORIES_DATA_FILE_NAME = "repositories.txt";
 	static readonly REPOSITORIES_DATA_JSON_FILE_NAME = "repositories.json";
@@ -106,11 +112,18 @@ export class LandscapeDataExport {
 
 	private analysisResults: LandscapeAnalysisResults;
 	private dataFolder: string;
+	private emitCompatibilityProjections: boolean;
 	private snapshotContext: SnapshotExportContext | null = null;
 	private snapshotSource: "analyzeLandscape" | "updateLandscape" | null = null;
 
-	constructor(analysisResults: LandscapeAnalysisResults, folder: string) {
+	constructor(
+		analysisResults: LandscapeAnalysisResults,
+		folder: string,
+		options: LandscapeDataExportOptions = {},
+	) {
 		this.analysisResults = analysisResults;
+		this.emitCompatibilityProjections =
+			options.emitCompatibilityProjections === true;
 
 		this.dataFolder = join(folder, "data");
 		if (!existsSync(this.dataFolder)) {
@@ -334,7 +347,7 @@ export class LandscapeDataExport {
 			);
 		}
 
-		writeFileSync(join(this.dataFolder, fileName), lines.join("\n"), "utf-8");
+		this.writeCompatibilityProjection(fileName, lines.join("\n"));
 	}
 
 	exportContributors(contributors: ContributorRepositoriesModel[]): void {
@@ -368,11 +381,7 @@ export class LandscapeDataExport {
 			);
 		}
 
-		writeFileSync(
-			join(this.dataFolder, "contributors.txt"),
-			lines.join("\n"),
-			"utf-8",
-		);
+		this.writeCompatibilityProjection("contributors.txt", lines.join("\n"));
 		writeFileSync(
 			join(this.dataFolder, "contributors.json"),
 			JSON.stringify(contributorsExport, null, 2),
@@ -432,11 +441,7 @@ export class LandscapeDataExport {
 			);
 		}
 
-		writeFileSync(
-			join(this.dataFolder, "teams.txt"),
-			lines.join("\n"),
-			"utf-8",
-		);
+		this.writeCompatibilityProjection("teams.txt", lines.join("\n"));
 		writeFileSync(
 			join(this.dataFolder, "teams.json"),
 			JSON.stringify(teamsExport, null, 2),
@@ -513,11 +518,13 @@ export class LandscapeDataExport {
 				existsSync(join(this.dataFolder, fileName)),
 			),
 		);
-		const compatibilityProjections = Object.fromEntries(
-			LandscapeDataExport.COMPATIBILITY_PROJECTION_CANDIDATES.filter(
-				([, fileName]) => existsSync(join(this.dataFolder, fileName)),
-			),
-		);
+		const compatibilityProjections = this.emitCompatibilityProjections
+			? Object.fromEntries(
+					LandscapeDataExport.COMPATIBILITY_PROJECTION_CANDIDATES.filter(
+						([, fileName]) => existsSync(join(this.dataFolder, fileName)),
+					),
+				)
+			: {};
 		writeFileSync(
 			join(
 				this.dataFolder,
@@ -554,6 +561,11 @@ export class LandscapeDataExport {
 			),
 			"utf-8",
 		);
+	}
+
+	private writeCompatibilityProjection(fileName: string, contents: string): void {
+		if (!this.emitCompatibilityProjections) return;
+		writeFileSync(join(this.dataFolder, fileName), contents, "utf-8");
 	}
 
 	private exportOverview(): void {

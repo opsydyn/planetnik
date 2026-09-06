@@ -55,6 +55,12 @@ const intelligenceNavSection: NavSection = {
 	],
 };
 
+const catalogueNavSection: NavSection = {
+	label: "Catalogue",
+	iconName: "squares-four",
+	items: [{ href: route("/explore"), label: "Explore datasets" }],
+};
+
 const reportContext = await getEntry("reportContext", "context");
 const reportMode = reportContext?.data.reportMode ?? "single_repository";
 const {
@@ -64,6 +70,7 @@ const {
 } = Astro.props;
 
 const singleRepoNavSections: NavSection[] = [
+	catalogueNavSection,
 	{
 		label: "Overview",
 		iconName: "house",
@@ -130,6 +137,7 @@ const singleRepoNavSections: NavSection[] = [
 ];
 
 const landscapeNavSections: NavSection[] = [
+	catalogueNavSection,
 	{
 		label: "Overview",
 		iconName: "house",

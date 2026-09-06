@@ -1,12 +1,14 @@
 # Phase 1 compatibility-removal fixture matrix
 
-Last verified: 2026-08-16
+Last verified: 2026-09-05
 
 This is the executable proof for the Phase 1 exit criterion that legacy TXT
 projections can be removed without breaking the core report products. The
 fixtures deliberately omit every `*.txt` projection; they retain the v2
 `report_context.json` manifest and populate the canonical JSON shards used by
-the route readers and Astro content loaders.
+the route readers and Astro content loaders. The focused reader-retirement
+fixtures also place stale TXT beside absent or malformed JSON and assert that
+the reader returns an empty or unavailable result.
 
 The matrix is intentionally reader-boundary evidence rather than a browser
 smoke test. Static pages and hosted API routes consume the readers listed here,
@@ -42,10 +44,13 @@ Fixture and test: `apps/site/src/lib/__tests__/planetnik-loader.test.ts`
 bun test \
   apps/runtime/src/lib/__tests__/report-datasets.test.ts \
   apps/runtime/src/lib/__tests__/compatibility-removal-fixture.test.ts \
-  apps/site/src/lib/__tests__/planetnik-loader.test.ts
+  apps/site/src/lib/__tests__/planetnik-loader.test.ts \
+  apps/site/src/lib/__tests__/metrics.test.ts \
+  apps/copilot-runtime/src/__tests__/data.test.ts \
+  packages/analyzer/src/__tests__/LandscapeAnalyzer.test.ts
 ```
 
-The focused command passed with 64 tests and 124 expectations on the date
-above. The full repository suite also passed (`946` tests). TXT parsing and
-export remain available for v1 datasets and migration; this matrix proves
-that they are no longer required by the current core route surfaces.
+The matrix command and the focused reader-retirement suites are the current
+verification gate; the current run passed with 83 tests and 167 expectations.
+TXT export remains available only as an explicit writer compatibility
+projection; no active report reader parses those projections.

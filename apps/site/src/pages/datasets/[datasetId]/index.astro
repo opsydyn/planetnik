@@ -1,0 +1,278 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common";
+import DatasetPreview from "../../../components/datasets/DatasetPreview.astro";
+import ExploreLayout from "../../../layouts/ExploreLayout.astro";
+import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource";
+import { getDatasetViewPath } from "../../../lib/datasets/explore";
+import { route } from "../../../lib/route";
+
+interface Props {
+	dataset: DatasetDescriptor;
+}
+
+export function getStaticPaths() {
+	const { catalog } = loadDatasetCatalog();
+	return catalog.datasets.map((dataset) => ({
+		params: { datasetId: dataset.slug },
+		props: { dataset },
+	}));
+}
+
+const { dataset } = Astro.props as Props;
+const detailHref = route(`/datasets/${dataset.slug}`);
+const overviewPath = getDatasetViewPath(dataset, "overview");
+const codeCityPath = getDatasetViewPath(dataset, "code-city");
+const trendsPath = getDatasetViewPath(dataset, "trends");
+const overviewHref = overviewPath ? route(overviewPath) : null;
+const codeCityHref = codeCityPath ? route(codeCityPath) : null;
+const trendsHref = trendsPath ? route(trendsPath) : null;
+---
+
+<ExploreLayout title={`${dataset.title} snapshot`} description={dataset.description}>
+	<div class="dataset-detail-page">
+		<nav class="detail-breadcrumb" aria-label="Breadcrumb">
+			<a href={route("/explore")}>Explore datasets</a>
+			<span aria-hidden="true">/</span>
+			<span aria-current="page">{dataset.title}</span>
+		</nav>
+
+		<section class="detail-hero" aria-labelledby="dataset-detail-title">
+			<div>
+				<p class="detail-eyebrow">Static snapshot detail</p>
+				<h1 id="dataset-detail-title">{dataset.title}</h1>
+				<p>{dataset.description}</p>
+			</div>
+			<div class="detail-identity">
+				<strong>{dataset.mode === "landscape" ? "Landscape" : "Repository"}</strong>
+				<span>{dataset.availability === "planned" ? "Planned example" : "Canonical v2 snapshot"}</span>
+			</div>
+		</section>
+
+		<div class="detail-grid">
+			<section class="detail-panel" aria-labelledby="detail-preview-title">
+				<div class="detail-panel-heading">
+					<p class="detail-eyebrow">Evidence boundary</p>
+					<h2 id="detail-preview-title">What this snapshot can show</h2>
+				</div>
+				<DatasetPreview dataset={dataset} audience="onboarding" href={detailHref} />
+			</section>
+
+			<aside class="detail-next-panel" aria-labelledby="detail-next-title">
+				<p class="detail-eyebrow">Report views</p>
+				<h2 id="detail-next-title">Open this snapshot in context.</h2>
+				<p>
+					These routes read this catalogue entry's canonical v2 JSON directly. Your active report environment is not
+					changed when you explore the showcase.
+				</p>
+				<div class="detail-view-actions" aria-label="Available report views">
+					{overviewHref ? <a class="detail-view-action detail-view-action--primary" href={overviewHref}>Open Overview <span aria-hidden="true">→</span></a> : null}
+					{codeCityHref ? <a class="detail-view-action" href={codeCityHref} data-astro-reload>Open Code City <span aria-hidden="true">→</span></a> : null}
+					{trendsHref ? <a class="detail-view-action" href={trendsHref}>Open Trends <span aria-hidden="true">→</span></a> : null}
+				</div>
+				{dataset.availability === "partial" ? (
+					<p class="detail-coverage-note"><strong>Partial snapshot.</strong> Available routes stay live; missing optional shards remain labelled inside the report.</p>
+				) : null}
+				<a class="detail-back-link" href={route("/explore")}>← Back to Explore</a>
+			</aside>
+		</div>
+	</div>
+</ExploreLayout>
+
+<style>
+	.dataset-detail-page {
+		display: grid;
+		gap: 1.5rem;
+		max-width: 70rem;
+		margin: 0 auto;
+	}
+
+	.detail-breadcrumb {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		color: var(--color-text-muted);
+		font-size: 0.76rem;
+	}
+
+	.detail-breadcrumb a {
+		color: var(--color-text-secondary);
+		text-decoration: none;
+	}
+
+	.detail-breadcrumb a:hover {
+		color: var(--color-accent-strong);
+		text-decoration: underline;
+	}
+
+	.detail-hero {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 2rem;
+		padding: 1.5rem 0;
+		border-top: 1px solid var(--color-border);
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.detail-eyebrow {
+		margin: 0 0 0.4rem;
+		color: var(--color-accent-strong);
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.13em;
+		text-transform: uppercase;
+	}
+
+	.detail-hero h1 {
+		margin: 0;
+		font-family: var(--font-heading-stack);
+		font-size: clamp(2rem, 5vw, 4rem);
+		line-height: 0.95;
+		letter-spacing: -0.04em;
+		text-wrap: balance;
+	}
+
+	.detail-hero p:not(.detail-eyebrow) {
+		max-width: 42rem;
+		margin: 0.8rem 0 0;
+		color: var(--color-text-secondary);
+		font-size: 0.95rem;
+		line-height: 1.6;
+	}
+
+	.detail-identity {
+		display: grid;
+		gap: 0.25rem;
+		flex: 0 0 12rem;
+		padding: 0.8rem 0.95rem;
+		border: 1px solid var(--color-border);
+		background: var(--color-card);
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+	}
+
+	.detail-identity strong {
+		color: var(--color-text);
+		font-family: var(--font-heading-stack);
+		font-size: 1rem;
+	}
+
+	.detail-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 0.8fr);
+		align-items: start;
+		gap: 1rem;
+	}
+
+	.detail-panel,
+	.detail-next-panel {
+		display: grid;
+		gap: 1rem;
+		min-width: 0;
+		padding: 1.25rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		background: var(--color-card);
+	}
+
+	.detail-panel-heading {
+		padding-bottom: 0.85rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.detail-panel-heading h2,
+	.detail-next-panel h2 {
+		margin: 0;
+		font-family: var(--font-heading-stack);
+		font-size: 1.3rem;
+		line-height: 1.1;
+		text-wrap: balance;
+	}
+
+	.detail-next-panel {
+		position: sticky;
+		top: 5.65rem;
+		background:
+			radial-gradient(circle at 100% 0, var(--color-warm-soft), transparent 60%),
+			var(--color-card);
+	}
+
+	.detail-next-panel > p:not(.detail-eyebrow) {
+		margin: 0;
+		color: var(--color-text-secondary);
+		font-size: 0.85rem;
+		line-height: 1.6;
+	}
+
+	.detail-back-link {
+		justify-self: start;
+		color: var(--color-accent-strong);
+		font-size: 0.78rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.detail-view-actions {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.detail-view-action {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.65rem 0.75rem;
+		border: 1px solid var(--color-border-strong);
+		color: var(--color-text-secondary);
+		font-size: 0.76rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.detail-view-action:hover,
+	.detail-view-action--primary {
+		border-color: var(--color-accent);
+		background: var(--color-accent-soft);
+		color: var(--color-accent-strong);
+	}
+
+	.detail-coverage-note {
+		padding: 0.7rem 0.75rem;
+		border-left: 3px solid var(--color-warm);
+		background: var(--color-warm-soft);
+	}
+
+	.detail-coverage-note strong {
+		color: var(--color-text);
+	}
+
+	.detail-back-link:hover {
+		text-decoration: underline;
+	}
+
+	.detail-breadcrumb a:focus-visible,
+	.detail-back-link:focus-visible,
+	.detail-view-action:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
+	@media (max-width: 820px) {
+		.detail-hero,
+		.detail-grid {
+			grid-template-columns: 1fr;
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.detail-identity {
+			flex-basis: auto;
+		}
+
+		.detail-next-panel {
+			position: static;
+		}
+	}
+</style>

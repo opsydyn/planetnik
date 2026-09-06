@@ -88,6 +88,18 @@ export class DependabotFetchError extends Data.TaggedError(
 	get message() { return `${this.title} [${this.repoKey}]: ${this.detail}` }
 }
 
+/** Concurrency must be a positive integer before a landscape traversal starts. */
+export class InvalidConcurrencyError extends Data.TaggedError(
+	"InvalidConcurrencyError",
+)<{
+	readonly type: "landscape/invalid-concurrency";
+	readonly title: "Invalid landscape concurrency";
+	readonly detail: string;
+	readonly concurrency: number;
+}> {
+	get message() { return `${this.title}: ${this.detail}` }
+}
+
 /** Union of all landscape domain errors. */
 export type LandscapeError =
 	| CloneError

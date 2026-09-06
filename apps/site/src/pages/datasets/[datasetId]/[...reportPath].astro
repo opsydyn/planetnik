@@ -1,0 +1,331 @@
+---
+import type { DatasetDescriptor } from "@planetnik/common"
+import ExploreLayout from "../../../layouts/ExploreLayout.astro"
+import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
+import { getDatasetViewPath } from "../../../lib/datasets/explore"
+import { normaliseEvidencePath, readDatasetReport } from "../../../lib/datasets/reportReader"
+import { route } from "../../../lib/route"
+
+interface Props {
+  dataset: DatasetDescriptor
+  reportPath: string
+}
+
+export function getStaticPaths() {
+  const { catalog } = loadDatasetCatalog()
+  return catalog.datasets.flatMap((dataset) => {
+    const report = readDatasetReport(dataset.id)
+    if (report.tag !== "ready") return []
+
+    const paths = new Set<string>()
+    for (const evidence of report.snapshot.hotspots) {
+      const path = normaliseEvidencePath(evidence.route)
+      if (path) paths.add(path)
+    }
+    for (const evidence of report.snapshot.impact?.impact_opportunities ?? []) {
+      const path = normaliseEvidencePath(evidence.route)
+      if (path) paths.add(path)
+    }
+
+    return [...paths].map((reportPath) => ({
+      params: { datasetId: dataset.slug, reportPath },
+      props: { dataset, reportPath },
+    }))
+  })
+}
+
+const { dataset, reportPath } = Astro.props as Props
+const report = readDatasetReport(dataset.id)
+const snapshot = report.tag === "ready" ? report.snapshot : null
+const reportMessage = report.tag === "ready" ? null : report.message
+const routePath = `/${reportPath}`
+const hotspotRecords = snapshot?.hotspots.filter((record) => normaliseEvidencePath(record.route) === reportPath) ?? []
+const impactRecords = snapshot?.impact?.impact_opportunities?.filter((record) => normaliseEvidencePath(record.route) === reportPath) ?? []
+const overviewPath = getDatasetViewPath(dataset, "overview")
+const codeCityPath = getDatasetViewPath(dataset, "code-city")
+const overviewHref = overviewPath ? route(overviewPath) : null
+const codeCityHref = codeCityPath ? route(codeCityPath) : null
+const routeLabel = reportPath
+  .split("/")
+  .map((segment) => segment.replace(/[-_]/gu, " "))
+  .join(" / ")
+---
+
+<ExploreLayout title={`${dataset.title} Evidence`} description={`Evidence route ${routePath} for ${dataset.title}.`}>
+  <div class="dataset-evidence-page" data-dataset-report="evidence">
+    <nav class="evidence-breadcrumb" aria-label="Breadcrumb">
+      <a href={route("/explore")}>Explore datasets</a>
+      <span aria-hidden="true">/</span>
+      <a href={route(`/datasets/${dataset.slug}`)}>{dataset.title}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{routePath}</span>
+    </nav>
+
+    <header class="evidence-header">
+      <div>
+        <p class="evidence-eyebrow">Dataset evidence reader</p>
+        <h1>{dataset.title} <span>{routeLabel}</span></h1>
+        <p>
+          This compact route keeps Code City evidence dataset-scoped while the full report parity surface is migrated.
+          The records below are read from the selected snapshot's canonical JSON shards.
+        </p>
+      </div>
+      <div class="evidence-header-actions">
+        {overviewHref ? <a href={overviewHref}>Open Overview <span aria-hidden="true">→</span></a> : null}
+        {codeCityHref ? <a href={codeCityHref} data-astro-reload>Open Code City <span aria-hidden="true">→</span></a> : null}
+      </div>
+    </header>
+
+    {snapshot ? (
+      <>
+        <section class="evidence-summary" aria-labelledby="evidence-summary-title">
+          <div>
+            <p class="evidence-eyebrow">Canonical route</p>
+            <h2 id="evidence-summary-title"><code>{routePath}</code></h2>
+          </div>
+          <p>{hotspotRecords.length + impactRecords.length} matching evidence {hotspotRecords.length + impactRecords.length === 1 ? "record" : "records"}.</p>
+        </section>
+
+        {hotspotRecords.length + impactRecords.length > 0 ? (
+          <section class="evidence-panel" aria-labelledby="evidence-records-title">
+            <div class="evidence-panel-heading">
+              <div>
+                <p class="evidence-eyebrow">Snapshot records</p>
+                <h2 id="evidence-records-title">Evidence behind this route</h2>
+              </div>
+              <span>Snapshot <code>{snapshot.context.snapshotId}</code></span>
+            </div>
+            <div class="evidence-table-wrap">
+              <table class="evidence-table">
+                <thead>
+                  <tr><th scope="col">Kind</th><th scope="col">Record</th><th scope="col">Signal</th><th scope="col">Source shard</th></tr>
+                </thead>
+                <tbody>
+                  {hotspotRecords.map((record) => (
+                    <tr>
+                      <td>{record.kind ?? "hotspot"}</td>
+                      <td><code>{record.id ?? record.name ?? "Unnamed hotspot"}</code></td>
+                      <td>{record.score !== undefined ? `Score ${record.score}` : record.severity ?? "Available"}</td>
+                      <td><code>{snapshot.context.canonicalShards?.hotspots ?? "hotspots.json"}</code></td>
+                    </tr>
+                  ))}
+                  {impactRecords.map((record) => (
+                    <tr>
+                      <td>{record.kind ?? "impact"}</td>
+                      <td><code>{record.id ?? record.name ?? "Unnamed opportunity"}</code></td>
+                      <td>{record.impact_score !== undefined ? `Impact ${record.impact_score}` : record.dominant_dimension ?? "Available"}</td>
+                      <td><code>{snapshot.context.canonicalShards?.impact ?? "impact.json"}</code></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : (
+          <section class="evidence-empty" aria-labelledby="evidence-empty-title">
+            <p class="evidence-eyebrow">No matching records</p>
+            <h2 id="evidence-empty-title">The route is valid, but this snapshot has no matching evidence rows.</h2>
+            <p>Use Overview for the aggregate source shape or Code City for the complete selectable model.</p>
+          </section>
+        )}
+      </>
+    ) : (
+      <section class="evidence-empty" aria-labelledby="evidence-invalid-title">
+        <p class="evidence-eyebrow">Snapshot unavailable</p>
+        <h2 id="evidence-invalid-title">This dataset could not be read.</h2>
+        <p>{reportMessage}</p>
+        <a href={route(`/datasets/${dataset.slug}`)}>Return to snapshot details</a>
+      </section>
+    )}
+  </div>
+</ExploreLayout>
+
+<style>
+  .dataset-evidence-page {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 76rem;
+    margin: 0 auto;
+  }
+
+  .evidence-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.74rem;
+  }
+
+  .evidence-breadcrumb a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+
+  .evidence-breadcrumb a:hover,
+  .evidence-empty a:hover {
+    color: var(--color-accent-strong);
+    text-decoration: underline;
+  }
+
+  .evidence-header,
+  .evidence-summary,
+  .evidence-panel,
+  .evidence-empty {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+  }
+
+  .evidence-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2rem;
+    padding-block: 1.5rem;
+    border-inline: 0;
+    background:
+      radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 42%),
+      var(--color-card);
+  }
+
+  .evidence-eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--color-accent-strong);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .evidence-header h1,
+  .evidence-summary h2,
+  .evidence-panel h2,
+  .evidence-empty h2 {
+    margin: 0;
+    font-family: var(--font-heading-stack);
+    font-size: clamp(1.25rem, 2.8vw, 2rem);
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  .evidence-header h1 span {
+    color: var(--color-text-muted);
+  }
+
+  .evidence-header p:last-child,
+  .evidence-summary > p,
+  .evidence-empty p:not(.evidence-eyebrow) {
+    max-width: 48rem;
+    margin: 0.85rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.84rem;
+    line-height: 1.6;
+  }
+
+  .evidence-header-actions {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+  }
+
+  .evidence-header-actions a,
+  .evidence-empty a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 10rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .evidence-header-actions a:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+
+  .evidence-summary {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    background: var(--color-surface-subtle);
+  }
+
+  .evidence-summary > p {
+    margin: 0;
+    color: var(--color-text-muted);
+    text-align: right;
+  }
+
+  .evidence-panel-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .evidence-panel-heading > span {
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+  }
+
+  .evidence-table-wrap {
+    overflow-x: auto;
+  }
+
+  .evidence-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+
+  .evidence-table th,
+  .evidence-table td {
+    padding: 0.7rem 0.65rem;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .evidence-table th {
+    color: var(--color-text-muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .evidence-table td {
+    color: var(--color-text-secondary);
+  }
+
+  .evidence-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .evidence-empty a {
+    justify-self: start;
+  }
+
+  @media (max-width: 720px) {
+    .evidence-header,
+    .evidence-summary {
+      grid-template-columns: 1fr;
+    }
+
+    .evidence-summary > p {
+      text-align: left;
+    }
+
+    .evidence-panel-heading {
+      align-items: start;
+      flex-direction: column;
+    }
+  }
+</style>

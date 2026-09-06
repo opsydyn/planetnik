@@ -551,59 +551,19 @@ export class LandscapeAnalyzer {
 
 	private readContributorsExport(dataDir: string): Contributor[] | null {
 		const jsonPath = resolve(dataDir, "contributors.json");
-		if (existsSync(jsonPath)) {
-			try {
-				const parsed = JSON.parse(readFileSync(jsonPath, "utf-8")) as {
-					contributors?: Array<Record<string, unknown>>;
-				};
-				const contributors = this.mapContributors(parsed.contributors ?? []);
-				if (contributors.length > 0) {
-					return contributors;
-				}
-			} catch {
-				// Fallback to legacy text export below.
-			}
-		}
-
-		const textPath = resolve(dataDir, "contributors.txt");
-		if (!existsSync(textPath)) {
+		if (!existsSync(jsonPath)) {
 			return null;
 		}
 
 		try {
-			const lines = readFileSync(textPath, "utf-8")
-				.split("\n")
-				.map((line) => line.trim())
-				.filter(Boolean);
-			if (lines.length <= 1) {
+			const parsed = JSON.parse(readFileSync(jsonPath, "utf-8")) as {
+				contributors?: Array<Record<string, unknown>>;
+			};
+			if (!Array.isArray(parsed.contributors)) {
 				return null;
 			}
 
-			return lines.slice(1).flatMap((line) => {
-				const columns = line.split("\t");
-				if (columns.length < 8) {
-					return [];
-				}
-
-				const contributor = new Contributor(columns[0] ?? "");
-				contributor.commitsCount = Number.parseInt(columns[1] ?? "0", 10) || 0;
-				contributor.commitsCount30Days =
-					Number.parseInt(columns[2] ?? "0", 10) || 0;
-				contributor.commitsCount90Days =
-					Number.parseInt(columns[3] ?? "0", 10) || 0;
-				contributor.commitsCount180Days =
-					Number.parseInt(columns[4] ?? "0", 10) || 0;
-				contributor.commitsCount365Days =
-					Number.parseInt(columns[5] ?? "0", 10) || 0;
-				contributor.firstCommitDate = columns[6] ?? "";
-				contributor.latestCommitDate = columns[7] ?? "";
-				contributor.userName = columns[9] ?? "";
-				contributor.isBot =
-					columns.length > 12
-						? (columns[12] ?? "").toLowerCase() === "true"
-						: false;
-				return contributor.email ? [contributor] : [];
-			});
+			return this.mapContributors(parsed.contributors);
 		} catch {
 			return null;
 		}

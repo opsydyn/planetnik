@@ -5,7 +5,7 @@ export {
 	type ContributorImpactPeriodExportInfo,
 	type ContributorImpactTopComponentExportInfo,
 } from "./ContributorImpactExportInfo.js";
-export { DataExporter } from "./DataExporter.js";
+export { DataExporter, type DataExporterOptions } from "./DataExporter.js";
 export { DataExportUtils } from "./DataExportUtils.js";
 export {
 	DependenciesExporter,

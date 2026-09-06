@@ -34,6 +34,18 @@ import {
 } from "./SnapshotContext.js";
 import { TemporalDependenciesExporter } from "./TemporalDependenciesExportInfo.js";
 import { UnitListExporter } from "./UnitsExportInfo.js";
+import {
+	normalizeFindingsAuthoringDocument,
+	type FindingsAuthoringDocument,
+	type FindingsExportItem,
+} from "../findings/FindingsAuthoring.js";
+
+export interface DataExporterOptions {
+	/** Emit the legacy tab-separated/text projections alongside canonical JSON. */
+	readonly emitCompatibilityProjections?: boolean;
+	/** Canonical structured findings authoring input, when available. */
+	readonly findings?: FindingsAuthoringDocument | null;
+}
 
 export class DataExporter {
 	static readonly DATA_FOLDER_NAME = "data";
@@ -85,16 +97,28 @@ export class DataExporter {
 
 	private analysisResults: CodeAnalysisResults;
 	private reportsFolder: string;
-	private findingsHtml: string | null;
+	private findings: FindingsAuthoringDocument | null;
+	private emitCompatibilityProjections: boolean;
 
 	constructor(
 		analysisResults: CodeAnalysisResults,
 		reportsFolder: string,
-		findingsHtml: string | null = null,
+		options: DataExporterOptions = {},
 	) {
 		this.analysisResults = analysisResults;
 		this.reportsFolder = reportsFolder;
-		this.findingsHtml = findingsHtml;
+		this.findings = options.findings ?? null;
+		this.emitCompatibilityProjections =
+			options.emitCompatibilityProjections ?? false;
+	}
+
+	private writeCompatibilityProjection(
+		dataFolder: string,
+		fileName: string,
+		contents: string,
+	): void {
+		if (!this.emitCompatibilityProjections) return;
+		writeFileSync(join(dataFolder, fileName), contents, "utf-8");
 	}
 
 	exportData(): void {
@@ -167,7 +191,7 @@ export class DataExporter {
 		const fileList = allFiles
 			.map((f) => `${f.relativePath}\t${f.linesOfCode}\t${f.extension}`)
 			.join("\n");
-		writeFileSync(join(dataFolder, "files.txt"), fileList, "utf-8");
+		this.writeCompatibilityProjection(dataFolder, "files.txt", fileList);
 
 		// Export per-component file lists
 		for (const decomposition of this.analysisResults
@@ -183,13 +207,10 @@ export class DataExporter {
 						.sort((a, b) => a.relativePath.localeCompare(b.relativePath))
 						.map((f) => `${f.relativePath}\t${f.linesOfCode}`)
 						.join("\n");
-					writeFileSync(
-						join(
-							dataFolder,
-							`${prefix}_${DataExportUtils.getAspectFileName("", aspect.name)}.txt`,
-						),
+					this.writeCompatibilityProjection(
+						dataFolder,
+						`${prefix}_${DataExportUtils.getAspectFileName("", aspect.name)}.txt`,
 						`Path\tLines of Code\n${content}`,
-						"utf-8",
 					);
 				}
 			}
@@ -207,7 +228,7 @@ export class DataExporter {
 		const lines = metrics
 			.map((m) => `${m.id}: ${m.value}`)
 			.join("\n");
-		writeFileSync(join(dataFolder, "metrics.txt"), lines, "utf-8");
+		this.writeCompatibilityProjection(dataFolder, "metrics.txt", lines);
 		writeFileSync(
 			join(dataFolder, "metrics.json"),
 			JSON.stringify(
@@ -279,17 +300,24 @@ export class DataExporter {
 			),
 			"utf-8",
 		);
-		writeFileSync(join(dataFolder, "controls.txt"), lines.join("\n"), "utf-8");
+		this.writeCompatibilityProjection(
+			dataFolder,
+			"controls.txt",
+			lines.join("\n"),
+		);
 	}
 
 	private exportFindings(dataFolder: string): void {
-		const findings = this.extractFindings(this.findingsHtml);
+		const normalized = this.findings
+			? normalizeFindingsAuthoringDocument(this.findings)
+			: null;
+		const findings: readonly FindingsExportItem[] = normalized?.items ?? [];
 
 		writeFileSync(
 			join(dataFolder, "findings.json"),
 			JSON.stringify(
 				{
-					title: "Notes & Findings",
+					title: normalized?.title ?? "Notes & Findings",
 					timestamp: new Date().toISOString(),
 					items: findings,
 				},
@@ -492,10 +520,10 @@ export class DataExporter {
 			),
 			"utf-8",
 		);
-		writeFileSync(
-			join(dataFolder, "contributors.txt"),
+		this.writeCompatibilityProjection(
+			dataFolder,
+			"contributors.txt",
 			lines.join("\n"),
-			"utf-8",
 		);
 	}
 
@@ -511,11 +539,13 @@ export class DataExporter {
 				existsSync(join(dataFolder, fileName)),
 			),
 		);
-		const compatibilityProjections = Object.fromEntries(
-			DataExporter.COMPATIBILITY_PROJECTION_CANDIDATES.filter(([, fileName]) =>
-				existsSync(join(dataFolder, fileName)),
-			),
-		);
+		const compatibilityProjections = this.emitCompatibilityProjections
+			? Object.fromEntries(
+					DataExporter.COMPATIBILITY_PROJECTION_CANDIDATES.filter(
+						([, fileName]) => existsSync(join(dataFolder, fileName)),
+					),
+				)
+			: {};
 
 		writeFileSync(
 			join(dataFolder, "report_context.json"),
@@ -722,10 +752,10 @@ export class DataExporter {
 			lines.push("");
 			id++;
 		}
-		writeFileSync(
-			join(dataFolder, `${fileName}.txt`),
+		this.writeCompatibilityProjection(
+			dataFolder,
+			`${fileName}.txt`,
 			lines.join("\n"),
-			"utf-8",
 		);
 	}
 
@@ -763,7 +793,11 @@ export class DataExporter {
 			lines.push("");
 			id++;
 		}
-		writeFileSync(join(dataFolder, "units.txt"), lines.join("\n"), "utf-8");
+		this.writeCompatibilityProjection(
+			dataFolder,
+			"units.txt",
+			lines.join("\n"),
+		);
 	}
 
 	private exportDependencies(dataFolder: string): void {
@@ -863,10 +897,10 @@ export class DataExporter {
 			}
 		}
 
-		writeFileSync(
-			join(dataFolder, `${fileNamePrefix}.txt`),
+		this.writeCompatibilityProjection(
+			dataFolder,
+			`${fileNamePrefix}.txt`,
 			lines.join("\n"),
-			"utf-8",
 		);
 	}
 
@@ -960,7 +994,7 @@ export class DataExporter {
 			);
 		}
 
-		writeFileSync(join(dataFolder, fileName), lines.join("\n"), "utf-8");
+		this.writeCompatibilityProjection(dataFolder, fileName, lines.join("\n"));
 	}
 
 	private exportPeopleDependencies(dataFolder: string): void {
@@ -1650,69 +1684,6 @@ export class DataExporter {
 			return "Broaden ownership of this component and add backup maintainers.";
 		}
 		return "Broaden ownership and create a clear handover path for this hotspot.";
-	}
-
-	private extractFindings(findingsHtml: string | null): Array<{
-		id: string;
-		summary: string;
-		bodyHtml: string;
-		bodyText: string;
-	}> {
-		if (!findingsHtml || findingsHtml.trim().length === 0) return [];
-
-		const findings: Array<{
-			id: string;
-			summary: string;
-			bodyHtml: string;
-			bodyText: string;
-		}> = [];
-		const findingRegex = /<finding>(.*?)<\/finding>/gs;
-		let index = 0;
-
-		for (
-			let findingMatch = findingRegex.exec(findingsHtml);
-			findingMatch !== null;
-			findingMatch = findingRegex.exec(findingsHtml)
-		) {
-			index += 1;
-			const findingContent = findingMatch[1] ?? "";
-			const summaryMatch = /<summary>(.*?)<\/summary>/is.exec(findingContent);
-			const bodyMatch = /<body>(.*?)<\/body>/is.exec(findingContent);
-			const summary = summaryMatch?.[1]?.trim() || `Finding ${index}`;
-			const bodyHtml = bodyMatch?.[1]?.trim() || findingContent.trim();
-			findings.push({
-				id: `finding-${index}`,
-				summary,
-				bodyHtml,
-				bodyText: this.htmlToText(bodyHtml),
-			});
-		}
-
-		if (findings.length === 0) {
-			return [
-				{
-					id: "finding-1",
-					summary: "Notes & Findings",
-					bodyHtml: findingsHtml.trim(),
-					bodyText: this.htmlToText(findingsHtml),
-				},
-			];
-		}
-
-		return findings;
-	}
-
-	private htmlToText(html: string): string {
-		return html
-			.replace(/<br\s*\/?>/gi, "\n")
-			.replace(/<\/p>/gi, "\n")
-			.replace(/<[^>]+>/g, " ")
-			.replace(/&nbsp;/g, " ")
-			.replace(/&amp;/g, "&")
-			.replace(/&lt;/g, "<")
-			.replace(/&gt;/g, ">")
-			.replace(/\s+/g, " ")
-			.trim();
 	}
 
 	private scaledScore(

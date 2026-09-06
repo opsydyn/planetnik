@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — Phase 1 complete (2026-03-22); see [roadmap](../roadmap/structured-concurrency.md)
+Accepted — Phase 5 complete (2026-09-04); see [roadmap](../roadmap/structured-concurrency.md)
 
 ## Context
 
@@ -209,16 +209,61 @@ We are not choosing it because it is too broad. The refactor should prove its va
 
 ## Verification
 
-- [ ] `analyzeLandscape` no longer uses manual batching plus `Promise.all`
-- [ ] Temporary clone directories are acquired in Effect scope and released by scoped finalizers
-- [ ] `--concurrency` still bounds parallel repo processing
-- [ ] `--skipExisting` behavior remains unchanged
-- [ ] Discovery and clone retries are explicit and bounded
-- [ ] Final analyzed/skipped/failed counts remain correct under concurrent execution
-- [ ] `_failures.json` is still written correctly when failures occur
-- [ ] Existing CLI and reports tests continue to pass
-- [ ] A large interrupted run does not leave temp clone directories behind
-- [ ] The command remains compatible with a future compiled Bun executable path
+- [x] `analyzeLandscape` no longer uses manual batching plus `Promise.all`
+- [x] Temporary clone directories are acquired in Effect scope and released by scoped finalizers
+- [x] `--concurrency` still bounds parallel repo processing
+- [x] `--skipExisting` behavior remains unchanged
+- [x] Discovery and clone retries are explicit and bounded
+- [x] Final analyzed/skipped/failed counts remain correct under concurrent execution
+- [x] `_failures.json` is still written correctly when failures occur
+- [x] Existing CLI and reports tests continue to pass
+- [x] Interrupted scoped worker cleanup is covered by a focused fixture; a full large-run soak remains operational follow-up
+- [x] The command remains compatible with the compiled Bun executable path; a
+  local smoke validates help parsing and `data/analysisResults.json`
+
+## Delivered phases: bounded traversal, structured state, retry/cancellation, and compiled packaging (2026-09-04)
+
+The landscape repository path now builds a flat task list and runs one
+`Effect.forEach` traversal with the requested `--concurrency` limit. The
+previous slice-plus-`Effect.all` batches are gone, so a completed repository
+immediately frees a slot for the next task. `--skipExisting` remains an
+explicit tagged outcome and never invokes the live worker.
+
+The worker is available through a thin `LandscapeRepoWorker` `Layer`, which is
+replaceable in tests and future compiled-CLI composition. Each live worker
+still uses `Effect.scoped` and `Effect.acquireRelease`; the layer owns the
+stable service boundary, while the scope owns the temporary clone directory.
+Dependabot traversal now uses `Effect.forEach` with its fixed concurrency-5
+rate-limit ceiling. Non-positive repository concurrency is rejected before
+discovery starts. Focused traversal tests cover the active-worker ceiling,
+ordered outcomes, skip preservation, invalid limits, and atomic done/skipped/
+failed summary updates; retry policy and interruption fixtures cover transient,
+permanent, exhausted, and scoped-cleanup boundaries.
+
+The command now creates a `LandscapeRunSummary` `Ref` for the flat task list.
+Each tagged outcome updates that Ref atomically as it completes, and the command
+reads it once after traversal for the final tally. The ordered outcome array is
+still the sole detailed failure collection, so `_failures.json` keeps its
+existing shape without duplicating failure state.
+
+The discovery and clone edges now use a bounded exponential retry schedule.
+Only recognisable transient network/service failures are retried; authentication,
+permission, not-found, and unknown failures fail closed on the first attempt.
+GitHub fetches and simple-git receive the Effect abort signal, and failed clone
+attempts reset their partial directory before the next attempt. The existing
+scoped finalizer still owns cleanup when the worker succeeds, fails, or is
+interrupted. Focused tests cover policy boundaries and interrupted cleanup.
+
+The local compiled executable contract is now validated. Switching GitHub
+Actions to that executable and applying the shared scoped boundary to
+`analyzeRemote` remain deliberately separate follow-on decisions.
+
+The reproducible proof is `bun run --cwd apps/cli compile:smoke`: it builds a
+standalone executable with Bun 1.3.11, checks `--help` for the full command
+surface, and runs `init` plus `generateReports` against a temporary Python
+fixture. The executable produced `data/analysisResults.json` with positive
+file and LOC measurements, exercising the bundled analyzer/WASM path without
+contacting GitHub.
 
 ## References
 

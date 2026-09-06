@@ -13,7 +13,7 @@ import {
   ReportRenderer,
   RichTextReport,
 } from "@planetnik/reports"
-import { Effect, Redacted } from "effect"
+import { Effect, Layer, Redacted, Ref, Schedule } from "effect"
 import simpleGit from "simple-git"
 import { CliConfig } from "../config.js"
 import {
@@ -21,6 +21,7 @@ import {
   ConfigNotFoundError,
   GitHistoryError,
   GitHubDiscoveryError,
+  InvalidConcurrencyError,
   RepoAnalysisDone,
   RepoAnalysisFailed,
   RepoAnalysisSkipped,
@@ -58,6 +59,76 @@ const skipExisting = Options.boolean("skipExisting").pipe(
   Options.withDefault(true),
   Options.withDescription("Skip repos that already have analysis results"),
 )
+const emitLegacyProjectionsOption = Options.boolean("emitLegacyProjections").pipe(
+  Options.optional,
+  Options.withDescription("Emit legacy landscape TXT and HTML projections (default: canonical JSON only)"),
+)
+
+const DEPENDABOT_CONCURRENCY = 5
+
+/** Maximum number of retries for an external landscape operation. */
+export const LANDSCAPE_EXTERNAL_RETRY_COUNT = 3
+
+/** Bounded exponential backoff shared by GitHub discovery and repository clone. */
+export const LANDSCAPE_EXTERNAL_RETRY_SCHEDULE = Schedule.exponential("1 second").pipe(
+  Schedule.compose(Schedule.recurs(LANDSCAPE_EXTERNAL_RETRY_COUNT)),
+)
+
+const TRANSIENT_ERROR_CODES = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+  "ENETUNREACH",
+  "ENETDOWN",
+])
+
+const TRANSIENT_ERROR_PATTERNS = [
+  /\b(?:408|425|429|500|502|503|504)\b/,
+  /(?:rate limit|too many requests|secondary rate limit|timed?\s*out|timeout|temporarily unavailable|try again|connection (?:reset|refused|closed)|network is unreachable|fetch failed|failed to fetch|could not resolve host|socket hang up|tls handshake)/i,
+]
+
+const PERMANENT_ERROR_PATTERNS = [
+  /\b(?:401|403|404)\b/,
+  /(?:repository|resource).*(?:not found|does not exist)|\bnot found\b/i,
+  /(?:authentication failed|permission denied|access denied|could not read username|invalid token)/i,
+]
+
+/**
+ * Classify errors at the external discovery/clone boundary.
+ *
+ * Unknown errors fail closed: only recognisable transient network/service
+ * failures are retried, while authentication, permission, and not-found
+ * failures remain immediate and deterministic.
+ */
+export function isRetryableLandscapeExternalError(error: unknown): boolean {
+  const record = typeof error === "object" && error !== null ? (error as Record<string, unknown>) : undefined
+  const code = typeof record?.code === "string" ? record.code.toUpperCase() : undefined
+  const message = typeof record?.message === "string" ? record.message : String(error)
+  const rateLimited = /(?:rate limit|too many requests|secondary rate limit)/i.test(message)
+  if (rateLimited) return true
+
+  const status = Number(record?.status ?? record?.statusCode)
+  if (Number.isInteger(status)) {
+    if ([401, 403, 404].includes(status)) return false
+    if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true
+  }
+
+  if (PERMANENT_ERROR_PATTERNS.some((pattern) => pattern.test(message))) return false
+  if (code !== undefined && TRANSIENT_ERROR_CODES.has(code)) return true
+  return TRANSIENT_ERROR_PATTERNS.some((pattern) => pattern.test(message))
+}
+
+/** Apply the bounded external retry policy; deterministic failures are never retried. */
+export function retryLandscapeExternal<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  schedule: Schedule.Schedule<unknown, E, never> = LANDSCAPE_EXTERNAL_RETRY_SCHEDULE,
+) {
+  return Effect.retry(effect, {
+    schedule,
+    while: (error: E) => isRetryableLandscapeExternalError(error),
+  })
+}
 
 function todayString(): string {
   const d = new Date()
@@ -80,12 +151,62 @@ export function acquireTempDir(prefix: string) {
   )
 }
 
+export interface RepoAnalysisTask {
+  readonly org: string
+  readonly repo: GitHubRepo
+  readonly repoOutputDir: string
+  readonly cloneUrl: string
+  readonly skip: boolean
+  readonly emitLegacyProjections?: boolean
+}
+
+/** Concurrency-safe progress state for a landscape traversal. */
+export interface LandscapeRunSummary {
+  readonly total: number
+  readonly completed: number
+  readonly analyzed: number
+  readonly skipped: number
+  readonly failed: number
+}
+
+export function makeLandscapeRunSummary(total: number): LandscapeRunSummary {
+  return { total, completed: 0, analyzed: 0, skipped: 0, failed: 0 }
+}
+
+export interface RepoFailureReportEntry {
+  readonly repoKey: string
+  readonly errorType: string
+  readonly detail: string
+}
+
+/** Project ordered tagged outcomes into the stable `_failures.json` shape. */
+export function buildRepoFailureReport(outcomes: readonly RepoWorkerOutcome[]): ReadonlyArray<RepoFailureReportEntry> {
+  return outcomes
+    .filter((outcome): outcome is RepoAnalysisFailed => outcome._tag === "RepoAnalysisFailed")
+    .map((failure) => ({
+      repoKey: failure.repoKey,
+      errorType: failure.error._tag,
+      detail: failure.error.detail,
+    }))
+}
+
+export interface LandscapeRepoWorkerService {
+  readonly run: (task: RepoAnalysisTask) => Effect.Effect<RepoWorkerOutcome, never, never>
+}
+
+/** Stable worker dependency; per-repository resources remain scoped inside the worker. */
+export class LandscapeRepoWorker extends Effect.Tag("LandscapeRepoWorker")<
+  LandscapeRepoWorker,
+  LandscapeRepoWorkerService
+>() {}
+
 /** Effect-native repo worker — runs inside a scope so temp dirs are always cleaned up. */
 export function analyzeRepoWorker(
   repo: GitHubRepo,
   repoOutputDir: string,
   cloneUrl: string,
   org: string,
+  emitLegacyProjections = false,
 ): Effect.Effect<RepoWorkerOutcome, never, never> {
   const repoKey = `${org}/${repo.name}`
 
@@ -94,16 +215,33 @@ export function analyzeRepoWorker(
       const cloneDir = yield* acquireTempDir("planetnik")
 
       yield* Effect.logDebug("Cloning...").pipe(withPhase("clone"))
-      const cloneResult = yield* Effect.tryPromise({
-        try: () => simpleGit().clone(cloneUrl, cloneDir, ["--single-branch"]),
-        catch: (error) =>
-          new CloneError({
-            type: "landscape/clone",
-            title: "Repository clone failed",
-            detail: String(error),
-            repoKey,
-          }),
-      }).pipe(Effect.either)
+      const cloneResult = yield* retryLandscapeExternal(
+        Effect.tryPromise({
+          try: (signal) => simpleGit({ abort: signal }).clone(cloneUrl, cloneDir, ["--single-branch"]),
+          catch: (error) => error,
+        }).pipe(
+          // A failed clone may leave a partial checkout behind. Each retry
+          // starts from a fresh directory, while the outer scope still owns
+          // the final cleanup on success, failure, or interruption.
+          Effect.tapError(() =>
+            Effect.sync(() => {
+              rmSync(cloneDir, { recursive: true, force: true })
+              mkdirSync(cloneDir, { recursive: true })
+            }),
+          ),
+        ),
+      ).pipe(
+        Effect.mapError(
+          (error) =>
+            new CloneError({
+              type: "landscape/clone",
+              title: "Repository clone failed",
+              detail: String(error),
+              repoKey,
+            }),
+        ),
+        Effect.either,
+      )
 
       if (cloneResult._tag === "Left") {
         yield* Effect.logWarning(`Clone failed: ${cloneResult.left.detail}`).pipe(withPhase("clone"))
@@ -145,7 +283,7 @@ export function analyzeRepoWorker(
       }
 
       yield* Effect.logDebug("Running analysis...").pipe(withPhase("analysis"))
-      yield* runAnalysis(confFile, repoOutputDir)
+      yield* runAnalysis(confFile, repoOutputDir, { emitLegacyProjections })
 
       return new RepoAnalysisDone({ repoKey, name: repo.name })
     }).pipe(
@@ -167,6 +305,56 @@ export function analyzeRepoWorker(
   ).pipe(Effect.annotateLogs({ org, repo: repo.name }))
 }
 
+export const LandscapeRepoWorkerLive: Layer.Layer<LandscapeRepoWorker> = Layer.succeed(LandscapeRepoWorker, {
+  run: (task) =>
+    analyzeRepoWorker(task.repo, task.repoOutputDir, task.cloneUrl, task.org, task.emitLegacyProjections === true),
+})
+
+/** Run repository jobs with a single bounded scheduler and ordered outcomes. */
+export function runRepoAnalysis(
+  tasks: readonly RepoAnalysisTask[],
+  limit: number,
+  summary: Ref.Ref<LandscapeRunSummary>,
+): Effect.Effect<ReadonlyArray<RepoWorkerOutcome>, InvalidConcurrencyError, LandscapeRepoWorker> {
+  return Effect.gen(function* () {
+    if (!Number.isInteger(limit) || limit <= 0) {
+      return yield* Effect.fail(
+        new InvalidConcurrencyError({
+          type: "landscape/invalid-concurrency",
+          title: "Invalid landscape concurrency",
+          detail: `Expected a positive integer, received ${limit}`,
+          concurrency: limit,
+        }),
+      )
+    }
+
+    const worker = yield* LandscapeRepoWorker
+    const recordOutcome = (outcome: RepoWorkerOutcome) =>
+      Ref.update(summary, (current) => ({
+        ...current,
+        completed: current.completed + 1,
+        analyzed: current.analyzed + (outcome._tag === "RepoAnalysisDone" ? 1 : 0),
+        skipped: current.skipped + (outcome._tag === "RepoAnalysisSkipped" ? 1 : 0),
+        failed: current.failed + (outcome._tag === "RepoAnalysisFailed" ? 1 : 0),
+      }))
+
+    return yield* Effect.forEach(
+      tasks,
+      (task) =>
+        (task.skip
+          ? Effect.succeed(
+              new RepoAnalysisSkipped({
+                repoKey: `${task.org}/${task.repo.name}`,
+                name: task.repo.name,
+              }),
+            )
+          : worker.run(task)
+        ).pipe(Effect.tap(recordOutcome)),
+      { concurrency: limit },
+    )
+  })
+}
+
 export const analyzeLandscapeCommand = Command.make(
   "analyzeLandscape",
   {
@@ -175,9 +363,15 @@ export const analyzeLandscapeCommand = Command.make(
     name: landscapeName,
     concurrency,
     skipExisting,
+    emitLegacyProjections: emitLegacyProjectionsOption,
   },
   (args) =>
     Effect.gen(function* () {
+      if (!Number.isInteger(args.concurrency) || args.concurrency <= 0) {
+        yield* Effect.logError(`Invalid concurrency: ${args.concurrency}. Use a positive integer.`)
+        return
+      }
+
       const configPath = resolve(args.config)
       if (!existsSync(configPath)) {
         yield* Effect.logError(`Config file not found: ${configPath}`)
@@ -188,6 +382,9 @@ export const analyzeLandscapeCommand = Command.make(
       const decoded = Schema.decodeUnknownSync(LandscapeConfigSchema)(rawJson)
       const cliConfig = yield* CliConfig
       const rawConfig = { ...rawJson, ...decoded }
+      const emitLegacyProjections =
+        (args.emitLegacyProjections._tag === "Some" && args.emitLegacyProjections.value === true) ||
+        rawConfig.emitLegacyProjections === true
       const config: LandscapeConfig = {
         ...decoded,
         githubToken: decoded.githubToken || (cliConfig.githubToken ? Redacted.value(cliConfig.githubToken) : undefined),
@@ -197,16 +394,21 @@ export const analyzeLandscapeCommand = Command.make(
 
       // 1. Discover repos
       yield* Effect.logInfo("Discovering repositories from GitHub...").pipe(withPhase("discovery"))
-      const orgRepos = yield* Effect.tryPromise({
-        try: () => discoverRepos(config),
-        catch: (error) =>
-          new GitHubDiscoveryError({
-            type: "landscape/github-discovery",
-            title: "GitHub API discovery failed",
-            detail: String(error),
-            org: "",
-          }),
-      }).pipe(
+      const orgRepos = yield* retryLandscapeExternal(
+        Effect.tryPromise({
+          try: (signal) => discoverRepos(config, signal),
+          catch: (error) => error,
+        }),
+      ).pipe(
+        Effect.mapError(
+          (error) =>
+            new GitHubDiscoveryError({
+              type: "landscape/github-discovery",
+              title: "GitHub API discovery failed",
+              detail: String(error),
+              org: "",
+            }),
+        ),
         Effect.tapError((e) =>
           Effect.logError(e.detail).pipe(
             withPhase("discovery"),
@@ -232,8 +434,8 @@ export const analyzeLandscapeCommand = Command.make(
         writeFileSync(join(discoveryDir, `${org}.json`), JSON.stringify(repos, null, 2), "utf-8")
       }
 
-      // 2. Analyze each repo
-      const allOutcomes: RepoWorkerOutcome[] = []
+      // 2. Analyze each repo with one bounded traversal across the landscape.
+      const repoTasks: RepoAnalysisTask[] = []
 
       for (const [org, repos] of orgRepos) {
         yield* Effect.logInfo(`Analyzing ${org} (${repos.length} repos)...`).pipe(
@@ -244,39 +446,23 @@ export const analyzeLandscapeCommand = Command.make(
         const orgDir = join(outDir, org)
         mkdirSync(orgDir, { recursive: true })
 
-        // Process in batches for concurrency control
-        const totalBatches = Math.ceil(repos.length / args.concurrency)
-        for (let i = 0; i < repos.length; i += args.concurrency) {
-          const batch = repos.slice(i, i + args.concurrency)
-          const batchNum = Math.floor(i / args.concurrency) + 1
-          yield* Effect.logDebug(
-            `Batch ${batchNum}/${totalBatches}: ${batch.map((r) => r.name).join(", ")}`,
-          ).pipe(withPhase("analysis"), Effect.annotateLogs("org", org))
-
-          const batchEffects = batch.map((repo) => {
-            const repoOutputDir = join(orgDir, repo.name)
-
-            // Skip if already analyzed
-            if (args.skipExisting && existsSync(join(repoOutputDir, "data", "analysisResults.json"))) {
-              return Effect.succeed(
-                new RepoAnalysisSkipped({
-                  repoKey: `${org}/${repo.name}`,
-                  name: repo.name,
-                }),
-              )
-            }
-
-            mkdirSync(repoOutputDir, { recursive: true })
-            const cloneUrl = `${config.githubCloneUrl}/${org}/${repo.name}.git`
-            return analyzeRepoWorker(repo, repoOutputDir, cloneUrl, org)
+        for (const repo of repos) {
+          const repoOutputDir = join(orgDir, repo.name)
+          const skip = args.skipExisting && existsSync(join(repoOutputDir, "data", "analysisResults.json"))
+          if (!skip) mkdirSync(repoOutputDir, { recursive: true })
+          repoTasks.push({
+            org,
+            repo,
+            repoOutputDir,
+            cloneUrl: `${config.githubCloneUrl}/${org}/${repo.name}.git`,
+            skip,
+            emitLegacyProjections,
           })
-
-          const results = yield* Effect.all(batchEffects, {
-            concurrency: "unbounded",
-          })
-          allOutcomes.push(...results)
         }
       }
+
+      const runSummaryRef = yield* Ref.make(makeLandscapeRunSummary(repoTasks.length))
+      const allOutcomes = yield* runRepoAnalysis(repoTasks, args.concurrency, runSummaryRef)
 
       // Log each outcome
       const logOutcome = (outcome: RepoWorkerOutcome) => {
@@ -294,27 +480,15 @@ export const analyzeLandscapeCommand = Command.make(
       }
       yield* Effect.forEach(allOutcomes, logOutcome, { discard: true })
 
-      // Tally results
-      const tally = allOutcomes.reduce(
-        (acc, o) => ({
-          analyzed: acc.analyzed + (o._tag === "RepoAnalysisDone" ? 1 : 0),
-          skipped: acc.skipped + (o._tag === "RepoAnalysisSkipped" ? 1 : 0),
-          failed: acc.failed + (o._tag === "RepoAnalysisFailed" ? 1 : 0),
-        }),
-        { analyzed: 0, skipped: 0, failed: 0 },
-      )
-      const failures = allOutcomes.filter((o): o is RepoAnalysisFailed => o._tag === "RepoAnalysisFailed")
+      // The Ref is the concurrency-safe progress summary; outcomes remain the detailed evidence source.
+      const tally = yield* Ref.get(runSummaryRef)
+      const failureReport = buildRepoFailureReport(allOutcomes)
 
       yield* Effect.logInfo(
         `Analysis complete: ${tally.analyzed} analyzed, ${tally.skipped} skipped, ${tally.failed} failed`,
       ).pipe(withPhase("analysis"))
 
-      if (failures.length > 0) {
-        const failureReport = failures.map((f) => ({
-          repoKey: f.repoKey,
-          errorType: f.error._tag,
-          detail: f.error.detail,
-        }))
+      if (failureReport.length > 0) {
         writeFileSync(join(outDir, "_failures.json"), JSON.stringify(failureReport, null, 2), "utf-8")
       }
 
@@ -364,10 +538,9 @@ export const analyzeLandscapeCommand = Command.make(
         }
 
         if (!securityBlocked) {
-          // Process in batches of 5 to respect rate limits
-          for (let i = startIndex; i < repoTargets.length; i += 5) {
-            const batch = repoTargets.slice(i, i + 5)
-            const batchEffects = batch.map(({ org, repo }) =>
+          const results = yield* Effect.forEach(
+            repoTargets.slice(startIndex),
+            ({ org, repo }) =>
               Effect.tryPromise({
                 try: () => fetchDependabotAlerts(org, repo.name, config.githubToken, config.githubApiUrl),
                 catch: (error) => error,
@@ -382,14 +555,10 @@ export const analyzeLandscapeCommand = Command.make(
                   }),
                 ),
               ),
-            )
-
-            const results = yield* Effect.all(batchEffects, {
-              concurrency: "unbounded",
-            })
-            for (const { repo: repoName, alerts } of results) {
-              alertsByRepo.set(repoName, alerts)
-            }
+            { concurrency: DEPENDABOT_CONCURRENCY },
+          )
+          for (const { repo: repoName, alerts } of results) {
+            alertsByRepo.set(repoName, alerts)
           }
         }
 
@@ -447,32 +616,41 @@ export const analyzeLandscapeCommand = Command.make(
           name: args.name.value,
         }
       }
+      landscapeConfig.emitLegacyProjections = emitLegacyProjections
       saveLandscapeConfiguration(landscapeConfigPath, landscapeConfig)
 
       const analyzer = new LandscapeAnalyzer(landscapeConfig, outDir)
       const landscapeResults = analyzer.analyze()
 
-      const report = new RichTextReport("landscape", "index.html")
-      report.displayName = landscapeResults.metadata.name || "Landscape"
-      LandscapeReportGenerator.generate(report, landscapeResults)
-
       const reportsDir = resolveLandscapeReportsDir(outDir)
       mkdirSync(reportsDir, { recursive: true })
 
-      const parts: string[] = []
-      const client = { append: (text: string) => parts.push(text) }
-      new ReportRenderer().render(report, client)
+      if (emitLegacyProjections) {
+        const report = new RichTextReport("landscape", "index.html")
+        report.displayName = landscapeResults.metadata.name || "Landscape"
+        LandscapeReportGenerator.generate(report, landscapeResults)
 
-      const html =
-        REPORTS_HTML_HEADER.replace("{{TITLE}}", report.displayName).replace("{{CUSTOM_HEADER}}", "") +
-        parts.join("") +
-        REPORTS_HTML_FOOTER
+        const parts: string[] = []
+        const client = { append: (text: string) => parts.push(text) }
+        new ReportRenderer().render(report, client)
 
-      writeFileSync(join(reportsDir, "index.html"), html, "utf-8")
+        const html =
+          REPORTS_HTML_HEADER.replace("{{TITLE}}", report.displayName).replace("{{CUSTOM_HEADER}}", "") +
+          parts.join("") +
+          REPORTS_HTML_FOOTER
+
+        writeFileSync(join(reportsDir, "index.html"), html, "utf-8")
+      } else {
+        yield* Effect.logInfo(
+          "Skipping legacy landscape TXT/HTML projections (canonical JSON is default).",
+        ).pipe(withPhase("reporting"))
+      }
 
       const dataDir = resolveLandscapeDataDir(outDir)
       mkdirSync(dataDir, { recursive: true })
-      const landscapeDataExport = new LandscapeDataExport(landscapeResults, reportsDir)
+      const landscapeDataExport = new LandscapeDataExport(landscapeResults, reportsDir, {
+        emitCompatibilityProjections: emitLegacyProjections,
+      })
       landscapeDataExport.exportCoreContracts("analyzeLandscape")
       landscapeDataExport.exportPeopleContracts(landscapeConfig.teamsConfig)
       const tagMap = buildLandscapeTagMap(landscapeConfig, landscapeResults.repositoryAnalysisResults, outDir)
@@ -496,7 +674,9 @@ export const analyzeLandscapeCommand = Command.make(
         )
       }
 
-      yield* Effect.logInfo(`Landscape report: ${reportsDir}/index.html`).pipe(withPhase("reporting"))
+      if (emitLegacyProjections) {
+        yield* Effect.logInfo(`Landscape report: ${reportsDir}/index.html`).pipe(withPhase("reporting"))
+      }
       yield* Effect.logInfo(
         `${landscapeResults.getRepositoryCount()} repositories, ${landscapeResults.getTotalLoc()} total LOC`,
       ).pipe(withPhase("reporting"))

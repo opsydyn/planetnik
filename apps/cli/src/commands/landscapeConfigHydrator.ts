@@ -84,6 +84,9 @@ export function hydrateLandscapeConfiguration(
 		rawConfig.ignoreContributors,
 	);
 	landscapeConfig.ignoreExtensions = toStringArray(rawConfig.ignoreExtensions);
+	if (typeof rawConfig.emitLegacyProjections === "boolean") {
+		landscapeConfig.emitLegacyProjections = rawConfig.emitLegacyProjections;
+	}
 
 	if (Array.isArray(rawConfig.breadcrumbs)) {
 		landscapeConfig.breadcrumbs = rawConfig.breadcrumbs
