@@ -20,7 +20,7 @@ function queue(window: PortfolioActionWindow, ids: readonly string[]): Portfolio
     rankingPolicyVersion: 1,
     asOf: "2026-09-06T00:00:00.000Z",
     filters: { repositoryIds: [], teamIds: [], priorityBands: [], domains: [], window },
-    items: ids.map((id) => ({ id })) as unknown as PortfolioActionQueue["items"],
+    items: ids.map((id) => ({ id, signals: [], evidence: [] })) as unknown as PortfolioActionQueue["items"],
     coverage: {
       datasets: { included: [], planned: [], excluded: [], unavailable: [] },
       domains: {
@@ -53,11 +53,11 @@ describe("action queue artifact materializer", () => {
         outputDir,
         windows: ["current"],
         pageSize: 2,
-        projectionVersion: 1,
       }),
     )
 
     expect(manifest.windows).toHaveLength(1)
+    expect(manifest.projectionVersion).toBe(2)
     expect(manifest.windows[0]).toMatchObject({
       window: "current",
       totalItems: 3,
@@ -68,11 +68,18 @@ describe("action queue artifact materializer", () => {
     })
     expect(manifest.filterOptions.priorities).toEqual(["critical", "high", "medium", "low", "unrated"])
     expect(manifest.sourceFingerprint).toMatch(/^[a-f0-9]{64}$/u)
+    expect(manifest.windows[0]?.contentFingerprint).toMatch(/^[a-f0-9]{64}$/u)
     expect(existsSync(join(outputDir, "manifest.json"))).toBe(true)
-    expect(JSON.parse(readFileSync(join(outputDir, "current/1.json"), "utf8"))).toMatchObject({
+    const firstChunk = JSON.parse(readFileSync(join(outputDir, "current/1.json"), "utf8")) as {
+      readonly evidenceBases: readonly unknown[]
+      readonly items: readonly Record<string, unknown>[]
+    }
+    expect(firstChunk).toMatchObject({
       asOf: "2026-09-06T00:00:00.000Z",
       totalItems: 3,
     })
+    expect(firstChunk.evidenceBases).toEqual([])
+    expect(firstChunk.items[0]).not.toHaveProperty("evidence")
     expect(
       JSON.parse(readFileSync(join(outputDir, "current/1.json"), "utf8")).items.map((item: { id: string }) => item.id),
     ).toEqual(["first", "second"])
@@ -110,5 +117,41 @@ describe("action queue artifact materializer", () => {
       JSON.parse(readFileSync(join(outputDir, "current/2.json"), "utf8")).items.map((item: { id: string }) => item.id),
     ).toEqual(["third"])
     expect(readdirSync(join(outputDir, "current"))).toEqual(["1.json", "2.json"])
+  })
+
+  test("changes only the affected window fingerprint when queue content changes", async () => {
+    const root = mkdtempSync(join(tmpdir(), "planetnik-action-artifacts-fingerprint-"))
+    roots.push(root)
+    const firstOutputDir = join(root, "first")
+    const secondOutputDir = join(root, "second")
+    const source = (changed: boolean): ActionQueueArtifactSource => ({
+      sourceIds: ["repo-a:snapshot-1"],
+      readWindow: (window) => queue(window, window === "current" ? ["current"] : changed ? ["changed"] : ["shared"]),
+    })
+
+    const firstManifest = await Effect.runPromise(
+      materializeActionQueueArtifacts({
+        source: source(false),
+        outputDir: firstOutputDir,
+        windows: ["current", "7d"],
+        pageSize: 2,
+      }),
+    )
+    const secondManifest = await Effect.runPromise(
+      materializeActionQueueArtifacts({
+        source: source(true),
+        outputDir: secondOutputDir,
+        windows: ["current", "7d"],
+        pageSize: 2,
+      }),
+    )
+
+    const firstCurrent = firstManifest.windows.find((window) => window.window === "current")!
+    const firstSevenDay = firstManifest.windows.find((window) => window.window === "7d")!
+    const secondCurrent = secondManifest.windows.find((window) => window.window === "current")!
+    const secondSevenDay = secondManifest.windows.find((window) => window.window === "7d")!
+    expect(secondManifest.sourceFingerprint).toBe(firstManifest.sourceFingerprint)
+    expect(secondCurrent.contentFingerprint).toBe(firstCurrent.contentFingerprint)
+    expect(secondSevenDay.contentFingerprint).not.toBe(firstSevenDay.contentFingerprint)
   })
 })

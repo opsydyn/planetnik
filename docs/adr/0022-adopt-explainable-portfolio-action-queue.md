@@ -2,9 +2,10 @@
 
 ## Status
 
-Accepted — static implementation and bounded artifact routes delivered
-2026-09-06; final incremental build evidence is green, real materialization
-is memory-heavy, and repository-wide lint remains open
+Accepted — static implementation, bounded artifact routes, compact v2 artifact
+projection, and per-window content invalidation delivered 2026-09-06; final
+incremental build evidence is green, real materialization is still
+memory-heavy, and repository-wide lint remains open
 
 ## Date
 
@@ -70,12 +71,23 @@ and snapshot identity.
 The static site materializes the ranked top 250 items per observation window
 by default. A versioned manifest and deterministic page-one chunk are written
 under Astro's ignored `.astro/planetnik-action-queue` cache directory; the
-HTML and JSON routes read only the selected chunk and use a source-identity
-fingerprint plus projection version in their cache keys. The site model keeps
+HTML and JSON routes read only the selected chunk and use the selected
+window's content fingerprint plus a canonical digest of the manifest-wide
+filter options, projection version, window, and page in their cache keys. The
+content fingerprint is salted with the artifact version so an on-disk schema
+change cannot silently reuse an older route cache. The manifest retains the
+global source-identity fingerprint for provenance. The site model keeps
 the full ranked total and an explicit `complete`/truncation flag, so filters
 cannot present a bounded slice as the complete queue. The materializer can
 write complete paginated windows when called without `itemLimit`, but that
 mode is not yet safe for the current 4 GB catalogue tree.
+
+Artifact version 2 keeps the public queue contract unchanged while compacting
+the ignored cache payload: each chunk stores repeated evidence metadata once
+in `evidenceBases`, signals refer to it with ordered `[baseId, record]`
+tuples, and the redundant item-level evidence copy is omitted. The route
+reader rehydrates the exact queue shape before rendering HTML or serving the
+JSON endpoint; stale v1 manifests fail closed.
 
 ## Decision Drivers
 
@@ -232,6 +244,34 @@ root `bun run lint` remains red on the repository's existing Biome 2.5/schema
 and format baseline (549 errors, 3 warnings, and 2 infos); unbounded full
 pagination and changed-fingerprint selective rebuild measurement remain
 follow-ups.
+
+Compaction follow-up evidence (2026-09-06): the real catalogue materializer
+wrote v2 page-one artifacts of 4,820,331 bytes for `current`, 4,820,341 for
+`latest-compatible`, 4,827,434 for `7d`, and 4,820,327 each for `30d` and
+`90d`. The `current` artifact is 95.38% smaller than the previous
+104,383,387-byte v1 chunk while preserving 250 items, 108,278 rehydrated
+evidence anchors, exact selectors, and the same full totals. This measurement
+covers the ignored materializer input artifacts; the public JSON route still
+serializes the full queue contract by design. The compact artifacts integrate
+with the real named-dataset Astro build: 131 pages completed in 119.87 seconds
+with 14,253,522,944 bytes maximum RSS, and an unchanged rerun completed in
+113.64 seconds while restoring all five action JSON routes from incremental
+cache. The build remains memory-heavy, so complete unbounded pagination is
+still deferred.
+
+Per-window content invalidation evidence (2026-09-06): each window manifest
+entry now carries a canonical queue-content fingerprint that includes the
+window, source identities, projection version, page size, full total, and
+materialized queue. A synthetic two-window materialization kept the global
+source fingerprint and the unchanged window fingerprint stable while changing
+only the other window. In a copied `requests-python-pilot` fixture, changing
+one `hotspots.json` score (`30` to `31`) kept the global source fingerprint at
+`7c582629...` but changed the current content fingerprint (`088f0d1f...` to
+`3d73af14...`) and compact artifact (`d4a4c83f...` to `4bc90467...`). The
+changed build regenerated the current JSON route; its body matched the
+rehydrated changed queue (`7fbd27c1...`), and an unchanged rerun restored all
+five JSON routes. The shard contributes to each observation window in this
+fixture, so all five JSON routes were regenerated for the mutation.
 
 ## Related ADRs and Evidence
 

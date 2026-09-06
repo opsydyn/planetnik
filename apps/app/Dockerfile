@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.11 AS build
+FROM oven/bun:1.4.2 AS build
 WORKDIR /workspace
 
 ARG PUBLIC_SERVER_URL=http://localhost:1337

@@ -19,7 +19,7 @@ It complements [CLAUDE.md](/Users/alan/Projects/planetnik/CLAUDE.md). `CLAUDE.md
 ## Runtime And Tooling
 
 - Runtime is Bun, not Node.
-- Root manifest uses `bun@1.3.11`.
+- Root manifest uses `bun@1.4.2`.
 - Main root scripts:
   - `bun run dev:site`
   - `bun run dev:cli`
@@ -195,7 +195,7 @@ Important:
 
 Current workflow direction is good, but keep these rules in mind:
 
-- Bun is pinned to `1.3.11` in workflows.
+- Bun is pinned to `1.4.2` in workflows.
 - Landscape deploy expects `LANDSCAPE_GITHUB_TOKEN`.
 - Deploy is now stricter about landscape security data being present when landscape analysis runs.
 

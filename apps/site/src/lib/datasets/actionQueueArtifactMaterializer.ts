@@ -8,6 +8,7 @@ import type {
 } from "@planetnik/common"
 import { Effect } from "effect"
 import {
+  ACTION_QUEUE_ARTIFACT_PROJECTION_VERSION,
   ACTION_QUEUE_ARTIFACT_VERSION,
   ACTION_QUEUE_MANIFEST_FILE,
   ACTION_QUEUE_PAGE_SIZE,
@@ -17,6 +18,7 @@ import {
   type ActionQueueArtifactWindow,
   chunkPortfolioActionQueue,
   fingerprintActionQueueSource,
+  fingerprintActionQueueWindow,
 } from "./actionQueueArtifacts.js"
 
 export type ActionQueueArtifactSource = {
@@ -104,6 +106,7 @@ function writeWindow(
   source: ActionQueueArtifactSource,
   window: PortfolioActionWindow,
   pageSize: number,
+  projectionVersion: number,
   itemLimit: number | undefined,
 ): Effect.Effect<MaterializedWindow, Error> {
   return Effect.gen(function* () {
@@ -114,6 +117,13 @@ function writeWindow(
     const queue = "queue" in result ? result.queue : result
     const totalItems = "totalItems" in result ? result.totalItems : queue.items.length
     const chunks = chunkPortfolioActionQueue(queue, pageSize, totalItems)
+    const contentFingerprint = fingerprintActionQueueWindow(
+      queue,
+      source.sourceIds,
+      projectionVersion,
+      pageSize,
+      totalItems,
+    )
     yield* Effect.forEach(chunks, (chunk) => writeJson(join(temporaryDir, chunkPath(window, chunk.page)), chunk), {
       concurrency: 1,
       discard: true,
@@ -126,6 +136,7 @@ function writeWindow(
         pageSize,
         pageCount: chunks.length,
         chunks: chunks.map((chunk) => chunkPath(window, chunk.page)),
+        contentFingerprint,
         asOf: queue.asOf,
         coverage: queue.coverage,
       },
@@ -138,7 +149,7 @@ export function materializeActionQueueArtifacts(
   options: MaterializeActionQueueArtifactsOptions,
 ): Effect.Effect<ActionQueueArtifactManifest, Error> {
   const pageSize = options.pageSize ?? ACTION_QUEUE_PAGE_SIZE
-  const projectionVersion = options.projectionVersion ?? 1
+  const projectionVersion = options.projectionVersion ?? ACTION_QUEUE_ARTIFACT_PROJECTION_VERSION
   const windows = options.windows ?? defaultWindows
   if (!windows.length) return Effect.fail(new Error("At least one action queue window is required."))
   const seenWindows = new Set<PortfolioActionWindow>()
@@ -161,7 +172,7 @@ export function materializeActionQueueArtifacts(
       Effect.gen(function* () {
         const materializedWindows = yield* Effect.forEach(
           windows,
-          (window) => writeWindow(temporaryDir, options.source, window, pageSize, options.itemLimit),
+          (window) => writeWindow(temporaryDir, options.source, window, pageSize, projectionVersion, options.itemLimit),
           { concurrency: 1 },
         )
         const manifest: ActionQueueArtifactManifest = {

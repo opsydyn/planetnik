@@ -1,11 +1,11 @@
-FROM oven/bun:1.3.11 AS build
+FROM oven/bun:1.4.2 AS build
 WORKDIR /workspace
 
 COPY . .
 RUN bun install --frozen-lockfile
 RUN bun run --cwd apps/runtime build
 
-FROM oven/bun:1.3.11 AS runtime
+FROM oven/bun:1.4.2 AS runtime
 WORKDIR /workspace/apps/runtime
 
 ENV NODE_ENV=production

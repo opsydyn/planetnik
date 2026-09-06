@@ -17,7 +17,9 @@
 - Do not add `actions.json` to canonical analysis exports; these are derived static artifacts only.
 - Keep the hosted acknowledgement/status overlay out of this slice.
 - Do not fork heavy synchronous queue builds concurrently; materialize windows with bounded concurrency `1` until measurements prove a higher limit safe.
-- Every generated artifact must include a source fingerprint and projection version so stale cache entries cannot be reused silently.
+- Every generated artifact must include a global source fingerprint and
+  projection version; each manifest window must also carry a content-derived
+  fingerprint so stale cache entries cannot be reused silently.
 - The public route must state its pagination/materialization scope; no filtered result may be presented as a complete queue when it is page-local.
 - Keep generated artifacts out of git and preserve the existing untracked `.superpowers/brainstorm` scratch files.
 
@@ -34,8 +36,15 @@ build completes in 264.43 seconds (Astro itself 41.25 seconds), peaks at
 rather than emitting empty pages. The final output is 131 pages with a 4 GB
 Node heap; the five action JSON routes are restored from Astro's incremental
 cache on a second unchanged build with the same source fingerprint. Full-catalogue
-(unbounded) page materialization and changed-fingerprint selective rebuild
-measurement remain unproven.
+(unbounded) page materialization remains unproven. The follow-up content-
+invalidation implementation adds per-window canonical queue fingerprints to
+the manifest and uses them in route cache keys. A same-source synthetic
+materialization keeps unchanged-window keys stable when another window changes.
+In a copied `requests-python-pilot` fixture, changing one canonical
+`hotspots.json` score changes the current content key and regenerated JSON body;
+an unchanged rerun restores all five JSON routes. The shard contributes to each
+observation window in that fixture, so all five JSON routes regenerate for that
+mutation.
 
 ## File Map
 
@@ -158,7 +167,9 @@ measurement remain unproven.
 
 **Interfaces:**
 - Consumes: the manifest/chunks produced by Task 2.
-- Produces: static JSON routes for each valid window/page, each with a stable `cacheKey` containing the source fingerprint, window, page, and projection version.
+- Produces: static JSON routes for each valid window/page, each with a stable
+  `cacheKey` containing the selected window content fingerprint, window, page,
+  and projection version.
 
 - [x] **Step 1: Write a route contract test.**
 
@@ -178,7 +189,7 @@ measurement remain unproven.
 
 - [x] **Step 4: Implement `getStaticPaths()` and `GET`.**
 
-  `getStaticPaths()` reads the generated manifest, returns only existing chunk params, and supplies the source-derived `cacheKey`. `GET` reads one chunk by validated params and returns `Response.json` with a public immutable cache header. It must not call the full queue builder.
+  `getStaticPaths()` reads the generated manifest, returns only existing chunk params, and supplies the selected-window content-derived `cacheKey` plus the canonical manifest-wide filter-options digest. `GET` reads one chunk by validated params and returns `Response.json` with a public immutable cache header. It must not call the full queue builder.
 
 - [x] **Step 5: Run the route test and a fixture build.**
 
@@ -246,7 +257,7 @@ measurement remain unproven.
 
 - [x] **Step 2: Inspect output directly.**
 
-  Verify that `/datasets/actions` is small, each chunk is independently readable, evidence anchors remain exact, and a changed source fingerprint rebuilds only affected routes while an unchanged build reuses cache entries.
+  Verify that `/datasets/actions` is small, each chunk is independently readable, evidence anchors remain exact, an unchanged build reuses cache entries, and a changed canonical shard regenerates the affected JSON route. Treat reuse as window-scoped: all windows whose queue content changes must regenerate.
 
 - [x] **Step 3: Update ADR and roadmap with evidence.**
 

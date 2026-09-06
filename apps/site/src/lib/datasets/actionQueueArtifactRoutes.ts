@@ -11,8 +11,13 @@ import {
   ACTION_QUEUE_MANIFEST_FILE,
   ACTION_QUEUE_WINDOWS,
   type ActionQueueArtifactChunk,
+  type ActionQueueArtifactEvidenceBase,
   type ActionQueueArtifactFilterOptions,
+  type ActionQueueArtifactItem,
   type ActionQueueArtifactManifest,
+  expandActionQueueArtifactItems,
+  fingerprintActionQueueArtifactFilterOptions,
+  isValidActionQueueArtifactEvidenceBase,
 } from "./actionQueueArtifacts.js"
 
 export type ActionQueueArtifactParams = {
@@ -33,6 +38,7 @@ export type ActionQueueArtifactPage = {
   readonly pageCount: number
   readonly complete: boolean
   readonly sourceFingerprint: string
+  readonly contentFingerprint: string
   readonly projectionVersion: number
   readonly filterOptions: ActionQueueArtifactFilterOptions
   readonly chunkPath: string
@@ -53,6 +59,10 @@ const signalDomains: readonly PortfolioActionSignalDomain[] = [
 ]
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
+
+function validEvidenceBase(value: unknown): value is ActionQueueArtifactEvidenceBase {
+  return isValidActionQueueArtifactEvidenceBase(value)
+}
 
 function validWindow(value: unknown): value is PortfolioActionWindow {
   return typeof value === "string" && ACTION_QUEUE_WINDOWS.includes(value as PortfolioActionWindow)
@@ -119,6 +129,8 @@ function parseManifest(value: unknown): ActionQueueArtifactManifest | undefined 
       typeof entry.complete !== "boolean" ||
       !positiveInteger(entry.pageSize) ||
       !nonNegativeInteger(entry.pageCount) ||
+      typeof entry.contentFingerprint !== "string" ||
+      !sourceFingerprintPattern.test(entry.contentFingerprint) ||
       typeof entry.asOf !== "string" ||
       !validCoverage(entry.coverage) ||
       !Array.isArray(entry.chunks) ||
@@ -134,6 +146,7 @@ function parseManifest(value: unknown): ActionQueueArtifactManifest | undefined 
         pageSize: entry.pageSize,
         pageCount: entry.pageCount,
         chunks: entry.chunks,
+        contentFingerprint: entry.contentFingerprint,
         asOf: entry.asOf,
         coverage: entry.coverage as never,
       },
@@ -162,10 +175,13 @@ export function parseActionQueueArtifactParams(
 }
 
 export function actionQueueArtifactCacheKey(
-  manifest: Pick<ActionQueueArtifactManifest, "sourceFingerprint" | "projectionVersion">,
+  manifest: Pick<ActionQueueArtifactManifest, "filterOptions" | "projectionVersion" | "windows">,
   params: ActionQueueArtifactParams,
 ): string {
-  return `${manifest.sourceFingerprint}:${manifest.projectionVersion}:${params.window}:${params.page}`
+  const window = manifest.windows.find((entry) => entry.window === params.window)
+  if (!window) throw new Error(`Action queue artifact window '${params.window}' is not present in the manifest.`)
+  const filterOptionsFingerprint = fingerprintActionQueueArtifactFilterOptions(manifest.filterOptions)
+  return `${window.contentFingerprint}:${filterOptionsFingerprint}:${manifest.projectionVersion}:${params.window}:${params.page}`
 }
 
 export function defaultActionQueueArtifactDirectory(): string {
@@ -215,10 +231,17 @@ export function readActionQueueArtifactPage(
       typeof value.asOf !== "string" ||
       value.asOf !== window.asOf ||
       !validCoverage(value.coverage) ||
+      !Array.isArray(value.evidenceBases) ||
+      !value.evidenceBases.every(validEvidenceBase) ||
       !Array.isArray(value.items)
     )
       return undefined
     const chunk = value as unknown as ActionQueueArtifactChunk
+    const items = expandActionQueueArtifactItems(
+      chunk.items as readonly ActionQueueArtifactItem[],
+      chunk.evidenceBases as readonly ActionQueueArtifactEvidenceBase[],
+    )
+    if (!items) return undefined
     return {
       params,
       queue: {
@@ -226,7 +249,7 @@ export function readActionQueueArtifactPage(
         rankingPolicyVersion: 1,
         asOf: window.asOf,
         filters: { repositoryIds: [], teamIds: [], priorityBands: [], domains: [], window: params.window },
-        items: chunk.items,
+        items,
         coverage: window.coverage,
       },
       totalItems: window.totalItems,
@@ -234,6 +257,7 @@ export function readActionQueueArtifactPage(
       pageCount: window.pageCount,
       complete: window.complete,
       sourceFingerprint: manifest.sourceFingerprint,
+      contentFingerprint: window.contentFingerprint,
       projectionVersion: manifest.projectionVersion,
       filterOptions: manifest.filterOptions,
       chunkPath,

@@ -634,10 +634,37 @@ Astro build over the local catalogue artifacts meet the static-slice criteria.
 The fixture build completes 64 pages; the final combined build completes 131
 pages under a 4 GB Node heap, takes 264.43 seconds wall-clock, and peaks at
 14,213,120,000 bytes RSS. The generated root action page is 88,900,127 bytes
-and the current JSON chunk is 104,383,387 bytes. An unchanged rerun restores
+and the current JSON route is 104,383,387 bytes. An unchanged rerun restores
 the five action JSON routes from Astro's incremental cache with the same source
-fingerprint. Payload compaction, lower-memory complete pagination, and
-changed-fingerprint selective rebuild measurement remain bounded follow-ups.
+fingerprint. The follow-up compact v2 artifact projection now stores repeated
+evidence bases once per chunk and omits the redundant item-level evidence
+copy: real page-one materializer inputs are 4,820,331 bytes (`current`),
+4,820,341 (`latest-compatible`), 4,827,434 (`7d`), and 4,820,327 each
+(`30d`/`90d`), a 95.38% reduction for the current window. The reader restores
+the exact queue contract; the public JSON route remains full-contract by
+design. Lower-memory complete pagination and changed-fingerprint selective
+rebuild measurement remain bounded follow-ups. The compact artifacts integrate
+with the named-dataset build at 131 pages in 119.87 seconds and
+14,253,522,944 bytes maximum RSS; an unchanged rerun restored all five action
+JSON routes from incremental cache in 113.64 seconds.
+The follow-up per-window content invalidation is now implemented: each window
+manifest entry carries a canonical queue-content fingerprint that includes the
+window, source identities, projection version, page size, full total, and
+materialized queue, while the global source fingerprint remains provenance.
+Route cache keys also include a canonical digest of the manifest-wide filter
+options, since those controls are rendered on every page; the content digest
+includes the artifact version as a schema salt.
+A synthetic two-window materialization kept the global source fingerprint and
+the unchanged window fingerprint stable while changing only the other window.
+In a copied `requests-python-pilot` fixture, changing one `hotspots.json` score
+(`30` to `31`) kept the global fingerprint at `7c582629...` but changed the
+current content fingerprint (`088f0d1f...` to `3d73af14...`) and compact
+artifact (`d4a4c83f...` to `4bc90467...`). The changed Astro build regenerated
+the current JSON route, whose body matched the rehydrated changed queue
+(`7fbd27c1...`), and an unchanged rerun restored all five JSON routes. This
+shard contributes to each observation window in the fixture, so all five JSON
+routes were regenerated for the mutation; selective reuse is now guarded by
+the window-level content key.
 The repository-wide Biome lint gate still reports its existing schema and
 format baseline and remains open rather than being folded into delivery status.
 
