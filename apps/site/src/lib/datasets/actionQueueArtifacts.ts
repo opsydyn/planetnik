@@ -475,3 +475,76 @@ export function fingerprintActionQueueSource(sourceIds: readonly string[], proje
   const canonical = JSON.stringify({ projectionVersion, sourceIds: [...sourceIds].sort() })
   return createHash("sha256").update(canonical).digest("hex")
 }
+
+/**
+ * Stream-materialized artifacts use a distinct salt from the bounded queue
+ * projection. This prevents a complete external run from reusing a cache key
+ * produced by the in-memory materializer for the same source identities.
+ */
+export function fingerprintStreamingActionQueueSource(sourceIds: readonly string[], projectionVersion: number): string {
+  if (!Number.isInteger(projectionVersion) || projectionVersion < 1)
+    throw new Error("projectionVersion must be a positive integer.")
+  return fingerprintCanonicalValue({
+    artifactVersion: ACTION_QUEUE_ARTIFACT_VERSION,
+    streamFingerprintVersion: 1,
+    projectionVersion,
+    sourceIds: [...sourceIds].sort(),
+  })
+}
+
+export type ActionQueueWindowStreamFingerprintOptions = {
+  readonly sourceIds: readonly string[]
+  readonly projectionVersion: number
+  readonly window: PortfolioActionWindow
+  readonly pageSize: number
+  readonly totalItems: number
+  readonly asOf: string
+  readonly coverage: PortfolioActionQueueCoverage
+}
+
+export type ActionQueueWindowStreamFingerprint = {
+  readonly updateItem: (item: PortfolioActionQueueItem) => void
+  readonly digest: () => string
+}
+
+/** Hash manifest metadata followed by canonical queue items in rank order. */
+export function createActionQueueWindowStreamFingerprint(
+  options: ActionQueueWindowStreamFingerprintOptions,
+): ActionQueueWindowStreamFingerprint {
+  if (!Number.isInteger(options.projectionVersion) || options.projectionVersion < 1)
+    throw new Error("projectionVersion must be a positive integer.")
+  if (!Number.isInteger(options.pageSize) || options.pageSize < 1)
+    throw new Error("pageSize must be a positive integer.")
+  if (!Number.isInteger(options.totalItems) || options.totalItems < 0)
+    throw new Error("totalItems must be a non-negative integer.")
+  const hash = createHash("sha256")
+  hash.update(
+    JSON.stringify(
+      canonicalizeFingerprintValue({
+        artifactVersion: ACTION_QUEUE_ARTIFACT_VERSION,
+        streamFingerprintVersion: 1,
+        projectionVersion: options.projectionVersion,
+        sourceIds: [...options.sourceIds].sort(),
+        window: options.window,
+        pageSize: options.pageSize,
+        totalItems: options.totalItems,
+        asOf: options.asOf,
+        coverage: options.coverage,
+      }),
+    ),
+  )
+  hash.update("\n")
+  let finished = false
+  return {
+    updateItem: (item) => {
+      if (finished) throw new Error("Cannot update a finalized action queue stream fingerprint.")
+      hash.update(JSON.stringify(canonicalizeFingerprintValue(item)))
+      hash.update("\n")
+    },
+    digest: () => {
+      if (finished) throw new Error("Action queue stream fingerprint has already been finalized.")
+      finished = true
+      return hash.digest("hex")
+    },
+  }
+}
