@@ -263,6 +263,7 @@ const trendOf = (signals: readonly PortfolioActionSignal[]): PortfolioActionTren
       (value): value is PortfolioActionTrend =>
         typeof value === "string" && trendOrder.includes(value as PortfolioActionTrend),
     )
+  if (trends.includes("worsening") && trends.includes("improving")) return "unknown"
   return trendOrder.find((trend) => trends.includes(trend)) ?? "unknown"
 }
 
@@ -487,6 +488,9 @@ export function filterPortfolioActionQueue(
   queue: PortfolioActionQueue,
   filters: PortfolioActionQueueFilters,
 ): PortfolioActionQueue {
+  if (filters.window !== queue.filters.window) {
+    throw new Error(`Cannot filter a ${queue.filters.window} queue with a ${filters.window} window`)
+  }
   const normalized: PortfolioActionQueueFilters = {
     repositoryIds: uniqueSorted(filters.repositoryIds),
     teamIds: uniqueSorted(filters.teamIds),

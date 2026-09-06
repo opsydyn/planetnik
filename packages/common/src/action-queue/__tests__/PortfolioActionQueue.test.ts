@@ -282,6 +282,7 @@ describe("portfolio action queue building", () => {
       queueRecord("hotspot", "better", "better", { kind: "file", severity: "High" }),
       queueRecord("hotspot", "stable", "stable", { kind: "file", severity: "High" }),
       queueRecord("hotspot", "generic", "generic", { kind: "file", severity: "High" }),
+      queueRecord("hotspot", "opposed", "opposed", { kind: "file", severity: "High" }),
       queueRecord("hotspot", "fresh-7", "fresh-7", { kind: "file", severity: "Low" }, "2026-08-30T00:00:00Z"),
       queueRecord("hotspot", "recent-8", "recent-8", { kind: "file", severity: "Low" }, "2026-08-29T00:00:00Z"),
       queueRecord("hotspot", "recent-30", "recent-30", { kind: "file", severity: "Low" }, "2026-08-07T00:00:00Z"),
@@ -300,6 +301,8 @@ describe("portfolio action queue building", () => {
           trendInput("better", { impact_score: 2 }, { impact_score: 1 }),
           trendInput("stable", { knowledgeRisk: 2 }, { knowledgeRisk: 2 }),
           trendInput("generic", { changed: false }, { changed: true }),
+          trendInput("opposed", { complexity: 1 }, { complexity: 2 }),
+          trendInput("opposed", { impact_score: 2 }, { impact_score: 1 }),
           ...riskFields.map((field) => {
             const [baseline, current] = ordinalPair(field)
             return trendInput(`allowlisted-${field}`, { [field]: baseline }, { [field]: current })
@@ -323,6 +326,8 @@ describe("portfolio action queue building", () => {
     ).toEqual(["fresh", "recent", "recent", "aging", "aging", "stale", "unknown"])
     expect(byTarget.get("generic")!.signals.some((signal) => signal.domain === "trend")).toBe(false)
     expect(byTarget.get("mixed")!.signals.some((signal) => signal.domain === "trend")).toBe(false)
+    expect(byTarget.get("opposed")!.trend).toBe("unknown")
+    expect(byTarget.get("opposed")!.signals.filter((signal) => signal.domain === "trend")).toHaveLength(2)
     expect(riskFields.map((field) => byTarget.get(`allowlisted-${field}`)!.trend)).toEqual(
       riskFields.map(() => "worsening"),
     )
@@ -439,6 +444,19 @@ describe("portfolio action queue building", () => {
     expect(filtered.coverage).toBe(source.coverage)
     expect(filtered.items[0]!.factors).toBe(source.items[0]!.factors)
     expect(JSON.stringify(source)).toBe(before)
+  })
+
+  test("rejects a filter window that does not match the prebuilt queue", () => {
+    const source = buildPortfolioActionQueue([datasetInput({})], { window: "current" })
+    expect(() =>
+      filterPortfolioActionQueue(source, {
+        repositoryIds: [],
+        teamIds: [],
+        priorityBands: [],
+        domains: [],
+        window: "7d",
+      }),
+    ).toThrow("Cannot filter a current queue with a 7d window")
   })
 })
 
