@@ -8,12 +8,15 @@ import {
   adaptPortfolioActionSignals,
   adaptSecuritySignals,
   adaptTrendSignals,
+  buildPortfolioActionQueue,
+  filterPortfolioActionQueue,
 } from "../index.js"
 import type {
   HostedActionStatus,
   PortfolioActionDatasetInput,
   PortfolioActionEvidence,
   PortfolioActionQueue,
+  PortfolioActionQueueFilters,
   PortfolioActionSignalDomain,
   PortfolioActionSourceRecord,
 } from "../PortfolioActionQueue.js"
@@ -83,6 +86,360 @@ const fixtureQueue = (): PortfolioActionQueue => ({
     },
     diagnostics: [],
   },
+})
+
+const queueRecord = (
+  domain: Exclude<PortfolioActionSignalDomain, "trend">,
+  id: string,
+  targetId: string,
+  values: Readonly<Record<string, unknown>>,
+  observedAt: string | null = "2026-09-06T00:00:00Z",
+  team?: { readonly id: string; readonly label: string },
+): PortfolioActionSourceRecord =>
+  sourceRecord(domain, id, values, {
+    targetId,
+    targetLabel: `Label ${targetId}`,
+    observedAt,
+    ...(team ? { team } : {}),
+  })
+
+const trendInput = (
+  targetId: string,
+  baselineValues: Readonly<Record<string, unknown>>,
+  currentValues: Readonly<Record<string, unknown>>,
+  observedAt: string | null = "2026-09-06T00:00:00Z",
+): PortfolioActionDatasetInput["trendInputs"][number] => ({
+  targetId,
+  targetLabel: `Label ${targetId}`,
+  baselineValues,
+  currentValues,
+  baselineEvidence: [actionEvidence("trend", `baseline:${targetId}`, { snapshotId: "old" })],
+  currentEvidence: [actionEvidence("trend", `current:${targetId}`)],
+  observedAt,
+})
+
+describe("portfolio action queue building", () => {
+  test("groups canonical targets while preserving distinct identities, ordered actions, teams, evidence, and visible factors", () => {
+    const shared = "target:shared"
+    const input = datasetInput(
+      {
+        security: {
+          status: "present",
+          records: [queueRecord("security", "security", shared, { open: true, severity: "high" })],
+        },
+        control: {
+          status: "present",
+          records: [
+            queueRecord("control", "control-a", shared, { status: "TOLERATED" }, undefined, {
+              id: "z-team",
+              label: "Z Team",
+            }),
+            queueRecord("control", "control-b", shared, { status: "TOLERATED" }, undefined, {
+              id: "z-team",
+              label: "Z Team",
+            }),
+          ],
+        },
+        hotspot: {
+          status: "present",
+          records: [
+            queueRecord("hotspot", "hotspot", shared, { kind: "file", severity: "High" }, undefined, {
+              id: "a-team",
+              label: "A Team",
+            }),
+            {
+              ...queueRecord("hotspot", "same-label-a", "target:a", { kind: "file", severity: "Low" }),
+              targetLabel: "Same",
+            },
+            {
+              ...queueRecord("hotspot", "same-label-b", "target:b", { kind: "file", severity: "Low" }),
+              targetLabel: "Same",
+            },
+          ],
+        },
+      },
+      {
+        historyStatus: "compatible",
+        trendInputs: [trendInput(shared, { complexity: 3 }, { complexity: 4 })],
+      },
+    )
+
+    const queue = buildPortfolioActionQueue([input], { window: "latest-compatible" })
+    const item = queue.items.find((candidate) => candidate.target.id === shared)!
+    expect(item.signals).toHaveLength(5)
+    expect(item.corroboration).toBe(4)
+    expect(item.primaryAction.key).toBe("patch-dependency")
+    expect(item.alternateActions.map((action) => action.key)).toEqual([
+      "restore-control",
+      "stabilize-hotspot",
+      "review-trend",
+    ])
+    expect(item.teams).toEqual([
+      { id: "a-team", label: "A Team" },
+      { id: "unassigned", label: "Unassigned" },
+      { id: "z-team", label: "Z Team" },
+    ])
+    expect(item.evidence).toHaveLength(6)
+    expect(item.factors.map((factor) => factor.key)).toEqual(["priority", "corroboration", "trend", "freshness"])
+    expect(item.factors.map((factor) => factor.value)).toEqual(["high", 4, "worsening", "fresh"])
+    expect(item.factors.every((factor) => factor.explanation.length > 0)).toBe(true)
+    expect(JSON.stringify(queue)).not.toContain('"score"')
+    expect(
+      queue.items.filter((candidate) => candidate.target.label === "Same").map((candidate) => candidate.target.id),
+    ).toEqual(["target:a", "target:b"])
+  })
+
+  test("applies the exact lexicographic ranking vector", () => {
+    const input = datasetInput(
+      {
+        hotspot: {
+          status: "present",
+          records: [
+            queueRecord(
+              "hotspot",
+              "critical",
+              "a-critical",
+              { kind: "file", severity: "Critical" },
+              "2026-06-01T00:00:00Z",
+            ),
+            queueRecord("hotspot", "corroborated", "b-corroborated", { kind: "file", severity: "High" }),
+            queueRecord(
+              "hotspot",
+              "worsening",
+              "c-worsening",
+              { kind: "file", severity: "High" },
+              "2026-08-01T00:00:00Z",
+            ),
+            queueRecord("hotspot", "stable", "d-stable", { kind: "file", severity: "High" }),
+            queueRecord("hotspot", "fresh-a", "e-fresh-a", { kind: "file", severity: "High" }),
+            queueRecord("hotspot", "fresh-b", "f-fresh-b", { kind: "file", severity: "High" }),
+            queueRecord("hotspot", "stale", "g-stale", { kind: "file", severity: "High" }, "2026-06-01T00:00:00Z"),
+          ],
+        },
+        ownership: {
+          status: "present",
+          records: [
+            queueRecord("ownership", "corroborated-own", "b-corroborated", {
+              reasons: ["Knowledge concentration"],
+              severity: "High",
+            }),
+            queueRecord("ownership", "corroborated-own-2", "b-corroborated", {
+              reasons: ["No backup"],
+              severity: "High",
+            }),
+          ],
+        },
+        coupling: {
+          status: "present",
+          records: [
+            queueRecord("coupling", "corroborated-coupling", "b-corroborated", {
+              kind: "component",
+              riskTier: "High",
+            }),
+          ],
+        },
+      },
+      {
+        historyStatus: "compatible",
+        trendInputs: [
+          trendInput("c-worsening", { complexity: 1 }, { complexity: 2 }, "2026-08-01T00:00:00Z"),
+          trendInput("d-stable", { complexity: 2 }, { complexity: 2 }),
+        ],
+      },
+    )
+
+    expect(
+      buildPortfolioActionQueue([input], { window: "latest-compatible" }).items.map((item) => item.target.id),
+    ).toEqual(["a-critical", "b-corroborated", "c-worsening", "d-stable", "e-fresh-a", "f-fresh-b", "g-stale"])
+  })
+
+  test("derives allowlisted trend directions and fixed freshness boundaries", () => {
+    const riskFields = [
+      "severity",
+      "status",
+      "riskTier",
+      "score",
+      "impact_score",
+      "structuralRisk",
+      "changePressure",
+      "coordinationCost",
+      "knowledgeRisk",
+      "temporalLinks",
+      "complexity",
+      "commitsCount",
+    ] as const
+    const ordinalPair = (field: (typeof riskFields)[number]): readonly [string | number, string | number] => {
+      if (field === "severity" || field === "riskTier") return ["Low", "High"]
+      if (field === "status") return ["OK", "FAILED"]
+      return [1, 2]
+    }
+    const allowlistedRecords = riskFields.map((field) =>
+      queueRecord("hotspot", `allowlisted-${field}`, `allowlisted-${field}`, { kind: "file", severity: "High" }),
+    )
+    const records = [
+      queueRecord("hotspot", "mixed", "mixed", { kind: "file", severity: "High" }),
+      queueRecord("hotspot", "worse", "worse", { kind: "file", severity: "High" }),
+      queueRecord("hotspot", "better", "better", { kind: "file", severity: "High" }),
+      queueRecord("hotspot", "stable", "stable", { kind: "file", severity: "High" }),
+      queueRecord("hotspot", "generic", "generic", { kind: "file", severity: "High" }),
+      queueRecord("hotspot", "fresh-7", "fresh-7", { kind: "file", severity: "Low" }, "2026-08-30T00:00:00Z"),
+      queueRecord("hotspot", "recent-8", "recent-8", { kind: "file", severity: "Low" }, "2026-08-29T00:00:00Z"),
+      queueRecord("hotspot", "recent-30", "recent-30", { kind: "file", severity: "Low" }, "2026-08-07T00:00:00Z"),
+      queueRecord("hotspot", "aging-31", "aging-31", { kind: "file", severity: "Low" }, "2026-08-06T00:00:00Z"),
+      queueRecord("hotspot", "aging-90", "aging-90", { kind: "file", severity: "Low" }, "2026-06-08T00:00:00Z"),
+      queueRecord("hotspot", "stale-91", "stale-91", { kind: "file", severity: "Low" }, "2026-06-07T00:00:00Z"),
+      queueRecord("hotspot", "unknown", "unknown", { kind: "file", severity: "Low" }, null),
+    ]
+    const input = datasetInput(
+      { hotspot: { status: "present", records: [...records, ...allowlistedRecords] } },
+      {
+        historyStatus: "compatible",
+        trendInputs: [
+          trendInput("mixed", { complexity: 1, commitsCount: 4 }, { complexity: 2, commitsCount: 3 }),
+          trendInput("worse", { complexity: 1 }, { complexity: 2 }),
+          trendInput("better", { impact_score: 2 }, { impact_score: 1 }),
+          trendInput("stable", { knowledgeRisk: 2 }, { knowledgeRisk: 2 }),
+          trendInput("generic", { changed: false }, { changed: true }),
+          ...riskFields.map((field) => {
+            const [baseline, current] = ordinalPair(field)
+            return trendInput(`allowlisted-${field}`, { [field]: baseline }, { [field]: current })
+          }),
+        ],
+      },
+    )
+    const queue = buildPortfolioActionQueue([input], { window: "latest-compatible" })
+    const byTarget = new Map(queue.items.map((item) => [item.target.id, item]))
+    expect(["mixed", "worse", "better", "stable", "generic"].map((id) => byTarget.get(id)!.trend)).toEqual([
+      "unknown",
+      "worsening",
+      "improving",
+      "stable",
+      "unknown",
+    ])
+    expect(
+      ["fresh-7", "recent-8", "recent-30", "aging-31", "aging-90", "stale-91", "unknown"].map(
+        (id) => byTarget.get(id)!.freshness,
+      ),
+    ).toEqual(["fresh", "recent", "recent", "aging", "aging", "stale", "unknown"])
+    expect(byTarget.get("generic")!.signals.some((signal) => signal.domain === "trend")).toBe(false)
+    expect(byTarget.get("mixed")!.signals.some((signal) => signal.domain === "trend")).toBe(false)
+    expect(riskFields.map((field) => byTarget.get(`allowlisted-${field}`)!.trend)).toEqual(
+      riskFields.map(() => "worsening"),
+    )
+  })
+
+  test("selects current, compatible, and day-window evidence without reading the machine clock", () => {
+    const noObservation = queueRecord("hotspot", "unknown", "unknown", { kind: "file", severity: "High" }, null)
+    const recent = queueRecord(
+      "hotspot",
+      "recent",
+      "recent",
+      { kind: "file", severity: "High" },
+      "2026-09-02T00:00:00Z",
+    )
+    const old = queueRecord("hotspot", "old", "old", { kind: "file", severity: "High" }, "2026-08-01T00:00:00Z")
+    const first = datasetInput(
+      { hotspot: { status: "present", records: [noObservation, recent, old] } },
+      {
+        historyStatus: "compatible",
+        trendInputs: [trendInput("recent", { complexity: 1 }, { complexity: 2 }, "2026-09-02T00:00:00Z")],
+      },
+    )
+    const second = datasetInput(
+      {},
+      {
+        datasetId: "second",
+        repositoryId: "repo-2",
+        repositoryTitle: "Second",
+        current: { snapshotId: "snap-2", generatedAt: "2026-09-07T00:00:00Z", domains: {} },
+      },
+    )
+
+    const current = buildPortfolioActionQueue([second, first], { window: "current" })
+    const compatible = buildPortfolioActionQueue([first, second], { window: "latest-compatible" })
+    const sevenDays = buildPortfolioActionQueue([first, second], { window: "7d" })
+    expect(current.asOf).toBe("2026-09-07T00:00:00Z")
+    expect(current.items.flatMap((item) => item.signals).some((signal) => signal.domain === "trend")).toBe(false)
+    expect(compatible.items.find((item) => item.target.id === "recent")!.trend).toBe("worsening")
+    expect(sevenDays.items.map((item) => item.target.id).sort()).toEqual(["recent", "unknown"])
+    expect(sevenDays.items.find((item) => item.target.id === "unknown")!.freshness).toBe("unknown")
+  })
+
+  test("fails dataset selection closed and aggregates declared domain coverage deterministically", () => {
+    const ready = datasetInput({
+      hotspot: {
+        status: "present",
+        records: [queueRecord("hotspot", "ready", "ready", { kind: "file", severity: "High" })],
+      },
+      control: { status: "invalid", records: [], message: "bad" },
+    })
+    const duplicate = { ...ready, repositoryId: "other" }
+    const landscape = datasetInput({}, { datasetId: "landscape", mode: "landscape" })
+    const planned = datasetInput({}, { datasetId: "planned", availability: "planned" })
+    const { current: _current, ...withoutCurrent } = datasetInput({})
+    const missing: PortfolioActionDatasetInput = { ...withoutCurrent, datasetId: "missing" }
+    const queue = buildPortfolioActionQueue([planned, landscape, ready, duplicate, missing], { window: "current" })
+
+    expect(queue.items).toEqual([])
+    expect(queue.coverage.datasets.included).toEqual([])
+    expect(queue.coverage.datasets.unavailable.map((entry) => entry.datasetId)).toEqual(["demo", "missing"])
+    expect(queue.coverage.datasets.excluded.map((entry) => entry.datasetId)).toEqual(["landscape"])
+    expect(queue.coverage.datasets.planned.map((entry) => entry.datasetId)).toEqual(["planned"])
+    expect(queue.coverage.domains.hotspot).toEqual({ status: "missing", datasetCount: 0, signalCount: 0 })
+    expect(queue.coverage.diagnostics.some((diagnostic) => diagnostic.reason.includes("duplicate datasetId"))).toBe(
+      true,
+    )
+
+    const declared = buildPortfolioActionQueue([ready], { window: "current" })
+    expect(declared.coverage.datasets.included).toEqual([{ datasetId: "demo", repositoryId: "repo" }])
+    expect(declared.coverage.domains.hotspot).toEqual({ status: "present", datasetCount: 1, signalCount: 1 })
+    expect(declared.coverage.domains.control).toEqual({
+      status: "invalid",
+      datasetCount: 1,
+      signalCount: 0,
+      message: "bad",
+    })
+    expect(declared.coverage.domains.security).toEqual({ status: "missing", datasetCount: 0, signalCount: 0 })
+  })
+
+  test("filters an immutable queue projection using normalized filter values", () => {
+    const input = datasetInput({
+      hotspot: {
+        status: "present",
+        records: [
+          queueRecord("hotspot", "platform", "platform", { kind: "file", severity: "High" }, undefined, {
+            id: "platform",
+            label: "Platform",
+          }),
+          queueRecord("hotspot", "product", "product", { kind: "file", severity: "Low" }, undefined, {
+            id: "product",
+            label: "Product",
+          }),
+        ],
+      },
+    })
+    const source = buildPortfolioActionQueue([input], { window: "current" })
+    const before = JSON.stringify(source)
+    const filters: PortfolioActionQueueFilters = {
+      repositoryIds: ["repo", "repo"],
+      teamIds: ["platform", "platform"],
+      priorityBands: ["high", "high"],
+      domains: ["hotspot", "hotspot"],
+      window: "current",
+    }
+    const filtered = filterPortfolioActionQueue(source, filters)
+    expect(filtered.items.map((item) => item.target.id)).toEqual(["platform"])
+    expect(filtered.filters).toEqual({
+      repositoryIds: ["repo"],
+      teamIds: ["platform"],
+      priorityBands: ["high"],
+      domains: ["hotspot"],
+      window: "current",
+    })
+    expect(filtered.coverage).toBe(source.coverage)
+    expect(filtered.items[0]!.factors).toBe(source.items[0]!.factors)
+    expect(JSON.stringify(source)).toBe(before)
+  })
 })
 
 describe("PortfolioActionQueue", () => {
