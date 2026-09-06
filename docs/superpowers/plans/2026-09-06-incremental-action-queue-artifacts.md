@@ -4,7 +4,7 @@
 
 **Goal:** Replace the monolithic static portfolio action payload with cacheable, bounded artifacts while preserving the canonical queue ranking and exact evidence provenance.
 
-**Architecture:** Keep `@planetnik/common` as the source of ranking truth. A site-side materializer will build one observation window at a time, split the ranked queue into deterministic chunks, and write a manifest plus chunk files under the Astro cache directory. Astro will expose those artifacts through `getStaticPaths()` routes with content-derived `cacheKey` values; the existing `/datasets/actions` shell will consume only the selected page. Complete ranked pagination is supported when materialization runs without an item limit; the default real-catalogue prebuild currently uses a bounded top-250 fallback and labels those artifacts `complete: false` until the full materialization memory cost is reduced.
+**Architecture:** Keep `@planetnik/common` as the source of ranking truth. A site-side materializer will build one observation window at a time, split the ranked queue into deterministic chunks, and write a manifest plus chunk files under the Astro cache directory. Astro will expose those artifacts through `getStaticPaths()` routes with content-derived `cacheKey` values; the existing `/datasets/actions` shell will consume only the selected page. The default real-catalogue prebuild uses a bounded top-250 fallback and labels those artifacts `complete: false`. An explicit complete mode uses the lower-memory streaming/external-spool materializer to emit every ranked page with `complete: true`; the full five-window materializer now has measured output, while an Astro build over every complete route remains an operational gate.
 
 **Tech Stack:** Bun 1.3.11, TypeScript, Astro 7.2+ incremental static builds, `effect` 3.x fibers and `Effect.forEach`, `@planetnik/common`, Astro static endpoints/pages, Bun tests.
 
@@ -35,8 +35,10 @@ build completes in 264.43 seconds (Astro itself 41.25 seconds), peaks at
 14,213,120,000 bytes RSS, reports the full totals, and records `complete: false`
 rather than emitting empty pages. The final output is 131 pages with a 4 GB
 Node heap; the five action JSON routes are restored from Astro's incremental
-cache on a second unchanged build with the same source fingerprint. Full-catalogue
-(unbounded) page materialization remains unproven. The follow-up content-
+cache on a second unchanged build with the same source fingerprint. The
+complete external-spool path and explicit build-mode selector are now
+implemented; full five-window materialization is measured, while static
+route/build cost remains a separate operational gate. The follow-up content-
 invalidation implementation adds per-window canonical queue fingerprints to
 the manifest and uses them in route cache keys. A same-source synthetic
 materialization keeps unchanged-window keys stable when another window changes.
@@ -45,6 +47,17 @@ In a copied `requests-python-pilot` fixture, changing one canonical
 an unchanged rerun restores all five JSON routes. The shard contributes to each
 observation window in that fixture, so all five JSON routes regenerate for that
 mutation.
+
+The complete-mode follow-up uses `PLANETNIK_ACTION_QUEUE_COMPLETE=1` and a
+validated `PLANETNIK_ACTION_QUEUE_PARTITIONS` value (default `64`). Its
+fixture smoke run published five complete windows with one page each and no
+intermediate partition/run directories. The real one-window probe emitted
+1,112,669 items over 4,451 pages in 85.680 seconds, wrote 4,153,494,606 final
+artifact bytes, and peaked at 4,056 MiB RSS under a 1 GiB heap cap; it stayed
+below the 4 GiB gate. A full real-catalogue run published all five windows
+(24,949 pages total) in 319.758 seconds, wrote 23,732,162,091 final artifact
+bytes, and peaked at 4,013 MiB RSS under a 4 GiB heap cap. An Astro build over
+all complete pages remains a separate route/build-cost decision.
 
 ## File Map
 

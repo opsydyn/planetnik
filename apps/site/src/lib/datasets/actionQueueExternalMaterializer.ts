@@ -435,6 +435,10 @@ export async function materializeStreamingActionQueueArtifacts(
       reportStreamMemory(`after window ${window}`)
       await rm(join(stagingDir, "runs", window), { recursive: true, force: true })
     }
+    // Partitions are an intermediate source spool. They are reused across
+    // windows but must never become part of the published artifact payload.
+    await rm(join(stagingDir, "partitions"), { recursive: true, force: true })
+    await rm(join(stagingDir, "runs"), { recursive: true, force: true })
     const manifest: ActionQueueArtifactManifest = {
       version: ACTION_QUEUE_ARTIFACT_VERSION,
       projectionVersion: ACTION_QUEUE_ARTIFACT_PROJECTION_VERSION,

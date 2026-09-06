@@ -39,27 +39,27 @@
 - Produces `isPortfolioActionSignalInWindow(signal, window, asOf)`, the exported window predicate used by both batch and streamed materialization.
 - Existing `adaptPortfolioActionSignals`, `adaptTrendSignals`, `buildPortfolioActionQueue`, and `buildPortfolioActionQueueWithStats` retain their public behavior by delegating to these helpers.
 
-- [ ] **Step 1: Write failing tests for record-level parity.**
+- [x] **Step 1: Write failing tests for record-level parity.**
 
 Add tests proving that a valid hotspot source record produces the same signal shape as the batch adapter, a non-candidate record produces no signal without a diagnostic, an invalid evidence anchor produces the existing diagnostic, a trend target set enriches only matching targets, and `buildPortfolioActionQueueItem` matches the item produced by the full queue builder.
 
-- [ ] **Step 2: Run the focused common test and verify it fails for missing exports.**
+- [x] **Step 2: Run the focused common test and verify it fails for missing exports.**
 
 Run: `bun test packages/common/src/action-queue/__tests__/PortfolioActionQueue.test.ts`
 
 Expected: FAIL because the new record-level and item-builder exports do not yet exist.
 
-- [ ] **Step 3: Refactor the existing private helpers without changing rules.**
+- [x] **Step 3: Refactor the existing private helpers without changing rules.**
 
 Move the current record validation/candidate/make-signal path behind `adaptPortfolioActionSourceRecord`. Move `buildItem` behind `buildPortfolioActionQueueItem`. Add a target-set trend helper and make `adaptTrendSignals` call it with the existing signal-derived set. Make `adaptCurrentDomain` call the record helper so batch diagnostics and signal order remain unchanged.
 
-- [ ] **Step 4: Run the focused test and the action-queue common suite.**
+- [x] **Step 4: Run the focused test and the action-queue common suite.**
 
 Run: `bun test packages/common/src/action-queue/__tests__/PortfolioActionQueue.test.ts`
 
 Expected: PASS, including all existing ranking and provenance assertions.
 
-- [ ] **Step 5: Commit the common boundary.**
+- [x] **Step 5: Commit the common boundary.**
 
 Run:
 
@@ -80,21 +80,21 @@ git commit -m "refactor: expose streaming action queue boundaries"
 - Rejects malformed JSON, unsafe/non-object array elements, missing keys, duplicate key selection, and invalid UTF-8 framing with a descriptive `Error`.
 - Never retains more than the current input chunk plus the current JSON object; no whole-file `readFileSync` or `JSON.parse` of the enclosing shard is permitted.
 
-- [ ] **Step 1: Write parser tests first.**
+- [x] **Step 1: Write parser tests first.**
 
 Cover arrays whose objects cross 1-byte and 17-byte chunk boundaries, escaped braces/quotes inside strings, nested arrays/objects, empty arrays, a missing key, a scalar array element, and malformed/truncated JSON.
 
-- [ ] **Step 2: Run the parser tests and verify the expected failures.**
+- [x] **Step 2: Run the parser tests and verify the expected failures.**
 
 Run: `bun test apps/site/src/lib/__tests__/streamJsonArray.test.ts`
 
 Expected: FAIL because the module is not present.
 
-- [ ] **Step 3: Implement the async generator with `createReadStream` and a streaming `TextDecoder`.**
+- [x] **Step 3: Implement the async generator with `createReadStream` and a streaming `TextDecoder`.**
 
 Frame object boundaries with string/escape/depth state, preserve only an incomplete object between chunks, parse each completed object independently, and verify the named array closes before returning. Use an explicit `highWaterMark` option with a 1 MiB default.
 
-- [ ] **Step 4: Run parser tests and a real giant-shard probe.**
+- [x] **Step 4: Run parser tests and a real giant-shard probe.**
 
 Run: `bun test apps/site/src/lib/__tests__/streamJsonArray.test.ts`
 
@@ -102,7 +102,7 @@ Then run a temporary stdin Bun probe over `datasets/code-city-task9/data/hotspot
 
 Expected: focused tests pass; the real probe stays below 512 MiB RSS and yields 1,112,667 hotspot records and 680,820 unit records.
 
-- [ ] **Step 5: Commit the parser.**
+- [x] **Step 5: Commit the parser.**
 
 Run:
 
@@ -141,39 +141,39 @@ git commit -m "feat: stream canonical JSON array records"
 - Coupling extraction streams `filesMain`, `units`, and `componentDependencies` into bounded component accumulators matching `readSnapshotEntities` provenance selectors; component hotspot records are joined by stable component ID.
 - History/trend extraction uses the existing validated history contract and the new target-set trend helper; trend signals are emitted only for targets that received actionable current signals.
 
-- [ ] **Step 1: Write source parity tests.**
+- [x] **Step 1: Write source parity tests.**
 
 Using the existing temporary fixture helpers, assert that a streamed ready fixture emits the same signal IDs, target IDs, priority bands, facts, evidence anchors, coverage states, and diagnostics as `createDatasetActionQueueReader` for every window. Add partial, malformed, missing-shard, unsafe-route, duplicate-identity, and history fixtures.
 
-- [ ] **Step 2: Run the source parity tests and verify failure.**
+- [x] **Step 2: Run the source parity tests and verify failure.**
 
 Run: `bun test apps/site/src/lib/__tests__/actionQueueStreamingSource.test.ts`
 
 Expected: FAIL because the streaming source module is not present.
 
-- [ ] **Step 3: Implement validated dataset metadata discovery.**
+- [x] **Step 3: Implement validated dataset metadata discovery.**
 
 Read only `report_context.json` and small metadata shards up front. Build the same included/planned/excluded/unavailable dataset lists and `asOf` value as the batch reader. Do not call `readDatasetCurrentSnapshot(..., { includeEntities: true })` in this path.
 
-- [ ] **Step 4: Implement hotspot/control/impact/security record streaming.**
+- [x] **Step 4: Implement hotspot/control/impact/security record streaming.**
 
 Construct exact `SnapshotEntityRecord` provenance selectors (`fileHotspots[index=N]`, `goals[index=N].controls[index=M]`, `impact_opportunities[index=N]`, and `alerts[index=N]`), call the common record adapter, emit valid signals, and record domain diagnostics/counts without storing source arrays.
 
-- [ ] **Step 5: Implement bounded component aggregation.**
+- [x] **Step 5: Implement bounded component aggregation.**
 
 Stream file/unit/dependency records into the existing component identity policy, retaining only per-component counters, index selectors, and scalar totals. Create component source records with the same shard selector pairs as `readSnapshotEntities`, merge component hotspots, and feed the coupling adapter. Release each dataset accumulator before moving to the next dataset.
 
-- [ ] **Step 6: Implement target-set trend extraction and window predicates.**
+- [x] **Step 6: Implement target-set trend extraction and window predicates.**
 
 Collect only stable target IDs for current actionable signals, invoke the target-set trend adapter, and emit all normalized signals once with their observed timestamps. Preserve the existing `current`, `latest-compatible`, `7d`, `30d`, and `90d` inclusion predicate exactly during downstream window reads.
 
-- [ ] **Step 7: Run source parity tests and a real code-city stream measurement.**
+- [x] **Step 7: Run source parity tests and a real code-city stream measurement.**
 
 Run: `bun test apps/site/src/lib/__tests__/actionQueueStreamingSource.test.ts apps/site/src/lib/__tests__/actionQueueSource.test.ts`
 
 Then stream the real code-city fixture and compare emitted hotspot signal count (`1,112,667`) and current item total (`1,112,669`) against the batch reference on a high-memory reference process. Record RSS and elapsed time.
 
-- [ ] **Step 8: Commit the streaming source.**
+- [x] **Step 8: Commit the streaming source.**
 
 Run:
 
@@ -198,39 +198,39 @@ git commit -m "feat: stream canonical action queue signals"
 - A partition pass builds groups and calls `buildPortfolioActionQueueItem`; sorted item runs use `compareQueueItems`; a bounded k-way merge emits compact chunks via `compactActionQueueItems` without retaining the complete queue.
 - `createActionQueueWindowStreamFingerprint({ sourceIds, projectionVersion, window, pageSize, totalItems, asOf, coverage })` returns `{ updateItem(item), digest() }`; it hashes canonical manifest metadata and each canonicalized item in rank order with an explicit stream fingerprint version, preserving 64-hex cache keys without colliding with the existing whole-queue helper.
 
-- [ ] **Step 1: Write failing external-materializer tests.**
+- [x] **Step 1: Write failing external-materializer tests.**
 
 Use a synthetic streaming source with multiple repositories, repeated target signals, trend-only signals, ties, and a page size of 2. Assert exact item order across partition boundaries, full totals, `complete: true`, compact evidence refs, deterministic reruns, cleanup after success/failure, and stream fingerprint changes when one signal changes.
 
-- [ ] **Step 2: Run the focused test and verify it fails.**
+- [x] **Step 2: Run the focused test and verify it fails.**
 
 Run: `bun test apps/site/src/lib/__tests__/actionQueueExternalMaterializer.test.ts`
 
 Expected: FAIL because the external materializer module is not present.
 
-- [ ] **Step 3: Implement partition writers/readers.**
+- [x] **Step 3: Implement partition writers/readers.**
 
 Create fixed-count partition files, buffer writes per partition, validate each parsed signal row, and close/remove all temporary resources through an Effect acquire/use/release scope. Reject malformed rows rather than silently dropping them.
 
-- [ ] **Step 4: Implement per-partition grouping and sorted runs.**
+- [x] **Step 4: Implement per-partition grouping and sorted runs.**
 
 Read one partition at a time, group by the exact item key, call the shared item builder, count complete items, sort bounded runs with `compareQueueItems`, and write newline-delimited full queue items. Keep coverage/filter metadata separate from item memory.
 
-- [ ] **Step 5: Implement k-way merge and page writer.**
+- [x] **Step 5: Implement k-way merge and page writer.**
 
 Open one cursor per run, maintain a min-heap ordered by `compareQueueItems`, update the stream fingerprint per emitted item, compact each 250-item page immediately, and write page files plus manifest metadata. Ensure the final page is emitted exactly once and `pageCount === ceil(totalItems / pageSize)`.
 
-- [ ] **Step 6: Implement atomic publication and stream fingerprinting.**
+- [x] **Step 6: Implement atomic publication and stream fingerprinting.**
 
 Write all pages and the manifest in the staging directory, mark every window `complete: true`, then replace the destination directory with the existing atomic rename pattern. Include source IDs, projection version, window, page size, total, coverage, and canonical item sequence in the stream fingerprint.
 
-- [ ] **Step 7: Run focused tests and a real one-window external probe.**
+- [x] **Step 7: Run focused tests and a real one-window external probe.**
 
 Run: `bun test apps/site/src/lib/__tests__/actionQueueExternalMaterializer.test.ts apps/site/src/lib/__tests__/actionQueueArtifacts.test.ts apps/site/src/lib/__tests__/actionQueueArtifactRoutes.test.ts`
 
 Then run the complete external materializer for the real `code-city-task9` dataset and `current` window with `NODE_OPTIONS=--max-old-space-size=1024`; record total 1,112,669, page count 4,451, output bytes, elapsed time, and peak RSS.
 
-- [ ] **Step 8: Commit the external materializer.**
+- [x] **Step 8: Commit the external materializer.**
 
 Run:
 
@@ -254,29 +254,29 @@ git commit -m "feat: externally materialize complete action queue pages"
 - `PLANETNIK_ACTION_QUEUE_COMPLETE=1 bun run --cwd apps/site materialize-action-queue` invokes the external complete path with `PLANETNIK_ACTION_QUEUE_PARTITIONS` (default `64`) and preserves the existing output directory override.
 - The script prints mode, per-window totals/page counts, output bytes, elapsed time, and peak RSS when complete mode is selected; it never claims deployment or live acceptance.
 
-- [ ] **Step 1: Write a failing mode-selection test or extract a pure parser.**
+- [x] **Step 1: Write a failing mode-selection test or extract a pure parser.**
 
 Assert that unset/false complete mode selects the existing bounded source and that `1` selects the streaming external source; invalid partition counts fail closed with a clear message.
 
-- [ ] **Step 2: Run the focused script test and verify failure.**
+- [x] **Step 2: Run the focused script test and verify failure.**
 
 Run: `bun test apps/site/src/lib/__tests__/actionQueueMaterializeScript.test.ts`
 
 Expected: FAIL until mode parsing is extracted and wired.
 
-- [ ] **Step 3: Implement explicit complete-mode selection.**
+- [x] **Step 3: Implement explicit complete-mode selection.**
 
 Keep the current bounded default unchanged. In complete mode, load the catalog metadata, create the streaming source, and call the external materializer. Do not use `STATIC_ACTION_QUEUE_ITEM_LIMIT` in complete mode.
 
-- [ ] **Step 4: Run fixture build verification.**
+- [x] **Step 4: Run fixture build verification.**
 
-Run the complete mode against a copied `code-city-task9-complete` fixture and assert five complete windows, 64 HTML/JSON pages, exact evidence links, and no temporary spool directory after publication.
+Run the complete mode against a copied `code-city-task9-complete` fixture and assert five complete windows, one compact JSON page per window, exact evidence links, and no temporary partition/run directory after publication.
 
-- [ ] **Step 5: Update ADR/roadmap evidence.**
+- [x] **Step 5: Update ADR/roadmap evidence.**
 
-Record the streaming/parser measurements, real one-window probe, complete-mode invocation, explicit 4 GiB RSS gate, output-byte/page-count gate, and the fact that the default prebuild remains bounded pending a full five-window disk/build budget run.
+Record the streaming/parser measurements, real one-window probe, complete-mode invocation, explicit 4 GiB RSS gate, output-byte/page-count gate, and the fact that the default prebuild remains bounded while the full five-window materializer is green and an Astro build over every complete route remains a separate gate.
 
-- [ ] **Step 6: Run workspace verification before claiming completion.**
+- [x] **Step 6: Run workspace verification before claiming completion.**
 
 Run:
 
@@ -287,9 +287,9 @@ bun test
 bun run --cwd apps/site build
 ```
 
-Also run the complete mode on the real catalogue with a separate output directory and `NODE_OPTIONS=--max-old-space-size=4096`; capture all five totals, page counts, RSS, elapsed time, and output bytes. Report any route/build or disk budget blocker separately from the memory gate.
+Also run the complete mode on the real catalogue with a separate output directory and `NODE_OPTIONS=--max-old-space-size=4096`; capture all five totals, page counts, RSS, elapsed time, and output bytes. The materializer run published all 24,949 pages in 319.758 seconds with 23,732,162,091 final bytes and 4,013 MiB peak RSS. Report the separate Astro route/build-cost decision independently from the memory gate.
 
-- [ ] **Step 7: Commit documentation and wiring.**
+- [x] **Step 7: Commit documentation and wiring.**
 
 Run:
 

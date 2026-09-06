@@ -3,9 +3,9 @@
 ## Status
 
 Accepted — static implementation, bounded artifact routes, compact v2 artifact
-projection, and per-window content invalidation delivered 2026-09-06; final
-incremental build evidence is green, real materialization is still
-memory-heavy, and repository-wide lint remains open
+projection, per-window content invalidation, and the explicit complete
+external-spool materializer delivered 2026-09-06; the default build remains
+bounded, the complete path is measured, and repository-wide lint remains open
 
 ## Date
 
@@ -78,9 +78,13 @@ content fingerprint is salted with the artifact version so an on-disk schema
 change cannot silently reuse an older route cache. The manifest retains the
 global source-identity fingerprint for provenance. The site model keeps
 the full ranked total and an explicit `complete`/truncation flag, so filters
-cannot present a bounded slice as the complete queue. The materializer can
-write complete paginated windows when called without `itemLimit`, but that
-mode is not yet safe for the current 4 GB catalogue tree.
+cannot present a bounded slice as the complete queue. An explicit complete
+mode (`PLANETNIK_ACTION_QUEUE_COMPLETE=1 bun run --cwd apps/site
+materialize-action-queue`) streams canonical JSON arrays into deterministic
+disk partitions, builds one partition at a time, externally merges ranked
+item runs, and writes every page with `complete: true`. The default prebuild
+remains bounded because complete output can be multi-gigabyte and its full
+catalogue disk/build budget is a separate gate.
 
 Artifact version 2 keeps the public queue contract unchanged while compacting
 the ignored cache payload: each chunk stores repeated evidence metadata once
@@ -161,10 +165,12 @@ delivery.
 - Some domains, especially ownership and coupling, may be unavailable when
   their source records do not expose an explicit actionable signal; coverage
   diagnostics keep those domains visible without inventing a signal.
-- The current bounded materializer still parses the large canonical shards in
-  one Bun process. On the local catalogue it peaked at 12,455,657,472 bytes
-  RSS for five sequential windows, so full unbounded pagination remains a
-  follow-up rather than an implied guarantee.
+- The bounded materializer still parses the large canonical shards in one Bun
+  process and remains the safe default; on the local catalogue it peaked at
+  12,455,657,472 bytes RSS for five sequential windows. The complete path
+  shifts source memory to disk partitions and external runs. The full
+  five-window materializer run is green; its output volume and an Astro build
+  over every complete route remain explicit operational gates.
 
 ## Non-goals
 
@@ -217,6 +223,9 @@ delivery.
 - [x] `/datasets/actions` renders ready and partial repository items and
       excludes planned, invalid, and landscape entries without fabricated
       actions.
+- [x] The complete opt-in path streams canonical arrays, partitions signal
+      rows deterministically, externally merges ranked items, writes complete
+      pages atomically, and removes temporary partitions/runs after publish.
 - [x] Static build, workspace typechecks, full tests, and direct browser
       evidence pass before the Phase 4 implementation is marked delivered.
 
@@ -241,8 +250,8 @@ cache with the same source fingerprint. The earlier Firefox evidence still
 covers the bounded action surface; no fresh browser provider was available for
 this artifact-route pass, so static HTML and JSON were inspected directly. The
 root `bun run lint` remains red on the repository's existing Biome 2.5/schema
-and format baseline (549 errors, 3 warnings, and 2 infos); unbounded full
-pagination remains a follow-up.
+and format baseline (554 errors, 5 warnings, and 2 infos); complete mode is
+therefore an explicit build path rather than the default prebuild.
 
 Compaction follow-up evidence (2026-09-06): the real catalogue materializer
 wrote v2 page-one artifacts of 4,820,331 bytes for `current`, 4,820,341 for
@@ -255,8 +264,30 @@ serializes the full queue contract by design. The compact artifacts integrate
 with the real named-dataset Astro build: 131 pages completed in 119.87 seconds
 with 14,253,522,944 bytes maximum RSS, and an unchanged rerun completed in
 113.64 seconds while restoring all five action JSON routes from incremental
-cache. The build remains memory-heavy, so complete unbounded pagination is
-still deferred.
+cache. The bounded build remains memory-heavy, so the default prebuild
+continues to use bounded mode.
+
+Complete-pagination evidence (2026-09-06): the explicit
+`PLANETNIK_ACTION_QUEUE_COMPLETE=1` command ran against an isolated copy of
+the checked-in `code-city-task9-complete` fixture. It published five windows,
+each with `complete: true`, four items, and one compact JSON page; six files
+(five pages plus the manifest) remained under the destination and no
+`.action-queue-stream-*` or
+`.action-queue-*` staging directory remained. A real `code-city-task9`
+`current`-window external probe with 64 partitions, page size 250, and
+`NODE_OPTIONS=--max-old-space-size=1024` emitted 1,112,669 items across 4,451
+complete pages in 85.680 seconds, wrote 4,153,494,606 final artifact bytes,
+and peaked at 4,056 MiB RSS. The probe stayed below the 4 GiB RSS gate. A full
+real-catalogue run with `NODE_OPTIONS=--max-old-space-size=4096` then published
+all five complete windows: page counts `5,880 / 5,880 / 1,429 / 5,880 / 5,880`
+(24,949 pages total), 23,732,162,091 final artifact bytes, 319.758 seconds
+elapsed, and 4,013 MiB peak RSS from the build script's sampler. Temporary
+partitions and runs were removed before publication. Astro's full static route
+cost is still a separate acceptance decision because complete mode would
+expose all 24,949 JSON pages (plus the corresponding HTML pages), while the
+default prebuild remains bounded. The build script reports mode, per-window
+totals/pages, output bytes, elapsed time, and peak RSS for this opt-in path; it
+does not claim deployment or live acceptance.
 
 Per-window content invalidation evidence (2026-09-06): each window manifest
 entry now carries a canonical queue-content fingerprint that includes the

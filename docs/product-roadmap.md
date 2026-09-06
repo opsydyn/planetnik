@@ -588,9 +588,10 @@ durable storage beyond the local showcase remain the open Phase 5 boundary.
 
 ## Phase 4 — Portfolio action queue
 
-**Status: Static implementation delivered — focused verification, bounded
-fixture build, direct browser evidence, and the bounded default catalogue build
-are green; repository-wide lint remains open (2026-09-06)**
+**Status: Static implementation and explicit complete external-spool path
+delivered — focused verification, bounded fixture/build evidence, direct
+browser evidence, and the bounded default catalogue build are green; the
+complete path is measured and repository-wide lint remains open (2026-09-06)**
 
 ### Outcome
 
@@ -618,9 +619,13 @@ here. The route now reads a versioned, source-fingerprinted page artifact for
 one window at a time, with immutable JSON links and deterministic pagination.
 The default real-catalogue prebuild materializes the ranked top 250 items per
 window and states the full total plus `complete: false`, so filtering never
-presents a bounded slice as the complete queue. Complete pagination remains
-available to a future unbounded materializer once the measured shard-memory
-cost is reduced.
+presents a bounded slice as the complete queue. Complete pagination is now
+available through the explicit
+`PLANETNIK_ACTION_QUEUE_COMPLETE=1 bun run --cwd apps/site
+materialize-action-queue` mode, which streams canonical arrays into
+deterministic disk partitions and writes `complete: true` pages. The default
+prebuild remains bounded; the full five-window materializer is green, while
+static-route cost is a separate disk/build-budget gate.
 
 ### Exit criteria
 
@@ -642,7 +647,8 @@ copy: real page-one materializer inputs are 4,820,331 bytes (`current`),
 4,820,341 (`latest-compatible`), 4,827,434 (`7d`), and 4,820,327 each
 (`30d`/`90d`), a 95.38% reduction for the current window. The reader restores
 the exact queue contract; the public JSON route remains full-contract by
-design. Lower-memory complete pagination remains a bounded follow-up. The
+design. The explicit complete external-spool path now provides full paginated
+artifacts when selected; the public prebuild remains bounded by default. The
 compact artifacts integrate with the named-dataset build at 131 pages in
 119.87 seconds and
 14,253,522,944 bytes maximum RSS; an unchanged rerun restored all five action
@@ -667,6 +673,19 @@ routes were regenerated for the mutation; selective reuse is now guarded by
 the window-level content key.
 The repository-wide Biome lint gate still reports its existing schema and
 format baseline and remains open rather than being folded into delivery status.
+The complete-mode fixture run published five `complete: true` windows with
+four items and one page per window, six JSON files total including the
+manifest, and no intermediate partition/run directories. The real
+`code-city-task9` current-window probe used 64 partitions and a 1 GiB Node
+heap cap, emitted 1,112,669 items over 4,451 pages in 85.680 seconds, wrote
+4,153,494,606 final artifact bytes, and peaked at 4,056 MiB RSS.
+The probe satisfies the 4 GiB RSS gate. A full real-catalogue complete-mode
+run then published all five windows (24,949 pages total) in 319.758 seconds,
+with 23,732,162,091 final artifact bytes and 4,013 MiB peak RSS from the
+script sampler; temporary partitions/runs were removed before publication.
+The complete artifact run is green; an Astro build over all 24,949 JSON pages
+plus their HTML counterparts remains a separate route/build-cost decision,
+and the default prebuild remains bounded.
 
 ## Phase 5 — Hosted snapshot ingestion and grounded retrieval
 
@@ -751,6 +770,7 @@ semantics, macro expansion, type resolution, or whole-program symbols.
 | Completed | Phase 4 static portfolio action queue — canonical JSON evidence, explainable factor-vector ranking, deterministic filters, coverage diagnostics, bounded top-250 static materialization, and `/datasets/actions` browser evidence (2026-09-06) |
 | Completed | Phase 4 incremental action artifacts — source-fingerprinted per-window JSON/HTML page routes, sequential Effect materialization, explicit incomplete totals, and 131-page real Astro build (2026-09-06) |
 | Completed | Phase 4 content-aware action artifact invalidation — canonical per-window fingerprints, filter-option cache digest, schema salt, and mutation regression evidence (2026-09-06) |
+| Completed | Phase 4 lower-memory complete pagination — streaming canonical arrays, deterministic disk partitions, external ranked-run merge, atomic complete pages, opt-in build mode, and sub-4 GiB real one- and five-window materializer probes (2026-09-06) |
 | Later | Phase 4 hosted acknowledgement/status overlay |
 | Later | Phase 5: hosted snapshot ingestion and grounded semantic retrieval |
 | Later | Phase 6: demand-led parser expansion |
@@ -870,9 +890,10 @@ that a legacy HTML file is not treated as a findings source. Reader-side TXT
 fallback retirement is also complete, and ADR-0021 closes the Tree-sitter
 runtime metric-policy review. The next bounded move is review of the written
 Phase 4 action-queue design and ADR. That review, the static implementation,
-and the bounded incremental artifact-route follow-up are delivered; hosted
-acknowledgement/status and lower-memory complete pagination remain later
-follow-ups.
+the bounded incremental artifact-route follow-up, and the explicit complete
+external-spool path are delivered; hosted acknowledgement/status remains a
+later follow-up. The public prebuild intentionally stays bounded unless the
+complete mode is selected explicitly.
 Keep Code City follow-ons bounded to its direct interaction matrix, landscape
 aggregation, and hosted repo-scoped integration; do not widen into a renderer
 rewrite or new semantic shard without evidence.

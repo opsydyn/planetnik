@@ -176,6 +176,8 @@ describe("materializeStreamingActionQueueArtifacts", () => {
     }
     expect(ids).toEqual(["alpha", "bravo", "charlie"])
     expect(materializedWindow(manifest, "latest-compatible").totalItems).toBe(3)
+    expect(existsSync(join(outputDir, "partitions"))).toBe(false)
+    expect(existsSync(join(outputDir, "runs"))).toBe(false)
     expect(manifest.sourceFingerprint).not.toBe(
       fingerprintActionQueueSource(source().sourceIds, ACTION_QUEUE_ARTIFACT_PROJECTION_VERSION),
     )
