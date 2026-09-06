@@ -35,11 +35,12 @@ export type DatasetActionQueueModel = {
   }
 }
 
-type Values = Readonly<Record<string, unknown>>
-type Source = {
+export type Values = Readonly<Record<string, unknown>>
+export type DatasetActionQueueSourceContext = {
   readonly dataset: DatasetDescriptor
   readonly context: CanonicalReportContext
 }
+type Source = DatasetActionQueueSourceContext
 const windows: readonly PortfolioActionWindow[] = ["current", "latest-compatible", "7d", "30d", "90d"]
 export const STATIC_ACTION_QUEUE_ITEM_LIMIT = 250
 const domains: readonly PortfolioActionSignalDomain[] = [
@@ -52,14 +53,14 @@ const domains: readonly PortfolioActionSignalDomain[] = [
   "trend",
 ]
 const priorities: readonly PortfolioActionPriorityBand[] = ["critical", "high", "medium", "low", "unrated"]
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
-const text = (value: unknown): string | undefined =>
+export const text = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined
 const missing = (message: string): PortfolioActionDomainInput => ({ status: "missing", records: [], message })
 const invalid = (message: string): PortfolioActionDomainInput => ({ status: "invalid", records: [], message })
 
-function evidencePath(source: Source, values: Values): string | null {
+export function evidencePath(source: Source, values: Values): string | null {
   const raw = values.route
   if (raw !== undefined && typeof raw !== "string") return null
   if (typeof raw === "string") {
@@ -83,7 +84,7 @@ function evidencePath(source: Source, values: Values): string | null {
   return getDatasetViewPath(source.dataset, "overview")
 }
 
-function observed(values: Values): PortfolioActionEvidence["observed"] {
+export function observed(values: Values): PortfolioActionEvidence["observed"] {
   return Object.fromEntries(
     Object.entries(values).filter(
       ([, value]) =>
@@ -95,17 +96,17 @@ function observed(values: Values): PortfolioActionEvidence["observed"] {
   ) as PortfolioActionEvidence["observed"]
 }
 
-function expanded(values: Values): Values {
+export function expanded(values: Values): Values {
   return { ...(isRecord(values.dimensions) ? values.dimensions : {}), ...values }
 }
 
-function label(record: SnapshotEntityRecord): string {
+export function label(record: SnapshotEntityRecord): string {
   return text(record.values.name) ?? text(record.values.targetLabel) ?? text(record.values.metricId) ?? record.id
 }
 
 // Entity provenance contains shard and selector lists, not a Cartesian product.
 // Resolve each selector through the validated capability map to retain exact pairs.
-function anchors(
+export function anchors(
   source: Source,
   record: SnapshotEntityRecord,
   domain: PortfolioActionSignalDomain,
@@ -148,7 +149,7 @@ function anchors(
   return result.length ? result : null
 }
 
-function sourceRecord(
+export function sourceRecord(
   source: Source,
   record: SnapshotEntityRecord,
   domain: PortfolioActionSignalDomain,
@@ -282,7 +283,7 @@ function couplingDomain(
   }
 }
 
-function historyInputs(
+export function historyInputs(
   source: Source,
   options: { readonly datasetsRoot?: string },
 ): {
@@ -432,7 +433,7 @@ function routeQueue(queue: PortfolioActionQueue): PortfolioActionQueue {
   }
 }
 
-function sourceId(dataset: DatasetDescriptor): string {
+export function sourceId(dataset: DatasetDescriptor): string {
   return [
     dataset.id,
     dataset.slug,
