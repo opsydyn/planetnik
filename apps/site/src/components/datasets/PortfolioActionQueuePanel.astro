@@ -1,0 +1,636 @@
+---
+import {
+  filterPortfolioActionQueue,
+  type PortfolioActionQueueFilters,
+  type PortfolioActionWindow,
+} from "@planetnik/common"
+import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
+import type { DatasetActionQueueModel } from "../../lib/datasets/actionQueueSource.js"
+import { route } from "../../lib/route.js"
+
+interface Props {
+  model: DatasetActionQueueModel
+  filters: PortfolioActionQueueFilters
+}
+
+const { model, filters } = Astro.props
+const canonicalFilters = parsePortfolioActionFilters(serializePortfolioActionFilters(filters))
+const windows: readonly { id: PortfolioActionWindow; label: string }[] = [
+  { id: "current", label: "Current snapshot" },
+  { id: "latest-compatible", label: "Latest compatible pair" },
+  { id: "7d", label: "Last 7 days" },
+  { id: "30d", label: "Last 30 days" },
+  { id: "90d", label: "Last 90 days" },
+]
+const filterGroups = [
+  {
+    name: "repo",
+    label: "Repositories",
+    options: model.filterOptions.repositories,
+    selected: canonicalFilters.repositoryIds,
+  },
+  { name: "team", label: "Teams", options: model.filterOptions.teams, selected: canonicalFilters.teamIds },
+  {
+    name: "priority",
+    label: "Priority",
+    options: model.filterOptions.priorities.map((id) => ({ id, label: id })),
+    selected: canonicalFilters.priorityBands,
+  },
+  {
+    name: "domain",
+    label: "Signal domains",
+    options: parsePortfolioActionFilters(
+      new URLSearchParams(model.filterOptions.domains.map((domain) => ["domain", domain])),
+    ).domains.map((id) => ({ id, label: id })),
+    selected: canonicalFilters.domains,
+  },
+]
+const variants = windows.map((window) => {
+  const queue = model.queuesByWindow[window.id]
+  const visible = new Set(
+    filterPortfolioActionQueue(queue, { ...canonicalFilters, window: window.id }).items.map((item) => item.id),
+  )
+  return { ...window, queue, visible }
+})
+---
+
+<section class="action-panel" data-portfolio-action-queue data-contract-version="1" aria-label="Portfolio action queue">
+  <form class="action-filters" action={route("/datasets/actions")} method="get" data-action-filters>
+    <div class="filter-intro">
+      <h2>Focus the queue</h2>
+      <p>Choose any combination. Within a filter, selections are inclusive; filters work together.</p>
+    </div>
+    <div class="filter-grid">
+      {filterGroups.map((group) => (
+        <details class="filter-group">
+          <summary>{group.label}</summary>
+          <fieldset>
+            <legend class="sr-only">{group.label}</legend>
+            <p>Leave all unchecked for any {group.label.toLowerCase()}.</p>
+            {group.options.length ? group.options.map((option) => (
+              <label class="filter-option">
+                <input type="checkbox" name={group.name} value={option.id} checked={(group.selected as readonly string[]).includes(option.id)} />
+                <span>{option.label}</span>
+              </label>
+            )) : <span class="filter-unavailable">No options in the current evidence.</span>}
+          </fieldset>
+        </details>
+      ))}
+      <label class="window-filter">
+        <span>Observation window</span>
+        <select name="window">
+          {windows.map((window) => <option value={window.id} selected={canonicalFilters.window === window.id}>{window.label}</option>)}
+        </select>
+      </label>
+    </div>
+    <div class="filter-actions">
+      <button type="submit">Apply filters</button>
+      <a href={route("/datasets/actions")}>Reset filters</a>
+      <span>Filters do not change the ranking policy or source evidence.</span>
+    </div>
+  </form>
+
+  <noscript>
+    <p class="action-note">The current queue and source links remain usable without JavaScript. Interactive filters and alternate windows require JavaScript on this static report.</p>
+  </noscript>
+
+  {variants.map(({ id, label, queue, visible }) => (
+    <section class="action-window" data-action-window={id} data-action-queue-status={queue.items.length > 0 ? "ready" : "empty"} hidden={id !== canonicalFilters.window} aria-labelledby={`action-window-${id}`}>
+      <header class="queue-header">
+        <div>
+          <p class="eyebrow">Precomputed · evidence first</p>
+          <h2 id={`action-window-${id}`}>{label}</h2>
+          <p>{queue.asOf ? <>As of <time datetime={queue.asOf}>{queue.asOf}</time></> : "No valid canonical snapshot is available."}</p>
+        </div>
+        <p class="queue-count" role="status" aria-live="polite"><strong data-action-count>{visible.size}</strong> of {queue.items.length} actions</p>
+      </header>
+
+      <section class="action-coverage" data-action-coverage aria-labelledby={`action-coverage-${id}`}>
+        <header>
+          <h3 id={`action-coverage-${id}`}>Evidence coverage</h3>
+          <p>Missing or invalid evidence is not a clean bill of health.</p>
+        </header>
+        <div class="coverage-summary">
+          <span><strong>{queue.coverage.datasets.included.length}</strong> included datasets</span>
+          <span><strong>{queue.coverage.datasets.planned.length}</strong> planned</span>
+          <span><strong>{queue.coverage.datasets.excluded.length}</strong> excluded</span>
+          <span><strong>{queue.coverage.datasets.unavailable.length}</strong> unavailable</span>
+        </div>
+        <ul class="domain-coverage">
+          {Object.entries(queue.coverage.domains).map(([domain, coverage]) => (
+            <li data-domain-coverage={domain} data-coverage-status={coverage.status}>
+              <strong>{domain}</strong><span>{coverage.status}</span>
+              <small>{coverage.signalCount} signals · {coverage.datasetCount} datasets</small>
+              {coverage.message ? <p>{coverage.message}</p> : null}
+            </li>
+          ))}
+        </ul>
+        <details class="coverage-details" open={queue.items.length === 0 || queue.coverage.diagnostics.length > 0}>
+          <summary>Dataset coverage and diagnostics</summary>
+          <ul>
+            {queue.coverage.datasets.included.map((entry) => <li><strong>Included</strong> · <code>{entry.datasetId}</code> · <code>{entry.repositoryId}</code></li>)}
+            {(["planned", "excluded", "unavailable"] as const).flatMap((state) => queue.coverage.datasets[state].map((entry) => <li><strong>{state}</strong> · <code>{entry.datasetId}</code> — {entry.reason}</li>))}
+            {queue.coverage.diagnostics.map((diagnostic) => <li data-action-diagnostic={diagnostic.severity}><strong>{diagnostic.severity}</strong> · <code>{diagnostic.datasetId}</code> — {diagnostic.reason}</li>)}
+          </ul>
+          {queue.coverage.diagnostics.length === 0 ? <p>No additional source diagnostics.</p> : null}
+        </details>
+      </section>
+
+      <p class="action-empty" data-action-empty hidden={visible.size > 0}>
+        {queue.items.length === 0 ? "No actionable items are available from the validated evidence in this window. Review coverage above." : "No actions match these filters. Reset or broaden your selections; coverage above still describes the source evidence."}
+      </p>
+
+      <ol class="action-list">
+        {queue.items.map((item, index) => (
+          <li class="action-item" data-action-item={item.id} data-repository-id={item.repositoryId} data-team-ids={JSON.stringify(item.teams.map((team) => team.id))} data-priority={item.priorityBand} data-domains={JSON.stringify([...new Set(item.signals.map((signal) => signal.domain))])} hidden={!visible.has(item.id)}>
+            <article aria-labelledby={`action-${id}-${index}`}>
+              <header class="action-item-header">
+                <div>
+                  <p class="action-repository">{item.repositoryTitle} <code>{item.repositoryId}</code></p>
+                  <h3 id={`action-${id}-${index}`}>{item.primaryAction.label}</h3>
+                  <p class="action-target">{item.target.label} <code>{item.target.id}</code></p>
+                </div>
+                <span class="priority-badge" data-priority-band={item.priorityBand}>{item.priorityBand} priority</span>
+              </header>
+              <div class="action-context">
+                <span>Teams: {item.teams.map((team) => team.label).join(", ")}</span>
+                <span>Trend: <strong>{item.trend}</strong></span>
+                <span>Freshness: <strong>{item.freshness}</strong></span>
+                <span>{item.corroboration} corroborating domain{item.corroboration === 1 ? "" : "s"}: <strong>{[...new Set(item.signals.map((signal) => signal.domain))].join(", ")}</strong></span>
+              </div>
+              <dl class="action-factors">
+                {item.factors.map((factor) => <div data-action-factor={factor.key}><dt>{factor.label} <strong>{factor.value}</strong></dt><dd>{factor.explanation}</dd></div>)}
+              </dl>
+              <details class="action-evidence">
+                <summary>Why this is here <span>{item.evidence.length} source anchor{item.evidence.length === 1 ? "" : "s"}</span></summary>
+                {item.alternateActions.length > 0 ? (
+                  <div class="alternate-actions"><h4>Also consider</h4><ul>{item.alternateActions.map((action) => <li>{action.label}</li>)}</ul></div>
+                ) : null}
+                <div class="signal-explanations">
+                  {item.signals.map((signal) => <section><h4>{signal.domain} · {signal.targetLabel}</h4><p>{signal.explanation}</p><dl class="source-facts">{signal.facts.map((fact) => <div><dt>{fact.label}</dt><dd>{fact.value === null ? "Unknown" : String(fact.value)}</dd></div>)}</dl></section>)}
+                </div>
+                <h4>Exact canonical evidence</h4>
+                <ul class="evidence-links">
+                  {item.evidence.map((evidence) => (
+                    <li data-action-evidence data-snapshot-id={evidence.snapshotId} data-shard={evidence.shard} data-record={evidence.record}>
+                      <a href={evidence.href}>{evidence.label} <span aria-hidden="true">→</span></a>
+                      <span>{evidence.domain} · dataset <code>{evidence.datasetId}</code> · repository <code>{evidence.repositoryId}</code></span>
+                      <span>Snapshot <code>{evidence.snapshotId}</code> · <time datetime={evidence.generatedAt}>{evidence.generatedAt}</time></span>
+                      <code>{evidence.shard} · {evidence.record}</code>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </article>
+          </li>
+        ))}
+      </ol>
+    </section>
+  ))}
+</section>
+
+<script>
+import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
+
+function initializeActionFilters() {
+  const root = document.querySelector<HTMLElement>("[data-portfolio-action-queue]")
+  const form = root?.querySelector<HTMLFormElement>("[data-action-filters]")
+  if (!root || !form || root.dataset.filtersBound === "true") return
+  root.dataset.filtersBound = "true"
+
+  const apply = (params: URLSearchParams, updateUrl: boolean) => {
+    const filters = parsePortfolioActionFilters(params)
+    const selections: Record<string, readonly string[]> = {
+      repo: filters.repositoryIds,
+      team: filters.teamIds,
+      priority: filters.priorityBands,
+      domain: filters.domains,
+    }
+    for (const input of form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')) {
+      input.checked = selections[input.name]?.includes(input.value) ?? false
+    }
+    const windowInput = form.elements.namedItem("window")
+    if (windowInput instanceof HTMLSelectElement) windowInput.value = filters.window
+    for (const section of root.querySelectorAll<HTMLElement>("[data-action-window]")) {
+      section.hidden = section.dataset.actionWindow !== filters.window
+      let visible = 0
+      for (const row of section.querySelectorAll<HTMLElement>("[data-action-item]")) {
+        const teams = JSON.parse(row.dataset.teamIds ?? "[]") as string[]
+        const domains = JSON.parse(row.dataset.domains ?? "[]") as string[]
+        const matches =
+          (filters.repositoryIds.length === 0 || filters.repositoryIds.includes(row.dataset.repositoryId ?? "")) &&
+          (filters.teamIds.length === 0 || teams.some((team) => filters.teamIds.includes(team))) &&
+          (filters.priorityBands.length === 0 ||
+            filters.priorityBands.some((priority) => priority === row.dataset.priority)) &&
+          (filters.domains.length === 0 ||
+            domains.some((domain) => filters.domains.some((selected) => selected === domain)))
+        row.hidden = !matches
+        if (matches) visible += 1
+      }
+      const count = section.querySelector<HTMLElement>("[data-action-count]")
+      if (count) count.textContent = String(visible)
+      const empty = section.querySelector<HTMLElement>("[data-action-empty]")
+      if (empty) empty.hidden = visible > 0
+    }
+    if (updateUrl) {
+      const url = new URL(window.location.href)
+      url.search = serializePortfolioActionFilters(filters).toString()
+      window.history.replaceState(window.history.state, "", url)
+    }
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault()
+    const params = new URLSearchParams()
+    for (const [key, value] of new FormData(form)) if (typeof value === "string") params.append(key, value)
+    apply(params, true)
+  })
+  apply(new URLSearchParams(window.location.search), true)
+}
+initializeActionFilters()
+document.addEventListener("astro:page-load", initializeActionFilters)
+</script>
+
+<style>
+[hidden] {
+  display: none !important;
+}
+.action-panel,
+.action-window {
+  display: grid;
+  gap: 1.1rem;
+}
+.action-filters,
+.action-coverage,
+.action-item {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.action-filters {
+  padding: 1rem;
+}
+.filter-intro h2,
+.action-coverage h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.filter-intro p,
+.action-coverage header p {
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(12rem, 1.4fr);
+  align-items: start;
+  gap: 0.65rem;
+}
+.filter-group,
+.window-filter select {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.75rem;
+}
+.filter-group summary {
+  padding: 0.75rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+.filter-group fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0 0.75rem 0.75rem;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+.filter-group fieldset p,
+.filter-unavailable {
+  margin: 0 0 0.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+}
+.filter-option {
+  display: flex;
+  align-items: start;
+  gap: 0.4rem;
+  padding: 0.35rem 0;
+  overflow-wrap: anywhere;
+}
+.filter-option input {
+  margin-top: 0.2rem;
+  accent-color: var(--color-accent);
+}
+.window-filter {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+.window-filter select {
+  min-width: 0;
+  width: 100%;
+  padding: 0.55rem;
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+  font-size: 0.73rem;
+}
+.filter-actions button {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--color-accent-strong);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.filter-actions span {
+  color: var(--color-text-muted);
+  font-size: 0.67rem;
+}
+a {
+  color: var(--color-accent-strong);
+  text-underline-offset: 0.2em;
+}
+.queue-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+.eyebrow {
+  margin: 0 0 0.4rem;
+  color: var(--color-accent-strong);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.queue-header h2 {
+  margin: 0;
+  font-family: var(--font-heading-stack);
+  font-size: 1.65rem;
+}
+.queue-header p:not(.eyebrow) {
+  margin: 0.5rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.73rem;
+}
+.queue-count {
+  flex-shrink: 0;
+}
+.queue-count strong {
+  color: var(--color-text);
+  font-size: 1.3rem;
+}
+.action-coverage {
+  padding: 0.9rem 1rem;
+}
+.coverage-summary,
+.action-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+.domain-coverage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.9rem 0;
+  list-style: none;
+}
+.domain-coverage li {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+  padding: 0.55rem;
+  border: 1px solid var(--color-border);
+  font-size: 0.7rem;
+}
+.domain-coverage li[data-coverage-status="invalid"] {
+  border-left: 3px solid #b85b3a;
+}
+.domain-coverage small,
+.domain-coverage p {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.domain-coverage p {
+  margin: 0;
+}
+.coverage-details {
+  font-size: 0.71rem;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.coverage-details summary,
+.action-evidence summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.coverage-details ul {
+  padding-left: 1.2rem;
+  line-height: 1.65;
+}
+.action-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.action-item {
+  padding: 1.15rem;
+  border-left: 3px solid var(--color-accent-strong);
+}
+.action-item-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.action-repository {
+  margin: 0 0 0.6rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.action-repository code,
+.action-target code {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+.action-item h3 {
+  margin: 0;
+  font-family: var(--font-heading-stack);
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+.action-target {
+  margin: 0.45rem 0 0.8rem;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+.priority-badge {
+  flex-shrink: 0;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--color-border);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.priority-badge[data-priority-band="critical"] {
+  color: #b43828;
+  border-color: currentColor;
+}
+.priority-badge[data-priority-band="high"] {
+  color: #a85616;
+  border-color: currentColor;
+}
+.action-factors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0;
+  padding-block: 0.9rem;
+  border-block: 1px solid var(--color-border);
+}
+.action-factors dt {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+.action-factors dt strong {
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+.action-factors dd {
+  margin: 0.4rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.alternate-actions,
+.signal-explanations {
+  font-size: 0.73rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+h4 {
+  margin: 0.8rem 0 0.35rem;
+  font-size: 0.76rem;
+  color: var(--color-text);
+}
+.alternate-actions ul {
+  margin-top: 0.3rem;
+  padding-left: 1.2rem;
+}
+.action-evidence {
+  margin-top: 0.85rem;
+  font-size: 0.75rem;
+}
+.action-evidence summary span {
+  margin-left: 0.5rem;
+  color: var(--color-text-muted);
+  font-weight: 400;
+  font-size: 0.65rem;
+}
+.source-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0.6rem 0;
+}
+.source-facts div {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.source-facts dt {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+}
+.source-facts dd {
+  margin: 0;
+  font-size: 0.71rem;
+}
+.evidence-links {
+  display: grid;
+  gap: 0.65rem;
+  list-style: none;
+  padding: 0;
+}
+.evidence-links li {
+  display: grid;
+  gap: 0.25rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.65rem;
+  overflow-wrap: anywhere;
+}
+.evidence-links li > span,
+.evidence-links li > code {
+  color: var(--color-text-muted);
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+.action-empty,
+.action-note {
+  padding: 1rem;
+  border: 1px dashed var(--color-border);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+:is(a, button, input, select, summary):focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 3px;
+}
+@media (max-width: 850px) {
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .window-filter {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .action-item-header,
+  .queue-header {
+    flex-direction: column;
+    align-items: start;
+  }
+  .action-factors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .action-item {
+    padding: 0.85rem;
+  }
+  .filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

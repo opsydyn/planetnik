@@ -1,0 +1,112 @@
+---
+import PortfolioActionQueuePanel from "../../components/datasets/PortfolioActionQueuePanel.astro"
+import ExploreLayout from "../../layouts/ExploreLayout.astro"
+import { parsePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
+import { readDatasetActionQueueModel } from "../../lib/datasets/actionQueueSource.js"
+import { loadDatasetCatalog } from "../../lib/datasets/catalogSource.js"
+import { route } from "../../lib/route.js"
+
+const { catalog, diagnostics } = loadDatasetCatalog()
+const model = readDatasetActionQueueModel({ catalog })
+const filters = parsePortfolioActionFilters(Astro.url.searchParams)
+---
+
+<ExploreLayout title="Portfolio actions" description="Portfolio actions grounded in canonical JSON evidence, with exact snapshot provenance across repositories.">
+  <div class="portfolio-actions-page" data-portfolio-actions-page>
+    <nav class="portfolio-breadcrumb" aria-label="Breadcrumb">
+      <a href={route("/explore")}>Explore datasets</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">Portfolio actions</span>
+    </nav>
+    <header class="portfolio-hero">
+      <div>
+        <p class="portfolio-eyebrow">Canonical JSON · static evidence</p>
+        <h1>Portfolio actions.</h1>
+        <p>Find the next useful intervention across repositories. Every priority keeps its source facts, ranking explanations, and exact snapshot evidence close at hand.</p>
+      </div>
+      <a class="portfolio-trends-link" href={route("/datasets/trends")}>Explore portfolio trends <span aria-hidden="true">→</span></a>
+    </header>
+    <PortfolioActionQueuePanel model={model} filters={filters} />
+    {diagnostics.length > 0 ? <details class="catalog-diagnostics" open><summary>{diagnostics.length} catalogue diagnostic{diagnostics.length === 1 ? "" : "s"}</summary><ul>{diagnostics.map((diagnostic) => <li><code>{diagnostic.datasetId}</code> — {diagnostic.reason}</li>)}</ul></details> : null}
+  </div>
+</ExploreLayout>
+
+<style>
+.portfolio-actions-page {
+  display: grid;
+  gap: 1.35rem;
+  max-width: 78rem;
+  margin: 0 auto;
+}
+.portfolio-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+}
+.portfolio-breadcrumb a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.portfolio-hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.5rem 0;
+  border-block: 1px solid var(--color-border);
+  background: radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 48%);
+}
+.portfolio-eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--color-accent-strong);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.portfolio-hero h1 {
+  margin: 0;
+  font-family: var(--font-heading-stack);
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+.portfolio-hero p:not(.portfolio-eyebrow) {
+  max-width: 47rem;
+  margin: 0.85rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.portfolio-trends-link {
+  flex: 0 0 auto;
+  color: var(--color-accent-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-underline-offset: 0.2em;
+}
+.catalog-diagnostics {
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.catalog-diagnostics summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.catalog-diagnostics ul {
+  padding-left: 1.2rem;
+  line-height: 1.6;
+}
+@media (max-width: 720px) {
+  .portfolio-hero {
+    display: grid;
+    gap: 1rem;
+  }
+}
+</style>
