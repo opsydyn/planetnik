@@ -132,10 +132,15 @@ function snapshot(dataDir: string, partial = false, historical = false): void {
     alerts: [{ id: "landscape-only", open: true, severity: "critical" }],
   })
 }
-function model(datasetsRoot: string, datasets: DatasetDescriptor[]) {
+function model(
+  datasetsRoot: string,
+  datasets: DatasetDescriptor[],
+  options: { readonly maxItemsPerWindow?: number } = {},
+) {
   return readDatasetActionQueueModel({
     catalog: { catalogVersion: 1, datasets } satisfies DatasetCatalog,
     datasetsRoot,
+    ...options,
   })
 }
 
@@ -409,5 +414,38 @@ describe("canonical action queue source", () => {
           expect(anchor.href).toStartWith("/planetnik/datasets/ready/")
         }
     }
+  })
+
+  test("caps static windows while preserving full totals and explicit truncation", () => {
+    const datasetsRoot = root()
+    const dataDir = join(datasetsRoot, "ready/data")
+    snapshot(dataDir)
+    const hotspots = JSON.parse(readFileSync(join(dataDir, "hotspots.json"), "utf-8")) as Record<string, unknown[]>
+    const base = hotspots.fileHotspots![0] as Record<string, unknown>
+    hotspots.fileHotspots = Array.from({ length: 6 }, (_, index) => ({
+      ...base,
+      id: `file:src/${index}.ts`,
+      name: `${index}.ts`,
+      route: "/hotspots/files",
+    }))
+    write(join(dataDir, "hotspots.json"), hotspots)
+
+    const full = model(datasetsRoot, [descriptor("ready")]).queuesByWindow.current
+    const boundedModel = model(datasetsRoot, [descriptor("ready")], { maxItemsPerWindow: 2 })
+    const bounded = boundedModel.queuesByWindow.current
+
+    expect(full.items.length).toBeGreaterThan(2)
+    expect(bounded.items).toEqual(full.items.slice(0, 2))
+    expect(boundedModel.totalItemsByWindow.current).toBe(full.items.length)
+    expect(boundedModel.truncatedByWindow.current).toBe(true)
+    expect(boundedModel.maxItemsPerWindow).toBe(2)
+  })
+
+  test("rejects a non-positive static window limit", () => {
+    const datasetsRoot = root()
+    snapshot(join(datasetsRoot, "ready/data"))
+    expect(() => model(datasetsRoot, [descriptor("ready")], { maxItemsPerWindow: 0 })).toThrow(
+      "maxItemsPerWindow must be a positive integer.",
+    )
   })
 })

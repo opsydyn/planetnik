@@ -24,6 +24,9 @@ import { readDatasetCurrentSnapshot, readDatasetSnapshotHistory } from "./snapsh
 
 export type DatasetActionQueueModel = {
   readonly queuesByWindow: Readonly<Record<PortfolioActionWindow, PortfolioActionQueue>>
+  readonly totalItemsByWindow: Readonly<Record<PortfolioActionWindow, number>>
+  readonly truncatedByWindow: Readonly<Record<PortfolioActionWindow, boolean>>
+  readonly maxItemsPerWindow?: number
   readonly filterOptions: {
     readonly repositories: readonly { readonly id: string; readonly label: string }[]
     readonly teams: readonly { readonly id: string; readonly label: string }[]
@@ -38,6 +41,7 @@ type Source = {
   readonly context: CanonicalReportContext
 }
 const windows: readonly PortfolioActionWindow[] = ["current", "latest-compatible", "7d", "30d", "90d"]
+export const STATIC_ACTION_QUEUE_ITEM_LIMIT = 250
 const domains: readonly PortfolioActionSignalDomain[] = [
   "hotspot",
   "control",
@@ -403,26 +407,43 @@ function datasetInput(
 export function readDatasetActionQueueModel(options: {
   readonly catalog: DatasetCatalog
   readonly datasetsRoot?: string
+  /** Optional static presentation bound; totals remain available separately. */
+  readonly maxItemsPerWindow?: number
 }): DatasetActionQueueModel {
+  const maxItemsPerWindow = options.maxItemsPerWindow
+  if (maxItemsPerWindow !== undefined && (!Number.isInteger(maxItemsPerWindow) || maxItemsPerWindow < 1))
+    throw new Error("maxItemsPerWindow must be a positive integer.")
   const datasets = [...options.catalog.datasets]
     .sort((left, right) => left.slug.localeCompare(right.slug))
     .map((dataset) => datasetInput(dataset, options))
+  const totalItemsByWindow = {} as Record<PortfolioActionWindow, number>
+  const truncatedByWindow = {} as Record<PortfolioActionWindow, boolean>
   const queuesByWindow = Object.fromEntries(
     windows.map((window): [PortfolioActionWindow, PortfolioActionQueue] => {
       const queue = buildPortfolioActionQueue(datasets, { window })
-      const routed = (anchor: PortfolioActionEvidence): PortfolioActionEvidence => ({
-        ...anchor,
-        href: route(anchor.href),
-      })
+      totalItemsByWindow[window] = queue.items.length
+      truncatedByWindow[window] = maxItemsPerWindow !== undefined && queue.items.length > maxItemsPerWindow
+      const items = (maxItemsPerWindow === undefined ? queue.items : queue.items.slice(0, maxItemsPerWindow)).map(
+        (item) => ({
+          ...item,
+          evidence: item.evidence.map((anchor) => ({
+            ...anchor,
+            href: route(anchor.href),
+          })),
+          signals: item.signals.map((signal) => ({
+            ...signal,
+            evidence: signal.evidence.map((anchor) => ({
+              ...anchor,
+              href: route(anchor.href),
+            })),
+          })),
+        }),
+      )
       return [
         window,
         {
           ...queue,
-          items: queue.items.map((item) => ({
-            ...item,
-            evidence: item.evidence.map(routed),
-            signals: item.signals.map((signal) => ({ ...signal, evidence: signal.evidence.map(routed) })),
-          })),
+          items,
         },
       ]
     }),
@@ -437,6 +458,9 @@ export function readDatasetActionQueueModel(options: {
     for (const signal of item.signals) if (!teams.has(signal.team.id)) teams.set(signal.team.id, signal.team)
   return {
     queuesByWindow,
+    totalItemsByWindow,
+    truncatedByWindow,
+    ...(maxItemsPerWindow === undefined ? {} : { maxItemsPerWindow }),
     filterOptions: {
       repositories,
       teams: [...teams.values()].sort((left, right) => left.id.localeCompare(right.id)),

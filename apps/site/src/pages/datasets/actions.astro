@@ -2,12 +2,15 @@
 import PortfolioActionQueuePanel from "../../components/datasets/PortfolioActionQueuePanel.astro"
 import ExploreLayout from "../../layouts/ExploreLayout.astro"
 import { parsePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
-import { readDatasetActionQueueModel } from "../../lib/datasets/actionQueueSource.js"
+import {
+  readDatasetActionQueueModel,
+  STATIC_ACTION_QUEUE_ITEM_LIMIT,
+} from "../../lib/datasets/actionQueueSource.js"
 import { loadDatasetCatalog } from "../../lib/datasets/catalogSource.js"
 import { route } from "../../lib/route.js"
 
 const { catalog, diagnostics } = loadDatasetCatalog()
-const model = readDatasetActionQueueModel({ catalog })
+const model = readDatasetActionQueueModel({ catalog, maxItemsPerWindow: STATIC_ACTION_QUEUE_ITEM_LIMIT })
 const filters = parsePortfolioActionFilters(Astro.url.searchParams)
 ---
 

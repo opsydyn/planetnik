@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — static implementation delivered 2026-09-06; full-catalogue build and repository-wide lint remain open
+Accepted — static implementation delivered 2026-09-06; bounded full-catalogue build is green and repository-wide lint remains open
 
 ## Date
 
@@ -64,6 +64,12 @@ entries. Planned, invalid, and landscape entries remain coverage diagnostics.
 Static items are read-only and carry `status: "untracked"`; hosted
 acknowledgement, snooze, and resolution are a separate overlay keyed by item
 and snapshot identity.
+
+The static site materializes the ranked top 250 items per observation window.
+The site model keeps the full ranked total and an explicit truncation flag, so
+the page can say when filters apply only to the materialized slice. This is a
+presentation bound for large static snapshots; it does not change the common
+ranking policy or discard source evidence from the retained items.
 
 ## Decision Drivers
 
@@ -187,23 +193,22 @@ delivery.
 - [x] `/datasets/actions` renders ready and partial repository items and
       excludes planned, invalid, and landscape entries without fabricated
       actions.
-- [ ] Static build, workspace typechecks, full tests, and direct browser
+- [x] Static build, workspace typechecks, full tests, and direct browser
       evidence pass before the Phase 4 implementation is marked delivered.
 
 Verification evidence for the static slice (2026-09-06): the focused action
-queue suite passes 37 tests with 295 assertions; `bun run typecheck` exits 0
-across the workspace; and `bun test` passes 1,272 tests with 6,877 assertions.
-A bounded static build using the checked-in `code-city-task9-complete` fixture
-completes 59 pages, including `/datasets/actions`. Firefox direct evidence
-loads the route, shows four source-backed actions, and reduces the visible
-queue to one item for `priority=critical&domain=hotspot`; expanded evidence
-shows the dataset-scoped hotspot and impact links with snapshot, shard, and
-record selectors. The default build over the current 4 GB `datasets/` tree
-still aborts with Node out-of-memory during route generation, and the root
-`bun run lint` remains red on the repository's existing Biome 2.5/schema and
-format baseline (549 errors, 3 warnings, and 2 infos). The combined gate above
-therefore remains open until those two repository/environment constraints are
-addressed.
+queue suite passes 39 tests with 301 assertions; `bun run typecheck` exits 0
+across the workspace; and `bun test` passes 1,274 tests with 6,850 assertions.
+The bounded static build using the checked-in `code-city-task9-complete` fixture
+completes 59 pages, including `/datasets/actions`. The default build over the
+current 4 GB `datasets/` tree completes 126 pages under a 4 GB Node heap; the
+generated route reports the explicit top-250 bound and its full ranked total.
+Firefox direct evidence loads the route, shows four source-backed actions, and
+reduces the visible queue to one item for `priority=critical&domain=hotspot`;
+expanded evidence shows the dataset-scoped hotspot and impact links with
+snapshot, shard, and record selectors. The root `bun run lint` remains red on
+the repository's existing Biome 2.5/schema and format baseline (549 errors, 3
+warnings, and 2 infos), so repository-wide lint remains the open constraint.
 
 ## Related ADRs and Evidence
 

@@ -50,7 +50,13 @@ const variants = windows.map((window) => {
   const visible = new Set(
     filterPortfolioActionQueue(queue, { ...canonicalFilters, window: window.id }).items.map((item) => item.id),
   )
-  return { ...window, queue, visible }
+  return {
+    ...window,
+    queue,
+    visible,
+    totalItems: model.totalItemsByWindow[window.id],
+    truncated: model.truncatedByWindow[window.id],
+  }
 })
 ---
 
@@ -94,16 +100,18 @@ const variants = windows.map((window) => {
     <p class="action-note">The current queue and source links remain usable without JavaScript. Interactive filters and alternate windows require JavaScript on this static report.</p>
   </noscript>
 
-  {variants.map(({ id, label, queue, visible }) => (
-    <section class="action-window" data-action-window={id} data-action-queue-status={queue.items.length > 0 ? "ready" : "empty"} hidden={id !== canonicalFilters.window} aria-labelledby={`action-window-${id}`}>
+  {variants.map(({ id, label, queue, visible, totalItems, truncated }) => (
+    <section class="action-window" data-action-window={id} data-action-queue-status={queue.items.length > 0 ? "ready" : "empty"} data-action-queue-truncated={truncated ? "true" : "false"} hidden={id !== canonicalFilters.window} aria-labelledby={`action-window-${id}`}>
       <header class="queue-header">
         <div>
           <p class="eyebrow">Precomputed · evidence first</p>
           <h2 id={`action-window-${id}`}>{label}</h2>
           <p>{queue.asOf ? <>As of <time datetime={queue.asOf}>{queue.asOf}</time></> : "No valid canonical snapshot is available."}</p>
         </div>
-        <p class="queue-count" role="status" aria-live="polite"><strong data-action-count>{visible.size}</strong> of {queue.items.length} actions</p>
+        <p class="queue-count" role="status" aria-live="polite"><strong data-action-count>{visible.size}</strong> matching {truncated ? `the top ${queue.items.length} of ${totalItems}` : totalItems} actions</p>
       </header>
+
+      {truncated ? <p class="action-note" data-action-truncated>Static report bound: showing the top {queue.items.length} of {totalItems} ranked actions. Filters apply to this materialized slice.</p> : null}
 
       <section class="action-coverage" data-action-coverage aria-labelledby={`action-coverage-${id}`}>
         <header>

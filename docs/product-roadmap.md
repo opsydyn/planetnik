@@ -589,8 +589,8 @@ durable storage beyond the local showcase remain the open Phase 5 boundary.
 ## Phase 4 — Portfolio action queue
 
 **Status: Static implementation delivered — focused verification, bounded
-fixture build, and direct browser evidence green; default catalogue build and
-repository-wide lint remain open (2026-09-06)**
+fixture build, direct browser evidence, and the bounded default catalogue build
+are green; repository-wide lint remains open (2026-09-06)**
 
 ### Outcome
 
@@ -614,7 +614,9 @@ keeps ready and partial single-repository coverage explicit, ranks with the
 visible factor vector, and links each item to exact dataset-scoped evidence.
 Planned and landscape entries remain coverage diagnostics. The hosted
 acknowledgement/status overlay remains a later boundary and is not implemented
-here.
+here. The route materializes the ranked top 250 items per window and states the
+full total and truncation in the static model, so filtering never presents a
+bounded slice as the complete queue.
 
 ### Exit criteria
 
@@ -622,13 +624,12 @@ here.
 - ranking factors are visible and testable
 - the static product can display the queue without requiring hosted services
 
-The focused common/site suite (37 tests), workspace typecheck, full test suite
-(1,272 tests), bounded static fixture build, and direct Firefox route evidence
-meet the static-slice criteria. The current full catalogue build still reaches
-Node out-of-memory during static route generation over the 4 GB local dataset
-tree, while the repository-wide Biome lint gate reports its existing schema and
-format baseline; both remain explicitly open rather than being folded into
-delivery status.
+The focused common/site suite, workspace typecheck, full test suite, bounded
+static fixture build, direct Firefox route evidence, and the default build over
+the current 4 GB local dataset tree meet the static-slice criteria. The default
+build completes 126 pages with the explicit per-window bound; the repository-
+wide Biome lint gate still reports its existing schema and format baseline and
+remains open rather than being folded into delivery status.
 
 ## Phase 5 — Hosted snapshot ingestion and grounded retrieval
 
@@ -710,7 +711,7 @@ semantics, macro expansion, type resolution, or whole-program symbols.
 | Completed | Tree-sitter capture lane: pinned-commit preflight, Maven build plan, disposable Java harness, and fail-closed command test (2026-09-05) |
 | Completed | Tree-sitter runtime evidence: Docker-backed Temurin 17 capture retained with 3 units/0 dependencies and explicit `.rs` cleaner provenance (2026-09-05) |
 | Completed | Tree-sitter metric policy: ADR-0021 makes real-file-extension semantics authoritative and classifies the extensionless `main` LOC difference as neutral (2026-09-05) |
-| Completed | Phase 4 static portfolio action queue — canonical JSON evidence, explainable factor-vector ranking, deterministic filters, coverage diagnostics, and `/datasets/actions` browser evidence (2026-09-06) |
+| Completed | Phase 4 static portfolio action queue — canonical JSON evidence, explainable factor-vector ranking, deterministic filters, coverage diagnostics, bounded top-250 static materialization, and `/datasets/actions` browser evidence (2026-09-06) |
 | Later | Phase 4 hosted acknowledgement/status overlay |
 | Later | Phase 5: hosted snapshot ingestion and grounded semantic retrieval |
 | Later | Phase 6: demand-led parser expansion |
