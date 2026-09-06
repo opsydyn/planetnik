@@ -76,7 +76,7 @@ export function readDatasetSnapshotHistory(
  */
 export function readDatasetCurrentSnapshot(
   datasetId: string,
-  options: { readonly datasetsRoot?: string } = {},
+  options: { readonly datasetsRoot?: string; readonly includeEntities?: boolean } = {},
 ): DatasetSnapshotReadResult {
   if (!safeDatasetIdPattern.test(datasetId)) {
     return { tag: "invalid", message: "Dataset id is not a safe catalogue identifier." }
@@ -91,7 +91,11 @@ export function readDatasetCurrentSnapshot(
     }
   }
 
-  const result = readHistoryEntry(resolve(dataDir), { dataDir: "." }, { includeEntities: false })
+  const result = readHistoryEntry(
+    resolve(dataDir),
+    { dataDir: "." },
+    { includeEntities: options.includeEntities ?? false },
+  )
   if (result.tag === "invalid") return result
   return { tag: "ready", snapshot: result.value }
 }

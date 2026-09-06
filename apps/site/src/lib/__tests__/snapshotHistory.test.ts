@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -80,6 +80,43 @@ function writeManifest(dataDir: string, snapshots: ReadonlyArray<{ dataDir: stri
 }
 
 describe("readSnapshotHistory", () => {
+  test("loads current entity collections only when explicitly requested", () => {
+    const datasetsRoot = mkdtempSync(join(tmpdir(), "planetnik-current-entities-"))
+    temporaryRoots.push(datasetsRoot)
+    const dataDir = join(datasetsRoot, "entity-fixture", "data")
+    writeSnapshot(dataDir, {
+      snapshotId: "22222222-2222-4222-8222-222222222222",
+      generatedAt: "2026-09-04T00:00:00.000Z",
+    })
+    const context = JSON.parse(readFileSync(join(dataDir, "report_context.json"), "utf-8"))
+    Object.assign(context.canonicalShards, {
+      filesMain: "files_main.json",
+      hotspots: "hotspots.json",
+      controls: "controls.json",
+    })
+    context.capabilities = Object.keys(context.canonicalShards)
+    writeJson(join(dataDir, "report_context.json"), context)
+    writeJson(join(dataDir, "files_main.json"), { files: [{ id: "file:a.ts", components: ["Core"] }] })
+    writeJson(join(dataDir, "hotspots.json"), { fileHotspots: [{ id: "file:a.ts", kind: "file" }] })
+    writeJson(join(dataDir, "controls.json"), {
+      goals: [{ goal: "Quality", controls: [{ metricId: "LOC", status: "FAILED" }] }],
+    })
+    writeJson(join(dataDir, "contributors.json"), { contributors: [{ email: "owner@example.test" }] })
+
+    const defaults = readDatasetCurrentSnapshot("entity-fixture", { datasetsRoot })
+    const included = readDatasetCurrentSnapshot("entity-fixture", { datasetsRoot, includeEntities: true })
+    expect(defaults.tag).toBe("ready")
+    expect(included.tag).toBe("ready")
+    if (defaults.tag !== "ready" || included.tag !== "ready") return
+    expect(defaults.snapshot.snapshot.entities).toBeUndefined()
+    expect(included.snapshot.snapshot.entities).toMatchObject({
+      components: { present: true, records: [{ id: "component:primary:Core" }] },
+      hotspots: { present: true, records: [{ id: "file:a.ts" }] },
+      controls: { present: true, records: [{ id: "control:Quality:LOC" }] },
+      ownership: { present: true, records: [{ id: "contributor:owner@example.test" }] },
+    })
+  })
+
   test("reads the current canonical snapshot independently of history retention", () => {
     const datasetsRoot = mkdtempSync(join(tmpdir(), "planetnik-current-snapshot-"))
     temporaryRoots.push(datasetsRoot)
