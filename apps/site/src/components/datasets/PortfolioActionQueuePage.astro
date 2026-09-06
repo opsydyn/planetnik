@@ -1,0 +1,119 @@
+---
+import ExploreLayout from "../../layouts/ExploreLayout.astro"
+import PortfolioActionQueuePanel from "./PortfolioActionQueuePanel.astro"
+import { actionQueuePagePath } from "../../lib/datasets/actionQueuePage.js"
+import type { ActionQueueArtifactPage } from "../../lib/datasets/actionQueueArtifactRoutes.js"
+import type { PortfolioActionQueueFilters } from "@planetnik/common"
+import { route } from "../../lib/route.js"
+
+interface Props {
+  page: ActionQueueArtifactPage
+  filters: PortfolioActionQueueFilters
+}
+
+const { page, filters } = Astro.props
+const pagePath = actionQueuePagePath(page.params)
+const jsonPath = `${pagePath}.json`
+---
+
+<ExploreLayout title="Portfolio actions" description="Portfolio actions grounded in canonical JSON evidence, with exact snapshot provenance across repositories.">
+  <div class="portfolio-actions-page" data-portfolio-actions-page>
+    <nav class="portfolio-breadcrumb" aria-label="Breadcrumb">
+      <a href={route("/explore")}>Explore datasets</a>
+      <span aria-hidden="true">/</span>
+      <a href={route("/datasets/actions")}>Portfolio actions</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{page.params.window} · page {page.params.page}</span>
+    </nav>
+    <header class="portfolio-hero">
+      <div>
+        <p class="portfolio-eyebrow">Canonical JSON · static evidence</p>
+        <h1>Portfolio actions.</h1>
+        <p>Find the next useful intervention across repositories. Every priority keeps its source facts, ranking explanations, and exact snapshot evidence close at hand.</p>
+      </div>
+      <div class="portfolio-hero-links">
+        <a class="portfolio-trends-link" href={route("/datasets/trends")}>Explore portfolio trends <span aria-hidden="true">→</span></a>
+        <a class="portfolio-artifact-link" href={route(jsonPath)}>Open page JSON <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+    <PortfolioActionQueuePanel page={page} filters={filters} />
+  </div>
+</ExploreLayout>
+
+<style>
+.portfolio-actions-page {
+  display: grid;
+  gap: 1.35rem;
+  max-width: 78rem;
+  margin: 0 auto;
+}
+.portfolio-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+}
+.portfolio-breadcrumb a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.portfolio-hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.5rem 0;
+  border-block: 1px solid var(--color-border);
+  background: radial-gradient(circle at 100% 0, var(--color-accent-soft), transparent 48%);
+}
+.portfolio-eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--color-accent-strong);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.portfolio-hero h1 {
+  margin: 0;
+  font-family: var(--font-heading-stack);
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+.portfolio-hero p:not(.portfolio-eyebrow) {
+  max-width: 47rem;
+  margin: 0.85rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.portfolio-hero-links {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+  justify-items: end;
+}
+.portfolio-trends-link,
+.portfolio-artifact-link {
+  color: var(--color-accent-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-underline-offset: 0.2em;
+}
+.portfolio-artifact-link {
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+}
+@media (max-width: 720px) {
+  .portfolio-hero {
+    display: grid;
+    gap: 1rem;
+  }
+  .portfolio-hero-links {
+    justify-items: start;
+  }
+}
+</style>

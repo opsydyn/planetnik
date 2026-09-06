@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted — static implementation delivered 2026-09-06; bounded full-catalogue build is green and repository-wide lint remains open
+Accepted — static implementation and bounded artifact routes delivered
+2026-09-06; final incremental build evidence is green, real materialization
+is memory-heavy, and repository-wide lint remains open
 
 ## Date
 
@@ -65,11 +67,15 @@ Static items are read-only and carry `status: "untracked"`; hosted
 acknowledgement, snooze, and resolution are a separate overlay keyed by item
 and snapshot identity.
 
-The static site materializes the ranked top 250 items per observation window.
-The site model keeps the full ranked total and an explicit truncation flag, so
-the page can say when filters apply only to the materialized slice. This is a
-presentation bound for large static snapshots; it does not change the common
-ranking policy or discard source evidence from the retained items.
+The static site materializes the ranked top 250 items per observation window
+by default. A versioned manifest and deterministic page-one chunk are written
+under Astro's ignored `.astro/planetnik-action-queue` cache directory; the
+HTML and JSON routes read only the selected chunk and use a source-identity
+fingerprint plus projection version in their cache keys. The site model keeps
+the full ranked total and an explicit `complete`/truncation flag, so filters
+cannot present a bounded slice as the complete queue. The materializer can
+write complete paginated windows when called without `itemLimit`, but that
+mode is not yet safe for the current 4 GB catalogue tree.
 
 ## Decision Drivers
 
@@ -125,6 +131,8 @@ delivery.
 - Partial datasets remain useful and honest because coverage is first-class.
 - A future status overlay can evolve independently of canonical snapshot
   identity.
+- The page shell no longer serializes all five full queues at once; each
+  window/page is independently cacheable and directly readable as JSON.
 
 ### Costs and risks
 
@@ -141,6 +149,10 @@ delivery.
 - Some domains, especially ownership and coupling, may be unavailable when
   their source records do not expose an explicit actionable signal; coverage
   diagnostics keep those domains visible without inventing a signal.
+- The current bounded materializer still parses the large canonical shards in
+  one Bun process. On the local catalogue it peaked at 12,455,657,472 bytes
+  RSS for five sequential windows, so full unbounded pagination remains a
+  follow-up rather than an implied guarantee.
 
 ## Non-goals
 
@@ -196,19 +208,30 @@ delivery.
 - [x] Static build, workspace typechecks, full tests, and direct browser
       evidence pass before the Phase 4 implementation is marked delivered.
 
-Verification evidence for the static slice (2026-09-06): the focused action
-queue suite passes 39 tests with 301 assertions; `bun run typecheck` exits 0
-across the workspace; and `bun test` passes 1,274 tests with 6,850 assertions.
-The bounded static build using the checked-in `code-city-task9-complete` fixture
-completes 59 pages, including `/datasets/actions`. The default build over the
-current 4 GB `datasets/` tree completes 126 pages under a 4 GB Node heap; the
-generated route reports the explicit top-250 bound and its full ranked total.
-Firefox direct evidence loads the route, shows four source-backed actions, and
-reduces the visible queue to one item for `priority=critical&domain=hotspot`;
-expanded evidence shows the dataset-scoped hotspot and impact links with
-snapshot, shard, and record selectors. The root `bun run lint` remains red on
-the repository's existing Biome 2.5/schema and format baseline (549 errors, 3
-warnings, and 2 infos), so repository-wide lint remains the open constraint.
+Verification evidence for the static slice (2026-09-06): the focused
+action-queue/materializer/route/page suites pass (52 tests, 336 assertions),
+`bun test` passes 1,291 tests with 0 failures, and `bun run typecheck`
+exits 0 across the workspace. The checked-in `code-city-task9-complete`
+fixture builds 64 pages, including one HTML and one JSON route for each
+observation window. The final named-dataset combined build materializes five
+bounded windows and completes 131 pages with
+`NODE_OPTIONS=--max-old-space-size=4096`; `/usr/bin/time -l` reports 264.43
+seconds total and 14,213,120,000 bytes maximum RSS. The manifest writes one
+250-item page per window, records full totals of 1,469,802 for
+current/latest-compatible/30d/90d and 357,129 for 7d, and marks each window
+`complete: false`. The generated root action page is 88,900,127 bytes, the
+current HTML page is 88,899,532 bytes, and the current page JSON is
+104,383,387 bytes. The output preserves the queue contract and exact
+dataset-scoped evidence anchors; direct inspection confirms `ready`, explicit
+truncation, 250-item page payloads, and the expected evidence routes. A second
+unchanged build restored all five action JSON routes from Astro's incremental
+cache with the same source fingerprint. The earlier Firefox evidence still
+covers the bounded action surface; no fresh browser provider was available for
+this artifact-route pass, so static HTML and JSON were inspected directly. The
+root `bun run lint` remains red on the repository's existing Biome 2.5/schema
+and format baseline (549 errors, 3 warnings, and 2 infos); unbounded full
+pagination and changed-fingerprint selective rebuild measurement remain
+follow-ups.
 
 ## Related ADRs and Evidence
 
@@ -219,5 +242,6 @@ warnings, and 2 infos), so repository-wide lint remains the open constraint.
 - [ADR-0020: Static dataset catalogue and Explore surface](./0020-adopt-static-dataset-explore-catalog.md)
 - [Portfolio action queue design](../superpowers/specs/2026-09-06-portfolio-action-queue-design.md)
 - [Portfolio action queue implementation plan](../superpowers/plans/2026-09-06-portfolio-action-queue.md)
+- [Incremental action queue artifacts implementation plan](../superpowers/plans/2026-09-06-incremental-action-queue-artifacts.md)
 - [Cross-repository trend contract](../../packages/common/src/trends/CrossRepositoryTrends.ts)
 - [Snapshot entity provenance contract](../../packages/common/src/trends/SnapshotEntityTrends.ts)

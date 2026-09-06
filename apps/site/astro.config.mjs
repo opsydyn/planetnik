@@ -60,6 +60,12 @@ export default defineConfig({
 	security: {
 		csp: false,
 	},
+	experimental: {
+		incrementalBuild: true,
+	},
+	build: {
+		concurrency: 1,
+	},
 	vite: {
 		optimizeDeps: {
 			include: [

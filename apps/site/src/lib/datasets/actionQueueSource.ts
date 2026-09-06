@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
-  buildPortfolioActionQueue,
+  buildPortfolioActionQueueWithStats,
   type CanonicalReportContext,
   type DatasetCatalog,
   type DatasetDescriptor,
@@ -403,6 +403,69 @@ function datasetInput(
   }
 }
 
+export type DatasetActionQueueReader = {
+  readonly datasets: readonly PortfolioActionDatasetInput[]
+  readonly sourceIds: readonly string[]
+  readonly readWindow: (
+    window: PortfolioActionWindow,
+    options?: { readonly itemLimit?: number },
+  ) => { readonly queue: PortfolioActionQueue; readonly totalItems: number }
+}
+
+function routeQueue(queue: PortfolioActionQueue): PortfolioActionQueue {
+  return {
+    ...queue,
+    items: queue.items.map((item) => ({
+      ...item,
+      evidence: item.evidence.map((anchor) => ({
+        ...anchor,
+        href: route(anchor.href),
+      })),
+      signals: item.signals.map((signal) => ({
+        ...signal,
+        evidence: signal.evidence.map((anchor) => ({
+          ...anchor,
+          href: route(anchor.href),
+        })),
+      })),
+    })),
+  }
+}
+
+function sourceId(dataset: DatasetDescriptor): string {
+  return [
+    dataset.id,
+    dataset.slug,
+    dataset.snapshot?.snapshotId ?? "unknown",
+    dataset.snapshot?.generatedAt ?? "unknown",
+  ].join("\0")
+}
+
+export function createDatasetActionQueueReader(options: {
+  readonly catalog: DatasetCatalog
+  readonly datasetsRoot?: string
+}): DatasetActionQueueReader {
+  const datasets = [...options.catalog.datasets]
+    .sort((left, right) => left.slug.localeCompare(right.slug))
+    .map((dataset) => datasetInput(dataset, options))
+  return {
+    datasets,
+    sourceIds: [...options.catalog.datasets].sort((left, right) => left.slug.localeCompare(right.slug)).map(sourceId),
+    readWindow: (window, windowOptions = {}) => {
+      const result = buildPortfolioActionQueueWithStats(datasets, { window, ...windowOptions })
+      return { ...result, queue: routeQueue(result.queue) }
+    },
+  }
+}
+
+export function readDatasetActionQueueWindow(options: {
+  readonly catalog: DatasetCatalog
+  readonly datasetsRoot?: string
+  readonly window: PortfolioActionWindow
+}): PortfolioActionQueue {
+  return createDatasetActionQueueReader(options).readWindow(options.window).queue
+}
+
 /** Filesystem boundary only. Common validates base-free routes; deployment prefixes belong to the returned site model. */
 export function readDatasetActionQueueModel(options: {
   readonly catalog: DatasetCatalog
@@ -413,32 +476,17 @@ export function readDatasetActionQueueModel(options: {
   const maxItemsPerWindow = options.maxItemsPerWindow
   if (maxItemsPerWindow !== undefined && (!Number.isInteger(maxItemsPerWindow) || maxItemsPerWindow < 1))
     throw new Error("maxItemsPerWindow must be a positive integer.")
-  const datasets = [...options.catalog.datasets]
-    .sort((left, right) => left.slug.localeCompare(right.slug))
-    .map((dataset) => datasetInput(dataset, options))
+  const reader = createDatasetActionQueueReader(options)
+  const datasets = reader.datasets
   const totalItemsByWindow = {} as Record<PortfolioActionWindow, number>
   const truncatedByWindow = {} as Record<PortfolioActionWindow, boolean>
   const queuesByWindow = Object.fromEntries(
     windows.map((window): [PortfolioActionWindow, PortfolioActionQueue] => {
-      const queue = buildPortfolioActionQueue(datasets, { window })
-      totalItemsByWindow[window] = queue.items.length
-      truncatedByWindow[window] = maxItemsPerWindow !== undefined && queue.items.length > maxItemsPerWindow
-      const items = (maxItemsPerWindow === undefined ? queue.items : queue.items.slice(0, maxItemsPerWindow)).map(
-        (item) => ({
-          ...item,
-          evidence: item.evidence.map((anchor) => ({
-            ...anchor,
-            href: route(anchor.href),
-          })),
-          signals: item.signals.map((signal) => ({
-            ...signal,
-            evidence: signal.evidence.map((anchor) => ({
-              ...anchor,
-              href: route(anchor.href),
-            })),
-          })),
-        }),
-      )
+      const result = reader.readWindow(window, { itemLimit: maxItemsPerWindow })
+      const queue = result.queue
+      totalItemsByWindow[window] = result.totalItems
+      truncatedByWindow[window] = maxItemsPerWindow !== undefined && result.totalItems > maxItemsPerWindow
+      const items = maxItemsPerWindow === undefined ? queue.items : queue.items.slice(0, maxItemsPerWindow)
       return [
         window,
         {

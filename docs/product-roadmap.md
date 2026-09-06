@@ -614,9 +614,13 @@ keeps ready and partial single-repository coverage explicit, ranks with the
 visible factor vector, and links each item to exact dataset-scoped evidence.
 Planned and landscape entries remain coverage diagnostics. The hosted
 acknowledgement/status overlay remains a later boundary and is not implemented
-here. The route materializes the ranked top 250 items per window and states the
-full total and truncation in the static model, so filtering never presents a
-bounded slice as the complete queue.
+here. The route now reads a versioned, source-fingerprinted page artifact for
+one window at a time, with immutable JSON links and deterministic pagination.
+The default real-catalogue prebuild materializes the ranked top 250 items per
+window and states the full total plus `complete: false`, so filtering never
+presents a bounded slice as the complete queue. Complete pagination remains
+available to a future unbounded materializer once the measured shard-memory
+cost is reduced.
 
 ### Exit criteria
 
@@ -625,11 +629,17 @@ bounded slice as the complete queue.
 - the static product can display the queue without requiring hosted services
 
 The focused common/site suite, workspace typecheck, full test suite, bounded
-static fixture build, direct Firefox route evidence, and the default build over
-the current 4 GB local dataset tree meet the static-slice criteria. The default
-build completes 126 pages with the explicit per-window bound; the repository-
-wide Biome lint gate still reports its existing schema and format baseline and
-remains open rather than being folded into delivery status.
+static fixture build, direct Firefox route evidence, and the final named-dataset
+Astro build over the local catalogue artifacts meet the static-slice criteria.
+The fixture build completes 64 pages; the final combined build completes 131
+pages under a 4 GB Node heap, takes 264.43 seconds wall-clock, and peaks at
+14,213,120,000 bytes RSS. The generated root action page is 88,900,127 bytes
+and the current JSON chunk is 104,383,387 bytes. An unchanged rerun restores
+the five action JSON routes from Astro's incremental cache with the same source
+fingerprint. Payload compaction, lower-memory complete pagination, and
+changed-fingerprint selective rebuild measurement remain bounded follow-ups.
+The repository-wide Biome lint gate still reports its existing schema and
+format baseline and remains open rather than being folded into delivery status.
 
 ## Phase 5 — Hosted snapshot ingestion and grounded retrieval
 
@@ -712,6 +722,7 @@ semantics, macro expansion, type resolution, or whole-program symbols.
 | Completed | Tree-sitter runtime evidence: Docker-backed Temurin 17 capture retained with 3 units/0 dependencies and explicit `.rs` cleaner provenance (2026-09-05) |
 | Completed | Tree-sitter metric policy: ADR-0021 makes real-file-extension semantics authoritative and classifies the extensionless `main` LOC difference as neutral (2026-09-05) |
 | Completed | Phase 4 static portfolio action queue — canonical JSON evidence, explainable factor-vector ranking, deterministic filters, coverage diagnostics, bounded top-250 static materialization, and `/datasets/actions` browser evidence (2026-09-06) |
+| Completed | Phase 4 incremental action artifacts — source-fingerprinted per-window JSON/HTML page routes, sequential Effect materialization, explicit incomplete totals, and 131-page real Astro build (2026-09-06) |
 | Later | Phase 4 hosted acknowledgement/status overlay |
 | Later | Phase 5: hosted snapshot ingestion and grounded semantic retrieval |
 | Later | Phase 6: demand-led parser expansion |
@@ -830,8 +841,10 @@ The parser-era findings HTML input path is now removed, with a fixture proving
 that a legacy HTML file is not treated as a findings source. Reader-side TXT
 fallback retirement is also complete, and ADR-0021 closes the Tree-sitter
 runtime metric-policy review. The next bounded move is review of the written
-Phase 4 action-queue design and ADR. Implementation remains pending that
-review.
+Phase 4 action-queue design and ADR. That review, the static implementation,
+and the bounded incremental artifact-route follow-up are delivered; hosted
+acknowledgement/status and lower-memory complete pagination remain later
+follow-ups.
 Keep Code City follow-ons bounded to its direct interaction matrix, landscape
 aggregation, and hosted repo-scoped integration; do not widen into a renderer
 rewrite or new semantic shard without evidence.

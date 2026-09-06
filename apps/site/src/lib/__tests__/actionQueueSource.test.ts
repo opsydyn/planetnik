@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { DatasetCatalog, DatasetDescriptor } from "@planetnik/common"
-import { readDatasetActionQueueModel } from "../datasets/actionQueueSource.js"
+import { createDatasetActionQueueReader, readDatasetActionQueueModel } from "../datasets/actionQueueSource.js"
 
 const roots: string[] = []
 afterEach(() => {
@@ -243,6 +243,18 @@ describe("canonical action queue source", () => {
     ])
     expect(result.queuesByWindow.current.items[0]?.evidence[0]?.href).toStartWith("/datasets/public-slug/")
     expect(result.queuesByWindow.current.coverage.datasets.unavailable).toHaveLength(1)
+  })
+
+  test("fingerprints both catalogue and public identities for artifact invalidation", () => {
+    const datasetsRoot = root()
+    snapshot(join(datasetsRoot, "source-id/data"))
+    const reader = createDatasetActionQueueReader({
+      datasetsRoot,
+      catalog: { catalogVersion: 1, datasets: [descriptor("source-id", { slug: "public-slug" })] },
+    })
+    expect(reader.sourceIds).toEqual([
+      ["source-id", "public-slug", currentId, "2026-09-06T00:00:00.000Z"].join("\u0000"),
+    ])
   })
 
   test.each(["impact", "security"])("rejects malformed and duplicate %s evidence", (capability) => {

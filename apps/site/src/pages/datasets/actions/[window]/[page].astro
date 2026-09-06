@@ -1,0 +1,48 @@
+---
+import type { GetStaticPaths } from "astro"
+import PortfolioActionQueuePage from "../../../../components/datasets/PortfolioActionQueuePage.astro"
+import {
+  actionQueueArtifactCacheKey,
+  defaultActionQueueArtifactDirectory,
+  loadActionQueueArtifactManifest,
+  parseActionQueueArtifactParams,
+  readActionQueueArtifactPage,
+  type ActionQueueArtifactPage,
+} from "../../../../lib/datasets/actionQueueArtifactRoutes.js"
+import { parsePortfolioActionFilters } from "../../../../lib/datasets/actionQueueFilters.js"
+import { actionQueuePageFilters } from "../../../../lib/datasets/actionQueuePage.js"
+
+interface Props {
+  page: ActionQueueArtifactPage
+}
+
+export const prerender = true
+
+export const getStaticPaths: GetStaticPaths = () => {
+  const artifactDirectory = defaultActionQueueArtifactDirectory()
+  const result = loadActionQueueArtifactManifest(artifactDirectory)
+  if (result.tag !== "ready") return []
+
+  return result.manifest.windows.flatMap((window) =>
+    window.chunks.flatMap((_, index) => {
+      const params = { window: window.window, page: String(index + 1) }
+      const parsed = parseActionQueueArtifactParams(params.window, params.page)
+      const page = parsed ? readActionQueueArtifactPage(artifactDirectory, result.manifest, parsed) : undefined
+      return parsed && page
+        ? [
+            {
+              params,
+              props: { page },
+              cacheKey: actionQueueArtifactCacheKey(result.manifest, parsed),
+            },
+          ]
+        : []
+    }),
+  )
+}
+
+const { page } = Astro.props as Props
+const filters = actionQueuePageFilters(parsePortfolioActionFilters(Astro.url.searchParams), page.params.window)
+---
+
+<PortfolioActionQueuePage page={page} filters={filters} />

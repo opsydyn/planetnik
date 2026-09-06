@@ -9,6 +9,7 @@ import {
   adaptSecuritySignals,
   adaptTrendSignals,
   buildPortfolioActionQueue,
+  buildPortfolioActionQueueWithStats,
   filterPortfolioActionQueue,
 } from "../index.js"
 import type {
@@ -251,6 +252,46 @@ describe("portfolio action queue building", () => {
     expect(
       buildPortfolioActionQueue([input], { window: "latest-compatible" }).items.map((item) => item.target.id),
     ).toEqual(["a-critical", "b-corroborated", "c-worsening", "d-stable", "e-fresh-a", "f-fresh-b", "g-stale"])
+  })
+
+  test("can retain only the ranked prefix without changing coverage", () => {
+    const input = datasetInput({
+      hotspot: {
+        status: "present",
+        records: [
+          queueRecord("hotspot", "a", "a", { kind: "file", severity: "High" }),
+          queueRecord("hotspot", "b", "b", { kind: "file", severity: "High" }),
+          queueRecord("hotspot", "c", "c", { kind: "file", severity: "High" }),
+        ],
+      },
+    })
+
+    const full = buildPortfolioActionQueue([input], { window: "current" })
+    const bounded = buildPortfolioActionQueue([input], { window: "current", itemLimit: 2 })
+
+    expect(bounded.items).toEqual(full.items.slice(0, 2))
+    expect(bounded.coverage).toEqual(full.coverage)
+    expect(() => buildPortfolioActionQueue([input], { window: "current", itemLimit: 0 })).toThrow(
+      "itemLimit must be a positive integer.",
+    )
+  })
+
+  test("reports the complete item count when the ranked prefix is bounded", () => {
+    const input = datasetInput({
+      hotspot: {
+        status: "present",
+        records: [
+          queueRecord("hotspot", "a", "a", { kind: "file", severity: "High" }),
+          queueRecord("hotspot", "b", "b", { kind: "file", severity: "High" }),
+          queueRecord("hotspot", "c", "c", { kind: "file", severity: "High" }),
+        ],
+      },
+    })
+
+    const result = buildPortfolioActionQueueWithStats([input], { window: "current", itemLimit: 2 })
+
+    expect(result.queue.items).toHaveLength(2)
+    expect(result.totalItems).toBe(3)
   })
 
   test("derives allowlisted trend directions and fixed freshness boundaries", () => {

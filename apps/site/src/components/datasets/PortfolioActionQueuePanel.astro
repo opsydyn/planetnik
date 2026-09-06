@@ -2,66 +2,52 @@
 import {
   filterPortfolioActionQueue,
   type PortfolioActionQueueFilters,
-  type PortfolioActionWindow,
 } from "@planetnik/common"
 import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
-import type { DatasetActionQueueModel } from "../../lib/datasets/actionQueueSource.js"
+import type { ActionQueueArtifactPage } from "../../lib/datasets/actionQueueArtifactRoutes.js"
+import { actionQueuePagePath, actionQueuePageWindowLinks, actionQueueWindowLabel } from "../../lib/datasets/actionQueuePage.js"
 import { route } from "../../lib/route.js"
 
 interface Props {
-  model: DatasetActionQueueModel
+  page: ActionQueueArtifactPage
   filters: PortfolioActionQueueFilters
 }
 
-const { model, filters } = Astro.props
+const { page, filters } = Astro.props
 const canonicalFilters = parsePortfolioActionFilters(serializePortfolioActionFilters(filters))
-const windows: readonly { id: PortfolioActionWindow; label: string }[] = [
-  { id: "current", label: "Current snapshot" },
-  { id: "latest-compatible", label: "Latest compatible pair" },
-  { id: "7d", label: "Last 7 days" },
-  { id: "30d", label: "Last 30 days" },
-  { id: "90d", label: "Last 90 days" },
-]
+const windows = ["current", "latest-compatible", "7d", "30d", "90d"] as const
+const queue = page.queue
+const visible = new Set(filterPortfolioActionQueue(queue, { ...canonicalFilters, window: page.params.window }).items.map((item) => item.id))
+const pagination = actionQueuePageWindowLinks(
+  { window: page.params.window, page: page.params.page, pageCount: page.pageCount },
+  canonicalFilters,
+)
 const filterGroups = [
   {
     name: "repo",
     label: "Repositories",
-    options: model.filterOptions.repositories,
+    options: page.filterOptions.repositories,
     selected: canonicalFilters.repositoryIds,
   },
-  { name: "team", label: "Teams", options: model.filterOptions.teams, selected: canonicalFilters.teamIds },
+  { name: "team", label: "Teams", options: page.filterOptions.teams, selected: canonicalFilters.teamIds },
   {
     name: "priority",
     label: "Priority",
-    options: model.filterOptions.priorities.map((id) => ({ id, label: id })),
+    options: page.filterOptions.priorities.map((id) => ({ id, label: id })),
     selected: canonicalFilters.priorityBands,
   },
   {
     name: "domain",
     label: "Signal domains",
-    options: parsePortfolioActionFilters(
-      new URLSearchParams(model.filterOptions.domains.map((domain) => ["domain", domain])),
-    ).domains.map((id) => ({ id, label: id })),
+    options: page.filterOptions.domains.map((id) => ({ id, label: id })),
     selected: canonicalFilters.domains,
   },
 ]
-const variants = windows.map((window) => {
-  const queue = model.queuesByWindow[window.id]
-  const visible = new Set(
-    filterPortfolioActionQueue(queue, { ...canonicalFilters, window: window.id }).items.map((item) => item.id),
-  )
-  return {
-    ...window,
-    queue,
-    visible,
-    totalItems: model.totalItemsByWindow[window.id],
-    truncated: model.truncatedByWindow[window.id],
-  }
-})
+const currentPagePath = actionQueuePagePath(page.params)
 ---
 
-<section class="action-panel" data-portfolio-action-queue data-contract-version="1" aria-label="Portfolio action queue">
-  <form class="action-filters" action={route("/datasets/actions")} method="get" data-action-filters>
+<section class="action-panel" data-portfolio-action-queue data-action-page-path={route(currentPagePath)} data-action-window={page.params.window} data-contract-version="1" aria-label="Portfolio action queue">
+  <form class="action-filters" action={route(currentPagePath)} method="get" data-action-filters>
     <div class="filter-intro">
       <h2>Focus the queue</h2>
       <p>Choose any combination. Within a filter, selections are inclusive; filters work together.</p>
@@ -85,13 +71,13 @@ const variants = windows.map((window) => {
       <label class="window-filter">
         <span>Observation window</span>
         <select name="window">
-          {windows.map((window) => <option value={window.id} selected={canonicalFilters.window === window.id}>{window.label}</option>)}
+          {windows.map((window) => <option value={window} selected={canonicalFilters.window === window}>{actionQueueWindowLabel(window)}</option>)}
         </select>
       </label>
     </div>
     <div class="filter-actions">
       <button type="submit">Apply filters</button>
-      <a href={route("/datasets/actions")}>Reset filters</a>
+      <a href={route(currentPagePath)}>Reset filters</a>
       <span>Filters do not change the ranking policy or source evidence.</span>
     </div>
   </form>
@@ -100,22 +86,31 @@ const variants = windows.map((window) => {
     <p class="action-note">The current queue and source links remain usable without JavaScript. Interactive filters and alternate windows require JavaScript on this static report.</p>
   </noscript>
 
-  {variants.map(({ id, label, queue, visible, totalItems, truncated }) => (
-    <section class="action-window" data-action-window={id} data-action-queue-status={queue.items.length > 0 ? "ready" : "empty"} data-action-queue-truncated={truncated ? "true" : "false"} hidden={id !== canonicalFilters.window} aria-labelledby={`action-window-${id}`}>
+  <section class="action-window" data-action-queue-status={queue.items.length > 0 ? "ready" : "empty"} data-action-queue-truncated={page.complete ? "false" : "true"} aria-labelledby={`action-window-${page.params.window}`}>
       <header class="queue-header">
         <div>
           <p class="eyebrow">Precomputed · evidence first</p>
-          <h2 id={`action-window-${id}`}>{label}</h2>
+          <h2 id={`action-window-${page.params.window}`}>{actionQueueWindowLabel(page.params.window)} · page {page.params.page}</h2>
           <p>{queue.asOf ? <>As of <time datetime={queue.asOf}>{queue.asOf}</time></> : "No valid canonical snapshot is available."}</p>
         </div>
-        <p class="queue-count" role="status" aria-live="polite"><strong data-action-count>{visible.size}</strong> matching {truncated ? `the top ${queue.items.length} of ${totalItems}` : totalItems} actions</p>
+        <p class="queue-count" role="status" aria-live="polite"><strong data-action-count>{visible.size}</strong> matching this page of {page.totalItems} ranked actions</p>
       </header>
 
-      {truncated ? <p class="action-note" data-action-truncated>Static report bound: showing the top {queue.items.length} of {totalItems} ranked actions. Filters apply to this materialized slice.</p> : null}
+      <p class="action-note" data-action-page-scope>
+        {page.complete
+          ? <>Showing page {page.params.page} of {page.pageCount}; filters apply to this materialized page. The ranking and total remain global to the selected observation window.</>
+          : <>Static report bound: showing the top {queue.items.length} of {page.totalItems} ranked actions. Filters apply to this bounded materialized slice.</>}
+      </p>
 
-      <section class="action-coverage" data-action-coverage aria-labelledby={`action-coverage-${id}`}>
+      <nav class="queue-pagination" aria-label="Action queue pagination">
+        {pagination.previous ? <a href={route(pagination.previous)}>← Previous page</a> : <span aria-hidden="true">&nbsp;</span>}
+        <span>Page {page.params.page} of {page.pageCount}</span>
+        {pagination.next ? <a href={route(pagination.next)}>Next page →</a> : <span aria-hidden="true">&nbsp;</span>}
+      </nav>
+
+      <section class="action-coverage" data-action-coverage aria-labelledby={`action-coverage-${page.params.window}`}>
         <header>
-          <h3 id={`action-coverage-${id}`}>Evidence coverage</h3>
+          <h3 id={`action-coverage-${page.params.window}`}>Evidence coverage</h3>
           <p>Missing or invalid evidence is not a clean bill of health.</p>
         </header>
         <div class="coverage-summary">
@@ -151,11 +146,11 @@ const variants = windows.map((window) => {
       <ol class="action-list">
         {queue.items.map((item, index) => (
           <li class="action-item" data-action-item={item.id} data-repository-id={item.repositoryId} data-team-ids={JSON.stringify(item.teams.map((team) => team.id))} data-priority={item.priorityBand} data-domains={JSON.stringify([...new Set(item.signals.map((signal) => signal.domain))])} hidden={!visible.has(item.id)}>
-            <article aria-labelledby={`action-${id}-${index}`}>
+            <article aria-labelledby={`action-${page.params.window}-${page.params.page}-${index}`}>
               <header class="action-item-header">
                 <div>
                   <p class="action-repository">{item.repositoryTitle} <code>{item.repositoryId}</code></p>
-                  <h3 id={`action-${id}-${index}`}>{item.primaryAction.label}</h3>
+                  <h3 id={`action-${page.params.window}-${page.params.page}-${index}`}>{item.primaryAction.label}</h3>
                   <p class="action-target">{item.target.label} <code>{item.target.id}</code></p>
                 </div>
                 <span class="priority-badge" data-priority-band={item.priorityBand}>{item.priorityBand} priority</span>
@@ -193,8 +188,11 @@ const variants = windows.map((window) => {
           </li>
         ))}
       </ol>
+      <nav class="queue-pagination queue-pagination-bottom" aria-label="Action queue pagination">
+        {pagination.previous ? <a href={route(pagination.previous)}>← Previous page</a> : <span aria-hidden="true">&nbsp;</span>}
+        {pagination.next ? <a href={route(pagination.next)}>Next page →</a> : <span aria-hidden="true">&nbsp;</span>}
+      </nav>
     </section>
-  ))}
 </section>
 
 <script>
@@ -206,8 +204,22 @@ function initializeActionFilters() {
   if (!root || !form || root.dataset.filtersBound === "true") return
   root.dataset.filtersBound = "true"
 
+  const pageWindow = root.dataset.actionWindow ?? "current"
+  const pagePath = root.dataset.actionPagePath ?? form.action
+  const navigateToWindow = (filters: ReturnType<typeof parsePortfolioActionFilters>) => {
+    const target = new URL(pagePath, window.location.href)
+    target.pathname = target.pathname.replace(
+      /\/datasets\/actions\/[^/]+\/\d+\/?$/u,
+      `/datasets/actions/${filters.window}/1`,
+    )
+    const query = serializePortfolioActionFilters(filters)
+    query.delete("window")
+    target.search = query.toString()
+    window.location.assign(target.toString())
+  }
   const apply = (params: URLSearchParams, updateUrl: boolean) => {
-    const filters = parsePortfolioActionFilters(params)
+    const parsed = parsePortfolioActionFilters(params)
+    const filters = { ...parsed, window: pageWindow as typeof parsed.window }
     const selections: Record<string, readonly string[]> = {
       repo: filters.repositoryIds,
       team: filters.teamIds,
@@ -218,28 +230,27 @@ function initializeActionFilters() {
       input.checked = selections[input.name]?.includes(input.value) ?? false
     }
     const windowInput = form.elements.namedItem("window")
-    if (windowInput instanceof HTMLSelectElement) windowInput.value = filters.window
-    for (const section of root.querySelectorAll<HTMLElement>("[data-action-window]")) {
-      section.hidden = section.dataset.actionWindow !== filters.window
-      let visible = 0
-      for (const row of section.querySelectorAll<HTMLElement>("[data-action-item]")) {
-        const teams = JSON.parse(row.dataset.teamIds ?? "[]") as string[]
-        const domains = JSON.parse(row.dataset.domains ?? "[]") as string[]
-        const matches =
-          (filters.repositoryIds.length === 0 || filters.repositoryIds.includes(row.dataset.repositoryId ?? "")) &&
-          (filters.teamIds.length === 0 || teams.some((team) => filters.teamIds.includes(team))) &&
-          (filters.priorityBands.length === 0 ||
-            filters.priorityBands.some((priority) => priority === row.dataset.priority)) &&
-          (filters.domains.length === 0 ||
-            domains.some((domain) => filters.domains.some((selected) => selected === domain)))
-        row.hidden = !matches
-        if (matches) visible += 1
-      }
-      const count = section.querySelector<HTMLElement>("[data-action-count]")
-      if (count) count.textContent = String(visible)
-      const empty = section.querySelector<HTMLElement>("[data-action-empty]")
-      if (empty) empty.hidden = visible > 0
+    if (windowInput instanceof HTMLSelectElement) windowInput.value = pageWindow
+    const section = root.querySelector<HTMLElement>("[data-action-window]")
+    if (!section) return
+    let visible = 0
+    for (const row of section.querySelectorAll<HTMLElement>("[data-action-item]")) {
+      const teams = JSON.parse(row.dataset.teamIds ?? "[]") as string[]
+      const domains = JSON.parse(row.dataset.domains ?? "[]") as string[]
+      const matches =
+        (filters.repositoryIds.length === 0 || filters.repositoryIds.includes(row.dataset.repositoryId ?? "")) &&
+        (filters.teamIds.length === 0 || teams.some((team) => filters.teamIds.includes(team))) &&
+        (filters.priorityBands.length === 0 ||
+          filters.priorityBands.some((priority) => priority === row.dataset.priority)) &&
+        (filters.domains.length === 0 ||
+          domains.some((domain) => filters.domains.some((selected) => selected === domain)))
+      row.hidden = !matches
+      if (matches) visible += 1
     }
+    const count = section.querySelector<HTMLElement>("[data-action-count]")
+    if (count) count.textContent = String(visible)
+    const empty = section.querySelector<HTMLElement>("[data-action-empty]")
+    if (empty) empty.hidden = visible > 0
     if (updateUrl) {
       const url = new URL(window.location.href)
       url.search = serializePortfolioActionFilters(filters).toString()
@@ -250,9 +261,17 @@ function initializeActionFilters() {
     event.preventDefault()
     const params = new URLSearchParams()
     for (const [key, value] of new FormData(form)) if (typeof value === "string") params.append(key, value)
+    const filters = parsePortfolioActionFilters(params)
+    if (filters.window !== pageWindow) {
+      navigateToWindow(filters)
+      return
+    }
     apply(params, true)
   })
-  apply(new URLSearchParams(window.location.search), true)
+  const initialParams = new URLSearchParams(window.location.search)
+  const initialFilters = parsePortfolioActionFilters(initialParams)
+  if (initialFilters.window !== pageWindow) navigateToWindow(initialFilters)
+  else apply(initialParams, true)
 }
 initializeActionFilters()
 document.addEventListener("astro:page-load", initializeActionFilters)
@@ -397,6 +416,23 @@ a {
 .queue-count strong {
   color: var(--color-text);
   font-size: 1.3rem;
+}
+.queue-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-block: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+.queue-pagination a {
+  color: var(--color-accent-strong);
+  font-weight: 700;
+}
+.queue-pagination-bottom {
+  border-top: 0;
 }
 .action-coverage {
   padding: 0.9rem 1rem;

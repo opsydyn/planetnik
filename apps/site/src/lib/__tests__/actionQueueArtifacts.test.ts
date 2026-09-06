@@ -4,7 +4,7 @@ import {
   ACTION_QUEUE_ARTIFACT_VERSION,
   chunkPortfolioActionQueue,
   fingerprintActionQueueSource,
-} from "../actionQueueArtifacts.js"
+} from "../datasets/actionQueueArtifacts.js"
 
 function queue(ids: readonly string[]): PortfolioActionQueue {
   return {
@@ -12,7 +12,7 @@ function queue(ids: readonly string[]): PortfolioActionQueue {
     rankingPolicyVersion: 1,
     asOf: "2026-09-06T00:00:00.000Z",
     filters: { repositoryIds: [], teamIds: [], priorityBands: [], domains: [], window: "current" },
-    items: ids.map((id) => ({ id })) as PortfolioActionQueue["items"],
+    items: ids.map((id) => ({ id })) as unknown as PortfolioActionQueue["items"],
     coverage: {
       datasets: { included: [], planned: [], excluded: [], unavailable: [] },
       domains: {
@@ -35,10 +35,7 @@ describe("action queue artifacts", () => {
 
     const chunks = chunkPortfolioActionQueue(source, 2)
 
-    expect(chunks.map((chunk) => chunk.items.map((item) => item.id))).toEqual([
-      ["first", "second"],
-      ["third"],
-    ])
+    expect(chunks.map((chunk) => chunk.items.map((item) => item.id))).toEqual([["first", "second"], ["third"]])
     expect(chunks[0]).toMatchObject({
       version: ACTION_QUEUE_ARTIFACT_VERSION,
       window: "current",

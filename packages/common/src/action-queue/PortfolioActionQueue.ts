@@ -113,6 +113,11 @@ export type PortfolioActionQueue = {
   readonly coverage: PortfolioActionQueueCoverage
 }
 
+export type PortfolioActionQueueBuildResult = {
+  readonly queue: PortfolioActionQueue
+  readonly totalItems: number
+}
+
 export type PortfolioActionSourceRecord = {
   readonly id: string
   readonly targetId: string
@@ -318,11 +323,95 @@ const validSignalAnchor = (signal: PortfolioActionSignal, input: PortfolioAction
       anchor.href.startsWith(`/datasets/${input.datasetId}/`),
   )
 
+const buildItem = (
+  repositoryTitle: string,
+  unsortedSignals: readonly PortfolioActionSignal[],
+  asOf: string,
+): PortfolioActionQueueItem | undefined => {
+  const signals = [...unsortedSignals].sort(signalOrder)
+  const actionable = signals.filter((signal) => signal.domain !== "trend")
+  if (actionable.length === 0) return undefined
+  const priorityBand = priorityOf(signals)
+  const primary = actionable.find((signal) => signal.priorityBand === priorityBand)!
+  const actions = signals.flatMap((signal) => (signal.action.key === primary.action.key ? [] : [signal.action]))
+  const alternateActions = actions.filter(
+    (action, index) => actions.findIndex((candidate) => candidate.key === action.key) === index,
+  )
+  const teams = signals
+    .map((signal) => signal.team)
+    .filter((team, index, all) => all.findIndex((candidate) => candidate.id === team.id) === index)
+    .sort((left, right) => left.id.localeCompare(right.id) || left.label.localeCompare(right.label))
+  const trend = trendOf(signals)
+  const freshness = freshnessOf(signals, asOf)
+  const corroboration = new Set(signals.map((signal) => signal.domain)).size
+  return {
+    id: `action:${primary.repositoryId}:${primary.targetId}`,
+    repositoryId: primary.repositoryId,
+    repositoryTitle,
+    target: { id: primary.targetId, label: primary.targetLabel },
+    teams,
+    primaryAction: primary.action,
+    alternateActions,
+    priorityBand,
+    trend,
+    freshness,
+    corroboration,
+    factors: factorsOf(priorityBand, corroboration, trend, freshness),
+    signals,
+    evidence: signals.flatMap((signal) => signal.evidence),
+    status: "untracked",
+  }
+}
+
+class WorstFirstQueue {
+  private readonly values: PortfolioActionQueueItem[] = []
+
+  constructor(private readonly limit: number) {}
+
+  add(value: PortfolioActionQueueItem): void {
+    if (this.values.length < this.limit) {
+      this.values.push(value)
+      this.siftUp(this.values.length - 1)
+      return
+    }
+    if (compareQueueItems(value, this.values[0]!) >= 0) return
+    this.values[0] = value
+    this.siftDown(0)
+  }
+
+  sorted(): readonly PortfolioActionQueueItem[] {
+    return [...this.values].sort(compareQueueItems)
+  }
+
+  private siftUp(index: number): void {
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2)
+      if (compareQueueItems(this.values[parent]!, this.values[index]!) >= 0) break
+      ;[this.values[parent], this.values[index]] = [this.values[index]!, this.values[parent]!]
+      index = parent
+    }
+  }
+
+  private siftDown(index: number): void {
+    while (true) {
+      const left = index * 2 + 1
+      const right = left + 1
+      let worst = index
+      if (left < this.values.length && compareQueueItems(this.values[left]!, this.values[worst]!) > 0) worst = left
+      if (right < this.values.length && compareQueueItems(this.values[right]!, this.values[worst]!) > 0) worst = right
+      if (worst === index) return
+      ;[this.values[index], this.values[worst]] = [this.values[worst]!, this.values[index]!]
+      index = worst
+    }
+  }
+}
+
 const buildItems = (
   selections: readonly DatasetSelection[],
   asOf: string,
   diagnostics: Diagnostic[],
-): readonly PortfolioActionQueueItem[] => {
+  itemLimit?: number,
+): { readonly items: readonly PortfolioActionQueueItem[]; readonly totalItems: number } => {
   const groups = new Map<string, { repositoryTitle: string; signals: PortfolioActionSignal[] }>()
   for (const selection of selections) {
     for (const signal of selection.signals) {
@@ -341,45 +430,25 @@ const buildItems = (
     }
   }
 
-  return [...groups.values()]
-    .flatMap(({ repositoryTitle, signals: unsortedSignals }): PortfolioActionQueueItem[] => {
-      const signals = [...unsortedSignals].sort(signalOrder)
-      const actionable = signals.filter((signal) => signal.domain !== "trend")
-      if (actionable.length === 0) return []
-      const priorityBand = priorityOf(signals)
-      const primary = actionable.find((signal) => signal.priorityBand === priorityBand)!
-      const actions = signals.flatMap((signal) => (signal.action.key === primary.action.key ? [] : [signal.action]))
-      const alternateActions = actions.filter(
-        (action, index) => actions.findIndex((candidate) => candidate.key === action.key) === index,
-      )
-      const teams = signals
-        .map((signal) => signal.team)
-        .filter((team, index, all) => all.findIndex((candidate) => candidate.id === team.id) === index)
-        .sort((left, right) => left.id.localeCompare(right.id) || left.label.localeCompare(right.label))
-      const trend = trendOf(signals)
-      const freshness = freshnessOf(signals, asOf)
-      const corroboration = new Set(signals.map((signal) => signal.domain)).size
-      return [
-        {
-          id: `action:${primary.repositoryId}:${primary.targetId}`,
-          repositoryId: primary.repositoryId,
-          repositoryTitle,
-          target: { id: primary.targetId, label: primary.targetLabel },
-          teams,
-          primaryAction: primary.action,
-          alternateActions,
-          priorityBand,
-          trend,
-          freshness,
-          corroboration,
-          factors: factorsOf(priorityBand, corroboration, trend, freshness),
-          signals,
-          evidence: signals.flatMap((signal) => signal.evidence),
-          status: "untracked",
-        },
-      ]
-    })
-    .sort(compareQueueItems)
+  if (itemLimit === undefined) {
+    const items = [...groups.values()]
+      .flatMap(({ repositoryTitle, signals }) => {
+        const item = buildItem(repositoryTitle, signals, asOf)
+        return item ? [item] : []
+      })
+      .sort(compareQueueItems)
+    return { items, totalItems: items.length }
+  }
+  const top = new WorstFirstQueue(itemLimit)
+  let totalItems = 0
+  for (const { repositoryTitle, signals } of groups.values()) {
+    const item = buildItem(repositoryTitle, signals, asOf)
+    if (item) {
+      totalItems += 1
+      top.add(item)
+    }
+  }
+  return { items: top.sorted(), totalItems }
 }
 
 const mergeDomainCoverage = (selections: readonly DatasetSelection[]): PortfolioActionQueueCoverage["domains"] => {
@@ -408,10 +477,12 @@ const mergeDomainCoverage = (selections: readonly DatasetSelection[]): Portfolio
   return merged
 }
 
-export function buildPortfolioActionQueue(
+export function buildPortfolioActionQueueWithStats(
   datasets: readonly PortfolioActionDatasetInput[],
-  options: { readonly window: PortfolioActionWindow },
-): PortfolioActionQueue {
+  options: { readonly window: PortfolioActionWindow; readonly itemLimit?: number },
+): PortfolioActionQueueBuildResult {
+  if (options.itemLimit !== undefined && (!Number.isInteger(options.itemLimit) || options.itemLimit < 1))
+    throw new Error("itemLimit must be a positive integer.")
   const included: { datasetId: string; repositoryId: string }[] = []
   const planned: { datasetId: string; reason: string }[] = []
   const excluded: { datasetId: string; reason: string }[] = []
@@ -468,18 +539,29 @@ export function buildPortfolioActionQueue(
     }
   })
 
+  const items = buildItems(selections, asOf, diagnostics, options.itemLimit)
   return {
-    contractVersion: 1,
-    rankingPolicyVersion: 1,
-    asOf,
-    filters: { ...defaultPortfolioActionQueueFilters(), window: options.window },
-    items: buildItems(selections, asOf, diagnostics),
-    coverage: {
-      datasets: { included, planned, excluded, unavailable },
-      domains: mergeDomainCoverage(selections),
-      diagnostics,
+    queue: {
+      contractVersion: 1,
+      rankingPolicyVersion: 1,
+      asOf,
+      filters: { ...defaultPortfolioActionQueueFilters(), window: options.window },
+      items: items.items,
+      coverage: {
+        datasets: { included, planned, excluded, unavailable },
+        domains: mergeDomainCoverage(selections),
+        diagnostics,
+      },
     },
+    totalItems: items.totalItems,
   }
+}
+
+export function buildPortfolioActionQueue(
+  datasets: readonly PortfolioActionDatasetInput[],
+  options: { readonly window: PortfolioActionWindow; readonly itemLimit?: number },
+): PortfolioActionQueue {
+  return buildPortfolioActionQueueWithStats(datasets, options).queue
 }
 
 const uniqueSorted = (values: readonly string[]): readonly string[] => [...new Set(values)].sort()
