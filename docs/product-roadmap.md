@@ -642,9 +642,9 @@ copy: real page-one materializer inputs are 4,820,331 bytes (`current`),
 4,820,341 (`latest-compatible`), 4,827,434 (`7d`), and 4,820,327 each
 (`30d`/`90d`), a 95.38% reduction for the current window. The reader restores
 the exact queue contract; the public JSON route remains full-contract by
-design. Lower-memory complete pagination and changed-fingerprint selective
-rebuild measurement remain bounded follow-ups. The compact artifacts integrate
-with the named-dataset build at 131 pages in 119.87 seconds and
+design. Lower-memory complete pagination remains a bounded follow-up. The
+compact artifacts integrate with the named-dataset build at 131 pages in
+119.87 seconds and
 14,253,522,944 bytes maximum RSS; an unchanged rerun restored all five action
 JSON routes from incremental cache in 113.64 seconds.
 The follow-up per-window content invalidation is now implemented: each window
@@ -750,6 +750,7 @@ semantics, macro expansion, type resolution, or whole-program symbols.
 | Completed | Tree-sitter metric policy: ADR-0021 makes real-file-extension semantics authoritative and classifies the extensionless `main` LOC difference as neutral (2026-09-05) |
 | Completed | Phase 4 static portfolio action queue — canonical JSON evidence, explainable factor-vector ranking, deterministic filters, coverage diagnostics, bounded top-250 static materialization, and `/datasets/actions` browser evidence (2026-09-06) |
 | Completed | Phase 4 incremental action artifacts — source-fingerprinted per-window JSON/HTML page routes, sequential Effect materialization, explicit incomplete totals, and 131-page real Astro build (2026-09-06) |
+| Completed | Phase 4 content-aware action artifact invalidation — canonical per-window fingerprints, filter-option cache digest, schema salt, and mutation regression evidence (2026-09-06) |
 | Later | Phase 4 hosted acknowledgement/status overlay |
 | Later | Phase 5: hosted snapshot ingestion and grounded semantic retrieval |
 | Later | Phase 6: demand-led parser expansion |

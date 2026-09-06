@@ -242,8 +242,7 @@ covers the bounded action surface; no fresh browser provider was available for
 this artifact-route pass, so static HTML and JSON were inspected directly. The
 root `bun run lint` remains red on the repository's existing Biome 2.5/schema
 and format baseline (549 errors, 3 warnings, and 2 infos); unbounded full
-pagination and changed-fingerprint selective rebuild measurement remain
-follow-ups.
+pagination remains a follow-up.
 
 Compaction follow-up evidence (2026-09-06): the real catalogue materializer
 wrote v2 page-one artifacts of 4,820,331 bytes for `current`, 4,820,341 for
