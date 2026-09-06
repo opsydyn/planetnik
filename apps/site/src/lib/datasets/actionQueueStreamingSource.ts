@@ -116,6 +116,16 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+function hasOwnershipReason(value: Record<string, unknown>): boolean {
+  const reasons =
+    typeof value.reasons === "string"
+      ? [value.reasons]
+      : Array.isArray(value.reasons)
+        ? value.reasons.filter((reason): reason is string => typeof reason === "string")
+        : []
+  return reasons.some((reason) => /knowledge|ownership|backup|contributor/i.test(reason))
+}
+
 function sourceRecordFromRaw(
   source: DatasetActionQueueSourceContext,
   domain: Exclude<PortfolioActionSignalDomain, "trend">,
@@ -285,15 +295,17 @@ async function streamHotspots(
         } else {
           invalidState(hotspotState, input.datasetId, `${key} record '${id}' has invalid evidence selectors or route.`)
         }
-        const ownershipRecord = sourceRecordFromRaw(
-          dataset.source,
-          "ownership",
-          fileName,
-          `${key}[index=${index}]`,
-          value,
-          id,
-        )
-        emitAdapted(input, "ownership", ownershipRecord, emit, ownershipState)
+        if (hasOwnershipReason(value)) {
+          const ownershipRecord = sourceRecordFromRaw(
+            dataset.source,
+            "ownership",
+            fileName,
+            `${key}[index=${index}]`,
+            value,
+            id,
+          )
+          emitAdapted(input, "ownership", ownershipRecord, emit, ownershipState)
+        }
       })
       if (presence === "present") found = true
     } catch (error) {
