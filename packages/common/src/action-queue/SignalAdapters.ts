@@ -35,6 +35,10 @@ const unassignedTeam = { id: "unassigned", label: "Unassigned" } as const
 
 type DomainCoverage = PortfolioActionQueueCoverage["domains"][PortfolioActionSignalDomain]
 type Diagnostic = PortfolioActionQueueCoverage["diagnostics"][number]
+export type PortfolioActionSourceRecordAdaptation =
+  | { readonly tag: "signal"; readonly signal: PortfolioActionSignal }
+  | { readonly tag: "skipped" }
+  | { readonly tag: "invalid"; readonly diagnostic: Diagnostic }
 type DomainAdapterResult = {
   readonly signals: readonly PortfolioActionSignal[]
   readonly coverage: DomainCoverage
@@ -188,6 +192,32 @@ const makeSignal = (
   }
 }
 
+/**
+ * Adapt one already-normalized source record without requiring the enclosing
+ * domain array to be retained in memory. Batch adapters use this same helper
+ * so streamed materialization cannot drift from the canonical rules.
+ */
+export function adaptPortfolioActionSourceRecord(
+  input: PortfolioActionDatasetInput,
+  domain: Exclude<PortfolioActionSignalDomain, "trend">,
+  record: PortfolioActionSourceRecord,
+  extraEvidence: readonly PortfolioActionEvidence[] = [],
+): PortfolioActionSourceRecordAdaptation {
+  const problem = recordProblem(record, input, domain)
+  if (problem) {
+    return {
+      tag: "invalid",
+      diagnostic: {
+        datasetId: input.datasetId,
+        severity: "error",
+        reason: `${domain} record ${record.id || "<empty>"}: ${problem}`,
+      },
+    }
+  }
+  if (domain === "security" && input.mode !== "single_repository") return { tag: "skipped" }
+  return isCandidate(domain, record) ? { tag: "signal", signal: makeSignal(input, domain, record, extraEvidence) } : { tag: "skipped" }
+}
+
 const isCandidate = (
   domain: Exclude<PortfolioActionSignalDomain, "trend">,
   record: PortfolioActionSourceRecord,
@@ -285,9 +315,11 @@ const adaptCurrentDomain = (
       supportingEvidence.set(record.targetId, collected)
     }
   }
-  const signals = domainInput.records
-    .filter((record) => isCandidate(domain, record))
-    .map((record) => makeSignal(input, domain, record, supportingEvidence.get(record.targetId) ?? []))
+  const signals: PortfolioActionSignal[] = []
+  for (const record of domainInput.records) {
+    const adaptation = adaptPortfolioActionSourceRecord(input, domain, record, supportingEvidence.get(record.targetId) ?? [])
+    if (adaptation.tag === "signal") signals.push(adaptation.signal)
+  }
   return { signals, coverage: coverage("present", signals.length, domainInput.message), diagnostics: [] }
 }
 
@@ -367,10 +399,7 @@ const trendProblem = (trend: PortfolioActionTrendInput, input: PortfolioActionDa
   return undefined
 }
 
-const adaptTrendDomain = (
-  input: PortfolioActionDatasetInput,
-  actionableSignals: readonly PortfolioActionSignal[],
-): DomainAdapterResult => {
+const adaptTrendDomain = (input: PortfolioActionDatasetInput, targetIds: ReadonlySet<string>): DomainAdapterResult => {
   const declared = input.current?.domains.trend
   const historyStatus: PortfolioActionDomainState =
     input.historyStatus === "compatible" ? "present" : input.historyStatus === "missing" ? "missing" : "invalid"
@@ -410,11 +439,8 @@ const adaptTrendDomain = (
   }
   if (diagnostics.length > 0) return { signals: [], coverage: coverage("invalid", 0), diagnostics }
 
-  const targets = new Set(
-    actionableSignals.filter((signal) => signal.domain !== "trend").map((signal) => signal.targetId),
-  )
   const signals = input.trendInputs.flatMap((trend, index): PortfolioActionSignal[] => {
-    if (!targets.has(trend.targetId)) return []
+    if (!targetIds.has(trend.targetId)) return []
     const direction = trendDirection(trend)
     if (!direction) return []
     const facts = riskFields.flatMap((field): PortfolioActionSignal["facts"] => {
@@ -450,7 +476,17 @@ const adaptTrendDomain = (
 export const adaptTrendSignals = (
   input: PortfolioActionDatasetInput,
   actionableSignals: readonly PortfolioActionSignal[],
-): readonly PortfolioActionSignal[] => adaptTrendDomain(input, actionableSignals).signals
+): readonly PortfolioActionSignal[] =>
+  adaptTrendDomain(
+    input,
+    new Set(actionableSignals.filter((signal) => signal.domain !== "trend").map((signal) => signal.targetId)),
+  ).signals
+
+/** Adapt compatible trend evidence using only stable actionable target IDs. */
+export const adaptPortfolioActionTrendTargets = (
+  input: PortfolioActionDatasetInput,
+  targetIds: ReadonlySet<string>,
+): readonly PortfolioActionSignal[] => adaptTrendDomain(input, targetIds).signals
 
 export function adaptPortfolioActionSignals(input: PortfolioActionDatasetInput): PortfolioActionSignalBuildResult {
   const resultByDomain = new Map<PortfolioActionSignalDomain, DomainAdapterResult>()
@@ -458,7 +494,13 @@ export function adaptPortfolioActionSignals(input: PortfolioActionDatasetInput):
     resultByDomain.set(domain, adaptCurrentDomain(input, domain as Exclude<PortfolioActionSignalDomain, "trend">))
   }
   const actionableSignals = domainOrder.flatMap((domain) => resultByDomain.get(domain)?.signals ?? [])
-  resultByDomain.set("trend", adaptTrendDomain(input, actionableSignals))
+  resultByDomain.set(
+    "trend",
+    adaptTrendDomain(
+      input,
+      new Set(actionableSignals.filter((signal) => signal.domain !== "trend").map((signal) => signal.targetId)),
+    ),
+  )
 
   const domainCoverage = {} as Record<PortfolioActionSignalDomain, DomainCoverage>
   for (const domain of domainOrder) domainCoverage[domain] = resultByDomain.get(domain)!.coverage

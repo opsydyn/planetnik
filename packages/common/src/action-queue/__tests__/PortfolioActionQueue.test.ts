@@ -6,11 +6,15 @@ import {
   adaptImpactSignals,
   adaptOwnershipSignals,
   adaptPortfolioActionSignals,
+  adaptPortfolioActionSourceRecord,
+  adaptPortfolioActionTrendTargets,
   adaptSecuritySignals,
   adaptTrendSignals,
+  buildPortfolioActionQueueItem,
   buildPortfolioActionQueue,
   buildPortfolioActionQueueWithStats,
   filterPortfolioActionQueue,
+  isPortfolioActionSignalInWindow,
 } from "../index.js"
 import type {
   HostedActionStatus,
@@ -577,6 +581,57 @@ const datasetInput = (
 })
 
 describe("portfolio action signal adapters", () => {
+  test("adapts one source record and preserves the batch signal shape", () => {
+    const input = datasetInput({
+      hotspot: {
+        status: "present",
+        records: [sourceRecord("hotspot", "hot", { kind: "file", severity: "High" })],
+      },
+    })
+    const record = input.current!.domains.hotspot!.records[0]!
+    const result = adaptPortfolioActionSourceRecord(input, "hotspot", record)
+    expect(result).toMatchObject({ tag: "signal" })
+    if (result.tag !== "signal") throw new Error("expected signal")
+    expect(result.signal).toEqual(adaptHotspotSignals(input)[0]!)
+    expect(adaptPortfolioActionSourceRecord(input, "hotspot", { ...record, values: { kind: "other" } })).toEqual({
+      tag: "skipped",
+    })
+  })
+
+  test("returns the existing provenance diagnostic for an invalid record", () => {
+    const input = datasetInput({
+      hotspot: { status: "present", records: [sourceRecord("hotspot", "hot", { kind: "file", severity: "High" })] },
+    })
+    const record = input.current!.domains.hotspot!.records[0]!
+    const result = adaptPortfolioActionSourceRecord(
+      input,
+      "hotspot",
+      { ...record, evidence: [{ ...record.evidence[0]!, snapshotId: "other" }] },
+    )
+    expect(result).toMatchObject({ tag: "invalid", diagnostic: { datasetId: "demo", severity: "error" } })
+  })
+
+  test("adapts trends from a target set and exposes the shared window predicate", () => {
+    const input = datasetInput(
+      { hotspot: { status: "present", records: [sourceRecord("hotspot", "hot", { kind: "file", severity: "High" })] } },
+      { historyStatus: "compatible", trendInputs: [trendInput("target:hot", { complexity: 1 }, { complexity: 2 })] },
+    )
+    const targets = new Set(["target:hot"])
+    expect(adaptPortfolioActionTrendTargets(input, targets)).toEqual(adaptTrendSignals(input, adaptHotspotSignals(input)))
+    const signal = adaptHotspotSignals(input)[0]!
+    expect(isPortfolioActionSignalInWindow(signal, "current", input.current!.generatedAt)).toBe(true)
+    expect(isPortfolioActionSignalInWindow(signal, "7d", input.current!.generatedAt)).toBe(true)
+  })
+
+  test("builds one item through the same grouping path as the full queue", () => {
+    const input = datasetInput({
+      hotspot: { status: "present", records: [sourceRecord("hotspot", "hot", { kind: "file", severity: "High" })] },
+    })
+    const signal = adaptHotspotSignals(input)[0]!
+    const expected = buildPortfolioActionQueue([input], { window: "current" }).items[0]
+    expect(buildPortfolioActionQueueItem("Demo", [signal], input.current!.generatedAt)).toEqual(expected)
+  })
+
   test("maps every actionable source domain through its focused adapter", () => {
     const input = datasetInput({
       hotspot: {

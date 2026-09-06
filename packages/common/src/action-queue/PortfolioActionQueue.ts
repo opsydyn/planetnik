@@ -230,7 +230,11 @@ const datasetProblem = (input: PortfolioActionDatasetInput): string | undefined 
   return undefined
 }
 
-const signalInWindow = (signal: PortfolioActionSignal, window: PortfolioActionWindow, asOf: string): boolean => {
+export const isPortfolioActionSignalInWindow = (
+  signal: PortfolioActionSignal,
+  window: PortfolioActionWindow,
+  asOf: string,
+): boolean => {
   if (window === "current") return signal.domain !== "trend"
   if (window === "latest-compatible") return true
   if (signal.observedAt === null) return true
@@ -323,7 +327,7 @@ const validSignalAnchor = (signal: PortfolioActionSignal, input: PortfolioAction
       anchor.href.startsWith(`/datasets/${input.datasetId}/`),
   )
 
-const buildItem = (
+export const buildPortfolioActionQueueItem = (
   repositoryTitle: string,
   unsortedSignals: readonly PortfolioActionSignal[],
   asOf: string,
@@ -433,7 +437,7 @@ const buildItems = (
   if (itemLimit === undefined) {
     const items = [...groups.values()]
       .flatMap(({ repositoryTitle, signals }) => {
-        const item = buildItem(repositoryTitle, signals, asOf)
+        const item = buildPortfolioActionQueueItem(repositoryTitle, signals, asOf)
         return item ? [item] : []
       })
       .sort(compareQueueItems)
@@ -442,7 +446,7 @@ const buildItems = (
   const top = new WorstFirstQueue(itemLimit)
   let totalItems = 0
   for (const { repositoryTitle, signals } of groups.values()) {
-    const item = buildItem(repositoryTitle, signals, asOf)
+    const item = buildPortfolioActionQueueItem(repositoryTitle, signals, asOf)
     if (item) {
       totalItems += 1
       top.add(item)
@@ -535,7 +539,7 @@ export function buildPortfolioActionQueueWithStats(
     return {
       input,
       signalResult,
-      signals: signalResult.signals.filter((signal) => signalInWindow(signal, options.window, asOf)),
+      signals: signalResult.signals.filter((signal) => isPortfolioActionSignalInWindow(signal, options.window, asOf)),
     }
   })
 
