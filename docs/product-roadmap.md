@@ -588,7 +588,9 @@ durable storage beyond the local showcase remain the open Phase 5 boundary.
 
 ## Phase 4 — Portfolio action queue
 
-**Status: Design approved — written spec review before implementation (2026-09-06)**
+**Status: Static implementation delivered — focused verification, bounded
+fixture build, and direct browser evidence green; default catalogue build and
+repository-wide lint remain open (2026-09-06)**
 
 ### Outcome
 
@@ -606,14 +608,27 @@ interventions across repositories.
 The approved contract is captured in the
 [portfolio action-queue design](./superpowers/specs/2026-09-06-portfolio-action-queue-design.md)
 and governed by
-[ADR-0022](./adr/0022-adopt-explainable-portfolio-action-queue.md). Implementation
-remains pending written-spec review.
+[ADR-0022](./adr/0022-adopt-explainable-portfolio-action-queue.md). The static
+slice is now implemented at `/datasets/actions`: it reads canonical v2 JSON,
+keeps ready and partial single-repository coverage explicit, ranks with the
+visible factor vector, and links each item to exact dataset-scoped evidence.
+Planned and landscape entries remain coverage diagnostics. The hosted
+acknowledgement/status overlay remains a later boundary and is not implemented
+here.
 
 ### Exit criteria
 
 - each queue item is reproducible from canonical snapshot records
 - ranking factors are visible and testable
 - the static product can display the queue without requiring hosted services
+
+The focused common/site suite (37 tests), workspace typecheck, full test suite
+(1,272 tests), bounded static fixture build, and direct Firefox route evidence
+meet the static-slice criteria. The current full catalogue build still reaches
+Node out-of-memory during static route generation over the 4 GB local dataset
+tree, while the repository-wide Biome lint gate reports its existing schema and
+format baseline; both remain explicitly open rather than being folded into
+delivery status.
 
 ## Phase 5 — Hosted snapshot ingestion and grounded retrieval
 
@@ -695,8 +710,8 @@ semantics, macro expansion, type resolution, or whole-program symbols.
 | Completed | Tree-sitter capture lane: pinned-commit preflight, Maven build plan, disposable Java harness, and fail-closed command test (2026-09-05) |
 | Completed | Tree-sitter runtime evidence: Docker-backed Temurin 17 capture retained with 3 units/0 dependencies and explicit `.rs` cleaner provenance (2026-09-05) |
 | Completed | Tree-sitter metric policy: ADR-0021 makes real-file-extension semantics authoritative and classifies the extensionless `main` LOC difference as neutral (2026-09-05) |
-| Now | Phase 4 design review: portfolio action-queue evidence contract and ranking explanation (2026-09-06) |
-| Later | Phase 4: portfolio action queue |
+| Completed | Phase 4 static portfolio action queue — canonical JSON evidence, explainable factor-vector ranking, deterministic filters, coverage diagnostics, and `/datasets/actions` browser evidence (2026-09-06) |
+| Later | Phase 4 hosted acknowledgement/status overlay |
 | Later | Phase 5: hosted snapshot ingestion and grounded semantic retrieval |
 | Later | Phase 6: demand-led parser expansion |
 

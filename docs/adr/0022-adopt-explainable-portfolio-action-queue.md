@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — design approved 2026-09-06; implementation pending
+Accepted — static implementation delivered 2026-09-06; full-catalogue build and repository-wide lint remain open
 
 ## Date
 
@@ -173,22 +173,37 @@ delivery.
 
 ## Verification
 
-- [ ] Common queue types are serialisable and carry `contractVersion: 1` and
+- [x] Common queue types are serialisable and carry `contractVersion: 1` and
       `rankingPolicyVersion: 1`.
-- [ ] Every supported signal adapter has a positive fixture, a skip/unknown
+- [x] Every supported signal adapter has a positive fixture, a skip/unknown
       fixture, and exact snapshot/shard/record provenance assertions.
-- [ ] Grouping and ranking tests prove the factor-vector ordering, stable
+- [x] Grouping and ranking tests prove the factor-vector ordering, stable
       ties, visible explanations, and absence of a composite score.
-- [ ] Filter and time-window tests are deterministic and URL-round-trippable.
-- [ ] Team filters cover explicit teams and the `unassigned` sentinel, including
+- [x] Filter and time-window tests are deterministic and URL-round-trippable.
+- [x] Team filters cover explicit teams and the `unassigned` sentinel, including
       items whose corroborating signals expose different teams.
-- [ ] Invalid, missing, duplicate, and provenance-less inputs fail closed with
+- [x] Invalid, missing, duplicate, and provenance-less inputs fail closed with
       explicit coverage diagnostics.
-- [ ] `/datasets/actions` renders ready and partial repository items and
+- [x] `/datasets/actions` renders ready and partial repository items and
       excludes planned, invalid, and landscape entries without fabricated
       actions.
 - [ ] Static build, workspace typechecks, full tests, and direct browser
       evidence pass before the Phase 4 implementation is marked delivered.
+
+Verification evidence for the static slice (2026-09-06): the focused action
+queue suite passes 37 tests with 295 assertions; `bun run typecheck` exits 0
+across the workspace; and `bun test` passes 1,272 tests with 6,877 assertions.
+A bounded static build using the checked-in `code-city-task9-complete` fixture
+completes 59 pages, including `/datasets/actions`. Firefox direct evidence
+loads the route, shows four source-backed actions, and reduces the visible
+queue to one item for `priority=critical&domain=hotspot`; expanded evidence
+shows the dataset-scoped hotspot and impact links with snapshot, shard, and
+record selectors. The default build over the current 4 GB `datasets/` tree
+still aborts with Node out-of-memory during route generation, and the root
+`bun run lint` remains red on the repository's existing Biome 2.5/schema and
+format baseline (549 errors, 3 warnings, and 2 infos). The combined gate above
+therefore remains open until those two repository/environment constraints are
+addressed.
 
 ## Related ADRs and Evidence
 
@@ -198,5 +213,6 @@ delivery.
 - [ADR-0019: Repo-scoped WebGL Code City decision surface](./0019-adopt-code-city-webgl-decision-surface.md)
 - [ADR-0020: Static dataset catalogue and Explore surface](./0020-adopt-static-dataset-explore-catalog.md)
 - [Portfolio action queue design](../superpowers/specs/2026-09-06-portfolio-action-queue-design.md)
+- [Portfolio action queue implementation plan](../superpowers/plans/2026-09-06-portfolio-action-queue.md)
 - [Cross-repository trend contract](../../packages/common/src/trends/CrossRepositoryTrends.ts)
 - [Snapshot entity provenance contract](../../packages/common/src/trends/SnapshotEntityTrends.ts)
