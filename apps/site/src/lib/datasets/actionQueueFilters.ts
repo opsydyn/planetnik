@@ -13,8 +13,8 @@ const priorityBands = [
   "unrated",
 ] as const satisfies readonly PortfolioActionPriorityBand[]
 const domains = [
-  "coupling",
   "control",
+  "coupling",
   "hotspot",
   "impact",
   "ownership",

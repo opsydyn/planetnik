@@ -22,7 +22,7 @@ describe("portfolio action queue URL filters", () => {
       repositoryIds: ["repo:Requests Python Tree-sitter Pilot", "zeta"],
       teamIds: ["alpha team", "platform"],
       priorityBands: ["critical", "high", "medium", "low", "unrated"],
-      domains: ["coupling", "control", "hotspot", "trend"],
+      domains: ["control", "coupling", "hotspot", "trend"],
       window: "latest-compatible",
     })
   })
@@ -57,7 +57,7 @@ describe("portfolio action queue URL filters", () => {
     })
 
     expect(params.toString()).toBe(
-      "repo=repo%3ARequests+Python+Tree-sitter+Pilot&repo=zeta&team=alpha&team=platform+team&priority=critical&priority=high&priority=low&domain=coupling&domain=control&domain=hotspot&domain=trend",
+      "repo=repo%3ARequests+Python+Tree-sitter+Pilot&repo=zeta&team=alpha&team=platform+team&priority=critical&priority=high&priority=low&domain=control&domain=coupling&domain=hotspot&domain=trend",
     )
     expect(serializePortfolioActionFilters(portfolioActionFilterDefaults()).toString()).toBe("")
   })
