@@ -284,7 +284,7 @@ No commit is allowed at this checkpoint without explicit user authorization.
 
 **Interfaces:**
 
-- Consumes `SignalBuildResult` from Task 2 and `PortfolioActionTrendInput` history records.
+- Consumes `PortfolioActionSignalBuildResult` from Task 2 and `PortfolioActionTrendInput` history records.
 - Produces `buildPortfolioActionQueue(datasets, { window })` and `filterPortfolioActionQueue(queue, filters)`.
 - Produces visible `factors`, `corroboration`, `trend`, `freshness`, `primaryAction`, `alternateActions`, and coverage without ever adding a `score` field.
 
