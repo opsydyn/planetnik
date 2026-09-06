@@ -42,6 +42,7 @@ type DomainAdapterResult = {
 }
 
 const isNonEmpty = (value: string): boolean => value.trim().length > 0
+const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && isNonEmpty(value)
 
 const isSafeDatasetHref = (href: string, datasetId: string): boolean => {
   if (!isNonEmpty(href) || !href.startsWith(`/datasets/${datasetId}/`)) return false
@@ -92,11 +93,15 @@ const recordProblem = (
 }
 
 const primitiveFacts = (values: Readonly<Record<string, unknown>>): PortfolioActionSignal["facts"] =>
-  Object.entries(values).flatMap(([label, value]) =>
-    value === null || ["string", "number", "boolean"].includes(typeof value)
-      ? [{ label, value: value as string | number | boolean | null }]
-      : [],
-  )
+  Object.entries(values).flatMap(([label, value]) => {
+    if (value === null || ["string", "number", "boolean"].includes(typeof value)) {
+      return [{ label, value: value as string | number | boolean | null }]
+    }
+    if (Array.isArray(value) && value.every((item): item is string => typeof item === "string")) {
+      return value.map((item, index) => ({ label: `${label}[${index}]`, value: item }))
+    }
+    return []
+  })
 
 const severityBand = (value: unknown): PortfolioActionPriorityBand => {
   switch (value) {
@@ -147,8 +152,8 @@ const sourcePriority = (
       value === null ? "unrated" : value >= 75 ? "critical" : value >= 55 ? "high" : value >= 35 ? "medium" : "low"
     return { label: "impact_score", value, band }
   }
-  if (domain === "coupling" && values.riskTier !== undefined) {
-    const value = typeof values.riskTier === "string" ? values.riskTier : null
+  if (domain === "coupling" && isNonEmptyString(values.riskTier)) {
+    const value = values.riskTier
     return { label: "riskTier", value, band: severityBand(value) }
   }
   const value = typeof values.severity === "string" ? values.severity : null
@@ -200,7 +205,7 @@ const isCandidate = (
     case "coupling":
       return (
         values.kind === "component" &&
-        (typeof values.riskTier === "string" ||
+        (isNonEmptyString(values.riskTier) ||
           positiveNumber(values.dependencyEdges) ||
           positiveNumber(values.inboundEdges) ||
           positiveNumber(values.outboundEdges) ||
@@ -266,6 +271,10 @@ const adaptCurrentDomain = (
     ids.add(record.id)
   }
   if (diagnostics.length > 0) return { signals: [], coverage: coverage("invalid", 0), diagnostics }
+
+  if (domain === "security" && input.mode !== "single_repository") {
+    return { signals: [], coverage: coverage("present", 0, domainInput.message), diagnostics: [] }
+  }
 
   const supportingEvidence = new Map<string, PortfolioActionEvidence[]>()
   if (domain === "coupling") {
@@ -363,11 +372,17 @@ const adaptTrendDomain = (
   actionableSignals: readonly PortfolioActionSignal[],
 ): DomainAdapterResult => {
   const declared = input.current?.domains.trend
+  const historyStatus: PortfolioActionDomainState =
+    input.historyStatus === "compatible" ? "present" : input.historyStatus === "missing" ? "missing" : "invalid"
   const status: PortfolioActionDomainState =
-    declared?.status ??
-    (input.historyStatus === "compatible" ? "present" : input.historyStatus === "missing" ? "missing" : "invalid")
+    historyStatus === "present" ? (declared?.status ?? "present") : historyStatus
   if (status !== "present") {
-    const message = declared?.message ?? (status === "invalid" ? `history is ${input.historyStatus}` : undefined)
+    const message =
+      historyStatus !== "present"
+        ? status === "invalid"
+          ? `history is ${input.historyStatus}`
+          : undefined
+        : declared?.message
     return {
       signals: [],
       coverage: coverage(status, 0, message),

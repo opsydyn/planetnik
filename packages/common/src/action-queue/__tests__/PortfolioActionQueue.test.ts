@@ -236,6 +236,10 @@ describe("portfolio action signal adapters", () => {
       "low",
       "unrated",
     ])
+    expect(adaptOwnershipSignals(input)[0]!.facts).toContainEqual({
+      label: "reasons[0]",
+      value: "Knowledge concentration",
+    })
 
     const result = adaptPortfolioActionSignals(input)
     expect(result.signals).toHaveLength(16)
@@ -275,6 +279,57 @@ describe("portfolio action signal adapters", () => {
       sourcePriority: { label: "severity", value: "Unexpected" },
       team: { id: "platform", label: "Platform" },
     })
+  })
+
+  test("does not emit repository security actions from landscape input", () => {
+    const input = datasetInput(
+      {
+        security: {
+          status: "present",
+          records: [sourceRecord("security", "landscape-alert", { open: true, severity: "critical" })],
+        },
+      },
+      { mode: "landscape" },
+    )
+
+    expect(adaptSecuritySignals(input)).toEqual([])
+    const result = adaptPortfolioActionSignals(input)
+    expect(result.signals).toEqual([])
+    expect(result.domainCoverage.security).toEqual({ status: "present", datasetCount: 1, signalCount: 0 })
+  })
+
+  test("falls back from null or blank coupling risk tiers without treating blanks as pressure", () => {
+    const input = datasetInput({
+      coupling: {
+        status: "present",
+        records: [
+          sourceRecord("coupling", "null-tier", {
+            kind: "component",
+            riskTier: null,
+            severity: "Critical",
+            dependencyEdges: 1,
+          }),
+          sourceRecord("coupling", "blank-tier-with-pressure", {
+            kind: "component",
+            riskTier: "  ",
+            severity: "High",
+            inboundEdges: 1,
+          }),
+          sourceRecord("coupling", "blank-tier-only", {
+            kind: "component",
+            riskTier: " ",
+            severity: "High",
+          }),
+        ],
+      },
+    })
+
+    expect(
+      adaptCouplingSignals(input).map(({ id, priorityBand, sourcePriority }) => ({ id, priorityBand, sourcePriority })),
+    ).toEqual([
+      { id: "null-tier", priorityBand: "critical", sourcePriority: { label: "severity", value: "Critical" } },
+      { id: "blank-tier-with-pressure", priorityBand: "high", sourcePriority: { label: "severity", value: "High" } },
+    ])
   })
 
   test("compares known risk fields only and cannot create a standalone trend", () => {
@@ -339,6 +394,36 @@ describe("portfolio action signal adapters", () => {
       "stable",
     ])
     expect(adaptPortfolioActionSignals(input).signals.filter((signal) => signal.domain === "trend")).toHaveLength(3)
+  })
+
+  test("fails trend closed when declared data has incompatible history", () => {
+    const hotspot = sourceRecord("hotspot", "incompatible-hotspot", { severity: "High", kind: "component" })
+    const input = datasetInput(
+      { hotspot: { status: "present", records: [hotspot] }, trend: { status: "present", records: [] } },
+      {
+        historyStatus: "incompatible",
+        trendInputs: [
+          {
+            targetId: hotspot.targetId,
+            targetLabel: hotspot.targetLabel,
+            baselineValues: { complexity: 10 },
+            currentValues: { complexity: 12 },
+            baselineEvidence: [actionEvidence("trend", "baseline", { snapshotId: "old" })],
+            currentEvidence: [actionEvidence("trend", "current")],
+            observedAt: hotspot.observedAt,
+          },
+        ],
+      },
+    )
+
+    const result = adaptPortfolioActionSignals(input)
+    expect(result.signals.some((signal) => signal.domain === "trend")).toBe(false)
+    expect(result.domainCoverage.trend.status).toBe("invalid")
+    expect(result.diagnostics).toContainEqual({
+      datasetId: "demo",
+      severity: "error",
+      reason: "trend domain is invalid: history is incompatible",
+    })
   })
 
   test("fails closed for malformed records, provenance, and duplicate IDs", () => {
