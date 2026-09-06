@@ -14,14 +14,15 @@ describe("portfolio action queue URL filters", () => {
     for (const teamId of ["platform", "alpha team", "platform", ""]) params.append("team", teamId)
     for (const priority of ["low", "critical", "unknown", "high", "low", "", "unrated", "medium"])
       params.append("priority", priority)
-    for (const domain of ["trend", "hotspot", "unknown", "control", "trend", ""]) params.append("domain", domain)
+    for (const domain of ["trend", "hotspot", "unknown", "control", "coupling", "trend", ""])
+      params.append("domain", domain)
     params.set("window", "latest-compatible")
 
     expect(parsePortfolioActionFilters(params)).toEqual({
       repositoryIds: ["repo:Requests Python Tree-sitter Pilot", "zeta"],
       teamIds: ["alpha team", "platform"],
       priorityBands: ["critical", "high", "medium", "low", "unrated"],
-      domains: ["control", "hotspot", "trend"],
+      domains: ["coupling", "control", "hotspot", "trend"],
       window: "latest-compatible",
     })
   })
@@ -51,12 +52,12 @@ describe("portfolio action queue URL filters", () => {
       repositoryIds: ["zeta", "repo:Requests Python Tree-sitter Pilot", "zeta"],
       teamIds: ["platform team", "alpha", "platform team"],
       priorityBands: ["low", "critical", "high", "low"],
-      domains: ["trend", "control", "hotspot", "control"],
+      domains: ["trend", "control", "hotspot", "coupling", "control"],
       window: "current",
     })
 
     expect(params.toString()).toBe(
-      "repo=repo%3ARequests+Python+Tree-sitter+Pilot&repo=zeta&team=alpha&team=platform+team&priority=critical&priority=high&priority=low&domain=control&domain=hotspot&domain=trend",
+      "repo=repo%3ARequests+Python+Tree-sitter+Pilot&repo=zeta&team=alpha&team=platform+team&priority=critical&priority=high&priority=low&domain=coupling&domain=control&domain=hotspot&domain=trend",
     )
     expect(serializePortfolioActionFilters(portfolioActionFilterDefaults()).toString()).toBe("")
   })
