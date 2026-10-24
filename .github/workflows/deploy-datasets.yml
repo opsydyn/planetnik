@@ -1,24 +1,13 @@
 name: Publish Hosted Datasets
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - datasets/**
-      - apps/cli/**
-      - packages/**
-      - package.json
-      - bun.lock
-      - landscape-config.json
-      - .github/workflows/deploy-datasets.yml
+  # Azure hosting is paused. Static Pages builds generate their own datasets.
   workflow_dispatch:
     inputs:
       benchmark_only:
         description: "Skip Azure publish; only measure landscape duration"
         type: boolean
         default: false
-  schedule:
-    - cron: "30 6 * * 1"
 
 permissions:
   contents: read

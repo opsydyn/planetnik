@@ -1,16 +1,7 @@
 name: Deploy Hosted App Container App
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - apps/app/**
-      - packages/**
-      - package.json
-      - bun.lock
-      - apps/app/Dockerfile
-      - .github/workflows/deploy-app.yml
-      - .github/workflows/build-deploy-container-app.yml
+  # Azure hosting is paused. Restore its resources before manually deploying.
   workflow_dispatch:
 
 jobs:

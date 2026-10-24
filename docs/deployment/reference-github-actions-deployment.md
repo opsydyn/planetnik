@@ -188,8 +188,19 @@ Landscape deploys must produce both files below when security export is enabled:
 
 If either file is missing, the deploy workflow fails intentionally.
 
-## Related workflow
+## Paused Azure workflows
 
-This repository also contains `.github/workflows/deploy-datasets.yml`, which is concerned with hosted dataset generation and upload rather than GitHub Pages site publishing.
+As of 2026-10-24, the hosted Azure environment is paused and its container registry has been removed. Only the static `apps/site` product is deployed automatically to production.
+
+The following workflows are retained for future recovery but are **manual-only**: they do not run on pushes, pull requests, or schedules.
+
+- `.github/workflows/deploy-app.yml` — hosted app container deployment
+- `.github/workflows/deploy-runtime.yml` — runtime container deployment
+- `.github/workflows/deploy-datasets.yml` — hosted dataset generation and Azure Files upload
+- `.github/workflows/infra.yml` — hosted infrastructure planning and optional apply
+
+Do not manually run these against the removed environment. Before resuming Azure hosting, review the Terraform state, restore the intended resources, and verify repository variables and credentials. Infrastructure apply still requires its explicit `apply` input. The shared `build-deploy-container-app.yml` workflow has no automatic trigger; it runs only when called by a deployment workflow.
+
+Normal `.github/workflows/ci.yml` quality checks remain enabled on pull requests and pushes to `main`. The static `.github/workflows/deploy.yml` retains its push, manual, and Monday schedule triggers. It generates its own analysis data and does not depend on Azure dataset publication.
 
 Use `.github/workflows/deploy.yml` when the goal is: **build and publish the site**.

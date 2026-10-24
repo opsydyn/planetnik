@@ -1,16 +1,7 @@
 name: Deploy Runtime Container App
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - apps/runtime/**
-      - packages/**
-      - package.json
-      - bun.lock
-      - apps/runtime/Dockerfile
-      - .github/workflows/deploy-runtime.yml
-      - .github/workflows/build-deploy-container-app.yml
+  # Azure hosting is paused. Restore its resources before manually deploying.
   workflow_dispatch:
 
 jobs:

@@ -1,11 +1,7 @@
 name: Provision Hosted Infrastructure
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - infra/**
-      - .github/workflows/infra.yml
+  # Azure hosting is paused. Infrastructure changes require an explicit manual run.
   workflow_dispatch:
     inputs:
       apply:
