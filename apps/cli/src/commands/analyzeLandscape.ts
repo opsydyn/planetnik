@@ -2,8 +2,6 @@ import { randomBytes } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { Command, Options } from "@effect/cli"
-import { Schema } from "@effect/schema"
 import { LandscapeAnalysisInitiator, LandscapeAnalyzer, ScopeCreator } from "@planetnik/analyzer"
 import {
   LandscapeDataExport,
@@ -13,8 +11,9 @@ import {
   ReportRenderer,
   RichTextReport,
 } from "@planetnik/reports"
-import { Effect, Layer, Redacted, Ref, Schedule } from "effect"
-import simpleGit from "simple-git"
+import { Context, Effect, Layer, Redacted, Ref, Schedule, Schema } from "effect"
+import { Command, Flag as Options } from "effect/cli"
+import { simpleGit } from "simple-git"
 import { CliConfig } from "../config.js"
 import {
   CloneError,
@@ -36,8 +35,8 @@ import {
   DependabotScopeError,
   fetchDependabotAlerts,
 } from "../github/DependabotClient.js"
-import { fetchVulnerabilityEnrichment } from "../github/VulnerabilityEnrichmentClient.js"
 import { discoverRepos, type GitHubRepo, type LandscapeConfig } from "../github/GitHubRepoFinder.js"
+import { fetchVulnerabilityEnrichment } from "../github/VulnerabilityEnrichmentClient.js"
 import { withPhase } from "../logger.js"
 import { LandscapeConfigSchema } from "../schemas/LandscapeConfigSchema.js"
 import { runAnalysis } from "./generateReports.js"
@@ -45,21 +44,21 @@ import { hydrateLandscapeConfiguration, saveLandscapeConfiguration } from "./lan
 import { resolveLandscapeDataDir, resolveLandscapeReportsDir } from "./landscapePaths.js"
 import { buildLandscapeTagMap } from "./landscapeTagMap.js"
 
-const configFile = Options.text("config").pipe(Options.withDescription("Path to landscape config JSON"))
-const outputFolder = Options.text("outputFolder").pipe(
+const configFile = Options.String("config").pipe(Options.withDescription("Path to landscape config JSON"))
+const outputFolder = Options.String("outputFolder").pipe(
   Options.withDefault("./landscape-report"),
   Options.withDescription("Output folder for all reports"),
 )
-const landscapeName = Options.text("name").pipe(Options.optional, Options.withDescription("Landscape name override"))
-const concurrency = Options.integer("concurrency").pipe(
+const landscapeName = Options.String("name").pipe(Options.optional, Options.withDescription("Landscape name override"))
+const concurrency = Options.Int("concurrency").pipe(
   Options.withDefault(4),
   Options.withDescription("Number of repos to analyze in parallel"),
 )
-const skipExisting = Options.boolean("skipExisting").pipe(
+const skipExisting = Options.Boolean("skipExisting").pipe(
   Options.withDefault(true),
   Options.withDescription("Skip repos that already have analysis results"),
 )
-const emitLegacyProjectionsOption = Options.boolean("emitLegacyProjections").pipe(
+const emitLegacyProjectionsOption = Options.Boolean("emitLegacyProjections").pipe(
   Options.optional,
   Options.withDescription("Emit legacy landscape TXT and HTML projections (default: canonical JSON only)"),
 )
@@ -67,11 +66,11 @@ const emitLegacyProjectionsOption = Options.boolean("emitLegacyProjections").pip
 const DEPENDABOT_CONCURRENCY = 5
 
 /** Maximum number of retries for an external landscape operation. */
-export const LANDSCAPE_EXTERNAL_RETRY_COUNT = 3
+const LANDSCAPE_EXTERNAL_RETRY_COUNT = 3
 
 /** Bounded exponential backoff shared by GitHub discovery and repository clone. */
-export const LANDSCAPE_EXTERNAL_RETRY_SCHEDULE = Schedule.exponential("1 second").pipe(
-  Schedule.compose(Schedule.recurs(LANDSCAPE_EXTERNAL_RETRY_COUNT)),
+const LANDSCAPE_EXTERNAL_RETRY_SCHEDULE = Schedule.exponential("1 second").pipe(
+  Schedule.upTo({ times: LANDSCAPE_EXTERNAL_RETRY_COUNT }),
 )
 
 const TRANSIENT_ERROR_CODES = new Set([
@@ -195,13 +194,12 @@ export interface LandscapeRepoWorkerService {
 }
 
 /** Stable worker dependency; per-repository resources remain scoped inside the worker. */
-export class LandscapeRepoWorker extends Effect.Tag("LandscapeRepoWorker")<
-  LandscapeRepoWorker,
-  LandscapeRepoWorkerService
->() {}
+export class LandscapeRepoWorker extends Context.Service<LandscapeRepoWorker, LandscapeRepoWorkerService>()(
+  "LandscapeRepoWorker",
+) {}
 
 /** Effect-native repo worker — runs inside a scope so temp dirs are always cleaned up. */
-export function analyzeRepoWorker(
+function analyzeRepoWorker(
   repo: GitHubRepo,
   repoOutputDir: string,
   cloneUrl: string,
@@ -240,15 +238,15 @@ export function analyzeRepoWorker(
               repoKey,
             }),
         ),
-        Effect.either,
+        Effect.result,
       )
 
-      if (cloneResult._tag === "Left") {
-        yield* Effect.logWarning(`Clone failed: ${cloneResult.left.detail}`).pipe(withPhase("clone"))
+      if (cloneResult._tag === "Failure") {
+        yield* Effect.logWarning(`Clone failed: ${cloneResult.failure.detail}`).pipe(withPhase("clone"))
         return new RepoAnalysisFailed({
           repoKey,
           name: repo.name,
-          error: cloneResult.left,
+          error: cloneResult.failure,
         })
       }
 
@@ -287,7 +285,7 @@ export function analyzeRepoWorker(
 
       return new RepoAnalysisDone({ repoKey, name: repo.name })
     }).pipe(
-      Effect.catchAll((error) =>
+      Effect.catch((error) =>
         Effect.succeed(
           new RepoAnalysisFailed({
             repoKey,
@@ -410,10 +408,7 @@ export const analyzeLandscapeCommand = Command.make(
             }),
         ),
         Effect.tapError((e) =>
-          Effect.logError(e.detail).pipe(
-            withPhase("discovery"),
-            Effect.annotateLogs("errorType", e._tag),
-          ),
+          Effect.logError(e.detail).pipe(withPhase("discovery"), Effect.annotateLogs("errorType", e._tag)),
         ),
       )
 
@@ -512,10 +507,10 @@ export const analyzeLandscapeCommand = Command.make(
             try: () =>
               fetchDependabotAlerts(firstTarget.org, firstTarget.repo.name, config.githubToken, config.githubApiUrl),
             catch: (error) => error,
-          }).pipe(Effect.either)
+          }).pipe(Effect.result)
 
-          if (preflight._tag === "Left") {
-            const error = preflight.left
+          if (preflight._tag === "Failure") {
+            const error = preflight.failure
             if (error instanceof DependabotAuthError) {
               securityBlocked = true
               yield* Effect.logWarning(
@@ -532,7 +527,7 @@ export const analyzeLandscapeCommand = Command.make(
               ).pipe(withPhase("security"))
             }
           } else {
-            alertsByRepo.set(firstTarget.repo.name, preflight.right)
+            alertsByRepo.set(firstTarget.repo.name, preflight.success)
             startIndex = 1
           }
         }
@@ -546,7 +541,7 @@ export const analyzeLandscapeCommand = Command.make(
                 catch: (error) => error,
               }).pipe(
                 Effect.map((alerts) => ({ repo: repo.name, alerts })),
-                Effect.catchAll((error) =>
+                Effect.catch((error) =>
                   Effect.gen(function* () {
                     yield* Effect.logWarning(`Dependabot fetch failed for ${org}/${repo.name}: ${String(error)}`).pipe(
                       withPhase("security"),
@@ -587,15 +582,15 @@ export const analyzeLandscapeCommand = Command.make(
         const enrichmentResult = yield* Effect.tryPromise({
           try: () => fetchVulnerabilityEnrichment(cveIds),
           catch: (error) => error,
-        }).pipe(Effect.either)
+        }).pipe(Effect.result)
 
-        if (enrichmentResult._tag === "Right") {
-          vulnerabilityEnrichment = enrichmentResult.right
+        if (enrichmentResult._tag === "Success") {
+          vulnerabilityEnrichment = enrichmentResult.success
           yield* Effect.logInfo(
             `Security enrichment: EPSS ${vulnerabilityEnrichment.epssAvailable ? "available" : "unavailable"}, KEV ${vulnerabilityEnrichment.kevAvailable ? "available" : "unavailable"}`,
           ).pipe(withPhase("security"))
         } else {
-          yield* Effect.logWarning(`Security enrichment failed: ${String(enrichmentResult.left)}`).pipe(
+          yield* Effect.logWarning(`Security enrichment failed: ${String(enrichmentResult.failure)}`).pipe(
             withPhase("security"),
           )
         }
@@ -641,9 +636,9 @@ export const analyzeLandscapeCommand = Command.make(
 
         writeFileSync(join(reportsDir, "index.html"), html, "utf-8")
       } else {
-        yield* Effect.logInfo(
-          "Skipping legacy landscape TXT/HTML projections (canonical JSON is default).",
-        ).pipe(withPhase("reporting"))
+        yield* Effect.logInfo("Skipping legacy landscape TXT/HTML projections (canonical JSON is default).").pipe(
+          withPhase("reporting"),
+        )
       }
 
       const dataDir = resolveLandscapeDataDir(outDir)

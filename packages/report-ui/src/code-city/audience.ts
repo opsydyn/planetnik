@@ -33,15 +33,7 @@ const AUDIENCE_PRESENTATIONS = {
     firstAction: "Select a district",
     labelDensity: "generous",
     routeEmphasis: "quiet",
-    inspectorMetricOrder: [
-      "footprint",
-      "ownership",
-      "health",
-      "impact",
-      "change",
-      "complexity",
-      "coverage",
-    ],
+    inspectorMetricOrder: ["footprint", "ownership", "health", "impact", "change", "complexity", "coverage"],
   },
   "architecture-review": {
     label: "Architecture Review",
@@ -50,15 +42,7 @@ const AUDIENCE_PRESENTATIONS = {
     firstAction: "Inspect a hub or boundary crossing",
     labelDensity: "balanced",
     routeEmphasis: "selection",
-    inspectorMetricOrder: [
-      "impact",
-      "health",
-      "ownership",
-      "change",
-      "complexity",
-      "footprint",
-      "coverage",
-    ],
+    inspectorMetricOrder: ["impact", "health", "ownership", "change", "complexity", "footprint", "coverage"],
   },
   stakeholder: {
     label: "Stakeholder",
@@ -67,15 +51,7 @@ const AUDIENCE_PRESENTATIONS = {
     firstAction: "Open the top concern",
     labelDensity: "calm",
     routeEmphasis: "consequential",
-    inspectorMetricOrder: [
-      "impact",
-      "health",
-      "change",
-      "ownership",
-      "footprint",
-      "complexity",
-      "coverage",
-    ],
+    inspectorMetricOrder: ["impact", "health", "change", "ownership", "footprint", "complexity", "coverage"],
   },
 } as const
 

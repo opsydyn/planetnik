@@ -591,7 +591,7 @@ durable storage beyond the local showcase remain the open Phase 5 boundary.
 **Status: Static implementation and explicit complete external-spool path
 delivered — focused verification, bounded fixture/build evidence, direct
 browser evidence, and the bounded default catalogue build are green; the
-complete path is measured and repository-wide lint remains open (2026-09-06)**
+complete path is measured (2026-09-06); repository-wide lint and Knip are clean (2026-10-24)**
 
 ### Outcome
 
@@ -671,8 +671,10 @@ the current JSON route, whose body matched the rehydrated changed queue
 shard contributes to each observation window in the fixture, so all five JSON
 routes were regenerated for the mutation; selective reuse is now guarded by
 the window-level content key.
-The repository-wide Biome lint gate still reports its existing schema and
-format baseline and remains open rather than being folded into delivery status.
+The repository-wide Biome schema/format baseline remained open at the original
+delivery checkpoint. The 2026-10-24 [repository cleanup](superpowers/plans/2026-10-24-repository-cleanup.md)
+clears lint and strict Knip checks and adds both gates to CI; the separate
+complete-catalogue route/build-cost gate below is unchanged.
 The complete-mode fixture run published five `complete: true` windows with
 four items and one page per window, six JSON files total including the
 manifest, and no intermediate partition/run directories. The real

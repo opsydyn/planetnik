@@ -27,10 +27,7 @@ export type CodeCityRendererStatus = "pending" | "ready" | "unavailable"
 
 export type CodeCityRendererUnavailableReason = "webgl-context-unavailable" | "renderer-initialisation-failed"
 
-export type CodeCityRendererPresentation = Pick<
-  CodeCityAudiencePresentation,
-  "routeEmphasis" | "labelDensity"
->
+export type CodeCityRendererPresentation = Pick<CodeCityAudiencePresentation, "routeEmphasis" | "labelDensity">
 
 export const CODE_CITY_CAMERA_CONFIG = {
   projection: "orthographic",

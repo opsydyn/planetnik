@@ -1,28 +1,28 @@
 {
-	"name": "@planetnik/cli",
-	"version": "0.1.0",
-	"private": true,
-	"type": "module",
-	"bin": {
-		"planetnik": "./src/index.ts"
-	},
-	"scripts": {
-		"build": "bun build ./src/index.ts --outdir ./dist --target bun",
-		"compile": "bun build --compile ./src/index.ts --outfile ./dist/planetnik",
-		"compile:smoke": "bun run ./scripts/compile-smoke.ts",
-		"dev": "bun run ./src/index.ts",
-		"test": "bun test",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"effect": "catalog:",
-		"@effect/cli": "catalog:",
-		"@effect/schema": "catalog:",
-		"@effect/platform": "catalog:",
-		"@effect/platform-node": "catalog:",
-		"simple-git": "catalog:",
-		"@planetnik/common": "workspace:*",
-		"@planetnik/analyzer": "workspace:*",
-		"@planetnik/reports": "workspace:*"
-	}
+  "name": "@planetnik/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "planetnik": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "compile": "bun build --compile ./src/index.ts --outfile ./dist/planetnik",
+    "compile:smoke": "bun run ./scripts/compile-smoke.ts",
+    "dev": "bun run ./src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "@effect/platform-node": "catalog:",
+    "simple-git": "catalog:",
+    "@planetnik/common": "workspace:*",
+    "@planetnik/analyzer": "workspace:*",
+    "@planetnik/reports": "workspace:*"
+  },
+  "devDependencies": {
+    "fast-check": "catalog:"
+  }
 }

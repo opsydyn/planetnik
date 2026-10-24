@@ -1,4 +1,4 @@
-import { useAtom } from "@effect-atom/atom-react"
+import { useAtom } from "@effect/atom-react"
 import { SystemIcon } from "@planetnik/report-ui/icons/SystemIcon.react"
 import { useEffect } from "react"
 import { publicVideoPausedAtom } from "../../lib/public-video-preferences.js"

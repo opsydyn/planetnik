@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema"
+import { Effect, Schema } from "effect"
 import { Elysia, t } from "elysia"
 import { auth } from "../../lib/auth.js"
 import {
@@ -79,8 +79,8 @@ const DatasetsResponseSchema = Schema.Struct({
 })
 
 const ReportContextSummarySchema = Schema.Struct({
-  mode: Schema.Literal("single_repository", "landscape"),
-  reportMode: Schema.Literal("single_repository", "landscape"),
+  mode: Schema.Literals(["single_repository", "landscape"]),
+  reportMode: Schema.Literals(["single_repository", "landscape"]),
   title: Schema.String,
   rootRoute: Schema.String,
   dataVersion: Schema.Number,
@@ -88,9 +88,9 @@ const ReportContextSummarySchema = Schema.Struct({
   snapshotId: Schema.optional(Schema.String),
   generatedAt: Schema.optional(Schema.String),
   capabilities: Schema.optional(Schema.Array(Schema.String)),
-  canonicalShards: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
-  compatibilityProjections: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
-  entityIdPolicy: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  canonicalShards: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+  compatibilityProjections: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+  entityIdPolicy: Schema.optional(Schema.Record(Schema.String, Schema.String)),
   source: Schema.String,
   hasLandscape: Schema.Boolean,
   hasSingleRepositoryAnalysis: Schema.Boolean,
@@ -183,7 +183,7 @@ function toGenUiBetaTone(value: string | null | undefined) {
 const ReportDetailResponseSchema = Schema.Struct({
   report: ReportSchema,
   context: Schema.NullOr(ReportContextSummarySchema),
-  artifact: Schema.NullOr(Schema.Union(SingleRepositoryArtifactSummarySchema, LandscapeArtifactSummarySchema)),
+  artifact: Schema.NullOr(Schema.Union([SingleRepositoryArtifactSummarySchema, LandscapeArtifactSummarySchema])),
 })
 
 const ReportGenUiBetaSurfaceResponseSchema = Schema.Struct({
@@ -192,11 +192,11 @@ const ReportGenUiBetaSurfaceResponseSchema = Schema.Struct({
     components: Schema.Array(
       Schema.Struct({
         id: Schema.String,
-        component: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+        component: Schema.Record(Schema.String, Schema.Unknown),
         weight: Schema.optional(Schema.Number),
       }),
     ),
-    data: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+    data: Schema.Record(Schema.String, Schema.Unknown),
   }),
 })
 
@@ -204,7 +204,7 @@ const ReportContributorSchema = Schema.Struct({
   email: Schema.String,
   userName: Schema.String,
   displayName: Schema.String,
-  status: Schema.Literal("Rookie", "Active", "Inactive"),
+  status: Schema.Literals(["Rookie", "Active", "Inactive"]),
   commitsAllTime: Schema.Number,
   commits30Days: Schema.Number,
   commits90Days: Schema.Number,
@@ -317,7 +317,7 @@ const ReportContributorDetailSchema = Schema.Struct({
   email: Schema.String,
   userName: Schema.String,
   displayName: Schema.String,
-  status: Schema.Literal("Rookie", "Active", "Inactive"),
+  status: Schema.Literals(["Rookie", "Active", "Inactive"]),
   commitsCount: Schema.Number,
   commitsCount30Days: Schema.Number,
   commitsCount90Days: Schema.Number,
@@ -405,7 +405,7 @@ const TopologyContributorImpactSchema = Schema.Struct({
   files_touched: Schema.Number,
   components_touched: Schema.Number,
   dominant_dimension: Schema.String,
-  dimensions: Schema.Record({ key: Schema.String, value: Schema.Number }),
+  dimensions: Schema.Record(Schema.String, Schema.Number),
   top_components: Schema.Array(
     Schema.Struct({
       name: Schema.String,
@@ -448,8 +448,8 @@ const ReportTopologySummarySchema = Schema.Struct({
       dominantDimension: Schema.String,
     }),
   ),
-  periodsData: Schema.Record({ key: Schema.String, value: Schema.Array(TopologyPeopleDepSchema) }),
-  impactPeriods: Schema.Record({ key: Schema.String, value: Schema.Array(TopologyContributorImpactSchema) }),
+  periodsData: Schema.Record(Schema.String, Schema.Array(TopologyPeopleDepSchema)),
+  impactPeriods: Schema.Record(Schema.String, Schema.Array(TopologyContributorImpactSchema)),
 })
 
 const ReportTopologyResponseSchema = Schema.Struct({
@@ -714,7 +714,7 @@ const ReportCouplingSummarySchema = Schema.Struct({
     Schema.Struct({
       component: Schema.String,
       systemicRisk: Schema.Number,
-      riskTier: Schema.Literal("Low", "Medium", "High", "Critical"),
+      riskTier: Schema.Literals(["Low", "Medium", "High", "Critical"]),
       dominantDimension: Schema.String,
       explainability: Schema.Array(Schema.String),
     }),
@@ -725,7 +725,7 @@ const ReportCouplingSummarySchema = Schema.Struct({
       systemicRisk: Schema.Number,
       overallLoad: Schema.Number,
       balanceScore: Schema.Number,
-      riskTier: Schema.Literal("Low", "Medium", "High", "Critical"),
+      riskTier: Schema.Literals(["Low", "Medium", "High", "Critical"]),
       dominantDimension: Schema.String,
       dominantDimensionId: Schema.String,
       files: Schema.Number,
@@ -897,19 +897,18 @@ const ReportSecuritySummarySchema = Schema.Struct({
       oldestOpenAlertDays: Schema.NullOr(Schema.Number),
     }),
   ),
-  enrichmentSummary: Schema.optionalWith(
-    Schema.Struct({
-      enrichedAt: Schema.NullOr(Schema.String),
-      latestAlertOpenedAt: Schema.NullOr(Schema.String),
-      latestAdvisoryPublishedAt: Schema.NullOr(Schema.String),
-      uniqueCveCount: Schema.Number,
-      epssCoverageCount: Schema.Number,
-      knownExploitedCount: Schema.Number,
-      epssAvailable: Schema.Boolean,
-      kevAvailable: Schema.Boolean,
-    }),
-    {
-      default: () => ({
+  enrichmentSummary: Schema.Struct({
+    enrichedAt: Schema.NullOr(Schema.String),
+    latestAlertOpenedAt: Schema.NullOr(Schema.String),
+    latestAdvisoryPublishedAt: Schema.NullOr(Schema.String),
+    uniqueCveCount: Schema.Number,
+    epssCoverageCount: Schema.Number,
+    knownExploitedCount: Schema.Number,
+    epssAvailable: Schema.Boolean,
+    kevAvailable: Schema.Boolean,
+  }).pipe(
+    Schema.withDecodingDefaultType(
+      Effect.sync(() => ({
         enrichedAt: null,
         latestAlertOpenedAt: null,
         latestAdvisoryPublishedAt: null,
@@ -918,38 +917,35 @@ const ReportSecuritySummarySchema = Schema.Struct({
         knownExploitedCount: 0,
         epssAvailable: false,
         kevAvailable: false,
-      }),
-    },
-  ),
-  topActionableVulnerabilities: Schema.optionalWith(
-    Schema.Array(
-      Schema.Struct({
-        repo: Schema.String,
-        repoKey: Schema.NullOr(Schema.String),
-        package: Schema.String,
-        ecosystem: Schema.String,
-        manifestPath: Schema.String,
-        advisoryId: Schema.String,
-        cveId: Schema.NullOr(Schema.String),
-        ghsaId: Schema.String,
-        severity: Schema.String,
-        summary: Schema.String,
-        state: Schema.String,
-        openedAt: Schema.String,
-        publishedAt: Schema.NullOr(Schema.String),
-        ageDays: Schema.Number,
-        sharedRepoCount: Schema.Number,
-        vulnerableVersionRange: Schema.String,
-        firstPatchedVersion: Schema.NullOr(Schema.String),
-        recommendedAction: Schema.String,
-        epssScore: Schema.NullOr(Schema.Number),
-        epssPercentile: Schema.NullOr(Schema.Number),
-        knownExploited: Schema.Boolean,
-        priorityScore: Schema.Number,
-      }),
+      })),
     ),
-    { default: () => [] },
   ),
+  topActionableVulnerabilities: Schema.Array(
+    Schema.Struct({
+      repo: Schema.String,
+      repoKey: Schema.NullOr(Schema.String),
+      package: Schema.String,
+      ecosystem: Schema.String,
+      manifestPath: Schema.String,
+      advisoryId: Schema.String,
+      cveId: Schema.NullOr(Schema.String),
+      ghsaId: Schema.String,
+      severity: Schema.String,
+      summary: Schema.String,
+      state: Schema.String,
+      openedAt: Schema.String,
+      publishedAt: Schema.NullOr(Schema.String),
+      ageDays: Schema.Number,
+      sharedRepoCount: Schema.Number,
+      vulnerableVersionRange: Schema.String,
+      firstPatchedVersion: Schema.NullOr(Schema.String),
+      recommendedAction: Schema.String,
+      epssScore: Schema.NullOr(Schema.Number),
+      epssPercentile: Schema.NullOr(Schema.Number),
+      knownExploited: Schema.Boolean,
+      priorityScore: Schema.Number,
+    }),
+  ).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
 })
 
 const ReportSecurityResponseSchema = Schema.Struct({
@@ -982,7 +978,7 @@ const ReportLandscapeRepositorySummarySchema = Schema.Struct({
       commits90d: Schema.Number,
       firstCommitDate: Schema.String,
       latestCommitDate: Schema.String,
-      type: Schema.Literal("Human", "Bot"),
+      type: Schema.Literals(["Human", "Bot"]),
       glueScore: Schema.String,
       structuralImpact: Schema.String,
       snackRisk: Schema.String,
@@ -998,7 +994,7 @@ const ReportLandscapeRepositorySummarySchema = Schema.Struct({
       commits90d: Schema.Number,
       firstCommitDate: Schema.String,
       latestCommitDate: Schema.String,
-      type: Schema.Literal("Human", "Bot"),
+      type: Schema.Literals(["Human", "Bot"]),
       glueScore: Schema.String,
       structuralImpact: Schema.String,
       snackRisk: Schema.String,
@@ -1123,12 +1119,12 @@ const ReportFilesTemporalViewSchema = Schema.Struct({
 })
 
 const ReportFilesViewResponseSchema = Schema.Struct({
-  files: Schema.Union(
+  files: Schema.Union([
     ReportFilesSizeViewSchema,
     ReportFilesAgeViewSchema,
     ReportFilesChurnViewSchema,
     ReportFilesTemporalViewSchema,
-  ),
+  ]),
 })
 
 const ReportUnitInventoryRowSchema = Schema.Struct({
@@ -1185,7 +1181,7 @@ const ReportUnitsComplexityViewSchema = Schema.Struct({
 })
 
 const ReportUnitsViewResponseSchema = Schema.Struct({
-  units: Schema.Union(ReportUnitsSizeViewSchema, ReportUnitsComplexityViewSchema),
+  units: Schema.Union([ReportUnitsSizeViewSchema, ReportUnitsComplexityViewSchema]),
 })
 
 const decodeReportsResponse = Schema.decodeUnknownSync(ReportsResponseSchema)

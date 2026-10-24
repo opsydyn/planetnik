@@ -13,19 +13,12 @@ const AUDIENCES: ReadonlyArray<{ readonly id: CodeCityAudienceId; readonly label
 
 export function CodeCityAudienceSwitch({ audience, onChange }: CodeCityAudienceSwitchProps) {
   return (
-    <div className="code-city__audience-switch" role="group" aria-label="Code City audience">
+    <fieldset className="code-city__audience-switch" aria-label="Code City audience">
       {AUDIENCES.map(({ id, label }) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={audience === id}
-          onClick={() => onChange(id)}
-        >
+        <button key={id} type="button" aria-pressed={audience === id} onClick={() => onChange(id)}>
           {label}
         </button>
       ))}
-    </div>
+    </fieldset>
   )
 }
-
-export default CodeCityAudienceSwitch

@@ -2,7 +2,7 @@ import type { GridRow } from "@planetnik/report-ui/tables/ReportDataGrid.types"
 import { formatReportDate } from "@planetnik/report-ui/utils/reportDates"
 import type { RuntimeReportLandscapeTeams } from "./runtime-client.js"
 
-export type ReportLandscapeTeamsCard = {
+type ReportLandscapeTeamsCard = {
   readonly label: string
   readonly value: string
 }

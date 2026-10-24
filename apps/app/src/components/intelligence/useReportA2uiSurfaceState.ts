@@ -1,7 +1,8 @@
-import type { A2UIActionEvent } from "@copilotkit/a2ui-renderer"
-import { Atom, useAtom } from "@effect-atom/atom-react"
+import { useAtom } from "@effect/atom-react"
+import { Atom } from "effect/reactivity"
 import { useCallback, useMemo, useState } from "react"
 import type { RuntimeReportGenUiBetaSurface } from "../../lib/runtime-client.js"
+import type { ReportA2uiAction } from "./report-a2ui-adapter.js"
 
 type ReportA2uiSurfaceResourceState = {
   readonly surfaceModel: RuntimeReportGenUiBetaSurface | null
@@ -41,7 +42,7 @@ function updateSurfaceResourceState(
 
 export function useReportA2uiSurfaceState(slug: string) {
   const [resourceStates, setResourceStates] = useAtom(reportA2uiSurfaceResourcesAtom)
-  const [lastAction, setLastAction] = useState<A2UIActionEvent | null>(null)
+  const [lastAction, setLastAction] = useState<ReportA2uiAction | null>(null)
 
   const resourceState = useMemo(
     () => resourceStates[slug] ?? createIdleReportA2uiSurfaceResourceState(),

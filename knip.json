@@ -1,9 +1,36 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
-  "tags": [
-    "-lintignore"
-  ],
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreDependencies": ["@emnapi/runtime"],
+  "tags": ["-lintignore"],
   "workspaces": {
-    ".": {}
+    ".": {
+      "bun": true,
+      "project": []
+    },
+    "apps/*": {
+      "bun": true
+    },
+    "apps/app": {
+      "bun": true,
+      "entry": ["src/pages/_sign-up.astro", "**/*{.,_}{test,spec}.{ts,tsx,js,jsx}"]
+    },
+    "apps/site": {
+      "bun": true,
+      "entry": ["scripts/**/*.{ts,tsx,js}", "public/**/*.{ts,js}", "**/*{.,_}{test,spec}.{ts,tsx,js,jsx}"],
+      "ignoreBinaries": ["ffmpeg"]
+    },
+    "apps/copilot-runtime": {
+      "bun": true,
+      "entry": ["**/*{.,_}{test,spec}.{ts,tsx,js,jsx}"]
+    },
+    "apps/runtime": {
+      "bun": true,
+      "drizzle": { "config": [] },
+      "entry": ["src/index.ts!", "drizzle.config.ts!", "src/db/schema/**/*.ts!", "**/*{.,_}{test,spec}.{ts,tsx,js,jsx}"]
+    },
+    "packages/*": {
+      "bun": true,
+      "entry": ["**/*{.,_}{test,spec}.{ts,tsx,js,jsx}"]
+    }
   }
 }

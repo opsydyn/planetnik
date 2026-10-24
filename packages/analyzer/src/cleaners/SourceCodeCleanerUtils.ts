@@ -1,56 +1,56 @@
-import { CleanedContent } from "./CleanedContent.js";
+import { CleanedContent } from "./CleanedContent.js"
 
 export class SourceCodeCleanerUtils {
-	private static readonly backspaceCharacter = String.fromCharCode(8);
+  private static readonly backspaceCharacter = String.fromCharCode(8)
 
-	static normalizeLineEnds(content: string): string {
-		return content
-			.replace(/\r\n/g, "\n")
-			.replace(/\r/g, "\n")
-			.replace(/\t/g, "    ")
-			.replace(/\f/g, "")
-			.replaceAll(SourceCodeCleanerUtils.backspaceCharacter, "");
-	}
+  static normalizeLineEnds(content: string): string {
+    return content
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .replace(/\t/g, "    ")
+      .replace(/\f/g, "")
+      .replaceAll(SourceCodeCleanerUtils.backspaceCharacter, "")
+  }
 
-	static cleanEmptyLines(content: string): string {
-		return content
-			.split("\n")
-			.filter((line) => line.trim().length > 0)
-			.join("\n");
-	}
+  static cleanEmptyLines(content: string): string {
+    return content
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .join("\n")
+  }
 
-	static cleanEmptyLinesWithLineIndexes(content: string): CleanedContent {
-		const lines = content.split("\n");
-		const cleanedLines: string[] = [];
-		const indexes: number[] = [];
+  static cleanEmptyLinesWithLineIndexes(content: string): CleanedContent {
+    const lines = content.split("\n")
+    const cleanedLines: string[] = []
+    const indexes: number[] = []
 
-		for (let i = 0; i < lines.length; i++) {
-			if (lines[i]!.trim().length > 0) {
-				cleanedLines.push(lines[i]!);
-				indexes.push(i);
-			}
-		}
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i]!.trim().length > 0) {
+        cleanedLines.push(lines[i]!)
+        indexes.push(i)
+      }
+    }
 
-		return new CleanedContent(cleanedLines.join("\n"), indexes);
-	}
+    return new CleanedContent(cleanedLines.join("\n"), indexes)
+  }
 
-	static trimLines(content: string): string {
-		return content
-			.split("\n")
-			.map((line) => line.trim().replace(/\s+/g, " "))
-			.join("\n");
-	}
+  static trimLines(content: string): string {
+    return content
+      .split("\n")
+      .map((line) => line.trim().replace(/\s+/g, " "))
+      .join("\n")
+  }
 
-	static splitInLines(content: string): string[] {
-		return content.split("\n");
-	}
+  static splitInLines(content: string): string[] {
+    return content.split("\n")
+  }
 
-	static emptyLinesMatchingPattern(pattern: string, content: string): string {
-		try {
-			const re = new RegExp(pattern, "gm");
-			return content.replace(re, "");
-		} catch {
-			return content;
-		}
-	}
+  static emptyLinesMatchingPattern(pattern: string, content: string): string {
+    try {
+      const re = new RegExp(pattern, "gm")
+      return content.replace(re, "")
+    } catch {
+      return content
+    }
+  }
 }

@@ -1,4 +1,4 @@
 export class GroupingRule {
-	name: string = "";
-	pattern: string = "";
+  name: string = ""
+  pattern: string = ""
 }

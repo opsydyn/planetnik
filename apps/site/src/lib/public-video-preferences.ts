@@ -1,6 +1,6 @@
-import { Atom } from "@effect-atom/atom-react"
 import { BrowserKeyValueStore } from "@effect/platform-browser"
 import { Schema } from "effect"
+import { Atom } from "effect/reactivity"
 
 export const PUBLIC_VIDEO_PAUSED_KEY = "planetnik.publicVideoPaused"
 

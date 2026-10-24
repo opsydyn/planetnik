@@ -42,11 +42,3 @@ export function maxOf(values: Iterable<number>, seed: number = Number.NEGATIVE_I
   }
   return result
 }
-
-export function minOf(values: Iterable<number>, seed: number = Number.POSITIVE_INFINITY): number {
-  let result = seed
-  for (const value of values) {
-    if (value < result) result = value
-  }
-  return result
-}

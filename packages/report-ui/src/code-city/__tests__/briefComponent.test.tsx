@@ -4,11 +4,7 @@ import {
   CodeCityArchitectureBrief,
   type CodeCityArchitectureBrief as CodeCityArchitectureBriefModel,
 } from "../CodeCityArchitectureBrief.js"
-import {
-  beginCodeCityBriefCopy,
-  resetCodeCityBriefCopy,
-  settleCodeCityBriefCopy,
-} from "../CodeCityView.js"
+import { beginCodeCityBriefCopy, resetCodeCityBriefCopy, settleCodeCityBriefCopy } from "../CodeCityView.js"
 
 type BriefElement = ReactElement<{
   readonly children?: unknown
@@ -47,9 +43,7 @@ describe("CodeCityArchitectureBrief", () => {
     })
     const elements = elementsIn(rendered)
     const copyButton = elements.find((child) => child.type === "button")
-    const evidenceLink = elements.find(
-      (child) => child.type === "a" && child.props.href === "/components#app",
-    )
+    const evidenceLink = elements.find((child) => child.type === "a" && child.props.href === "/components#app")
 
     expect(rendered.props["aria-label"]).toBe("Architecture brief")
     expect(copyButton?.props.children).toBe("Copy brief")
@@ -68,7 +62,7 @@ describe("CodeCityArchitectureBrief", () => {
       onCopy: () => {},
     })
 
-    expect(elementsIn(rendered).map((child) => child.props.children).flat()).not.toContain(
+    expect(elementsIn(rendered).flatMap((child) => child.props.children)).not.toContain(
       "Copy failed. Select the brief text to copy it manually.",
     )
   })
@@ -80,7 +74,7 @@ describe("CodeCityArchitectureBrief", () => {
       onCopy: () => {},
     })
 
-    expect(elementsIn(rendered).map((child) => child.props.children).flat()).toContain(
+    expect(elementsIn(rendered).flatMap((child) => child.props.children)).toContain(
       "Copy failed. Select the brief text to copy it manually.",
     )
   })
@@ -88,11 +82,7 @@ describe("CodeCityArchitectureBrief", () => {
   test("ignores a late copy completion after the brief changes", () => {
     const firstCopy = beginCodeCityBriefCopy("brief:onboarding")
     const changedBrief = resetCodeCityBriefCopy("brief:architecture-review")
-    const lateCompletion = settleCodeCityBriefCopy(
-      changedBrief,
-      firstCopy.briefIdentity,
-      "success",
-    )
+    const lateCompletion = settleCodeCityBriefCopy(changedBrief, firstCopy.briefIdentity, "success")
 
     expect(lateCompletion).toEqual({
       briefIdentity: "brief:architecture-review",

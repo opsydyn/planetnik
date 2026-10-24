@@ -4,6 +4,15 @@
 
 Accepted
 
+## Package migration note — 2026-10-24
+
+The approved Effect 4 dependency upgrade replaces `@effect-atom/atom-react` with
+the matching `@effect/atom-react` package. Core `Atom` and `AtomRegistry` now come
+from `effect/reactivity`; React hooks and registry providers remain framework
+bindings. The persisted-state, server-value and topology derivation contracts
+are unchanged and covered by their existing regression tests. The initial trial
+decision and its scope below remain historical context.
+
 ## Context
 
 `apps/site` currently manages interactive state with local React hooks only. That is fine for isolated components, but it does not yet tell us whether an Effect-native state model will improve the frontend as the Astro UI grows.

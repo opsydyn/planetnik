@@ -1,11 +1,12 @@
-import { type A2UIActionEvent, A2UIViewer } from "@copilotkit/a2ui-renderer"
+import type { A2UIClientEventMessage } from "@copilotkit/a2ui-renderer"
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import "../intelligence-beta/GenUiBetaBoard.css"
-import { getRuntimeReportGenUiBetaSurface, type RuntimeReportGenUiBetaSurface } from "../../lib/runtime-client.js"
+import { getRuntimeReportGenUiBetaSurface } from "../../lib/runtime-client.js"
 import { navigateToHostedIntelligencePage } from "./navigation.js"
-import { useReportA2uiSurfaceState } from "./useReportA2uiSurfaceState"
+import { ReportA2uiRenderer } from "./ReportA2uiRenderer.js"
+import { normalizeReportA2uiAction, type ReportA2uiAction } from "./report-a2ui-adapter.js"
+import { useReportA2uiSurfaceState } from "./useReportA2uiSurfaceState.js"
 
-export type ReportA2uiSurfaceContract = RuntimeReportGenUiBetaSurface
 export interface StagedFollowUpAction {
   readonly question: string
   readonly sensitivity: number | null
@@ -60,8 +61,8 @@ function asBoolean(value: unknown): boolean | null {
   return null
 }
 
-function parseStagedFollowUpAction(action: A2UIActionEvent | null): StagedFollowUpAction | null {
-  if (!action || action.actionName !== "stage_followup") {
+function parseStagedFollowUpAction(action: ReportA2uiAction | null): StagedFollowUpAction | null {
+  if (action?.actionName !== "stage_followup") {
     return null
   }
 
@@ -148,7 +149,9 @@ export default function ReportA2uiSurface({
   )
 
   const handleAction = useCallback(
-    (action: A2UIActionEvent) => {
+    (message: A2UIClientEventMessage) => {
+      const action = normalizeReportA2uiAction(message)
+      if (!action) return
       setLastAction(action)
       setFollowUpStatus("idle")
       setFollowUpError(null)
@@ -206,16 +209,7 @@ export default function ReportA2uiSurface({
 
       <div className="gen-ui-beta-a2ui-stack">
         {surfaceModel ? (
-          <A2UIViewer
-            root={surfaceModel.root}
-            components={[...surfaceModel.components]}
-            data={surfaceModel.data}
-            onAction={handleAction}
-            styles={{
-              font: "var(--font-sans, Inter, system-ui, sans-serif)",
-            }}
-            className="gen-ui-beta-a2ui-viewer"
-          />
+          <ReportA2uiRenderer surface={surfaceModel} surfaceId={`report-${slug}`} onAction={handleAction} />
         ) : loadError ? (
           <div className="gen-ui-beta-empty">
             Unable to load the runtime investigation surface right now. <strong>{loadError}</strong>

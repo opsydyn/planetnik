@@ -1,5 +1,5 @@
 import dagre from "@dagrejs/dagre"
-import { RegistryProvider, useAtom, useAtomValue } from "@effect-atom/atom-react"
+import { RegistryProvider, useAtom, useAtomValue } from "@effect/atom-react"
 import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesState } from "@xyflow/react"
 import { maxOf } from "../lib/arrayMath"
 import "@xyflow/react/dist/style.css"

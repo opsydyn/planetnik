@@ -159,10 +159,38 @@ const audienceEmphasisScene = (): CodeCityScene => ({
     },
   ],
   edges: [
-    { id: "edge:smallest", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 1 },
-    { id: "edge:second", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 8 },
-    { id: "edge:third", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 3 },
-    { id: "edge:largest", sourceId: "district:app", targetId: "district:shared", renderable: true, points: [], weight: 13 },
+    {
+      id: "edge:smallest",
+      sourceId: "district:app",
+      targetId: "district:shared",
+      renderable: true,
+      points: [],
+      weight: 1,
+    },
+    {
+      id: "edge:second",
+      sourceId: "district:app",
+      targetId: "district:shared",
+      renderable: true,
+      points: [],
+      weight: 8,
+    },
+    {
+      id: "edge:third",
+      sourceId: "district:app",
+      targetId: "district:shared",
+      renderable: true,
+      points: [],
+      weight: 3,
+    },
+    {
+      id: "edge:largest",
+      sourceId: "district:app",
+      targetId: "district:shared",
+      renderable: true,
+      points: [],
+      weight: 13,
+    },
   ],
   bounds: { width: 20, depth: 8, height: 4 },
 })
@@ -278,7 +306,6 @@ describe("resolveCodeCityRouteSelectionId", () => {
 })
 
 describe("Code City renderer selection contracts", () => {
-
   test("consequential emphasis adds the highest weighted routes but stays bounded", () => {
     const ids = resolveCodeCityHighlightedRouteIds(audienceEmphasisScene(), emptySelection, "consequential")
 
@@ -296,10 +323,7 @@ describe("Code City renderer selection contracts", () => {
       })),
     }
 
-    expect(resolveCodeCityHighlightedRouteIds(scene, emptySelection, "consequential")).toEqual([
-      "edge:Z",
-      "edge:a",
-    ])
+    expect(resolveCodeCityHighlightedRouteIds(scene, emptySelection, "consequential")).toEqual(["edge:Z", "edge:a"])
   })
 
   test("quiet emphasis keeps routes hidden until a selection exists", () => {

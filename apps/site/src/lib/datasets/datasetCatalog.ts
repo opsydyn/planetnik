@@ -26,7 +26,7 @@ export type DatasetCatalogSeed = {
   availability?: "ready" | "partial" | "planned"
 }
 
-export type DatasetCatalogDiagnostic = {
+type DatasetCatalogDiagnostic = {
   datasetId: string
   severity: "warning" | "error"
   reason: string

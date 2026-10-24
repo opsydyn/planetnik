@@ -2,9 +2,9 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { cors } from "@elysiajs/cors"
 import { openapi } from "@elysiajs/openapi"
-import { JSONSchema } from "effect"
 import { Elysia } from "elysia"
 import { appConfig } from "./config.js"
+import { toOpenApiJsonSchema } from "./lib/openapi-schema.js"
 import { authRoutes } from "./routes/auth/index.js"
 import { copilotRoutes } from "./routes/copilot/index.js"
 import { healthRoutes } from "./routes/health/index.js"
@@ -65,7 +65,7 @@ export async function createApp() {
           },
         },
         mapJsonSchema: {
-          effect: JSONSchema.make,
+          effect: toOpenApiJsonSchema,
         },
       }),
     )

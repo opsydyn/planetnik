@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.10/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "assist": {
     "actions": {
       "source": {
@@ -10,7 +10,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "complexity": {
         "noStaticOnlyClass": "off"
       },
@@ -35,10 +35,12 @@
   "files": {
     "includes": [
       "biome.json",
+      "knip.json",
       "package.json",
       "tsconfig.base.json",
       "packages/**/*.json",
       "packages/**/*.ts",
+      "packages/**/*.tsx",
       "apps/**/*.json",
       "apps/**/*.ts",
       "apps/**/*.tsx",
@@ -49,9 +51,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "apps/site/src/components/charts/**/*.tsx"
-      ],
+      "includes": ["apps/site/src/components/charts/**/*.tsx"],
       "linter": {
         "rules": {
           "a11y": {
@@ -61,9 +61,7 @@
       }
     },
     {
-      "includes": [
-        "apps/site/src/components/coupling/**/*.tsx"
-      ],
+      "includes": ["apps/site/src/components/coupling/**/*.tsx"],
       "linter": {
         "rules": {
           "a11y": {
@@ -73,9 +71,7 @@
       }
     },
     {
-      "includes": [
-        "apps/site/src/components/charts/HorizontalBarChart.tsx"
-      ],
+      "includes": ["apps/site/src/components/charts/HorizontalBarChart.tsx"],
       "linter": {
         "rules": {
           "security": {

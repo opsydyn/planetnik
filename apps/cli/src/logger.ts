@@ -1,4 +1,4 @@
-import { Effect, Layer, Logger, LogLevel } from "effect";
+import { Effect, Layer, Logger, type LogLevel, References } from "effect"
 
 /**
  * Planetnik CLI logger — structured log output with phase and context annotations.
@@ -11,50 +11,47 @@ import { Effect, Layer, Logger, LogLevel } from "effect";
  */
 
 const LOG_LEVEL_MAP: Record<string, LogLevel.LogLevel> = {
-	DEBUG: LogLevel.Debug,
-	INFO: LogLevel.Info,
-	WARNING: LogLevel.Warning,
-	ERROR: LogLevel.Error,
-	NONE: LogLevel.None,
-};
+  DEBUG: "Debug",
+  INFO: "Info",
+  WARNING: "Warn",
+  ERROR: "Error",
+  NONE: "None",
+}
 
 function resolveLogLevel(): LogLevel.LogLevel {
-	const env =
-		(typeof process !== "undefined" && process.env.PLANETNIK_LOG_LEVEL) || "";
-	return LOG_LEVEL_MAP[env.toUpperCase()] ?? LogLevel.Info;
+  const env = (typeof process !== "undefined" && process.env.PLANETNIK_LOG_LEVEL) || ""
+  return LOG_LEVEL_MAP[env.toUpperCase()] ?? "Info"
 }
 
 const LOG_OUTPUT: Record<string, "error" | "warn" | "debug"> = {
-	Error: "error",
-	Fatal: "error",
-	Warning: "warn",
-	Debug: "debug",
-};
+  Error: "error",
+  Fatal: "error",
+  Warn: "warn",
+  Debug: "debug",
+}
 
-const planetnikLogger = Logger.make(
-	({ logLevel, message, annotations, spans }) => {
-		const prefix = logLevel._tag === "Info" ? "" : `[${logLevel.label}] `;
-		const msg = `${prefix}${message}`;
+const planetnikLogger = Logger.make(({ logLevel, message, fiber, date }) => {
+  const prefix = logLevel === "Info" ? "" : `[${logLevel.toUpperCase()}] `
+  const msg = `${prefix}${message}`
 
-		const parts: string[] = [];
-		for (const [key, value] of annotations) {
-			parts.push(`${key}=${value}`);
-		}
-		for (const span of spans) {
-			parts.push(`${span.label}=${Date.now() - span.startTime}ms`);
-		}
+  const parts: string[] = []
+  for (const [key, value] of Object.entries(fiber.getRef(References.CurrentLogAnnotations))) {
+    parts.push(`${key}=${value}`)
+  }
+  for (const [label, startTime] of fiber.getRef(References.CurrentLogSpans)) {
+    parts.push(`${label}=${date.getTime() - startTime}ms`)
+  }
 
-		const suffix = parts.length > 0 ? ` (${parts.join(", ")})` : "";
-		const method = LOG_OUTPUT[logLevel._tag] ?? "log";
-		console[method](`${msg}${suffix}`);
-	},
-);
+  const suffix = parts.length > 0 ? ` (${parts.join(", ")})` : ""
+  const method = LOG_OUTPUT[logLevel] ?? "log"
+  console[method](`${msg}${suffix}`)
+})
 
 /** Logger layer for the Planetnik CLI. Respects PLANETNIK_LOG_LEVEL env var. */
 export const PlanetnikLoggerLayer: Layer.Layer<never> = Layer.merge(
-	Logger.replace(Logger.defaultLogger, planetnikLogger),
-	Logger.minimumLogLevel(resolveLogLevel()),
-);
+  Logger.layer([planetnikLogger, Logger.tracerLogger]),
+  Layer.succeed(References.MinimumLogLevel, resolveLogLevel()),
+)
 
 /** Annotate an effect with a named phase for structured log context. */
-export const withPhase = (phase: string) => Effect.annotateLogs("phase", phase);
+export const withPhase = (phase: string) => Effect.annotateLogs("phase", phase)

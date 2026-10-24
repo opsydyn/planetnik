@@ -215,7 +215,9 @@ export function adaptPortfolioActionSourceRecord(
     }
   }
   if (domain === "security" && input.mode !== "single_repository") return { tag: "skipped" }
-  return isCandidate(domain, record) ? { tag: "signal", signal: makeSignal(input, domain, record, extraEvidence) } : { tag: "skipped" }
+  return isCandidate(domain, record)
+    ? { tag: "signal", signal: makeSignal(input, domain, record, extraEvidence) }
+    : { tag: "skipped" }
 }
 
 const isCandidate = (
@@ -317,7 +319,12 @@ const adaptCurrentDomain = (
   }
   const signals: PortfolioActionSignal[] = []
   for (const record of domainInput.records) {
-    const adaptation = adaptPortfolioActionSourceRecord(input, domain, record, supportingEvidence.get(record.targetId) ?? [])
+    const adaptation = adaptPortfolioActionSourceRecord(
+      input,
+      domain,
+      record,
+      supportingEvidence.get(record.targetId) ?? [],
+    )
     if (adaptation.tag === "signal") signals.push(adaptation.signal)
   }
   return { signals, coverage: coverage("present", signals.length, domainInput.message), diagnostics: [] }

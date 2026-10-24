@@ -10,10 +10,12 @@ TypeScript port of [Sokrates](https://github.com/zeljkoobrenovic/sokrates) — a
 
 - **Runtime:** Bun
 - **Language:** TypeScript (strict mode, `exactOptionalPropertyTypes`)
-- **Core framework:** Effect (services, layers, error handling, concurrency)
-- **CLI:** `@effect/cli`
-- **Schema/validation:** `@effect/schema` (replaces Jackson JSON mapping)
-- **File I/O:** `@effect/platform` (FileSystem, Path)
+- **Core framework:** Effect 4 (services, layers, error handling, concurrency)
+- **CLI:** `effect/cli`
+- **Schema/validation:** `effect/Schema` (replaces Jackson JSON mapping)
+- **File I/O:** `effect` FileSystem/Path with `@effect/platform-node` services
+- **Frontend state:** `effect/reactivity` with `@effect/atom-react` bindings
+- **Website:** Astro 7.4; TypeScript 6 remains required by the current Astro checker
 - **Git:** `simple-git`
 - **Linting/formatting:** Biome (2-space indent, double quotes, no semicolons, 120 line width)
 - **Testing:** `bun:test`
@@ -47,7 +49,7 @@ planetnik/
 ```bash
 bun install          # Install all dependencies
 bun run build        # Build all packages
-bun test             # Run all tests (currently 439 tests, 1038 assertions)
+bun test             # Run all tests
 bun run typecheck    # TypeScript type checking
 bun run lint         # Biome lint check
 bun run lint:fix     # Biome auto-fix

@@ -4,7 +4,7 @@ import { formatReportDate } from "@planetnik/report-ui/utils/reportDates"
 import { getHostedReportContributorRouteParam } from "./hosted-routes.js"
 import type { RuntimeReportContributor } from "./runtime-client.js"
 
-export type ReportLandscapeContributorsCard = {
+type ReportLandscapeContributorsCard = {
   readonly label: string
   readonly value: string
 }

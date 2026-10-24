@@ -44,6 +44,12 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Lint
+        run: bun run lint
+
+      - name: Dead code and dependencies
+        run: bun run knip
+
       - name: Test
         run: bun test --reporter=junit --reporter-outfile=test-results.xml
 

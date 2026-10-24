@@ -23,7 +23,7 @@ import type { CodeCitySelectionResult } from "./selection.js"
 import { type CodeCityTextureAtlas, createCodeCityTextureAtlas } from "./textureAtlas.js"
 import type { CodeCityMaterialFamily, CodeCityTexturePattern } from "./visualTokens.js"
 
-export type CodeCityLensVisuals = Readonly<Record<string, CodeCityLensVisual>>
+type CodeCityLensVisuals = Readonly<Record<string, CodeCityLensVisual>>
 
 export type CodeCityKitRenderer = {
   readonly update: (input: {

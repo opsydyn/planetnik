@@ -31,7 +31,8 @@ const repositoryRoot = resolve(cliRoot, "../..")
 const smokeRoot = mkdtempSync(join(tmpdir(), "planetnik-compile-smoke-"))
 const executable = join(smokeRoot, "planetnik")
 const sourceRoot = join(smokeRoot, "source")
-const configPath = join(smokeRoot, "config.json")
+// ScopeCreator emits srcRoot=".." for configs inside the source's config directory.
+const configPath = join(sourceRoot, "_sokrates", "config.json")
 const reportsRoot = join(smokeRoot, "reports")
 
 try {

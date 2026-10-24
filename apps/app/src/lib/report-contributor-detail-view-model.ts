@@ -1,18 +1,18 @@
 import { formatReportDate } from "@planetnik/report-ui/utils/reportDates"
 import type { RuntimeReportContributorDetail } from "./runtime-client.js"
 
-export type ReportContributorDetailCard = {
+type ReportContributorDetailCard = {
   readonly label: string
   readonly value: string
   readonly detail: string | null
 }
 
-export type ReportContributorDetailFact = {
+type ReportContributorDetailFact = {
   readonly label: string
   readonly value: string
 }
 
-export type ReportContributorDetailListItem = {
+type ReportContributorDetailListItem = {
   readonly label: string
   readonly value: string
 }

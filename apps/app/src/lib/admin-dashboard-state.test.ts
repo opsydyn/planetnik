@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Registry } from "@effect-atom/atom-react"
+import { AtomRegistry as Registry } from "effect/reactivity"
 import {
   ADMIN_DASHBOARD_TABLE_STATE_KEY,
   adminDashboardTableStateAtom,

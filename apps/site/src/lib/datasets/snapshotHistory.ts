@@ -32,7 +32,7 @@ export type DatasetSnapshotHistoryEntry = {
   readonly snapshot: CanonicalEntitySnapshotInput
 }
 
-export type DatasetSnapshotHistory = {
+type DatasetSnapshotHistory = {
   readonly manifestPath: string
   readonly entries: readonly DatasetSnapshotHistoryEntry[]
   readonly comparison: SnapshotComparison

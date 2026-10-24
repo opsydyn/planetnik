@@ -1,4 +1,4 @@
-export const ACTION_QUEUE_DEFAULT_PARTITION_COUNT = 64
+const ACTION_QUEUE_DEFAULT_PARTITION_COUNT = 64
 
 export type ActionQueueMaterializationMode = "bounded" | "complete"
 

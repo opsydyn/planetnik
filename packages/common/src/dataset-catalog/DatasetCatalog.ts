@@ -1,10 +1,10 @@
-import { Schema } from "@effect/schema"
+import { Schema } from "effect"
 
 const safeDatasetIdPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u
 const uuidV4Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 
-const DatasetModeSchema = Schema.Literal("single_repository", "landscape")
-const DatasetAvailabilitySchema = Schema.Literal("ready", "partial", "planned", "invalid")
+const DatasetModeSchema = Schema.Literals(["single_repository", "landscape"])
+const DatasetAvailabilitySchema = Schema.Literals(["ready", "partial", "planned", "invalid"])
 
 export type DatasetMode = typeof DatasetModeSchema.Type
 export type DatasetAvailability = typeof DatasetAvailabilitySchema.Type

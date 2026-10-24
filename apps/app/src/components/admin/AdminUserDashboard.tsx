@@ -1,13 +1,19 @@
-import { useAtom } from "@effect-atom/atom-react"
+import { useAtom } from "@effect/atom-react"
 import {
   type ColumnDef,
+  columnVisibilityFeature,
+  createPaginatedRowModel,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type PaginationState,
+  rowPaginationFeature,
+  rowSortingFeature,
   type SortingState,
-  useReactTable,
+  sortFn_alphanumeric,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table"
 import { type ComponentProps, useCallback, useEffect, useMemo, useRef } from "react"
 import {
@@ -41,6 +47,19 @@ import {
   createDefaultAdminDashboardTableState,
 } from "../../lib/admin-dashboard-state.js"
 import { authClient } from "../../lib/auth-client.js"
+
+const features = tableFeatures({
+  columnVisibilityFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
+})
 
 type Props = {
   currentUserId: string
@@ -714,7 +733,7 @@ export default function AdminUserDashboard({ currentUserId, currentUserRole }: P
     [currentUserId, pushToast, setFeedback],
   )
 
-  const columns = useMemo<ColumnDef<AdminUserRecord>[]>(
+  const columns = useMemo<ColumnDef<typeof features, AdminUserRecord>[]>(
     () => [
       {
         id: "name",
@@ -839,7 +858,8 @@ export default function AdminUserDashboard({ currentUserId, currentUserRole }: P
     [beginEdit, beginPasswordChange, currentUserId, deleteUser, feedback.saving, impersonateUser, toggleUserBan],
   )
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: filteredUsers,
     columns,
     state: {
@@ -851,9 +871,6 @@ export default function AdminUserDashboard({ currentUserId, currentUserRole }: P
     },
     onSortingChange: handleSortingChange,
     onPaginationChange: handlePaginationChange,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
   })
 
   const visibleRowCount = table.getRowModel().rows.length

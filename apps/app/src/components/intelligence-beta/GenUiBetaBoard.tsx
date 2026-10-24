@@ -8,13 +8,13 @@ import "./GenUiBetaBoard.css"
 
 export type GenUiBetaTone = "calm" | "watch" | "alert"
 
-export interface GenUiBetaNavCard {
+interface GenUiBetaNavCard {
   readonly label: string
   readonly href: string
   readonly description: string
 }
 
-export interface GenUiBetaTableRow {
+interface GenUiBetaTableRow {
   readonly name: string
   readonly context: string
   readonly signal: string
@@ -75,8 +75,8 @@ export default function GenUiBetaBoard({
           <p className="gen-ui-beta-eyebrow">Dedicated Gen UI beta</p>
           <h2 className="gen-ui-beta-title">Planetnik-specific component vocabulary trail</h2>
           <p className="gen-ui-beta-lede">
-            This page is an isolated playground for pressure summaries, hotspot rankings, severity breakdowns,
-            impact opportunities, suggested navigation cards, and report-shaped charts.
+            This page is an isolated playground for pressure summaries, hotspot rankings, severity breakdowns, impact
+            opportunities, suggested navigation cards, and report-shaped charts.
           </p>
         </div>
         <div className="gen-ui-beta-hero-meta">
@@ -175,7 +175,9 @@ export default function GenUiBetaBoard({
         <article className="gen-ui-beta-nav-card">
           <div className="gen-ui-beta-section-head">
             <h3>Suggested navigation cards</h3>
-            <p>These are the sort of follow-up actions the agent should offer instead of leaving the user at a dead end.</p>
+            <p>
+              These are the sort of follow-up actions the agent should offer instead of leaving the user at a dead end.
+            </p>
           </div>
           <div className="gen-ui-beta-nav-grid">
             {navigationCards.map((item) => (

@@ -1,4 +1,4 @@
-import { useAtom } from "@effect-atom/atom-react"
+import { useAtom } from "@effect/atom-react"
 import { PauseIcon } from "@phosphor-icons/react/dist/csr/Pause"
 import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play"
 import { useEffect } from "react"

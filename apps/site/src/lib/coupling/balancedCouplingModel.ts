@@ -2,27 +2,27 @@ import { maxOf } from "../arrayMath"
 
 type CouplingDimensionId = "staticCoupling" | "temporalCoupling" | "coordinationCoupling" | "knowledgeRisk"
 
-export interface BalancedCouplingInputFile {
+interface BalancedCouplingInputFile {
   relativePath: string
   linesOfCode: number
   components: string[]
   contributors?: string[]
 }
 
-export interface BalancedCouplingInputDependency {
+interface BalancedCouplingInputDependency {
   decompositionKey: string
   fromComponent: string
   toComponent: string
   count: number
 }
 
-export interface BalancedCouplingInputTemporalDependency {
+interface BalancedCouplingInputTemporalDependency {
   file1: string
   file2: string
   sameCommits: number
 }
 
-export interface BalancedCouplingInputHotspot {
+interface BalancedCouplingInputHotspot {
   kind: "file" | "unit" | "component"
   name: string
   parent: string
@@ -60,7 +60,7 @@ export interface BalancedCouplingSnapshot {
   explainability: string[]
 }
 
-export interface BalancedCouplingAggregate {
+interface BalancedCouplingAggregate {
   totalComponents: number
   averageLoad: number
   averageBalance: number

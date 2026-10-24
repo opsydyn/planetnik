@@ -28,7 +28,7 @@ import {
 import { readDatasetCurrentSnapshot } from "./snapshotHistory.js"
 import { streamJsonArrayObjects } from "./streamJsonArray.js"
 
-export type ActionQueueStreamingSourceMetadata = {
+type ActionQueueStreamingSourceMetadata = {
   readonly asOf: string
   readonly coverage: PortfolioActionQueueCoverage
   readonly filterOptions: ActionQueueArtifactFilterOptions

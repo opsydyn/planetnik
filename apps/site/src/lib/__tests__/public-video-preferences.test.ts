@@ -1,5 +1,5 @@
-import { Registry } from "@effect-atom/atom-react"
 import { describe, expect, test } from "bun:test"
+import { AtomRegistry as Registry } from "effect/reactivity"
 import { PUBLIC_VIDEO_PAUSED_KEY, publicVideoPausedAtom } from "../public-video-preferences.js"
 
 class MemoryStorage implements Storage {

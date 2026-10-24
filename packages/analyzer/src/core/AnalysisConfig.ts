@@ -1,104 +1,84 @@
-import { Schema } from "@effect/schema";
-import { Thresholds } from "./Thresholds.js";
+import { Effect, Schema } from "effect"
+import { Thresholds } from "./Thresholds.js"
 
 const ThresholdsSchema = Schema.Struct({
-	low: Schema.optionalWith(Schema.Number, { default: () => 200 }),
-	medium: Schema.optionalWith(Schema.Number, { default: () => 500 }),
-	high: Schema.optionalWith(Schema.Number, { default: () => 1000 }),
-	veryHigh: Schema.optionalWith(Schema.Number, { default: () => 2000 }),
-});
+  low: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 200))),
+  medium: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 500))),
+  high: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 1000))),
+  veryHigh: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 2000))),
+})
 
 const AnalysisConfigSchema = Schema.Struct({
-	skipDuplication: Schema.optionalWith(Schema.Boolean, {
-		default: () => false,
-	}),
-	skipCorrelations: Schema.optionalWith(Schema.Boolean, {
-		default: () => false,
-	}),
-	skipDependencies: Schema.optionalWith(Schema.Boolean, {
-		default: () => false,
-	}),
-	saveSourceFiles: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-	saveCodeFragments: Schema.optionalWith(Schema.Boolean, {
-		default: () => true,
-	}),
-	maxFileSizeBytes: Schema.optionalWith(Schema.Number, {
-		default: () => 1_000_000,
-	}),
-	maxLines: Schema.optionalWith(Schema.Number, { default: () => 10_000 }),
-	maxLineLength: Schema.optionalWith(Schema.Number, { default: () => 1_000 }),
-	maxTemporalDependenciesDepthDays: Schema.optionalWith(Schema.Number, {
-		default: () => 180,
-	}),
-	locDuplicationThreshold: Schema.optionalWith(Schema.Number, {
-		default: () => 10_000_000,
-	}),
-	minDuplicationBlockLoc: Schema.optionalWith(Schema.Number, {
-		default: () => 6,
-	}),
-	maxTopListSize: Schema.optionalWith(Schema.Number, { default: () => 50 }),
-	analyzeConcernOverlaps: Schema.optionalWith(Schema.Boolean, {
-		default: () => false,
-	}),
-	customHtmlReportHeaderFragment: Schema.optionalWith(Schema.String, {
-		default: () => "",
-	}),
-	fileSizeThresholds: Schema.optionalWith(ThresholdsSchema, {
-		default: () => ({ low: 200, medium: 500, high: 1000, veryHigh: 2000 }),
-	}),
-	unitSizeThresholds: Schema.optionalWith(ThresholdsSchema, {
-		default: () => ({ low: 10, medium: 20, high: 50, veryHigh: 100 }),
-	}),
-	conditionalComplexityThresholds: Schema.optionalWith(ThresholdsSchema, {
-		default: () => ({ low: 5, medium: 10, high: 25, veryHigh: 50 }),
-	}),
-	fileAgeThresholds: Schema.optionalWith(ThresholdsSchema, {
-		default: () => ({ low: 30, medium: 90, high: 180, veryHigh: 365 }),
-	}),
-	fileUpdateFrequencyThresholds: Schema.optionalWith(ThresholdsSchema, {
-		default: () => ({ low: 5, medium: 20, high: 50, veryHigh: 100 }),
-	}),
-	fileContributorsCountThresholds: Schema.optionalWith(ThresholdsSchema, {
-		default: () => ({ low: 1, medium: 5, high: 10, veryHigh: 25 }),
-	}),
-});
+  skipDuplication: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))),
+  skipCorrelations: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))),
+  skipDependencies: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))),
+  saveSourceFiles: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => true))),
+  saveCodeFragments: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => true))),
+  maxFileSizeBytes: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 1_000_000))),
+  maxLines: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 10_000))),
+  maxLineLength: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 1_000))),
+  maxTemporalDependenciesDepthDays: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 180))),
+  locDuplicationThreshold: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 10_000_000))),
+  minDuplicationBlockLoc: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 6))),
+  maxTopListSize: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 50))),
+  analyzeConcernOverlaps: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))),
+  customHtmlReportHeaderFragment: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  fileSizeThresholds: ThresholdsSchema.pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ({ low: 200, medium: 500, high: 1000, veryHigh: 2000 }))),
+  ),
+  unitSizeThresholds: ThresholdsSchema.pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ({ low: 10, medium: 20, high: 50, veryHigh: 100 }))),
+  ),
+  conditionalComplexityThresholds: ThresholdsSchema.pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ({ low: 5, medium: 10, high: 25, veryHigh: 50 }))),
+  ),
+  fileAgeThresholds: ThresholdsSchema.pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ({ low: 30, medium: 90, high: 180, veryHigh: 365 }))),
+  ),
+  fileUpdateFrequencyThresholds: ThresholdsSchema.pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ({ low: 5, medium: 20, high: 50, veryHigh: 100 }))),
+  ),
+  fileContributorsCountThresholds: ThresholdsSchema.pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ({ low: 1, medium: 5, high: 10, veryHigh: 25 }))),
+  ),
+})
 
-export type AnalysisConfigType = typeof AnalysisConfigSchema.Type;
+export type AnalysisConfigType = typeof AnalysisConfigSchema.Type
 
 export const AnalysisConfig = {
-	schema: AnalysisConfigSchema,
+  schema: AnalysisConfigSchema,
 
-	make(input: Partial<AnalysisConfigType> = {}): AnalysisConfigType {
-		return Schema.decodeUnknownSync(AnalysisConfigSchema)(input);
-	},
+  make(input: Partial<AnalysisConfigType> = {}): AnalysisConfigType {
+    return Schema.decodeUnknownSync(AnalysisConfigSchema)(input)
+  },
 
-	getFileSizeThresholds(config: AnalysisConfigType): Thresholds {
-		const t = config.fileSizeThresholds;
-		return new Thresholds(t.low, t.medium, t.high, t.veryHigh);
-	},
+  getFileSizeThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileSizeThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
 
-	getUnitSizeThresholds(config: AnalysisConfigType): Thresholds {
-		const t = config.unitSizeThresholds;
-		return new Thresholds(t.low, t.medium, t.high, t.veryHigh);
-	},
+  getUnitSizeThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.unitSizeThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
 
-	getConditionalComplexityThresholds(config: AnalysisConfigType): Thresholds {
-		const t = config.conditionalComplexityThresholds;
-		return new Thresholds(t.low, t.medium, t.high, t.veryHigh);
-	},
+  getConditionalComplexityThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.conditionalComplexityThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
 
-	getFileAgeThresholds(config: AnalysisConfigType): Thresholds {
-		const t = config.fileAgeThresholds;
-		return new Thresholds(t.low, t.medium, t.high, t.veryHigh);
-	},
+  getFileAgeThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileAgeThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
 
-	getFileUpdateFrequencyThresholds(config: AnalysisConfigType): Thresholds {
-		const t = config.fileUpdateFrequencyThresholds;
-		return new Thresholds(t.low, t.medium, t.high, t.veryHigh);
-	},
+  getFileUpdateFrequencyThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileUpdateFrequencyThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
 
-	getFileContributorsCountThresholds(config: AnalysisConfigType): Thresholds {
-		const t = config.fileContributorsCountThresholds;
-		return new Thresholds(t.low, t.medium, t.high, t.veryHigh);
-	},
-};
+  getFileContributorsCountThresholds(config: AnalysisConfigType): Thresholds {
+    const t = config.fileContributorsCountThresholds
+    return new Thresholds(t.low, t.medium, t.high, t.veryHigh)
+  },
+}

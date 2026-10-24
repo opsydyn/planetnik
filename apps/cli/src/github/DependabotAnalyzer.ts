@@ -1,7 +1,7 @@
 import type { DependabotAlert } from "./DependabotClient.js"
 import type { VulnerabilityEnrichment } from "./VulnerabilityEnrichmentClient.js"
 
-export interface SeverityCounts {
+interface SeverityCounts {
   critical: number
   high: number
   medium: number
@@ -40,7 +40,7 @@ export interface LandscapeDependencyHealth {
   topActionableVulnerabilities: TopActionableVulnerability[]
 }
 
-export interface VulnerabilityEnrichmentSummary {
+interface VulnerabilityEnrichmentSummary {
   enrichedAt: string | null
   latestAlertOpenedAt: string | null
   latestAdvisoryPublishedAt: string | null
@@ -51,7 +51,7 @@ export interface VulnerabilityEnrichmentSummary {
   kevAvailable: boolean
 }
 
-export interface TopActionableVulnerability {
+interface TopActionableVulnerability {
   repo: string
   package: string
   ecosystem: string

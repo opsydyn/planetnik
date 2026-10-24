@@ -206,7 +206,7 @@ export function materializeActionQueueArtifacts(
         try: () => rm(temporaryDir, { recursive: true, force: true }),
         catch: (cause) => materializerError(`Unable to remove action queue staging directory '${temporaryDir}'`, cause),
       }).pipe(
-        Effect.catchAll(() => Effect.succeed(undefined)),
+        Effect.catch(() => Effect.succeed(undefined)),
         Effect.asVoid,
       ),
   )

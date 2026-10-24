@@ -11,6 +11,7 @@ import { UndirectedGraph } from "graphology"
 import { circular } from "graphology-layout"
 import forceAtlas2 from "graphology-layout-forceatlas2"
 import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "react"
+import { DEFAULT_STYLES, type SigmaOptions } from "sigma/types"
 import type { ForceGraphEdge, ForceGraphNode } from "../../lib/forceGraph"
 import "./ForceGraph.css"
 
@@ -63,71 +64,62 @@ type ForceGraphTheme = {
   accentStrong: string
 }
 
-function drawNodeHoverDarkAware(
-  context: CanvasRenderingContext2D,
-  data: {
-    x: number
-    y: number
-    size: number
-    label: string | null
-    color: string
-  },
-  settings: { labelSize: number; labelFont: string; labelWeight: string },
-) {
-  const isDark = document.documentElement.getAttribute("data-theme") === "dark"
-  const bgColor = isDark ? "#1e293b" : "#ffffff"
-  const textColor = isDark ? "#e2e8f0" : "#1e293b"
-  const shadowColor = isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.2)"
+const labelVisibility = (_attributes: unknown, { isHovered }: { isHovered: boolean }) =>
+  isHovered ? "visible" : "auto"
+const backdropVisibility = (_attributes: unknown, { isHovered }: { isHovered: boolean }) =>
+  isHovered ? "visible" : "hidden"
 
-  const { labelSize: size, labelFont: font, labelWeight: weight } = settings
-  context.font = `${weight} ${size}px ${font}`
+function createForceGraphOptions({
+  isLargeGraph,
+  isDenseGraph,
+  theme,
+  text,
+}: {
+  isLargeGraph: boolean
+  isDenseGraph: boolean
+  theme: "light" | "dark"
+  text: string
+}) {
+  const isDark = theme === "dark"
 
-  context.fillStyle = bgColor
-  context.shadowOffsetX = 0
-  context.shadowOffsetY = 2
-  context.shadowBlur = 8
-  context.shadowColor = shadowColor
-
-  const PADDING = 3
-  if (typeof data.label === "string") {
-    const textWidth = context.measureText(data.label).width
-    const boxWidth = Math.round(textWidth + 8)
-    const boxHeight = Math.round(size + 2 * PADDING)
-    const radius = Math.max(data.size, size / 2) + PADDING
-    const angleRadian = Math.asin(boxHeight / 2 / radius)
-    const xDeltaCoord = Math.sqrt(Math.abs(radius ** 2 - (boxHeight / 2) ** 2))
-
-    context.beginPath()
-    context.moveTo(data.x + xDeltaCoord, data.y + boxHeight / 2)
-    context.lineTo(data.x + radius + boxWidth, data.y + boxHeight / 2)
-    context.lineTo(data.x + radius + boxWidth, data.y - boxHeight / 2)
-    context.lineTo(data.x + xDeltaCoord, data.y - boxHeight / 2)
-    context.arc(data.x, data.y, radius, angleRadian, -angleRadian)
-    context.closePath()
-    context.fill()
-
-    context.shadowBlur = 0
-    context.fillStyle = textColor
-    context.fillText(data.label, data.x + radius + 3, data.y + size / 3)
-  } else {
-    context.beginPath()
-    context.arc(data.x, data.y, data.size + PADDING, 0, Math.PI * 2)
-    context.closePath()
-    context.fill()
-  }
-
-  // Node circle on top
-  context.shadowBlur = 0
-  context.beginPath()
-  context.arc(data.x, data.y, data.size, 0, Math.PI * 2)
-  context.closePath()
-  context.fillStyle = data.color
-  context.fill()
-  context.strokeStyle = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.2)"
-  context.lineWidth = 1.5
-  context.stroke()
+  return {
+    settings: {
+      allowInvalidContainer: true,
+      renderEdgeLabels: false,
+      enableEdgeEvents: !isLargeGraph,
+      stagePadding: 32,
+      minCameraRatio: 0.08,
+      maxCameraRatio: 4,
+      labelDensity: isDenseGraph ? 0.18 : isLargeGraph ? 0.32 : 1.1,
+      labelRenderedSizeThreshold: isDenseGraph ? 14 : isLargeGraph ? 12 : 0,
+    },
+    styles: {
+      nodes: {
+        ...DEFAULT_STYLES.nodes,
+        size: { attribute: "size" },
+        color: { attribute: "color", defaultValue: "#58A6FF" },
+        labelFont: "600 Inter, system-ui, sans-serif",
+        labelSize: isLargeGraph ? 12 : 13,
+        labelColor: text,
+        labelVisibility,
+        backdropVisibility,
+        backdropColor: isDark ? "#1e293b" : "#ffffff",
+        backdropShadowColor: isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.2)",
+        backdropShadowBlur: 8,
+        backdropPadding: 3,
+        backdropBorderColor: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.2)",
+        backdropBorderWidth: 1.5,
+      },
+      edges: {
+        ...DEFAULT_STYLES.edges,
+        color: {
+          attribute: "color",
+          defaultValue: isDark ? "rgba(167, 139, 250, 0.44)" : "rgba(67, 56, 202, 0.38)",
+        },
+      },
+    },
+  } satisfies SigmaOptions
 }
-
 function getCssVar(name: string, fallback: string) {
   if (typeof window === "undefined") return fallback
   const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -275,7 +267,7 @@ function ForceGraphScene({
         frameThree = window.requestAnimationFrame(() => {
           sigma.resize(true)
           sigma.refresh()
-          void sigma.getCamera().animatedReset({ duration: 0 })
+          void sigma.getCamera().reset({ duration: 0 })
         })
       })
     })
@@ -317,7 +309,7 @@ function ForceGraphScene({
       frame = window.requestAnimationFrame(() => {
         sigma.resize(true)
         sigma.refresh()
-        void sigma.getCamera().animatedReset({ duration: 0 })
+        void sigma.getCamera().reset({ duration: 0 })
       })
     })
 
@@ -469,23 +461,12 @@ export default function ForceGraphClient({
         <SigmaContainer
           className="force-graph-sigma"
           style={{ width: "100%", height: "100%" }}
-          settings={{
-            allowInvalidContainer: true,
-            renderEdgeLabels: false,
-            enableEdgeEvents: !isLargeGraph,
-            stagePadding: 32,
-            minCameraRatio: 0.08,
-            maxCameraRatio: 4,
-            labelDensity: isDenseGraph ? 0.18 : isLargeGraph ? 0.32 : 1.1,
-            labelRenderedSizeThreshold: isDenseGraph ? 14 : isLargeGraph ? 12 : 0,
-            labelFont: "var(--font-sans, Inter, system-ui, sans-serif)",
-            labelSize: isLargeGraph ? 12 : 13,
-            labelWeight: "600",
-            labelColor: { color: theme.text },
-            defaultEdgeColor: theme.theme === "dark" ? "rgba(167, 139, 250, 0.44)" : "rgba(67, 56, 202, 0.38)",
-            defaultNodeColor: "#58A6FF",
-            defaultDrawNodeHover: drawNodeHoverDarkAware as never,
-          }}
+          options={createForceGraphOptions({
+            isLargeGraph,
+            isDenseGraph,
+            theme: theme.theme,
+            text: theme.text,
+          })}
         >
           <ForceGraphScene graph={graph} onNodeClick={onNodeClick} onHoverChange={setHovered} />
         </SigmaContainer>

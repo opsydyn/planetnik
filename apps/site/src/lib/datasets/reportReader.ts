@@ -24,9 +24,9 @@ export function normaliseEvidencePath(value: string | undefined): string | null 
   return normalised
 }
 
-export type DatasetReportSummary = Record<string, unknown>
+type DatasetReportSummary = Record<string, unknown>
 
-export type DatasetMetricRecord = {
+type DatasetMetricRecord = {
   readonly id?: string
   readonly value?: number
 }

@@ -21,8 +21,7 @@ export type CodeCityArchitectureBrief = {
   readonly nextAction: string
 }
 
-const compareText = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0
+const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0)
 
 const evidenceLabel = (reference: CodeCityEvidenceRef): string =>
   `${reference.kind.charAt(0).toUpperCase()}${reference.kind.slice(1)}: ${reference.id}`
@@ -31,24 +30,25 @@ const largestContext = (model: CodeCityModel): CodeCityDistrict | null =>
   [...model.districts]
     .filter((district) => Number.isFinite(district.metrics.footprint.loc))
     .sort(
-      (left, right) =>
-        right.metrics.footprint.loc - left.metrics.footprint.loc || compareText(left.id, right.id),
+      (left, right) => right.metrics.footprint.loc - left.metrics.footprint.loc || compareText(left.id, right.id),
     )[0] ?? null
 
 const strongestBoundary = (model: CodeCityModel): CodeCityDependencyEdge | null => {
   const districtIds = new Set(model.districts.map((district) => district.id))
-  return [...model.edges]
-    .filter(
-      (edge) =>
-        edge.resolution === "both" &&
-        Number.isFinite(edge.count) &&
-        edge.count > 0 &&
-        edge.sourceDistrictId !== null &&
-        edge.targetDistrictId !== null &&
-        districtIds.has(edge.sourceDistrictId) &&
-        districtIds.has(edge.targetDistrictId),
-    )
-    .sort((left, right) => right.count - left.count || compareText(left.id, right.id))[0] ?? null
+  return (
+    [...model.edges]
+      .filter(
+        (edge) =>
+          edge.resolution === "both" &&
+          Number.isFinite(edge.count) &&
+          edge.count > 0 &&
+          edge.sourceDistrictId !== null &&
+          edge.targetDistrictId !== null &&
+          districtIds.has(edge.sourceDistrictId) &&
+          districtIds.has(edge.targetDistrictId),
+      )
+      .sort((left, right) => right.count - left.count || compareText(left.id, right.id))[0] ?? null
+  )
 }
 
 const normaliseBasePath = (basePath: string): string => {
@@ -56,7 +56,10 @@ const normaliseBasePath = (basePath: string): string => {
   return href === null || href === "/" ? "" : href.replace(/\/$/, "")
 }
 
-const evidenceFor = (references: readonly CodeCityEvidenceRef[], basePath: string): readonly CodeCityBriefEvidence[] => {
+const evidenceFor = (
+  references: readonly CodeCityEvidenceRef[],
+  basePath: string,
+): readonly CodeCityBriefEvidence[] => {
   const unique = new Map<string, CodeCityBriefEvidence>()
   for (const reference of references) {
     const href = resolveCodeCityEvidenceHref(basePath, reference.route)
@@ -67,18 +70,16 @@ const evidenceFor = (references: readonly CodeCityEvidenceRef[], basePath: strin
   )
 }
 
-const canonicalStoryEvidence = (
-  story: CodeCityStory,
-  basePath: string,
-): readonly CodeCityBriefEvidence[] => {
+const canonicalStoryEvidence = (story: CodeCityStory, basePath: string): readonly CodeCityBriefEvidence[] => {
   const normalisedBasePath = normaliseBasePath(basePath)
   const evidence = new Map<string, CodeCityBriefEvidence>()
   for (const step of story.steps) {
     for (const item of step.evidence) {
       if (!item.href.startsWith("/")) continue
-      const route = normalisedBasePath && item.href.startsWith(normalisedBasePath)
-        ? item.href.slice(normalisedBasePath.length)
-        : item.href
+      const route =
+        normalisedBasePath && item.href.startsWith(normalisedBasePath)
+          ? item.href.slice(normalisedBasePath.length)
+          : item.href
       const href = resolveCodeCityEvidenceHref(basePath, route)
       if (href === item.href) evidence.set(`${item.label}:${href}`, { label: item.label, href })
     }
@@ -88,8 +89,7 @@ const canonicalStoryEvidence = (
   )
 }
 
-const titleFor = (presentation: CodeCityAudiencePresentation): string =>
-  `${presentation.label} architecture brief`
+const titleFor = (presentation: CodeCityAudiencePresentation): string => `${presentation.label} architecture brief`
 
 const leadFor = (presentation: CodeCityAudiencePresentation): string => {
   switch (presentation.audience) {
@@ -132,9 +132,7 @@ export function buildCodeCityArchitectureBrief(
     facts: [
       {
         label: "Largest context",
-        value: largest
-          ? `${largest.label} (${largest.metrics.footprint.loc} LOC)`
-          : "Unavailable",
+        value: largest ? `${largest.label} (${largest.metrics.footprint.loc} LOC)` : "Unavailable",
         evidence: [],
       },
       {
@@ -146,7 +144,10 @@ export function buildCodeCityArchitectureBrief(
       },
       {
         label: "Evidence",
-        value: evidence.length > 0 ? `${evidence.length} canonical evidence link${evidence.length === 1 ? "" : "s"}` : "Unavailable",
+        value:
+          evidence.length > 0
+            ? `${evidence.length} canonical evidence link${evidence.length === 1 ? "" : "s"}`
+            : "Unavailable",
         evidence,
       },
     ],

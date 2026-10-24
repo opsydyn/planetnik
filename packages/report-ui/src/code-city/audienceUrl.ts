@@ -1,4 +1,4 @@
-import { resolveCodeCityAudience, type CodeCityAudienceId } from "./audience.js"
+import { type CodeCityAudienceId, resolveCodeCityAudience } from "./audience.js"
 import type { CodeCityStoryStepId } from "./story.js"
 
 export type CodeCityUrlState = {
@@ -17,15 +17,11 @@ export function parseCodeCityUrlState(url: URL): CodeCityUrlState {
   }
 }
 
-export function resolveCodeCityInitialUrlState(
-  initialState: CodeCityUrlState,
-): CodeCityUrlState {
+export function resolveCodeCityInitialUrlState(initialState: CodeCityUrlState): CodeCityUrlState {
   return initialState
 }
 
-export function resolveCodeCityPostHydrationUrlState(
-  browserUrl: URL | null,
-): CodeCityUrlState | null {
+export function resolveCodeCityPostHydrationUrlState(browserUrl: URL | null): CodeCityUrlState | null {
   return browserUrl === null ? null : parseCodeCityUrlState(browserUrl)
 }
 

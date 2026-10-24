@@ -153,12 +153,12 @@ describe("runRepoAnalysis", () => {
     })
 
     const result = await Effect.runPromise(
-      runRepoAnalysis([task("never")], 0, summaryRef).pipe(Effect.provide(workerLayer), Effect.either),
+      runRepoAnalysis([task("never")], 0, summaryRef).pipe(Effect.provide(workerLayer), Effect.result),
     )
 
-    expect(result._tag).toBe("Left")
-    if (result._tag === "Left") {
-      expect(result.left).toBeInstanceOf(InvalidConcurrencyError)
+    expect(result._tag).toBe("Failure")
+    if (result._tag === "Failure") {
+      expect(result.failure).toBeInstanceOf(InvalidConcurrencyError)
     }
   })
 })

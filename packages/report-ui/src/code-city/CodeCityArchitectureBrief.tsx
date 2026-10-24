@@ -9,11 +9,7 @@ export type CodeCityArchitectureBriefProps = {
 export type CodeCityArchitectureBrief = CodeCityArchitectureBriefModel
 export type CodeCityBriefCopyStatus = "idle" | "success" | "failure"
 
-export function CodeCityArchitectureBrief({
-  brief,
-  onCopy,
-  copyStatus,
-}: CodeCityArchitectureBriefProps) {
+export function CodeCityArchitectureBrief({ brief, onCopy, copyStatus }: CodeCityArchitectureBriefProps) {
   return (
     <section className="code-city__brief" aria-label="Architecture brief">
       <div className="code-city__brief-copy">
@@ -41,8 +37,12 @@ export function CodeCityArchitectureBrief({
         ))}
       </dl>
       <div className="code-city__brief-actions">
-        <p><strong>Next action:</strong> {brief.nextAction}</p>
-        <button type="button" onClick={onCopy}>Copy brief</button>
+        <p>
+          <strong>Next action:</strong> {brief.nextAction}
+        </p>
+        <button type="button" onClick={onCopy}>
+          Copy brief
+        </button>
       </div>
       {copyStatus === "idle" ? null : (
         <p className="code-city__brief-status" role="status">
@@ -54,5 +54,3 @@ export function CodeCityArchitectureBrief({
     </section>
   )
 }
-
-export default CodeCityArchitectureBrief

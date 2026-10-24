@@ -1,57 +1,40 @@
 {
-	"name": "planetnik",
-	"private": true,
-	"packageManager": "bun@1.4.2",
-	"workspaces": {
-		"packages": [
-			"packages/*",
-			"apps/*"
-		],
-		"catalog": {
-			"effect": "^3.19.19",
-			"@effect/cli": "^0.73.2",
-			"@effect/experimental": "^0.58.0",
-			"@effect/platform": "^0.94.5",
-			"@effect/platform-node": "^0.104.1",
-			"@effect/printer": "^0.47.0",
-			"@effect/printer-ansi": "^0.47.0",
-			"@effect/schema": "^0.75.5",
-			"simple-git": "^3.27.0"
-		}
-	},
-	"scripts": {
-		"dev:site": "bun run --cwd apps/site dev",
-		"dev:cli": "bun run --cwd apps/cli dev",
-		"dev:app": "bun run --cwd apps/app dev",
-		"dev:runtime": "bun run --cwd apps/runtime dev",
-		"build": "bun run --filter '*' build",
-		"test": "bun run --filter '*' test",
-		"typecheck": "bun run --filter '*' typecheck",
-		"lint": "bun x biome check .",
-		"lint:fix": "bun x biome check --write .",
-		"knip": "knip"
-	},
-	"dependencies": {
-		"@effect/cli": "^0.75.2",
-		"@effect/cluster": "^0.58.2",
-		"@effect/experimental": "^0.60.0",
-		"@effect/platform": "^0.96.2",
-		"@effect/platform-node": "^0.107.0",
-		"@effect/printer": "^0.49.0",
-		"@effect/printer-ansi": "^0.49.0",
-		"@effect/rpc": "^0.75.1",
-		"@effect/schema": "^0.75.5",
-		"@effect/sql": "^0.51.1",
-		"@effect/typeclass": "^0.40.0",
-		"@effect/workflow": "^0.18.2",
-		"effect": "^3.21.4"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.5.0",
-		"@effect/language-service": "^0.84.3",
-		"@types/bun": "^1.4.1",
-		"@types/node": "^25.9.3",
-		"knip": "^6.17.1",
-		"typescript": "^6.0.3"
-	}
+  "name": "planetnik",
+  "private": true,
+  "packageManager": "bun@1.4.2",
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "apps/*"
+    ],
+    "catalog": {
+      "effect": "4.0.6",
+      "@effect/platform-node": "4.0.6",
+      "@effect/platform-browser": "4.0.6",
+      "@effect/atom-react": "4.0.6",
+      "fast-check": "^4.10.2",
+      "simple-git": "^4.0.2"
+    }
+  },
+  "scripts": {
+    "dev:site": "bun run --cwd apps/site dev",
+    "dev:cli": "bun run --cwd apps/cli dev",
+    "dev:app": "bun run --cwd apps/app dev",
+    "dev:runtime": "bun run --cwd apps/runtime dev",
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "bun x biome check .",
+    "lint:fix": "bun x biome check --write .",
+    "knip": "knip --treat-config-hints-as-errors"
+  },
+  "devDependencies": {
+    "@emnapi/runtime": "^1.11.3",
+    "@biomejs/biome": "^2.6.2",
+    "@effect/language-service": "^0.87.5",
+    "@types/bun": "^1.4.4",
+    "@types/node": "^26.6.5",
+    "knip": "^6.42.1",
+    "typescript": "^6.0.3"
+  }
 }

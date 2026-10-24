@@ -47,10 +47,10 @@ describe("landscape external retry policy", () => {
           return yield* Effect.fail(new Error("repository not found"))
         }),
         Schedule.recurs(3),
-      ).pipe(Effect.either),
+      ).pipe(Effect.result),
     )
 
-    expect(result._tag).toBe("Left")
+    expect(result._tag).toBe("Failure")
     expect(attempts).toBe(1)
   })
 
@@ -64,10 +64,10 @@ describe("landscape external retry policy", () => {
           return yield* Effect.fail(new Error("ETIMEDOUT"))
         }),
         Schedule.recurs(3),
-      ).pipe(Effect.either),
+      ).pipe(Effect.result),
     )
 
-    expect(result._tag).toBe("Left")
+    expect(result._tag).toBe("Failure")
     expect(attempts).toBe(4)
   })
 })

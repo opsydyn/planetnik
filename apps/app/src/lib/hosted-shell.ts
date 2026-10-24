@@ -6,7 +6,7 @@ import {
 } from "./hosted-routes.js"
 import type { RuntimeReportDetail } from "./runtime-client.js"
 
-export type HostedNavItem = {
+type HostedNavItem = {
   readonly href: string
   readonly label: string
   readonly badge?: string
@@ -17,7 +17,7 @@ export type HostedNavSection = {
   readonly items: ReadonlyArray<HostedNavItem>
 }
 
-export type HostedBreadcrumb = {
+type HostedBreadcrumb = {
   readonly label: string
   readonly href?: string
 }

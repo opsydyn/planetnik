@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { CodeCityModel, CodeCitySignals } from "@planetnik/common"
-import { buildCodeCityArchitectureBrief } from "../brief.js"
 import { getCodeCityAudiencePresentation } from "../audience.js"
+import { buildCodeCityArchitectureBrief } from "../brief.js"
 import type { CodeCityStory } from "../story.js"
 
 const signals = (loc: number): CodeCitySignals => ({
@@ -154,11 +154,7 @@ describe("buildCodeCityArchitectureBrief", () => {
       "/repo",
     )
 
-    expect(brief.facts.map(({ label }) => label)).toEqual([
-      "Largest context",
-      "Strongest boundary",
-      "Evidence",
-    ])
+    expect(brief.facts.map(({ label }) => label)).toEqual(["Largest context", "Strongest boundary", "Evidence"])
     expect(brief.facts.flatMap(({ evidence }) => evidence.map(({ href }) => href))).toEqual([
       "/repo/components#app",
       "/repo/components#shared",

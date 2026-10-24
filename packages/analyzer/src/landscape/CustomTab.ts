@@ -1,4 +1,4 @@
 export class CustomTab {
-	name: string = "";
-	src: string = "";
+  name: string = ""
+  src: string = ""
 }

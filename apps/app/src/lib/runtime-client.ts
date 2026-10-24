@@ -83,7 +83,7 @@ export type RuntimeDataset = {
   readonly reportMode: string | null
 }
 
-export type RuntimeReportContext = {
+type RuntimeReportContext = {
   readonly mode: "single_repository" | "landscape"
   readonly reportMode: "single_repository" | "landscape"
   readonly title: string
@@ -95,7 +95,7 @@ export type RuntimeReportContext = {
   readonly primaryNavigation: ReadonlyArray<string>
 }
 
-export type RuntimeSingleRepositoryArtifact = {
+type RuntimeSingleRepositoryArtifact = {
   readonly kind: "single_repository"
   readonly projectName: string
   readonly filesCount: number
@@ -104,7 +104,7 @@ export type RuntimeSingleRepositoryArtifact = {
   readonly duplicationPercentage: number
 }
 
-export type RuntimeLandscapeArtifact = {
+type RuntimeLandscapeArtifact = {
   readonly kind: "landscape"
   readonly title: string
   readonly landscapeName: string
@@ -115,7 +115,7 @@ export type RuntimeLandscapeArtifact = {
   readonly commits90d: number
 }
 
-export type RuntimeReportArtifact = RuntimeSingleRepositoryArtifact | RuntimeLandscapeArtifact
+type RuntimeReportArtifact = RuntimeSingleRepositoryArtifact | RuntimeLandscapeArtifact
 
 export type RuntimeReportContributor = {
   readonly email: string
@@ -147,10 +147,6 @@ export type RuntimeReportDetail = {
   readonly report: RuntimeReport
   readonly context: RuntimeReportContext | null
   readonly artifact: RuntimeReportArtifact | null
-}
-
-export type RuntimeReportContributors = {
-  readonly contributors: ReadonlyArray<RuntimeReportContributor>
 }
 
 export type RuntimeReportContributorDetail = {
@@ -209,14 +205,14 @@ export type RuntimeReportContributorDetail = {
   } | null
 }
 
-export type RuntimeTopologyPeopleDep = {
+type RuntimeTopologyPeopleDep = {
   readonly from: string
   readonly to: string
   readonly count: number
   readonly files: ReadonlyArray<string>
 }
 
-export type RuntimeTopologyContributorImpact = {
+type RuntimeTopologyContributorImpact = {
   readonly email: string
   readonly display_name: string
   readonly glue_score: number
@@ -773,7 +769,7 @@ export type RuntimeReportLandscapeTeams = {
   }>
 }
 
-export type RuntimeReportFileInventoryRow = {
+type RuntimeReportFileInventoryRow = {
   readonly relativePath: string
   readonly extension: string
   readonly linesOfCode: number
@@ -783,7 +779,7 @@ export type RuntimeReportFileInventoryRow = {
   readonly latestDate: string | null
 }
 
-export type RuntimeReportFilesSizeView = {
+type RuntimeReportFilesSizeView = {
   readonly view: "size"
   readonly headline: {
     readonly fileCount: number
@@ -801,7 +797,7 @@ export type RuntimeReportFilesSizeView = {
   readonly rows: ReadonlyArray<RuntimeReportFileInventoryRow>
 }
 
-export type RuntimeReportFilesAgeView = {
+type RuntimeReportFilesAgeView = {
   readonly view: "age"
   readonly headline: {
     readonly ageInDays: number | null
@@ -814,7 +810,7 @@ export type RuntimeReportFilesAgeView = {
   }>
 }
 
-export type RuntimeReportFilesChurnView = {
+type RuntimeReportFilesChurnView = {
   readonly view: "churn"
   readonly headline: {
     readonly activeDays: number | null
@@ -829,7 +825,7 @@ export type RuntimeReportFilesChurnView = {
   readonly rows: ReadonlyArray<RuntimeReportFileInventoryRow>
 }
 
-export type RuntimeReportFilesTemporalView = {
+type RuntimeReportFilesTemporalView = {
   readonly view: "temporal"
   readonly sections: ReadonlyArray<{
     readonly periodKey: string
@@ -852,7 +848,7 @@ export type RuntimeReportFilesView =
   | RuntimeReportFilesChurnView
   | RuntimeReportFilesTemporalView
 
-export type RuntimeReportUnitInventoryRow = {
+type RuntimeReportUnitInventoryRow = {
   readonly shortName: string
   readonly relativeFileName: string
   readonly linesOfCode: number
@@ -862,7 +858,7 @@ export type RuntimeReportUnitInventoryRow = {
   readonly endLine: number
 }
 
-export type RuntimeReportUnitsSizeView = {
+type RuntimeReportUnitsSizeView = {
   readonly view: "size"
   readonly headline: {
     readonly unitCount: number
@@ -880,7 +876,7 @@ export type RuntimeReportUnitsSizeView = {
   readonly rows: ReadonlyArray<RuntimeReportUnitInventoryRow>
 }
 
-export type RuntimeReportUnitsComplexityView = {
+type RuntimeReportUnitsComplexityView = {
   readonly view: "complexity"
   readonly headline: {
     readonly unitCount: number

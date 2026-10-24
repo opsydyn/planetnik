@@ -49,6 +49,15 @@
 	gap: 0.45rem;
 }
 
+.code-city__audience-switch,
+.code-city__view-buttons,
+.code-city__story-actions {
+	min-inline-size: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
 .code-city__audience-switch {
 	display: inline-flex;
 	flex-wrap: wrap;

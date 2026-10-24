@@ -4,12 +4,12 @@ import { formatReportDate } from "@planetnik/report-ui/utils/reportDates"
 import { getHostedReportRepositoryHref } from "./hosted-routes.js"
 import type { RuntimeReportLandscapeRepositories } from "./runtime-client.js"
 
-export type ReportLandscapeRepositoriesCard = {
+type ReportLandscapeRepositoriesCard = {
   readonly label: string
   readonly value: string
 }
 
-export type ReportLandscapeRepositoriesRow = {
+type ReportLandscapeRepositoriesRow = {
   readonly repoKey: string
   readonly name: string
   readonly href: string

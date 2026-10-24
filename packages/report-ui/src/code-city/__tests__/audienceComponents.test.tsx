@@ -18,6 +18,8 @@ describe("CodeCityAudienceSwitch", () => {
     })
     const buttons = rendered.props.children as AudienceButton[]
 
+    expect(rendered.type).toBe("fieldset")
+    expect(rendered.props["aria-label"]).toBe("Code City audience")
     expect(buttons).toHaveLength(3)
     expect(buttons[0]?.props).toMatchObject({ children: "Onboarding", "aria-pressed": true })
     buttons[1]?.props.onClick?.()

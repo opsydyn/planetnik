@@ -26,7 +26,7 @@ const handler = copilotRuntimeNodeHttpEndpoint({
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? ""
-  const allowedOrigin = CORS_ORIGINS.has(origin) ? origin : [...CORS_ORIGINS][0] ?? ""
+  const allowedOrigin = CORS_ORIGINS.has(origin) ? origin : ([...CORS_ORIGINS][0] ?? "")
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",

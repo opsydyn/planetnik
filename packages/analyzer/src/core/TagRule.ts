@@ -1,22 +1,18 @@
-import { Schema } from "@effect/schema";
+import { Effect, Schema } from "effect"
 
 const TagRuleSchema = Schema.Struct({
-	tag: Schema.optionalWith(Schema.String, { default: () => "" }),
-	color: Schema.optionalWith(Schema.String, { default: () => "" }),
-	pathPatterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	excludePathPatterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-});
+  tag: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  color: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  pathPatterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  excludePathPatterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+})
 
-export type TagRuleType = typeof TagRuleSchema.Type;
+export type TagRuleType = typeof TagRuleSchema.Type
 
 export const TagRule = {
-	schema: TagRuleSchema,
+  schema: TagRuleSchema,
 
-	make(input: Partial<TagRuleType>): TagRuleType {
-		return Schema.decodeUnknownSync(TagRuleSchema)(input);
-	},
-};
+  make(input: Partial<TagRuleType>): TagRuleType {
+    return Schema.decodeUnknownSync(TagRuleSchema)(input)
+  },
+}

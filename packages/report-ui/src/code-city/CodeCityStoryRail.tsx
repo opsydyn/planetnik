@@ -11,13 +11,7 @@ export type CodeCityStoryRailProps = {
 const activeStep = (story: CodeCityStory, stepIndex: number) =>
   story.steps[Math.min(Math.max(0, stepIndex), story.steps.length - 1)] ?? null
 
-export function CodeCityStoryRail({
-  story,
-  state,
-  canFocus = true,
-  onEvent,
-  onFocusStep,
-}: CodeCityStoryRailProps) {
+export function CodeCityStoryRail({ story, state, canFocus = true, onEvent, onFocusStep }: CodeCityStoryRailProps) {
   if (state.tag === "idle") {
     return (
       <section className="code-city__story-rail" aria-labelledby="code-city-story-title">
@@ -41,14 +35,14 @@ export function CodeCityStoryRail({
           <h2 id="code-city-story-title">Story complete</h2>
           <p>The explanation remains grounded in the canonical evidence linked from each step.</p>
         </div>
-        <div className="code-city__story-actions" aria-label="Code City story controls">
+        <fieldset className="code-city__story-actions" aria-label="Code City story controls">
           <button type="button" onClick={() => onEvent({ type: "start" })}>
             Replay
           </button>
           <button type="button" onClick={() => onEvent({ type: "exit" })}>
             Exit
           </button>
-        </div>
+        </fieldset>
       </section>
     )
   }
@@ -62,7 +56,7 @@ export function CodeCityStoryRail({
           <h2 id="code-city-story-title">Explain this city</h2>
           <p>No canonical story steps are available for this snapshot.</p>
         </div>
-        <div className="code-city__story-actions" aria-label="Code City story controls">
+        <fieldset className="code-city__story-actions" aria-label="Code City story controls">
           <button type="button" disabled>
             Back
           </button>
@@ -78,7 +72,7 @@ export function CodeCityStoryRail({
           <button type="button" onClick={() => onEvent({ type: "exit" })}>
             Exit
           </button>
-        </div>
+        </fieldset>
       </section>
     )
   }
@@ -110,7 +104,7 @@ export function CodeCityStoryRail({
           </ul>
         ) : null}
       </div>
-      <div className="code-city__story-actions" aria-label="Code City story controls">
+      <fieldset className="code-city__story-actions" aria-label="Code City story controls">
         <button type="button" disabled={state.stepIndex === 0} onClick={() => onEvent({ type: "back" })}>
           Back
         </button>
@@ -130,9 +124,7 @@ export function CodeCityStoryRail({
         <button type="button" onClick={() => onEvent({ type: "exit" })}>
           Exit
         </button>
-      </div>
+      </fieldset>
     </section>
   )
 }
-
-export default CodeCityStoryRail

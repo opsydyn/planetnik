@@ -1,12 +1,12 @@
 export {
-	FindingsAuthoringError,
-	escapeFindingsHtml,
-	findingsMarkdownToText,
-	normalizeFindingsAuthoringDocument,
-	parseFindingsAuthoringDocument,
-	renderFindingsMarkdownToHtml,
-	type FindingsAuthoringDocument,
-	type FindingsAuthoringItem,
-	type FindingsExportItem,
-	type NormalizedFindingsDocument,
-} from "./FindingsAuthoring.js";
+  escapeFindingsHtml,
+  type FindingsAuthoringDocument,
+  FindingsAuthoringError,
+  type FindingsAuthoringItem,
+  type FindingsExportItem,
+  findingsMarkdownToText,
+  type NormalizedFindingsDocument,
+  normalizeFindingsAuthoringDocument,
+  parseFindingsAuthoringDocument,
+  renderFindingsMarkdownToHtml,
+} from "./FindingsAuthoring.js"

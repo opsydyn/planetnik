@@ -1,33 +1,33 @@
-import { Schema } from "@effect/schema";
-import { Link, type LinkType } from "./Link.js";
+import { Effect, Schema } from "effect"
+import { Link, type LinkType } from "./Link.js"
 
 const MetadataSchema = Schema.Struct({
-	name: Schema.optionalWith(Schema.String, { default: () => "" }),
-	description: Schema.optionalWith(Schema.String, { default: () => "" }),
-	tooltip: Schema.optionalWith(Schema.String, { default: () => "" }),
-	logoLink: Schema.optionalWith(Schema.String, { default: () => "" }),
-	links: Schema.optionalWith(Schema.Array(Link.schema), { default: () => [] }),
-});
+  name: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  description: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  tooltip: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  logoLink: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  links: Schema.Array(Link.schema).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+})
 
 export type MetadataType = {
-	name: string;
-	description: string;
-	tooltip: string;
-	logoLink: string;
-	links: LinkType[];
-};
+  name: string
+  description: string
+  tooltip: string
+  logoLink: string
+  links: LinkType[]
+}
 
 export const Metadata = {
-	schema: MetadataSchema,
+  schema: MetadataSchema,
 
-	make(input: Partial<MetadataType>): MetadataType {
-		const decoded = Schema.decodeUnknownSync(MetadataSchema)(input);
-		return {
-			name: decoded.name,
-			description: decoded.description,
-			tooltip: decoded.tooltip,
-			logoLink: decoded.logoLink,
-			links: [...decoded.links],
-		};
-	},
-};
+  make(input: Partial<MetadataType>): MetadataType {
+    const decoded = Schema.decodeUnknownSync(MetadataSchema)(input)
+    return {
+      name: decoded.name,
+      description: decoded.description,
+      tooltip: decoded.tooltip,
+      logoLink: decoded.logoLink,
+      links: [...decoded.links],
+    }
+  },
+}

@@ -77,7 +77,7 @@ function getContributorLabel(email: string): string {
   return label.length > 18 ? `${label.slice(0, 15)}...` : label
 }
 
-export function shortForceGraphPath(path: string): string {
+function shortForceGraphPath(path: string): string {
   const parts = path.split("/")
   return parts.length > 2 ? `.../${parts.slice(-2).join("/")}` : path
 }

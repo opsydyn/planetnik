@@ -1,21 +1,21 @@
-export { AnalysisConfig, type AnalysisConfigType } from "./AnalysisConfig.js";
+export { AnalysisConfig, type AnalysisConfigType } from "./AnalysisConfig.js"
 export {
-	CodeAnalyzerSettings,
-	type CodeAnalyzerSettingsType,
-} from "./CodeAnalyzerSettings.js";
+  CodeAnalyzerSettings,
+  type CodeAnalyzerSettingsType,
+} from "./CodeAnalyzerSettings.js"
 export {
-	CodeConfiguration,
-	DEFAULT_CONFIGURATION_FOLDER,
-} from "./CodeConfiguration.js";
-export { CodeConfigurationUtils } from "./CodeConfigurationUtils.js";
-export { FileHistoryAnalysisConfig } from "./FileHistoryAnalysisConfig.js";
-export { Link, type LinkType } from "./Link.js";
-export { Metadata, type MetadataType } from "./Metadata.js";
-export { Range, type RangeType } from "./Range.js";
-export { ReferenceAnalysisResult } from "./ReferenceAnalysisResult.js";
+  CodeConfiguration,
+  DEFAULT_CONFIGURATION_FOLDER,
+} from "./CodeConfiguration.js"
+export { CodeConfigurationUtils } from "./CodeConfigurationUtils.js"
+export { FileHistoryAnalysisConfig } from "./FileHistoryAnalysisConfig.js"
+export { Link, type LinkType } from "./Link.js"
+export { Metadata, type MetadataType } from "./Metadata.js"
+export { Range, type RangeType } from "./Range.js"
+export { ReferenceAnalysisResult } from "./ReferenceAnalysisResult.js"
 export {
-	SourceFileFilter,
-	type SourceFileFilterType,
-} from "./SourceFileFilter.js";
-export { TagRule, type TagRuleType } from "./TagRule.js";
-export { TrendAnalysisConfig } from "./TrendAnalysisConfig.js";
+  SourceFileFilter,
+  type SourceFileFilterType,
+} from "./SourceFileFilter.js"
+export { TagRule, type TagRuleType } from "./TagRule.js"
+export { TrendAnalysisConfig } from "./TrendAnalysisConfig.js"

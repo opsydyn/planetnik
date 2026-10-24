@@ -10,8 +10,8 @@ import {
   adaptPortfolioActionTrendTargets,
   adaptSecuritySignals,
   adaptTrendSignals,
-  buildPortfolioActionQueueItem,
   buildPortfolioActionQueue,
+  buildPortfolioActionQueueItem,
   buildPortfolioActionQueueWithStats,
   filterPortfolioActionQueue,
   isPortfolioActionSignalInWindow,
@@ -603,11 +603,10 @@ describe("portfolio action signal adapters", () => {
       hotspot: { status: "present", records: [sourceRecord("hotspot", "hot", { kind: "file", severity: "High" })] },
     })
     const record = input.current!.domains.hotspot!.records[0]!
-    const result = adaptPortfolioActionSourceRecord(
-      input,
-      "hotspot",
-      { ...record, evidence: [{ ...record.evidence[0]!, snapshotId: "other" }] },
-    )
+    const result = adaptPortfolioActionSourceRecord(input, "hotspot", {
+      ...record,
+      evidence: [{ ...record.evidence[0]!, snapshotId: "other" }],
+    })
     expect(result).toMatchObject({ tag: "invalid", diagnostic: { datasetId: "demo", severity: "error" } })
   })
 
@@ -617,7 +616,9 @@ describe("portfolio action signal adapters", () => {
       { historyStatus: "compatible", trendInputs: [trendInput("target:hot", { complexity: 1 }, { complexity: 2 })] },
     )
     const targets = new Set(["target:hot"])
-    expect(adaptPortfolioActionTrendTargets(input, targets)).toEqual(adaptTrendSignals(input, adaptHotspotSignals(input)))
+    expect(adaptPortfolioActionTrendTargets(input, targets)).toEqual(
+      adaptTrendSignals(input, adaptHotspotSignals(input)),
+    )
     const signal = adaptHotspotSignals(input)[0]!
     expect(isPortfolioActionSignalInWindow(signal, "current", input.current!.generatedAt)).toBe(true)
     expect(isPortfolioActionSignalInWindow(signal, "7d", input.current!.generatedAt)).toBe(true)

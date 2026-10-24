@@ -1,68 +1,64 @@
-import type { DuplicationInstance } from "@planetnik/analyzer";
-import type { FileExportInfo } from "./FileExportInfo.js";
-import { fileExportInfoFromSourceFile } from "./FileExportInfo.js";
-import { fileEntityId } from "./EntityIdentity.js";
+import type { DuplicationInstance } from "@planetnik/analyzer"
+import { fileEntityId } from "./EntityIdentity.js"
+import type { FileExportInfo } from "./FileExportInfo.js"
+import { fileExportInfoFromSourceFile } from "./FileExportInfo.js"
 
 export interface DuplicateFileBlockExportInfo {
-	file: FileExportInfo;
-	sourceFileCleanedLinesOfCode: number;
-	startLine: number;
-	endLine: number;
-	cleanedStartLine: number;
-	cleanedEndLine: number;
+  file: FileExportInfo
+  sourceFileCleanedLinesOfCode: number
+  startLine: number
+  endLine: number
+  cleanedStartLine: number
+  cleanedEndLine: number
 }
 
 export interface DuplicateExportInfo {
-	blockSize: number;
-	duplicatedFileBlocks: DuplicateFileBlockExportInfo[];
+  blockSize: number
+  duplicatedFileBlocks: DuplicateFileBlockExportInfo[]
 }
 
 export interface DuplicationExportInfo {
-	title: string;
-	timestamp: string;
-	duplicates: DuplicateExportInfo[];
+  title: string
+  timestamp: string
+  duplicates: DuplicateExportInfo[]
 }
 
 export class DuplicationExporter {
-	private duplicates: DuplicationInstance[];
+  private duplicates: DuplicationInstance[]
 
-	constructor(duplicates: DuplicationInstance[]) {
-		this.duplicates = duplicates;
-	}
+  constructor(duplicates: DuplicationInstance[]) {
+    this.duplicates = duplicates
+  }
 
-	getDuplicatesExportInfo(): DuplicateExportInfo[] {
-		return this.duplicates.map((instance) => ({
-			blockSize: instance.blockSize,
-			duplicatedFileBlocks: instance.duplicatedFileBlocks.map((block) => ({
-				file: block.sourceFile
-					? fileExportInfoFromSourceFile(block.sourceFile)
-					: {
-							id: fileEntityId(""),
-							relativePath: "",
-							extension: "",
-							linesOfCode: 0,
-							components: [],
-							concerns: [],
-						},
-				sourceFileCleanedLinesOfCode: block.sourceFileCleanedLinesOfCode,
-				startLine: block.startLine,
-				endLine: block.endLine,
-				cleanedStartLine: block.cleanedStartLine,
-				cleanedEndLine: block.cleanedEndLine,
-			})),
-		}));
-	}
+  getDuplicatesExportInfo(): DuplicateExportInfo[] {
+    return this.duplicates.map((instance) => ({
+      blockSize: instance.blockSize,
+      duplicatedFileBlocks: instance.duplicatedFileBlocks.map((block) => ({
+        file: block.sourceFile
+          ? fileExportInfoFromSourceFile(block.sourceFile)
+          : {
+              id: fileEntityId(""),
+              relativePath: "",
+              extension: "",
+              linesOfCode: 0,
+              components: [],
+              concerns: [],
+            },
+        sourceFileCleanedLinesOfCode: block.sourceFileCleanedLinesOfCode,
+        startLine: block.startLine,
+        endLine: block.endLine,
+        cleanedStartLine: block.cleanedStartLine,
+        cleanedEndLine: block.cleanedEndLine,
+      })),
+    }))
+  }
 
-	static exportDuplication(
-		duplicates: DuplicationInstance[],
-		title: string,
-		timestamp: string,
-	): DuplicationExportInfo {
-		const exporter = new DuplicationExporter(duplicates);
-		return {
-			title,
-			timestamp,
-			duplicates: exporter.getDuplicatesExportInfo(),
-		};
-	}
+  static exportDuplication(duplicates: DuplicationInstance[], title: string, timestamp: string): DuplicationExportInfo {
+    const exporter = new DuplicationExporter(duplicates)
+    return {
+      title,
+      timestamp,
+      duplicates: exporter.getDuplicatesExportInfo(),
+    }
+  }
 }

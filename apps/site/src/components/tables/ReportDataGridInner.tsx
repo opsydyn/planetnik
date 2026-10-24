@@ -1,18 +1,32 @@
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type OnChangeFn,
   type PaginationState,
+  rowPaginationFeature,
+  rowSortingFeature,
   type SortingState,
-  useReactTable,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table"
 import { startTransition, useDeferredValue, useEffect, useId, useMemo, useState } from "react"
 import type { GridCellValue, GridColumnConfig, GridRow, ReportDataGridProps } from "./ReportDataGrid.types"
+
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+})
 
 function normalizeSearchValue(value: unknown): string {
   return value == null ? "" : String(value).toLowerCase().trim()
@@ -179,14 +193,14 @@ function getColumnStyle(column: GridColumnConfig) {
   }
 }
 
-function createColumnDef(column: GridColumnConfig): ColumnDef<GridRow> {
+function createColumnDef(column: GridColumnConfig): ColumnDef<typeof features, GridRow> {
   return {
     id: column.field,
     accessorFn: (row) => row[column.field],
     header: column.headerName,
     enableSorting: true,
     enableColumnFilter: true,
-    sortingFn: (left, right) => compareValues(left.original[column.field], right.original[column.field]),
+    sortFn: (left, right) => compareValues(left.original[column.field], right.original[column.field]),
     filterFn: (row, _columnId, filterValue) => {
       const normalizedFilter = normalizeSearchValue(filterValue)
       if (!normalizedFilter) return true
@@ -199,7 +213,7 @@ function createColumnDef(column: GridColumnConfig): ColumnDef<GridRow> {
   }
 }
 
-function getColumnMetaConfig(columnDef: ColumnDef<GridRow>): GridColumnConfig | undefined {
+function getColumnMetaConfig(columnDef: ColumnDef<typeof features, GridRow>): GridColumnConfig | undefined {
   return (columnDef.meta as { config?: GridColumnConfig } | undefined)?.config
 }
 
@@ -263,7 +277,8 @@ export default function ReportDataGridInner({
     setPagination((current) => (typeof updater === "function" ? updater(current) : updater))
   }
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: searchedRows,
     columns: columnDefs,
     state: {
@@ -275,17 +290,13 @@ export default function ReportDataGridInner({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: handlePaginationChange,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
   })
 
   const filteredRowCount = table.getFilteredRowModel().rows.length
   const pageRows = table.getRowModel().rows
   const pageCount = Math.max(table.getPageCount(), 1)
-  const pageIndex = table.getState().pagination.pageIndex
-  const pageSize = table.getState().pagination.pageSize
+  const pageIndex = table.state.pagination.pageIndex
+  const pageSize = table.state.pagination.pageSize
   const fromRow = filteredRowCount === 0 ? 0 : pageIndex * pageSize + 1
   const toRow = filteredRowCount === 0 ? 0 : Math.min((pageIndex + 1) * pageSize, filteredRowCount)
   const pageSizeOptions = [...new Set([10, 25, 50, 100, paginationPageSize])].sort((a, b) => a - b)

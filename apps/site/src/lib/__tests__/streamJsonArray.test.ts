@@ -30,7 +30,7 @@ describe("streamJsonArrayObjects", () => {
         title: "stream",
         records: [
           { id: "a{b}", nested: { values: [1, 2] } },
-          { id: "b", text: 'quote \\\" and closing ] brace }' },
+          { id: "b", text: 'quote \\" and closing ] brace }' },
         ],
         other: [],
       }),
@@ -38,7 +38,7 @@ describe("streamJsonArrayObjects", () => {
 
     expect(await collect(path, "records", 1)).toEqual([
       { index: 0, value: { id: "a{b}", nested: { values: [1, 2] } } },
-      { index: 1, value: { id: "b", text: 'quote \\\" and closing ] brace }' } },
+      { index: 1, value: { id: "b", text: 'quote \\" and closing ] brace }' } },
     ])
   })
 
@@ -61,11 +61,14 @@ describe("streamJsonArrayObjects", () => {
   })
 
   test("rejects an invalid object member and malformed UTF-8", async () => {
-    await expect(collect(fixture('{"records":[{"id":}]}'), "records", 5)).rejects.toThrow(
-      "invalid object record",
-    )
+    await expect(collect(fixture('{"records":[{"id":}]}'), "records", 5)).rejects.toThrow("invalid object record")
     const path = fixture('{"records":[]}' + "\u0000")
-    writeFileSync(path, Buffer.from([0x7b, 0x22, 0x72, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x73, 0x22, 0x3a, 0x5b, 0x5d, 0x2c, 0xc3, 0x28, 0x7d]))
+    writeFileSync(
+      path,
+      Buffer.from([
+        0x7b, 0x22, 0x72, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x73, 0x22, 0x3a, 0x5b, 0x5d, 0x2c, 0xc3, 0x28, 0x7d,
+      ]),
+    )
     await expect(collect(path, "records", 4)).rejects.toThrow("invalid UTF-8")
   })
 })

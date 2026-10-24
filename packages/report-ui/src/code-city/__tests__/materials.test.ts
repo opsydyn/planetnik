@@ -1,12 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import {
-  resolveCodeCityMaterialSpec,
-  resolveCodeCitySurfaceTreatment,
-} from "../materials.js"
-import { createCodeCityTextureAtlas } from "../textureAtlas.js"
-import type { CodeCityLensId, CodeCityLensVisual } from "../lens.js"
-import type { CodeCityMaterialFamily, CodeCityTexturePattern } from "../visualTokens.js"
 import * as ReportUi from "../../index.js"
+import type { CodeCityLensId, CodeCityLensVisual } from "../lens.js"
+import { resolveCodeCityMaterialSpec, resolveCodeCitySurfaceTreatment } from "../materials.js"
+import { createCodeCityTextureAtlas } from "../textureAtlas.js"
+import type { CodeCityMaterialFamily, CodeCityTexturePattern } from "../visualTokens.js"
 
 const families: readonly CodeCityMaterialFamily[] = [
   "brick",
@@ -31,13 +28,12 @@ const lensVisual = (lens: CodeCityLensId, available = true): CodeCityLensVisual 
 })
 
 const relativeLuminance = (color: string): number => {
-  const channels = color
-    .slice(1)
-    .match(/.{2}/g)
-    ?.map((channel) => Number.parseInt(channel, 16) / 255) ?? []
-  const linear = channels.map((channel) =>
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-  )
+  const channels =
+    color
+      .slice(1)
+      .match(/.{2}/g)
+      ?.map((channel) => Number.parseInt(channel, 16) / 255) ?? []
+  const linear = channels.map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4))
 
   return 0.2126 * (linear[0] ?? 0) + 0.7152 * (linear[1] ?? 0) + 0.0722 * (linear[2] ?? 0)
 }
@@ -79,14 +75,7 @@ describe("resolveCodeCityMaterialSpec", () => {
   test("does not let an active lens alter a building material token", () => {
     const before = resolveCodeCityMaterialSpec("ironstone", "gridded")
 
-    for (const lens of [
-      "footprint",
-      "complexity",
-      "health",
-      "change_pressure",
-      "ownership",
-      "impact",
-    ] as const) {
+    for (const lens of ["footprint", "complexity", "health", "change_pressure", "ownership", "impact"] as const) {
       resolveCodeCitySurfaceTreatment(lensVisual(lens))
     }
 

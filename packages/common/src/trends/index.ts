@@ -1,4 +1,18 @@
 export {
+  buildCrossRepositoryTrends,
+  CROSS_REPOSITORY_METRIC_DEFINITIONS,
+  type CrossRepositoryCoverage,
+  type CrossRepositoryDatasetSummary,
+  type CrossRepositoryHistoryInput,
+  type CrossRepositoryHistoryStatus,
+  type CrossRepositoryMetricDefinition,
+  type CrossRepositoryMetricRollup,
+  type CrossRepositoryMetricUnit,
+  type CrossRepositoryMovement,
+  type CrossRepositoryTrendDataset,
+  type CrossRepositoryTrends,
+} from "./CrossRepositoryTrends.js"
+export {
   type CanonicalEntitySnapshotInput,
   compareCanonicalEntitySnapshots,
   type SnapshotEntityCollection,
@@ -24,17 +38,3 @@ export {
   type SnapshotMetricProvenance,
   type SnapshotProvenance,
 } from "./SnapshotTrends.js"
-export {
-  buildCrossRepositoryTrends,
-  CROSS_REPOSITORY_METRIC_DEFINITIONS,
-  type CrossRepositoryCoverage,
-  type CrossRepositoryDatasetSummary,
-  type CrossRepositoryHistoryInput,
-  type CrossRepositoryHistoryStatus,
-  type CrossRepositoryMetricDefinition,
-  type CrossRepositoryMetricRollup,
-  type CrossRepositoryMetricUnit,
-  type CrossRepositoryMovement,
-  type CrossRepositoryTrendDataset,
-  type CrossRepositoryTrends,
-} from "./CrossRepositoryTrends.js"

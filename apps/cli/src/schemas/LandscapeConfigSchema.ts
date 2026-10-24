@@ -1,78 +1,58 @@
-import { Schema } from "@effect/schema";
+import { Effect, Schema } from "effect"
 
 const IgnoreRuleSchema = Schema.Struct({
-	org: Schema.optionalWith(Schema.String, { default: () => "" }),
-	repo: Schema.optionalWith(Schema.String, { default: () => "" }),
-});
+  org: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  repo: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+})
 
 const MetadataSchema = Schema.Struct({
-	name: Schema.optionalWith(Schema.String, { default: () => "" }),
-	description: Schema.optionalWith(Schema.String, { default: () => "" }),
-});
+  name: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  description: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+})
 
 const TeamSchema = Schema.Struct({
-	name: Schema.String,
-	description: Schema.optionalWith(Schema.String, { default: () => "" }),
-	emailPatterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-});
+  name: Schema.String,
+  description: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  emailPatterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+})
 
 const TeamsConfigSchema = Schema.Struct({
-	teams: Schema.optionalWith(Schema.Array(TeamSchema), { default: () => [] }),
-});
+  teams: Schema.Array(TeamSchema).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+})
 
 const RepositoryTagSchema = Schema.Struct({
-	tag: Schema.String,
-	patterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	excludePatterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	mainExtensions: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	anyExtensions: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	excludeExtensions: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	pathPatterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	excludePathPatterns: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	imageLink: Schema.optionalWith(Schema.String, { default: () => "" }),
-});
+  tag: Schema.String,
+  patterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  excludePatterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  mainExtensions: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  anyExtensions: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  excludeExtensions: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  pathPatterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  excludePathPatterns: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  imageLink: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+})
 
 const TagGroupSchema = Schema.Struct({
-	name: Schema.String,
-	description: Schema.optionalWith(Schema.String, { default: () => "" }),
-	color: Schema.optionalWith(Schema.String, { default: () => "" }),
-	repositoryTags: Schema.optionalWith(Schema.Array(RepositoryTagSchema), {
-		default: () => [],
-	}),
-});
+  name: Schema.String,
+  description: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  color: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  repositoryTags: Schema.Array(RepositoryTagSchema).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+})
 
 const MergeExtensionSchema = Schema.Struct({
-	primary: Schema.String,
-	secondary: Schema.String,
-});
+  primary: Schema.String,
+  secondary: Schema.String,
+})
 
 const SecurityConfigSchema = Schema.Struct({
-	enabled: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-	fetchAlerts: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-	fetchSBOM: Schema.optionalWith(Schema.Boolean, { default: () => false }),
-	alertStates: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => ["open", "fixed"],
-	}),
-	alertSeverities: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => ["critical", "high", "medium", "low"],
-	}),
-});
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => true))),
+  fetchAlerts: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => true))),
+  fetchSBOM: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))),
+  alertStates: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => ["open", "fixed"]))),
+  alertSeverities: Schema.Array(Schema.String).pipe(
+    Schema.withDecodingDefaultType(Effect.sync(() => ["critical", "high", "medium", "low"])),
+  ),
+})
 
 /**
  * Schema for landscape-config.json — the landscape analysis configuration file.
@@ -81,63 +61,33 @@ const SecurityConfigSchema = Schema.Struct({
  * landscape analysis options (metadata, teams, tags, merge extensions).
  */
 export const LandscapeConfigSchema = Schema.Struct({
-	githubCloneUrl: Schema.optionalWith(Schema.String, {
-		default: () => "https://github.com",
-	}),
-	githubApiUrl: Schema.optionalWith(Schema.String, {
-		default: () => "https://api.github.com",
-	}),
-	githubToken: Schema.optional(Schema.String),
-	githubOrgs: Schema.Array(Schema.String),
-	reposUpdatedAfter: Schema.optionalWith(Schema.String, {
-		default: () => "2020-01-01",
-	}),
-	ignore: Schema.optionalWith(Schema.Array(IgnoreRuleSchema), {
-		default: () => [],
-	}),
-	metadata: Schema.optionalWith(MetadataSchema, {
-		default: () => ({ name: "", description: "" }),
-	}),
-	teamsConfig: Schema.optionalWith(TeamsConfigSchema, {
-		default: () => ({ teams: [] }),
-	}),
-	tagGroups: Schema.optionalWith(Schema.Array(TagGroupSchema), {
-		default: () => [],
-	}),
-	mergeExtensions: Schema.optionalWith(Schema.Array(MergeExtensionSchema), {
-		default: () => [],
-	}),
-	ignoreContributors: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	ignoreExtensions: Schema.optionalWith(Schema.Array(Schema.String), {
-		default: () => [],
-	}),
-	extensionThresholdLoc: Schema.optionalWith(Schema.Number, {
-		default: () => 0,
-	}),
-	repositoryThresholdLocMain: Schema.optionalWith(Schema.Number, {
-		default: () => 0,
-	}),
-	repositoryThresholdContributors: Schema.optionalWith(Schema.Number, {
-		default: () => 1,
-	}),
-	contributorThresholdCommits: Schema.optionalWith(Schema.Number, {
-		default: () => 1,
-	}),
-	commitsMaxYears: Schema.optionalWith(Schema.Number, { default: () => 10 }),
-	security: Schema.optionalWith(SecurityConfigSchema, {
-		default: () => ({
-			enabled: true,
-			fetchAlerts: true,
-			fetchSBOM: false,
-			alertStates: ["open", "fixed"],
-			alertSeverities: ["critical", "high", "medium", "low"],
-		}),
-	}),
-	emitLegacyProjections: Schema.optionalWith(Schema.Boolean, {
-		default: () => false,
-	}),
-});
-
-export type LandscapeConfigInput = typeof LandscapeConfigSchema.Type;
+  githubCloneUrl: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => "https://github.com"))),
+  githubApiUrl: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => "https://api.github.com"))),
+  githubToken: Schema.optional(Schema.String),
+  githubOrgs: Schema.Array(Schema.String),
+  reposUpdatedAfter: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => "2020-01-01"))),
+  ignore: Schema.Array(IgnoreRuleSchema).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  metadata: MetadataSchema.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ({ name: "", description: "" })))),
+  teamsConfig: TeamsConfigSchema.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ({ teams: [] })))),
+  tagGroups: Schema.Array(TagGroupSchema).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  mergeExtensions: Schema.Array(MergeExtensionSchema).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  ignoreContributors: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  ignoreExtensions: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultType(Effect.sync(() => []))),
+  extensionThresholdLoc: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 0))),
+  repositoryThresholdLocMain: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 0))),
+  repositoryThresholdContributors: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 1))),
+  contributorThresholdCommits: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 1))),
+  commitsMaxYears: Schema.Number.pipe(Schema.withDecodingDefaultType(Effect.sync(() => 10))),
+  security: SecurityConfigSchema.pipe(
+    Schema.withDecodingDefaultType(
+      Effect.sync(() => ({
+        enabled: true,
+        fetchAlerts: true,
+        fetchSBOM: false,
+        alertStates: ["open", "fixed"],
+        alertSeverities: ["critical", "high", "medium", "low"],
+      })),
+    ),
+  ),
+  emitLegacyProjections: Schema.Boolean.pipe(Schema.withDecodingDefaultType(Effect.sync(() => false))),
+})

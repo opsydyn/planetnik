@@ -10,7 +10,7 @@ import type { SnapshotHistoryReadResult } from "./snapshotHistory.js"
 
 type RecordValue = Record<string, unknown>
 
-export type SnapshotTrendSnapshot = {
+type SnapshotTrendSnapshot = {
   readonly snapshotId: string
   readonly generatedAt: string
   readonly relativeDataDir: string
@@ -31,7 +31,7 @@ export type SnapshotTrendEntityRow = Pick<
   readonly currentRecords: readonly string[]
 }
 
-export type SnapshotTrendEntitySection = {
+type SnapshotTrendEntitySection = {
   readonly domain: SnapshotEntityDelta["domain"]
   readonly label: string
   readonly status: "compatible" | "missing" | "incompatible"
@@ -48,7 +48,7 @@ export type SnapshotTrendProjectSide = {
   readonly emptyDomains: readonly SnapshotEntityDomain[]
 }
 
-export type SnapshotTrendProjectMovement = {
+type SnapshotTrendProjectMovement = {
   readonly metricChanged: number
   readonly metricAdded: number
   readonly metricRemoved: number
@@ -58,12 +58,12 @@ export type SnapshotTrendProjectMovement = {
   readonly totalChanged: number
 }
 
-export type SnapshotTrendProjectCoverage = {
+type SnapshotTrendProjectCoverage = {
   readonly status: "complete" | "partial" | "unavailable"
   readonly caveat: string
 }
 
-export type SnapshotTrendProjectSummary = {
+type SnapshotTrendProjectSummary = {
   readonly baseline: SnapshotTrendProjectSide
   readonly current: SnapshotTrendProjectSide
   readonly movement: SnapshotTrendProjectMovement

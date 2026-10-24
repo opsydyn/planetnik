@@ -15,29 +15,29 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@astrojs/node": "11.0.2",
-    "@astrojs/react": "6.0.1",
-    "@copilotkit/a2ui-renderer": "^1.54.1",
-    "@copilotkit/react-core": "^1.54.1",
-    "@copilotkit/react-ui": "^1.54.1",
-    "@effect-atom/atom-react": "^0.5.0",
-    "@effect/platform-browser": "^0.76.0",
-    "@elysiajs/eden": "^1.4.1",
+    "effect": "catalog:",
+    "@astrojs/node": "11.1.9",
+    "@astrojs/react": "7.1.1",
+    "@copilotkit/a2ui-renderer": "^1.79.1",
+    "@copilotkit/react-core": "^1.79.1",
+    "@copilotkit/react-ui": "^1.79.1",
+    "@effect/platform-browser": "catalog:",
+    "@elysiajs/eden": "^1.4.9",
     "@phosphor-icons/react": "^2.1.10",
     "@planetnik/report-ui": "workspace:*",
-    "@tanstack/react-table": "^8.21.3",
-    "astro": "7.0.7",
-    "better-auth": "^1.4.19",
-    "fuse.js": "^7.1.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@tanstack/react-table": "^9.3.1",
+    "astro": "7.4.2",
+    "better-auth": "^1.7.12",
+    "fuse.js": "^7.5.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "@effect/atom-react": "catalog:"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.9",
-    "@astrojs/compiler-rs": "0.3.0",
-    "@types/bun": "^1.4.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "typescript": "^6.0.2"
+    "@astrojs/check": "0.9.12",
+    "@types/bun": "^1.4.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^6.0.3"
   }
 }

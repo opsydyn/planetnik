@@ -34,8 +34,8 @@ export type ActionQueueArtifactFilterOptions = {
 }
 
 export type ActionQueueArtifactEvidenceBase = Omit<PortfolioActionEvidence, "record">
-export type ActionQueueArtifactEvidenceRef = readonly [baseId: number, record: string]
-export type ActionQueueArtifactSignal = Omit<PortfolioActionSignal, "evidence"> & {
+type ActionQueueArtifactEvidenceRef = readonly [baseId: number, record: string]
+type ActionQueueArtifactSignal = Omit<PortfolioActionSignal, "evidence"> & {
   readonly evidenceRefs: readonly ActionQueueArtifactEvidenceRef[]
 }
 export type ActionQueueArtifactItem = Omit<PortfolioActionQueueItem, "signals" | "evidence"> & {

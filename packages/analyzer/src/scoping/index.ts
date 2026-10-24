@@ -1,8 +1,8 @@
-export { ConcernConventions } from "./ConcernConventions.js";
-export { type Convention, createConvention } from "./Convention.js";
-export { ConventionUtils } from "./ConventionUtils.js";
-export { CustomConventionsHelper } from "./CustomConventionsHelper.js";
-export { CustomExtensionConventions } from "./CustomExtensionConventions.js";
-export { CustomScopingConventions } from "./CustomScopingConventions.js";
-export { ScopeCreator } from "./ScopeCreator.js";
-export { ScopingConventions } from "./ScopingConventions.js";
+export { ConcernConventions } from "./ConcernConventions.js"
+export { type Convention, createConvention } from "./Convention.js"
+export { ConventionUtils } from "./ConventionUtils.js"
+export { CustomConventionsHelper } from "./CustomConventionsHelper.js"
+export { CustomExtensionConventions } from "./CustomExtensionConventions.js"
+export { CustomScopingConventions } from "./CustomScopingConventions.js"
+export { ScopeCreator } from "./ScopeCreator.js"
+export { ScopingConventions } from "./ScopingConventions.js"

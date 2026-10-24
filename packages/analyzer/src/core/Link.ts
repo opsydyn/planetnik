@@ -1,16 +1,16 @@
-import { Schema } from "@effect/schema";
+import { Effect, Schema } from "effect"
 
 const LinkSchema = Schema.Struct({
-	label: Schema.optionalWith(Schema.String, { default: () => "" }),
-	href: Schema.optionalWith(Schema.String, { default: () => "" }),
-});
+  label: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+  href: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.sync(() => ""))),
+})
 
-export type LinkType = typeof LinkSchema.Type;
+export type LinkType = typeof LinkSchema.Type
 
 export const Link = {
-	schema: LinkSchema,
+  schema: LinkSchema,
 
-	make(input: Partial<LinkType>): LinkType {
-		return Schema.decodeUnknownSync(LinkSchema)(input);
-	},
-};
+  make(input: Partial<LinkType>): LinkType {
+    return Schema.decodeUnknownSync(LinkSchema)(input)
+  },
+}

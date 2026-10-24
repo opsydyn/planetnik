@@ -3,12 +3,12 @@ import type { ReactElement, ReactNode } from "react"
 import { tryFocusCodeCityRenderer, tryResetCodeCityRenderer } from "../CodeCityCanvas.js"
 import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
 import {
-  reduceCodeCityStoryViewState,
   isCodeCityResetShortcut,
+  reduceCodeCityStoryViewState,
   resolveCodeCityResetViewResult,
+  resolveCodeCitySelectionFocusResult,
   resolveCodeCityStoryCompletionAction,
   resolveCodeCityStoryFocusAction,
-  resolveCodeCitySelectionFocusResult,
 } from "../CodeCityView.js"
 import type { CodeCityStory, CodeCityStoryEvent } from "../story.js"
 
@@ -93,6 +93,20 @@ const findButton = (node: ReactNode, label: string): ReactElement<ButtonProps> =
 }
 
 describe("CodeCityStoryRail", () => {
+  test("names the native story-control group in each navigable state", () => {
+    for (const state of [{ tag: "completed" as const }, { tag: "active" as const, stepIndex: 0, focused: false }]) {
+      const rendered = CodeCityStoryRail({
+        story: storyFixture(),
+        state,
+        onEvent: () => undefined,
+        onFocusStep: () => undefined,
+      })
+      const controls = rendered.props.children[1]
+      expect(controls.type).toBe("fieldset")
+      expect(controls.props["aria-label"]).toBe("Code City story controls")
+    }
+  })
+
   test("idle rail offers an explicit explain action", () => {
     const events: CodeCityStoryEvent[] = []
     const rendered = CodeCityStoryRail({
@@ -128,9 +142,7 @@ describe("CodeCityStoryRail", () => {
       onFocusStep: () => undefined,
     })
 
-    expect(textContent(rendered)).toContain(
-      "No resolved district relationship is available in the canonical model.",
-    )
+    expect(textContent(rendered)).toContain("No resolved district relationship is available in the canonical model.")
     expect(findButton(rendered, "Focus this step").props.disabled).toBe(true)
     findButton(rendered, "Skip").props.onClick?.()
     expect(events).toEqual([{ type: "skip" }])

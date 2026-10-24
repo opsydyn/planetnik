@@ -68,14 +68,12 @@ describe("Explore presentation helpers", () => {
     expect(getDatasetRecommendedView(readyRepository, "onboarding")).toBe("overview")
     expect(getDatasetRecommendedView(readyRepository, "architecture-review")).toBe("code-city")
     expect(getDatasetRecommendedView(readyRepository, "stakeholder")).toBe("overview")
-    expect(
-      getDatasetRecommendedView({ ...readyRepository, capabilities: ["overview"] }, "architecture-review"),
-    ).toBe("overview")
+    expect(getDatasetRecommendedView({ ...readyRepository, capabilities: ["overview"] }, "architecture-review")).toBe(
+      "overview",
+    )
     expect(
       getDatasetRecommendedView({ ...readyRepository, capabilities: ["summary", "filesMain"] }, "architecture-review"),
     ).toBe("code-city")
-    expect(
-      getDatasetRecommendedView({ ...readyRepository, capabilities: ["summary"] }, "stakeholder"),
-    ).toBe("overview")
+    expect(getDatasetRecommendedView({ ...readyRepository, capabilities: ["summary"] }, "stakeholder")).toBe("overview")
   })
 })

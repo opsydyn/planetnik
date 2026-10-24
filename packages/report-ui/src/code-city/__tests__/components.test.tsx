@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test"
 import type { ReactElement, ReactNode } from "react"
 import { CodeCityArchitectureBrief } from "../CodeCityArchitectureBrief.js"
 import { CodeCityAudienceSwitch } from "../CodeCityAudienceSwitch.js"
+import type { CodeCityFallbackRow } from "../CodeCityFallback.js"
 import { formatCodeCityFallbackInspectLabel } from "../CodeCityFallback.js"
 import { CodeCityInspector } from "../CodeCityInspector.js"
 import { CodeCityStoryRail } from "../CodeCityStoryRail.js"
 import type { CodeCityStory } from "../story.js"
-import type { CodeCityFallbackRow } from "../CodeCityFallback.js"
 import type { CodeCityInspectorModel } from "../viewModel.js"
 
 const viewSource = await Bun.file(new URL("../CodeCityView.tsx", import.meta.url)).text()
@@ -26,10 +26,7 @@ const findElements = (
   if (node === null || node === undefined || typeof node !== "object") return []
   if (Array.isArray(node)) return node.flatMap((child) => findElements(child, predicate))
   const element = node as ReactElement<Record<string, unknown> & { readonly children?: ReactNode }>
-  return [
-    ...(predicate(element) ? [element] : []),
-    ...findElements(element.props?.children, predicate),
-  ]
+  return [...(predicate(element) ? [element] : []), ...findElements(element.props?.children, predicate)]
 }
 
 describe("CodeCityFallback", () => {
@@ -64,7 +61,6 @@ describe("CodeCityFallback", () => {
     expect(formatCodeCityFallbackInspectLabel(district)).toBe("Inspect district Runtime")
     expect(formatCodeCityFallbackInspectLabel(building)).toBe("Inspect file src/runtime.ts")
   })
-
 })
 
 describe("Code City audience experience", () => {
@@ -92,8 +88,8 @@ describe("Code City audience experience", () => {
     const audienceButtons = findElements(audience, (element) => element.type === "button")
     const storyButtons = findElements(rail, (element) => element.type === "button")
 
+    expect(audience.type).toBe("fieldset")
     expect(audience.props).toMatchObject({
-      role: "group",
       "aria-label": "Code City audience",
     })
     expect(audienceButtons.map((button) => textContent(button))).toEqual([
@@ -136,10 +132,7 @@ describe("Code City audience experience", () => {
     expect(textContent(rendered)).toContain("Largest context")
     expect(textContent(rendered)).toContain("Runtime · 240 LOC")
     expect(textContent(rendered)).toContain("Inspect a hub or boundary crossing")
-    expect(links.map((link) => link.props.href)).toEqual([
-      "/components#runtime",
-      "/topology#runtime",
-    ])
+    expect(links.map((link) => link.props.href)).toEqual(["/components#runtime", "/topology#runtime"])
   })
 })
 
@@ -151,25 +144,25 @@ describe("CodeCityInspector", () => {
       districtLabel: "Runtime",
       sourceSets: ["main"],
       metrics: [],
-		evidence: [],
-		relationships: [
-			{
-				id: "edge:runtime-web",
-				label: "Dependency route",
-				summary: "Runtime → Web · 2 dependencies",
-				href: "/topology#runtime-web",
-			},
-		],
-		visualFacts: [
-			{ label: "Material", value: "Brick" },
-			{ label: "Archetype", value: "Tower" },
-			{ label: "Roof", value: "Capped" },
-			{ label: "Texture", value: "Banded" },
-			{
-				label: "Active lens",
-				value: "Health has no separate geometry cue; it uses a restrained emissive surface tint.",
-			},
-		],
+      evidence: [],
+      relationships: [
+        {
+          id: "edge:runtime-web",
+          label: "Dependency route",
+          summary: "Runtime → Web · 2 dependencies",
+          href: "/topology#runtime-web",
+        },
+      ],
+      visualFacts: [
+        { label: "Material", value: "Brick" },
+        { label: "Archetype", value: "Tower" },
+        { label: "Roof", value: "Capped" },
+        { label: "Texture", value: "Banded" },
+        {
+          label: "Active lens",
+          value: "Health has no separate geometry cue; it uses a restrained emissive surface tint.",
+        },
+      ],
       units: [
         {
           id: "unit:runtime-start",
@@ -197,15 +190,13 @@ describe("CodeCityInspector", () => {
     expect(text).toContain("Lines 10–31")
     expect(text).toContain("22 LOC")
     expect(text).toContain("McCabe 11")
-		expect(text).toContain("Visual encoding")
-		expect(text).toContain("Material")
-		expect(text).toContain("Health has no separate geometry cue; it uses a restrained emissive surface tint.")
-		expect(text).toContain("Architecture tethers")
-		expect(text).toContain("Runtime → Web · 2 dependencies")
+    expect(text).toContain("Visual encoding")
+    expect(text).toContain("Material")
+    expect(text).toContain("Health has no separate geometry cue; it uses a restrained emissive surface tint.")
+    expect(text).toContain("Architecture tethers")
+    expect(text).toContain("Runtime → Web · 2 dependencies")
     expect(links.map((link) => link.props.href)).toContain("/units/complexity#start")
-		expect(links.map((link) => link.props["aria-label"])).toContain(
-			"Dependency route: Runtime → Web · 2 dependencies",
-		)
-		expect(links.map((link) => link.props.href)).toContain("/topology#runtime-web")
+    expect(links.map((link) => link.props["aria-label"])).toContain("Dependency route: Runtime → Web · 2 dependencies")
+    expect(links.map((link) => link.props.href)).toContain("/topology#runtime-web")
   })
 })

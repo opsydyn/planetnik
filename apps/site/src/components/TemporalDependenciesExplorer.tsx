@@ -112,6 +112,7 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
   const latestCommit =
     filteredRows.reduce((latest, row) => {
       const normalizedLatestCommit = normalizeTemporalCommit(row.latestCommit)
+      // biome-ignore lint/complexity/useMathMinMax: ISO date strings need lexical comparison, not numeric coercion.
       return normalizedLatestCommit > latest ? normalizedLatestCommit : latest
     }, "") || "—"
 

@@ -1,40 +1,36 @@
-import { Schema } from "effect";
-import { Elysia } from "elysia";
-import { appConfig } from "../../config.js";
+import { Schema } from "effect"
+import { Elysia } from "elysia"
+import { appConfig } from "../../config.js"
 
-const NodeEnvironmentSchema = Schema.Literal(
-	"development",
-	"test",
-	"production",
-);
+const NodeEnvironmentSchema = Schema.Literals(["development", "test", "production"])
 const HealthResponseSchema = Schema.Struct({
-	status: Schema.Literal("ok"),
-	service: Schema.Literal("planetnik-runtime"),
-	nodeEnv: NodeEnvironmentSchema,
-});
+  status: Schema.Literal("ok"),
+  service: Schema.Literal("planetnik-runtime"),
+  nodeEnv: NodeEnvironmentSchema,
+})
 
-type HealthResponse = typeof HealthResponseSchema.Type;
+type HealthResponse = typeof HealthResponseSchema.Type
 
-const decodeHealthResponse = Schema.decodeUnknownSync(HealthResponseSchema);
+const decodeHealthResponse = Schema.decodeUnknownSync(HealthResponseSchema)
 
 export const healthRoutes = new Elysia({ name: "health" }).get(
-	"/health",
-	() => {
-		const response: HealthResponse = {
-			status: "ok",
-			service: "planetnik-runtime",
-			nodeEnv: appConfig.nodeEnv,
-		};
+  "/health",
+  () => {
+    const response: HealthResponse = {
+      status: "ok",
+      service: "planetnik-runtime",
+      nodeEnv: appConfig.nodeEnv,
+    }
 
-		return decodeHealthResponse(response);
-	},
-	{
-		response: {
-			200: Schema.standardSchemaV1(HealthResponseSchema),
-		},
-		detail: {
-			summary: "Runtime health check",
-			tags: ["Health"],
-		},
-	},
-);
+    return decodeHealthResponse(response)
+  },
+  {
+    response: {
+      200: Schema.toStandardSchemaV1(HealthResponseSchema),
+    },
+    detail: {
+      summary: "Runtime health check",
+      tags: ["Health"],
+    },
+  },
+)

@@ -44,7 +44,7 @@ export function createCodeCityTextureAtlas(documentRef: Document): CodeCityTextu
     canvas.height = atlasSize
     const context = canvas.getContext("2d")
     if (context === null) {
-      textures.forEach((texture) => texture.dispose())
+      for (const texture of textures.values()) texture.dispose()
       return null
     }
 
@@ -66,7 +66,7 @@ export function createCodeCityTextureAtlas(documentRef: Document): CodeCityTextu
     dispose: () => {
       if (disposed) return
       disposed = true
-      textures.forEach((texture) => texture.dispose())
+      for (const texture of textures.values()) texture.dispose()
     },
   }
 }

@@ -96,7 +96,9 @@ class JsonArrayObjectParser {
       this.escaped = false
       this.stringRaw = ""
       this.stringIsRootKey =
-        this.stack.length === 1 && this.stack[0] === "object" && (this.lastSignificant === "{" || this.lastSignificant === ",")
+        this.stack.length === 1 &&
+        this.stack[0] === "object" &&
+        (this.lastSignificant === "{" || this.lastSignificant === ",")
       return
     }
     if (whitespace.test(character)) return

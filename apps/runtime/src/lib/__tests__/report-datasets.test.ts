@@ -75,10 +75,7 @@ const validEntityIdPolicy = {
   contributor: "contributor:<lowercase trimmed email>",
 }
 
-function writeValidV2Context(
-  dataDir: string,
-  overrides: Record<string, unknown> = {},
-): void {
+function writeValidV2Context(dataDir: string, overrides: Record<string, unknown> = {}): void {
   writeJson(join(dataDir, "analysisResults.json"), {})
   writeJson(join(dataDir, "metrics.json"), { metrics: [] })
   writeJson(join(dataDir, "contributors.json"), { contributors: [] })

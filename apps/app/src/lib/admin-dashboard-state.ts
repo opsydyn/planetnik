@@ -1,7 +1,7 @@
 import { BrowserKeyValueStore } from "@effect/platform-browser"
-import { Atom } from "@effect-atom/atom-react"
 import type { SortingState } from "@tanstack/react-table"
 import { Schema } from "effect"
+import { Atom } from "effect/reactivity"
 import {
   type AdminPasswordDraft,
   type AdminUserDraft,
@@ -53,7 +53,7 @@ const sortingSchema = Schema.Array(
 const tableStateSchema = Schema.Struct({
   searchQuery: Schema.String,
   sorting: sortingSchema,
-  statusFilter: Schema.Literal("all", "active", "banned"),
+  statusFilter: Schema.Literals(["all", "active", "banned"]),
   pageIndex: Schema.Number,
   pageSize: Schema.Number,
 })

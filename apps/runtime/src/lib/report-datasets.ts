@@ -77,7 +77,7 @@ export type ReportContextSummary = {
   readonly entityIdPolicy?: Readonly<Record<string, string>>
 }
 
-export type SingleRepositoryArtifactSummary = {
+type SingleRepositoryArtifactSummary = {
   readonly kind: "single_repository"
   readonly projectName: string
   readonly filesCount: number
@@ -86,7 +86,7 @@ export type SingleRepositoryArtifactSummary = {
   readonly duplicationPercentage: number
 }
 
-export type LandscapeArtifactSummary = {
+type LandscapeArtifactSummary = {
   readonly kind: "landscape"
   readonly title: string
   readonly landscapeName: string
@@ -189,14 +189,14 @@ export type ReportContributorDetail = {
   } | null
 }
 
-export type TopologyPeopleDep = {
+type TopologyPeopleDep = {
   readonly from: string
   readonly to: string
   readonly count: number
   readonly files: ReadonlyArray<string>
 }
 
-export type TopologyContributorImpact = {
+type TopologyContributorImpact = {
   readonly email: string
   readonly display_name: string
   readonly glue_score: number
@@ -757,7 +757,7 @@ export type ReportTrendsSummary = {
 
 export type ReportFileViewName = "size" | "age" | "churn" | "temporal"
 
-export type ReportFileInventoryRow = {
+type ReportFileInventoryRow = {
   readonly relativePath: string
   readonly extension: string
   readonly linesOfCode: number
@@ -767,7 +767,7 @@ export type ReportFileInventoryRow = {
   readonly latestDate: string | null
 }
 
-export type ReportFilesSizeView = {
+type ReportFilesSizeView = {
   readonly view: "size"
   readonly headline: {
     readonly fileCount: number
@@ -785,7 +785,7 @@ export type ReportFilesSizeView = {
   readonly rows: ReadonlyArray<ReportFileInventoryRow>
 }
 
-export type ReportFilesAgeView = {
+type ReportFilesAgeView = {
   readonly view: "age"
   readonly headline: {
     readonly ageInDays: number | null
@@ -798,7 +798,7 @@ export type ReportFilesAgeView = {
   }>
 }
 
-export type ReportFilesChurnView = {
+type ReportFilesChurnView = {
   readonly view: "churn"
   readonly headline: {
     readonly activeDays: number | null
@@ -813,7 +813,7 @@ export type ReportFilesChurnView = {
   readonly rows: ReadonlyArray<ReportFileInventoryRow>
 }
 
-export type ReportFilesTemporalView = {
+type ReportFilesTemporalView = {
   readonly view: "temporal"
   readonly sections: ReadonlyArray<{
     readonly periodKey: string
@@ -834,7 +834,7 @@ export type ReportFilesView = ReportFilesSizeView | ReportFilesAgeView | ReportF
 
 export type ReportUnitViewName = "size" | "complexity"
 
-export type ReportUnitInventoryRow = {
+type ReportUnitInventoryRow = {
   readonly shortName: string
   readonly relativeFileName: string
   readonly linesOfCode: number
@@ -844,7 +844,7 @@ export type ReportUnitInventoryRow = {
   readonly endLine: number
 }
 
-export type ReportUnitsSizeView = {
+type ReportUnitsSizeView = {
   readonly view: "size"
   readonly headline: {
     readonly unitCount: number
@@ -862,7 +862,7 @@ export type ReportUnitsSizeView = {
   readonly rows: ReadonlyArray<ReportUnitInventoryRow>
 }
 
-export type ReportUnitsComplexityView = {
+type ReportUnitsComplexityView = {
   readonly view: "complexity"
   readonly headline: {
     readonly unitCount: number
@@ -1471,21 +1471,10 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   )
 }
 
-const ENTITY_ID_POLICY_KEYS = [
-  "repository",
-  "file",
-  "unit",
-  "component",
-  "contributor",
-] as const
+const ENTITY_ID_POLICY_KEYS = ["repository", "file", "unit", "component", "contributor"] as const
 
 function isSafeRelativeShardPath(value: string): boolean {
-  return (
-    value.length > 0 &&
-    !value.startsWith("/") &&
-    !value.includes("\\") &&
-    !value.split("/").includes("..")
-  )
+  return value.length > 0 && !value.startsWith("/") && !value.includes("\\") && !value.split("/").includes("..")
 }
 
 function isIsoTimestamp(value: string): boolean {
@@ -1512,14 +1501,11 @@ function isValidV2Context(
   compatibilityProjections: unknown,
   entityIdPolicy: unknown,
 ): boolean {
-  const hasNonEmptyString = (value: unknown): value is string =>
-    typeof value === "string" && value.trim().length > 0
+  const hasNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0
 
   if (
     typeof snapshotId !== "string" ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      snapshotId,
-    ) ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(snapshotId) ||
     typeof generatedAt !== "string" ||
     !isIsoTimestamp(generatedAt) ||
     (mode === "single_repository" && !hasNonEmptyString(repositoryId)) ||
@@ -1533,9 +1519,7 @@ function isValidV2Context(
   }
 
   const requiredCapabilities =
-    mode === "single_repository"
-      ? ["summary", "metrics", "contributors"]
-      : ["analysis", "overview"]
+    mode === "single_repository" ? ["summary", "metrics", "contributors"] : ["analysis", "overview"]
   const canonicalShardKeys = Object.keys(canonicalShards)
   if (
     capabilities.length !== canonicalShardKeys.length ||
@@ -1605,8 +1589,7 @@ export function readReportContextSummary(dataDir: string): ReportContextSummary 
     (snapshotId !== undefined && typeof snapshotId !== "string") ||
     (generatedAt !== undefined && typeof generatedAt !== "string") ||
     (capabilities !== undefined &&
-      (!Array.isArray(capabilities) ||
-        !capabilities.every((item) => typeof item === "string"))) ||
+      (!Array.isArray(capabilities) || !capabilities.every((item) => typeof item === "string"))) ||
     (canonicalShards !== undefined && !isStringRecord(canonicalShards)) ||
     (compatibilityProjections !== undefined && !isStringRecord(compatibilityProjections)) ||
     (entityIdPolicy !== undefined && !isStringRecord(entityIdPolicy)) ||
@@ -4608,7 +4591,7 @@ export function resolvePersistedReportDataSource(input: {
   }
 }
 
-export function getConfiguredDatasetsRoot(): string {
+function getConfiguredDatasetsRoot(): string {
   return appConfig.datasetsRoot ?? defaultDatasetsRoot
 }
 

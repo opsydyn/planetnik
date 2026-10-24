@@ -1,22 +1,22 @@
-import type { ContributionTimeSlot } from "../contributors/ContributionTimeSlot.js";
-import type { Contributor } from "../contributors/Contributor.js";
-import type { ComponentDependency } from "../dependencies/ComponentDependency.js";
-import type { CommitsPerExtension } from "../githistory/CommitsPerExtension.js";
+import type { ContributionTimeSlot } from "../contributors/ContributionTimeSlot.js"
+import type { Contributor } from "../contributors/Contributor.js"
+import type { ComponentDependency } from "../dependencies/ComponentDependency.js"
+import type { CommitsPerExtension } from "../githistory/CommitsPerExtension.js"
 
 export class ContributorsAnalysisResults {
-	latestCommitDate: string = "";
-	commitsCount: number = 0;
-	contributors: Contributor[] = [];
-	contributorsPerYear: ContributionTimeSlot[] = [];
-	contributorsPerMonth: ContributionTimeSlot[] = [];
-	contributorsPerDay: ContributionTimeSlot[] = [];
-	contributorsPerWeek: ContributionTimeSlot[] = [];
-	commitsPerExtension: CommitsPerExtension[] = [];
+  latestCommitDate: string = ""
+  commitsCount: number = 0
+  contributors: Contributor[] = []
+  contributorsPerYear: ContributionTimeSlot[] = []
+  contributorsPerMonth: ContributionTimeSlot[] = []
+  contributorsPerDay: ContributionTimeSlot[] = []
+  contributorsPerWeek: ContributionTimeSlot[] = []
+  commitsPerExtension: CommitsPerExtension[] = []
 
-	peopleDependencies: ComponentDependency[] = [];
-	peopleDependencies30Days: ComponentDependency[] = [];
-	peopleDependencies90Days: ComponentDependency[] = [];
-	peopleDependencies180Days: ComponentDependency[] = [];
-	peopleDependencies365Days: ComponentDependency[] = [];
-	peopleDependenciesAllTime: ComponentDependency[] = [];
+  peopleDependencies: ComponentDependency[] = []
+  peopleDependencies30Days: ComponentDependency[] = []
+  peopleDependencies90Days: ComponentDependency[] = []
+  peopleDependencies180Days: ComponentDependency[] = []
+  peopleDependencies365Days: ComponentDependency[] = []
+  peopleDependenciesAllTime: ComponentDependency[] = []
 }

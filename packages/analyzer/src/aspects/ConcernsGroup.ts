@@ -1,16 +1,16 @@
-import type { Concern } from "./Concern.js";
+import type { Concern } from "./Concern.js"
 
 export class ConcernsGroup {
-	name: string;
-	concerns: Concern[];
-	metaConcerns: Array<{
-		pathPattern: string;
-		contentPattern: string;
-		use: string;
-	}> = [];
+  name: string
+  concerns: Concern[]
+  metaConcerns: Array<{
+    pathPattern: string
+    contentPattern: string
+    use: string
+  }> = []
 
-	constructor(name: string = "") {
-		this.name = name;
-		this.concerns = [];
-	}
+  constructor(name: string = "") {
+    this.name = name
+    this.concerns = []
+  }
 }
