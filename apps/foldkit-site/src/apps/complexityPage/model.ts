@@ -2,9 +2,10 @@
  * Page model for the server-rendered complexity report.
  *
  * One FoldKit application owns the whole route, which is what `definePage`
- * requires and what makes the page server-render: the Astro renderer only
- * executes a FoldKit app when it is a page owner. An island is emitted as an
- * empty mount shell whatever directive it carries.
+ * requires. The page owner server-renders and then hydrates, adopting its own
+ * markup. The island version pre-renders each component instead
+ * (`lazyApp(load, { prerender: true })`), and an island that boots replaces
+ * that markup rather than adopting it.
  *
  * The four report components are embedded as submodels, so the same code backs
  * both this page and the island version of it.
