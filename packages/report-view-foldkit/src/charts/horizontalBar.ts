@@ -80,17 +80,22 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
       () => false,
     )
     return [
-      h.rect([
-        h.X("0"),
-        h.Y(String(slot.start)),
-        h.Width(String(axis.scale(row.value))),
-        h.Height(String(slot.size)),
-        h.Rx("2"),
-        h.Fill(active ? BAR_ACTIVE : BAR),
-        h.OnMouseEnter(Message.HoveredBar({ index })),
-        h.OnMouseLeave(Message.BlurredBar()),
-        h.Attribute("data-testid", `bar-${index}`),
-      ]),
+      h.rect(
+        [
+          h.X("0"),
+          h.Y(String(slot.start)),
+          h.Width(String(axis.scale(row.value))),
+          h.Height(String(slot.size)),
+          h.Rx("2"),
+          h.Fill(active ? BAR_ACTIVE : BAR),
+          h.OnMouseEnter(Message.HoveredBar({ index })),
+          h.OnMouseLeave(Message.BlurredBar()),
+          h.Attribute("data-testid", `bar-${index}`),
+        ],
+        // A native tooltip, so the bar still names itself when the chart is
+        // pre-rendered and ships without a runtime.
+        [h.title([], [`${row.label}: ${row.value}`])],
+      ),
       h.text(
         [
           h.X(String(axis.scale(row.value) + 6)),

@@ -8,17 +8,18 @@ import Scatter from "../../apps/scatter/app"
 import Dashboard from "../../layouts/Dashboard.astro"
 import { complexityFlags, type Unit } from "../../lib/complexityData"
 
-// The island version: four client-only islands composed by Astro. Its
+// The island version: four FoldKit islands composed by Astro. Its
 // server-rendered counterpart at /units/complexity-ssr prepares its data with
 // the same function, so the only difference between the two pages is delivery.
 //
-// Every island is `client:load`, and none can be `client:visible`. Astro's
-// visible directive observes an island's children, because `astro-island` is
-// `display: contents`; a FoldKit island's only child is the empty mount shell
-// the renderer emits, which measures 0x0 and so never intersects. The scatter
-// and the grid were on `client:visible` and silently never hydrated. An island
-// that server-rendered would have size, and the directive would work — see
-// amendment 8 of docs/foldkit-site-port-assessment.md.
+// Every island is pre-rendered (`lazyApp(load, { prerender: true })`), so its
+// markup is in the HTML. The three charts are read, not used, so they take no
+// client directive: Astro emits no island and no script for them, and each mark
+// keeps its hover text as a native `<title>`. Only the grid is interactive, and
+// it is `client:visible`, so the page loads no JavaScript until the reader
+// scrolls to the table. `client:interaction` was measured for the grid and was
+// slower from a tap to a working search box; see
+// docs/astro-foldkit-optimisation-plan.md.
 const summary = await getEntry("analysis", "summary")
 const units = await getCollection("units")
 const projectName = summary?.data.metadata.name ?? "Unknown"
