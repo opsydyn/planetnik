@@ -66,6 +66,7 @@ function run(command: readonly string[], cwd: string): ProcessResult {
   } catch (error) {
     throw new Error(
       `Could not execute ${command[0] ?? "command"}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     )
   }
 
@@ -344,6 +345,7 @@ export function captureSokratesRust(options: CaptureArguments): void {
   } catch (error) {
     throw new Error(
       formatMissingSokratesRustCapturePrerequisites([error instanceof Error ? error.message : String(error)]),
+      { cause: error },
     )
   }
 

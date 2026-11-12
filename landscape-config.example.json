@@ -30,17 +30,13 @@
       ]
     }
   ],
-  "mergeExtensions": [
-    { "primary": "ts", "secondary": "tsx" }
-  ],
+  "mergeExtensions": [{ "primary": "ts", "secondary": "tsx" }],
   "security": {
     "enabled": true,
     "fetchAlerts": true,
     "fetchSBOM": false
   },
-  "githubOrgs": [
-    "<YOUR_ORG>"
-  ],
+  "githubOrgs": ["<YOUR_ORG>"],
   "ignore": [
     { "org": "", "repo": ".*[-]builds" },
     { "org": "", "repo": "\\.github" }

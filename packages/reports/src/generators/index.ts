@@ -10,10 +10,7 @@ export { FileHistoryReportGenerator } from "./FileHistoryReportGenerator.js"
 export { FileSizeReportGenerator } from "./FileSizeReportGenerator.js"
 export { FileTemporalDependenciesReportGenerator } from "./FileTemporalDependenciesReportGenerator.js"
 export { FindingsReportGenerator } from "./FindingsReportGenerator.js"
-export {
-  HistoryMode,
-  HistoryPerLanguageGenerator,
-} from "./HistoryPerLanguageGenerator.js"
+export { HistoryMode, HistoryPerLanguageGenerator } from "./HistoryPerLanguageGenerator.js"
 export { LogicalComponentsReportGenerator } from "./LogicalComponentsReportGenerator.js"
 export { MetricsReportGenerator } from "./MetricsReportGenerator.js"
 export { OverviewReportGenerator } from "./OverviewReportGenerator.js"

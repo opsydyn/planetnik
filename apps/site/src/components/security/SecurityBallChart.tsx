@@ -316,7 +316,7 @@ function SecurityBallInner({
                   strokeOpacity={isSelected ? 0.95 : 0.45}
                   strokeWidth={isSelected ? 2 : 1}
                 />
-                {/* biome-ignore lint/a11y/useSemanticElements: SVG circles cannot be replaced with <button> */}
+                {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SVG circles cannot be replaced with <button> */}
                 <g
                   role="button"
                   tabIndex={0}

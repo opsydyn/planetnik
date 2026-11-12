@@ -289,7 +289,7 @@ export default function ReportDataGridInner({
     )
   }, [paginationPageSize])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: filter and search changes intentionally trigger a page reset even though the effect body only updates pagination.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- filter and search changes intentionally trigger a page reset even though the effect body only updates pagination.
   useEffect(() => {
     setPagination((current) => (current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }))
   }, [columnFilters, deferredQuery])

@@ -97,7 +97,7 @@ function LineChartInner({ series, xLabel, yLabel, width, height }: LineChartProp
                   strokeWidth={2}
                 />
                 {s.data.map((d) => (
-                  // biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: this SVG data graphic only exposes a tooltip, with no button action.
+                  // oxlint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- this SVG data graphic only exposes a tooltip, with no button action.
                   <circle
                     key={`${s.name}-${d.label}`}
                     role="img"

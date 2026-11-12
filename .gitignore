@@ -11,3 +11,7 @@ _sokrates/
 /datasets/
 _planetnik_landscape/
 apps/runtime/artifacts/
+
+# Brainstorm companion runtime state; the session content itself is tracked
+.superpowers/brainstorm/.last-*
+.superpowers/brainstorm/*/state/

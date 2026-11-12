@@ -117,7 +117,7 @@ function ScatterInner({
               (thresholds?.y != null && d.y > thresholds.y) || (thresholds?.x != null && d.x > thresholds.x)
 
             return (
-              // biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: this SVG data graphic only exposes a tooltip, with no button action.
+              // oxlint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- this SVG data graphic only exposes a tooltip, with no button action.
               <circle
                 key={`${d.label}-${d.x}-${d.y}`}
                 role="img"

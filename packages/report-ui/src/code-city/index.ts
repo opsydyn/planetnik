@@ -1,8 +1,4 @@
-export type {
-  CodeCityAudienceId,
-  CodeCityAudienceMetricId,
-  CodeCityAudiencePresentation,
-} from "./audience.js"
+export type { CodeCityAudienceId, CodeCityAudienceMetricId, CodeCityAudiencePresentation } from "./audience.js"
 export {
   buildCodeCityAudiencePresentation,
   getCodeCityAudiencePresentation,
@@ -10,10 +6,7 @@ export {
 } from "./audience.js"
 export type { CodeCityUrlState } from "./audienceUrl.js"
 export { buildCodeCityUrl, parseCodeCityUrlState } from "./audienceUrl.js"
-export type {
-  CodeCityBriefEvidence,
-  CodeCityBriefFact,
-} from "./brief.js"
+export type { CodeCityBriefEvidence, CodeCityBriefFact } from "./brief.js"
 export { buildCodeCityArchitectureBrief } from "./brief.js"
 export type { CodeCityArchitectureBriefProps } from "./CodeCityArchitectureBrief.js"
 export { CodeCityArchitectureBrief } from "./CodeCityArchitectureBrief.js"
@@ -36,19 +29,10 @@ export type { CodeCityLensEntity, CodeCityLensId, CodeCityLensVisual } from "./l
 export { resolveCodeCityLens } from "./lens"
 export type { CodeCityMaterialSpec, CodeCitySurfaceTreatment } from "./materials"
 export { resolveCodeCityMaterialSpec, resolveCodeCitySurfaceTreatment } from "./materials"
-export type {
-  CodeCityRouteResolution,
-  CodeCityRouteState,
-  CodeCityRouteStateInput,
-} from "./routeState"
+export type { CodeCityRouteResolution, CodeCityRouteState, CodeCityRouteStateInput } from "./routeState"
 export { resolveCodeCityRouteState } from "./routeState"
 export { buildCodeCityScene } from "./sceneAdapter"
-export type {
-  CodeCityScene,
-  CodeCitySceneEdge,
-  CodeCitySceneNode,
-  CodeCityScenePoint,
-} from "./sceneTypes"
+export type { CodeCityScene, CodeCitySceneEdge, CodeCitySceneNode, CodeCityScenePoint } from "./sceneTypes"
 export type { CodeCitySelection, CodeCitySelectionResult } from "./selection"
 export { resolveCodeCitySelection } from "./selection"
 export type {
@@ -69,10 +53,7 @@ export type {
   CodeCityInspectorRelationshipModel,
   CodeCityInspectorUnitModel,
 } from "./viewModel"
-export {
-  buildCodeCityFallbackRows,
-  buildCodeCityInspectorModel,
-} from "./viewModel"
+export { buildCodeCityFallbackRows, buildCodeCityInspectorModel } from "./viewModel"
 export type {
   CodeCityBuildingArchetype,
   CodeCityBuildingVisual,

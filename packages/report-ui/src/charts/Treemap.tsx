@@ -99,7 +99,7 @@ function TreemapInner({ data, valueLabel, width, height }: TreemapChartProps & {
 
           return (
             <Group key={`${leaf.data.group ?? "ungrouped"}-${leaf.data.name}`} left={leaf.x0} top={leaf.y0}>
-              {/* biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: this SVG data graphic only exposes a tooltip, with no button action. */}
+              {/* oxlint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- this SVG data graphic only exposes a tooltip, with no button action. */}
               <rect
                 width={w}
                 role="img"

@@ -1,7 +1,4 @@
-export {
-  ContributorConnection,
-  ContributorConnections,
-} from "./ContributorConnection.js"
+export { ContributorConnection, ContributorConnections } from "./ContributorConnection.js"
 export { ContributorConnectionUtils } from "./ContributorConnectionUtils.js"
 export { ContributorRepositories } from "./ContributorRepositories.js"
 export { ContributorRepositoryInfo } from "./ContributorRepositoryInfo.js"
@@ -10,10 +7,7 @@ export { CustomTab } from "./CustomTab.js"
 export { DependenciesCreator } from "./DependenciesCreator.js"
 export { FileExport } from "./FileExport.js"
 export { LandscapeAnalysisInitiator } from "./LandscapeAnalysisInitiator.js"
-export {
-  LandscapeAnalysisResults,
-  type RepositoryAnalysisResult,
-} from "./LandscapeAnalysisResults.js"
+export { LandscapeAnalysisResults, type RepositoryAnalysisResult } from "./LandscapeAnalysisResults.js"
 export { LandscapeAnalysisResultsReadData } from "./LandscapeAnalysisResultsReadData.js"
 export { LandscapeAnalysisUpdater } from "./LandscapeAnalysisUpdater.js"
 export { LandscapeAnalysisUtils } from "./LandscapeAnalysisUtils.js"

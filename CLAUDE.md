@@ -17,7 +17,8 @@ TypeScript port of [Sokrates](https://github.com/zeljkoobrenovic/sokrates) — a
 - **Frontend state:** `effect/reactivity` with `@effect/atom-react` bindings
 - **Website:** Astro 7.4; TypeScript 6 remains required by the current Astro checker
 - **Git:** `simple-git`
-- **Linting/formatting:** Biome (2-space indent, double quotes, no semicolons, 120 line width)
+- **Linting:** oxlint (`oxlint.config.ts`), with the `@foldkit/oxlint-plugin` conventions applied to the FoldKit packages
+- **Formatting:** oxfmt (`.oxfmtrc.json`: 2-space indent, double quotes, no semicolons, 120 line width)
 - **Testing:** `bun:test`
 
 ## Monorepo Structure
@@ -51,16 +52,17 @@ bun install          # Install all dependencies
 bun run build        # Build all packages
 bun test             # Run all tests
 bun run typecheck    # TypeScript type checking
-bun run lint         # Biome lint check
-bun run lint:fix     # Biome auto-fix
+bun run lint         # oxlint + oxfmt --check
+bun run lint:fix     # oxfmt + oxlint --fix
 bun run knip         # Dead code detection
 ```
 
 ## Conventions
 
 ### Code Style
-- **Biome** handles all formatting and linting — run `bunx biome check --write .` before committing
-- Imports must be alphabetically ordered by source path (Biome enforces this)
+- **oxlint and oxfmt** handle all linting and formatting — run `bun run lint:fix` before committing
+- Suppress a finding with `// oxlint-disable-next-line <rule> -- <reason>`; the reason is required by convention. A few rules report at the offending attribute rather than at the element, so check that the suppression binds
+- Import order is **not** enforced: oxfmt's `sortImports` groups differently from the Biome it replaced, and turning it on reformats 431 files, so it is off until that is done as its own change
 - `noStaticOnlyClass` is disabled — many Java utility classes port as static-only classes
 - `noNonNullAssertion` is disabled — used sparingly for Java parity
 - All `.ts` imports use `.js` extensions (ESM convention)

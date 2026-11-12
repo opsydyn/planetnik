@@ -141,7 +141,7 @@ function readSnapshotRecord(
     }
   } catch (error) {
     if (error instanceof Error && error.message.includes("is not a directory")) throw error
-    throw new Error(`Snapshot history entry '${entry.dataDir}' is not a directory.`)
+    throw new Error(`Snapshot history entry '${entry.dataDir}' is not a directory.`, { cause: error })
   }
 
   const contextPath = join(directory, "report_context.json")

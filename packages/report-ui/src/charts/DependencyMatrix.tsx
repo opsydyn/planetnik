@@ -118,7 +118,7 @@ function MatrixInner({
               {names.map((colName, ci) => {
                 const count = matrix[ri]?.[ci] ?? 0
                 return (
-                  // biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: SVG cells only display data tooltips on hover, with no button action.
+                  // oxlint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- SVG cells only display data tooltips on hover, with no button action.
                   <rect
                     key={`cell-${rowName}-${colName}`}
                     role="img"

@@ -6,17 +6,13 @@
     "name": "Alan Currie - personal repo",
     "description": "Multi-repository landscape analysis of Alan Currie's repositories"
   },
-  "mergeExtensions": [
-    { "primary": "ts", "secondary": "tsx" }
-  ],
+  "mergeExtensions": [{ "primary": "ts", "secondary": "tsx" }],
   "security": {
     "enabled": true,
     "fetchAlerts": true,
     "fetchSBOM": false
   },
-  "githubOrgs": [
-    "alanpcurrie"
-  ],
+  "githubOrgs": ["alanpcurrie"],
   "ignore": [
     { "org": "", "repo": "\\.github" },
     { "org": "", "repo": "^website$" },

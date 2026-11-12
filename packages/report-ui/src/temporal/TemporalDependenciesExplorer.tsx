@@ -111,7 +111,7 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
   const latestCommit =
     filteredRows.reduce((latest, row) => {
       const normalizedLatestCommit = normalizeTemporalCommit(row.latestCommit)
-      // biome-ignore lint/complexity/useMathMinMax: normalized commit dates are strings ordered lexically; Math.max coerces them to NaN.
+      // oxlint-disable-next-line unicorn/prefer-math-min-max -- normalized commit dates are strings ordered lexically; Math.max coerces them to NaN.
       return normalizedLatestCommit > latest ? normalizedLatestCommit : latest
     }, "") || "—"
 
