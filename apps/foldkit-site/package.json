@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@astrojs/react": "7.1.8",
-    "@opsydyn/astro-foldkit": "0.10.0",
+    "@opsydyn/astro-foldkit": "0.12.0",
     "@planetnik/report-data": "workspace:*",
     "@planetnik/report-ui": "workspace:*",
     "@planetnik/report-view-foldkit": "workspace:*",
