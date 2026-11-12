@@ -1,5 +1,5 @@
 import { getCollection, getEntry } from "astro:content"
-import { getLandscapeRepoRouteParam, readLandscapeRepoJson } from "./landscape"
+import { getLandscapeRepoRouteParam, readLandscapeRepoJson } from "@planetnik/report-data/lib/landscape"
 
 export interface LandscapeRepoPageProps {
   repositoryId: string

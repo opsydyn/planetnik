@@ -1,13 +1,13 @@
 ---
 import RepositoryDependenciesView from "@planetnik/report-ui/views/RepositoryDependenciesView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { readLandscapeRepoJson } from "../../../../lib/landscape";
+import { readLandscapeRepoJson } from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { route } from "../../../../lib/route";
+import { route } from "@planetnik/report-data/lib/route";
 
 interface ComponentDependencyRecord {
 	decompositionKey: string;

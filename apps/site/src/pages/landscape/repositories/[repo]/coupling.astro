@@ -1,14 +1,14 @@
 ---
 import RepositoryBalancedCouplingView from "@planetnik/report-ui/views/RepositoryBalancedCouplingView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { buildBalancedCouplingModel } from "../../../../lib/coupling/balancedCouplingModel";
-import { readLandscapeRepoJson } from "../../../../lib/landscape";
+import { buildBalancedCouplingModel } from "@planetnik/report-data/lib/coupling/balancedCouplingModel";
+import { readLandscapeRepoJson } from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { route } from "../../../../lib/route";
+import { route } from "@planetnik/report-data/lib/route";
 
 interface FileRecord {
 	relativePath: string;

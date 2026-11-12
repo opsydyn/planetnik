@@ -2,8 +2,8 @@
 import { getEntry } from "astro:content";
 import SnapshotTrendsPanel from "../components/trends/SnapshotTrendsPanel.astro";
 import Dashboard from "../layouts/Dashboard.astro";
-import { resolveDataDir } from "../loaders/planetnik-loader.js";
-import { readSnapshotHistory } from "../lib/datasets/snapshotHistory.js";
+import { resolveDataDir } from "@planetnik/report-data/loaders/planetnik-loader";
+import { readSnapshotHistory } from "@planetnik/report-data/lib/datasets/snapshotHistory";
 
 const summary = await getEntry("analysis", "summary");
 const reportContext = await getEntry("reportContext", "context");

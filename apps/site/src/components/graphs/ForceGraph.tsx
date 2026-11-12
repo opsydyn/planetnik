@@ -1,5 +1,5 @@
+import type { ForceGraphEdge, ForceGraphNode } from "@planetnik/report-data/lib/forceGraph"
 import { type ComponentType, type CSSProperties, useEffect, useState } from "react"
-import type { ForceGraphEdge, ForceGraphNode } from "../../lib/forceGraph"
 import ChartCard from "../charts/ChartCard"
 
 interface ForceGraphProps {

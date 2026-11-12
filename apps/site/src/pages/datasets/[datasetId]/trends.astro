@@ -3,10 +3,10 @@ import type { DatasetDescriptor } from "@planetnik/common"
 import DatasetReportHeader from "../../../components/datasets/DatasetReportHeader.astro"
 import SnapshotTrendsPanel from "../../../components/trends/SnapshotTrendsPanel.astro"
 import ExploreLayout from "../../../layouts/ExploreLayout.astro"
-import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
-import { getDatasetViewPath } from "../../../lib/datasets/explore"
-import { readDatasetSnapshotHistory } from "../../../lib/datasets/snapshotHistory"
-import { route } from "../../../lib/route"
+import { loadDatasetCatalog } from "@planetnik/report-data/lib/datasets/catalogSource"
+import { getDatasetViewPath } from "@planetnik/report-data/lib/datasets/explore"
+import { readDatasetSnapshotHistory } from "@planetnik/report-data/lib/datasets/snapshotHistory"
+import { route } from "@planetnik/report-data/lib/route"
 
 interface Props {
   dataset: DatasetDescriptor

@@ -1,10 +1,10 @@
 ---
 import type { DatasetDescriptor } from "@planetnik/common"
 import ExploreLayout from "../../../layouts/ExploreLayout.astro"
-import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
-import { getDatasetViewPath } from "../../../lib/datasets/explore"
-import { normaliseEvidencePath, readDatasetReport } from "../../../lib/datasets/reportReader"
-import { route } from "../../../lib/route"
+import { loadDatasetCatalog } from "@planetnik/report-data/lib/datasets/catalogSource"
+import { getDatasetViewPath } from "@planetnik/report-data/lib/datasets/explore"
+import { normaliseEvidencePath, readDatasetReport } from "@planetnik/report-data/lib/datasets/reportReader"
+import { route } from "@planetnik/report-data/lib/route"
 
 interface Props {
   dataset: DatasetDescriptor

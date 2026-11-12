@@ -3,13 +3,13 @@ import type { DatasetDescriptor } from "@planetnik/common";
 import DatasetCard from "../components/datasets/DatasetCard.astro";
 import DatasetPreview from "../components/datasets/DatasetPreview.astro";
 import ExploreLayout from "../layouts/ExploreLayout.astro";
-import { loadDatasetCatalog } from "../lib/datasets/catalogSource";
+import { loadDatasetCatalog } from "@planetnik/report-data/lib/datasets/catalogSource";
 import {
 	type ExploreAudience,
 	getDatasetRecommendedView,
 	getDatasetViewPath,
-} from "../lib/datasets/explore";
-import { route } from "../lib/route";
+} from "@planetnik/report-data/lib/datasets/explore";
+import { route } from "@planetnik/report-data/lib/route";
 
 const { catalog, diagnostics } = loadDatasetCatalog();
 const datasets = catalog.datasets;

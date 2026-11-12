@@ -1,4 +1,5 @@
 import { navigate } from "astro:transitions/client"
+import type { ForceGraphEdge, ForceGraphNode } from "@planetnik/report-data/lib/forceGraph"
 import {
   ControlsContainer,
   SigmaContainer,
@@ -12,7 +13,6 @@ import { circular } from "graphology-layout"
 import forceAtlas2 from "graphology-layout-forceatlas2"
 import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "react"
 import { DEFAULT_STYLES, type SigmaOptions } from "sigma/types"
-import type { ForceGraphEdge, ForceGraphNode } from "../../lib/forceGraph"
 import "./ForceGraph.css"
 
 const LARGE_GRAPH_NODE_THRESHOLD = 220

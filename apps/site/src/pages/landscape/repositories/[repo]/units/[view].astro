@@ -4,12 +4,12 @@ import Dashboard from "../../../../../layouts/Dashboard.astro";
 import {
 	getLandscapeRepositoryUnitPageHref,
 	readLandscapeRepoJson,
-} from "../../../../../lib/landscape";
+} from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	type LandscapeRepoPageProps,
 } from "../../../../../lib/landscapeRepoContext";
-import { route } from "../../../../../lib/route";
+import { route } from "@planetnik/report-data/lib/route";
 
 interface RepoUnitRecord {
 	shortName: string;
@@ -32,7 +32,7 @@ const viewLabels = {
 export async function getStaticPaths() {
 	const { getCollection } = await import("astro:content");
 	const { getLandscapeRepoRouteParam } = await import(
-		"../../../../../lib/landscape"
+		"@planetnik/report-data/lib/landscape"
 	);
 	const repositories = await getCollection("landscapeRepositories");
 	const views = ["size", "complexity"] as const;

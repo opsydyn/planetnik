@@ -1,10 +1,10 @@
+import { maxOf } from "@planetnik/report-data/lib/arrayMath"
 import { AxisBottom, AxisLeft } from "@visx/axis"
 import { GridRows } from "@visx/grid"
 import { Group } from "@visx/group"
 import { scaleLinear, scalePoint } from "@visx/scale"
 import { LinePath } from "@visx/shape"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
-import { maxOf } from "../../lib/arrayMath"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 

@@ -1,19 +1,19 @@
 import { readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
-import { Effect } from "effect"
-import { materializeActionQueueArtifacts } from "../src/lib/datasets/actionQueueArtifactMaterializer.js"
-import { defaultActionQueueArtifactDirectory } from "../src/lib/datasets/actionQueueArtifactRoutes.js"
-import { materializeStreamingActionQueueArtifacts } from "../src/lib/datasets/actionQueueExternalMaterializer.js"
+import { materializeActionQueueArtifacts } from "@planetnik/report-data/lib/datasets/actionQueueArtifactMaterializer"
+import { defaultActionQueueArtifactDirectory } from "@planetnik/report-data/lib/datasets/actionQueueArtifactRoutes"
+import { materializeStreamingActionQueueArtifacts } from "@planetnik/report-data/lib/datasets/actionQueueExternalMaterializer"
 import {
   parseActionQueueMaterializationMode,
   parseActionQueuePartitionCount,
-} from "../src/lib/datasets/actionQueueMaterializationMode.js"
+} from "@planetnik/report-data/lib/datasets/actionQueueMaterializationMode"
 import {
   createDatasetActionQueueReader,
   STATIC_ACTION_QUEUE_ITEM_LIMIT,
-} from "../src/lib/datasets/actionQueueSource.js"
-import { createStreamingActionQueueSource } from "../src/lib/datasets/actionQueueStreamingSource.js"
-import { loadDatasetCatalog } from "../src/lib/datasets/catalogSource.js"
+} from "@planetnik/report-data/lib/datasets/actionQueueSource"
+import { createStreamingActionQueueSource } from "@planetnik/report-data/lib/datasets/actionQueueStreamingSource"
+import { loadDatasetCatalog } from "@planetnik/report-data/lib/datasets/catalogSource"
+import { Effect } from "effect"
 
 const outputDir = defaultActionQueueArtifactDirectory()
 const mode = parseActionQueueMaterializationMode(process.env.PLANETNIK_ACTION_QUEUE_COMPLETE)

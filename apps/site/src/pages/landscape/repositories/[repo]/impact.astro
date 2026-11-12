@@ -1,14 +1,14 @@
 ---
 import RepositoryImpactView from "@planetnik/report-ui/views/RepositoryImpactView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { readLandscapeRepoJson } from "../../../../lib/landscape";
+import { readLandscapeRepoJson } from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryComponentsHref,
 	getLandscapeRepositoryContributorsHref,
 	getLandscapeRepositoryControlsHref,
 	getLandscapeRepositoryHotspotsHref,
 	mapLandscapeRepositoryRoute,
-} from "../../../../lib/landscape";
+} from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,

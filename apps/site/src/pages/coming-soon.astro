@@ -4,7 +4,7 @@ import { Font } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
 import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
 import PublicVideoToggle from "../components/public/PublicVideoToggle";
-import { route } from "../lib/route";
+import { route } from "@planetnik/report-data/lib/route";
 
 const reportContext = await getEntry("reportContext", "context")
 const backHref = reportContext?.data.reportMode === "landscape" ? route("/landscape") : route("/")

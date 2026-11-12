@@ -3,10 +3,10 @@ import {
   filterPortfolioActionQueue,
   type PortfolioActionQueueFilters,
 } from "@planetnik/common"
-import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
-import type { ActionQueueArtifactPage } from "../../lib/datasets/actionQueueArtifactRoutes.js"
-import { actionQueuePagePath, actionQueuePageWindowLinks, actionQueueWindowLabel } from "../../lib/datasets/actionQueuePage.js"
-import { route } from "../../lib/route.js"
+import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "@planetnik/report-data/lib/datasets/actionQueueFilters"
+import type { ActionQueueArtifactPage } from "@planetnik/report-data/lib/datasets/actionQueueArtifactRoutes"
+import { actionQueuePagePath, actionQueuePageWindowLinks, actionQueueWindowLabel } from "@planetnik/report-data/lib/datasets/actionQueuePage"
+import { route } from "@planetnik/report-data/lib/route"
 
 interface Props {
   page: ActionQueueArtifactPage
@@ -196,7 +196,7 @@ const currentPagePath = actionQueuePagePath(page.params)
 </section>
 
 <script>
-import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
+import { parsePortfolioActionFilters, serializePortfolioActionFilters } from "@planetnik/report-data/lib/datasets/actionQueueFilters"
 
 function initializeActionFilters() {
   const root = document.querySelector<HTMLElement>("[data-portfolio-action-queue]")

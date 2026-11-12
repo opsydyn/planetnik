@@ -3,7 +3,7 @@ import { Image } from "astro:assets";
 import { getEntry } from "astro:content";
 import Hero from "../components/Hero.astro";
 import Dashboard from "../layouts/Dashboard.astro";
-import { route } from "../lib/route";
+import { route } from "@planetnik/report-data/lib/route";
 
 const summary = await getEntry("analysis", "summary");
 const reportContext = await getEntry("reportContext", "context");

@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test"
-import type { CodeCitySnapshotCollections } from "../codeCitySnapshot.js"
-import { toCodeCitySnapshotInput } from "../codeCitySnapshot.js"
+import type { CodeCitySnapshotCollections } from "@planetnik/report-data/lib/codeCitySnapshot"
+import { toCodeCitySnapshotInput } from "@planetnik/report-data/lib/codeCitySnapshot"
 
 const fixtureCollections = (): CodeCitySnapshotCollections => ({
   context: {

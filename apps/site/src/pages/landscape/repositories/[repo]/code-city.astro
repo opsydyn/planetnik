@@ -5,14 +5,14 @@ import Dashboard from "../../../../layouts/Dashboard.astro";
 import {
 	getLandscapeRepositoryFilePageHref,
 	getLandscapeRepositoryHref,
-} from "../../../../lib/landscape";
+} from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
 import { resolveLandscapeCodeCityRouteState } from "../../../../lib/landscapeCodeCityRoute";
-import { readLandscapeRepositoryCodeCitySnapshot } from "../../../../lib/landscapeCodeCitySnapshot";
+import { readLandscapeRepositoryCodeCitySnapshot } from "@planetnik/report-data/lib/landscapeCodeCitySnapshot";
 
 export async function getStaticPaths() {
 	return getLandscapeRepositoryStaticPaths();

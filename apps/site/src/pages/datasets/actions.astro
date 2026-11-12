@@ -6,8 +6,8 @@ import {
   loadActionQueueArtifactManifest,
   parseActionQueueArtifactParams,
   readActionQueueArtifactPage,
-} from "../../lib/datasets/actionQueueArtifactRoutes.js"
-import { parsePortfolioActionFilters } from "../../lib/datasets/actionQueueFilters.js"
+} from "@planetnik/report-data/lib/datasets/actionQueueArtifactRoutes"
+import { parsePortfolioActionFilters } from "@planetnik/report-data/lib/datasets/actionQueueFilters"
 
 const filters = parsePortfolioActionFilters(Astro.url.searchParams)
 const artifactDirectory = defaultActionQueueArtifactDirectory()

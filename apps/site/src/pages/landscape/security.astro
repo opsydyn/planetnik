@@ -1,5 +1,5 @@
 ---
-import { maxOf } from "../../lib/arrayMath";
+import { maxOf } from "@planetnik/report-data/lib/arrayMath";
 import { getCollection, getEntry } from "astro:content";
 import DonutChart from "../../components/charts/DonutChart";
 import HorizontalBarChart from "../../components/charts/HorizontalBarChart";
@@ -10,8 +10,8 @@ import { SecurityActionCenter } from "@planetnik/report-ui";
 import SystemIcon from "@planetnik/report-ui/icons/SystemIcon";
 import type { SystemIconName } from "@planetnik/report-ui/icons/SystemIcon.react";
 import Dashboard from "../../layouts/Dashboard.astro";
-import { getLandscapeRepositoryHref } from "../../lib/landscapeRoutes";
-import { route } from "../../lib/route";
+import { getLandscapeRepositoryHref } from "@planetnik/report-data/lib/landscapeRoutes";
+import { route } from "@planetnik/report-data/lib/route";
 
 const severityWeights = {
   critical: 4,

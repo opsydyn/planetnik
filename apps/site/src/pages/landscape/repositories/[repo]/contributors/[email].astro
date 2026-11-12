@@ -6,15 +6,15 @@ import {
 	getContributorDisplayName,
 	getContributorMonthlyActivity,
 	getContributorRouteParam,
-} from "../../../../../lib/contributors";
+} from "@planetnik/report-data/lib/contributors";
 import {
 	getLandscapeRepoRouteParam,
 	getLandscapeRepositoryContributorHref,
 	getLandscapeRepositoryHref,
 	readLandscapeRepoContributorDetailJson,
 	readLandscapeRepoJson,
-} from "../../../../../lib/landscape";
-import { route } from "../../../../../lib/route";
+} from "@planetnik/report-data/lib/landscape";
+import { route } from "@planetnik/report-data/lib/route";
 interface RepoContributorDetail {
 	email: string;
 	userName?: string;

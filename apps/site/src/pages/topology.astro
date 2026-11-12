@@ -4,9 +4,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import TopologyGraph from "../components/TopologyGraph";
 import Dashboard from "../layouts/Dashboard.astro";
-import { route } from "../lib/route";
+import { route } from "@planetnik/report-data/lib/route";
 // Import triggers .env side-effect, ensuring PLANETNIK_DATA_DIR is set
-import { resolveDataDir } from "../loaders/planetnik-loader";
+import { resolveDataDir } from "@planetnik/report-data/loaders/planetnik-loader";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode === "landscape") {

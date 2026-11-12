@@ -1,0 +1,24 @@
+{
+  "name": "@planetnik/report-data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./lib/*": "./src/lib/*.ts",
+    "./loaders/*": "./src/loaders/*.ts",
+    "./data/*": "./src/data/*"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@planetnik/common": "workspace:*",
+    "effect": "catalog:effect"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "astro": "7.4.11",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,9 +1,9 @@
 ---
 import PortfolioTrendsPanel from "../../components/trends/PortfolioTrendsPanel.astro"
 import ExploreLayout from "../../layouts/ExploreLayout.astro"
-import { loadDatasetCatalog } from "../../lib/datasets/catalogSource"
-import { readDatasetPortfolioTrends } from "../../lib/datasets/portfolioTrends"
-import { route } from "../../lib/route"
+import { loadDatasetCatalog } from "@planetnik/report-data/lib/datasets/catalogSource"
+import { readDatasetPortfolioTrends } from "@planetnik/report-data/lib/datasets/portfolioTrends"
+import { route } from "@planetnik/report-data/lib/route"
 
 const { catalog, diagnostics } = loadDatasetCatalog()
 const trends = readDatasetPortfolioTrends({ catalog })

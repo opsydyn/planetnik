@@ -6,12 +6,12 @@ import Dashboard from "../../../layouts/Dashboard.astro";
 import {
 	getContributorDisplayName,
 	getContributorRouteParam,
-} from "../../../lib/contributors";
+} from "@planetnik/report-data/lib/contributors";
 import {
 	getLandscapeRepositoryContributorHref,
 	getLandscapeRepositoryHref,
-} from "../../../lib/landscape";
-import { route } from "../../../lib/route";
+} from "@planetnik/report-data/lib/landscape";
+import { route } from "@planetnik/report-data/lib/route";
 
 export async function getStaticPaths() {
 	const contributors = await getCollection("landscapeContributors");
