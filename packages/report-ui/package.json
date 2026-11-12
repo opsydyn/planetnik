@@ -64,9 +64,9 @@
     "typecheck": "tsc -p ./tsconfig.json --noEmit"
   },
   "dependencies": {
-    "effect": "catalog:",
     "@base-ui/react": "^1.9.0",
     "@dagrejs/dagre": "^3.1.2",
+    "@effect/atom-react": "catalog:effect",
     "@phosphor-icons/react": "^2.1.10",
     "@planetnik/common": "workspace:*",
     "@react-sigma/core": "^6.0.0",
@@ -80,14 +80,14 @@
     "@visx/tooltip": "^4.0.0",
     "@xyflow/react": "^12.12.0",
     "d3-hierarchy": "^3.1.2",
+    "effect": "catalog:effect",
     "graphology": "^0.26.0",
     "graphology-layout": "^0.6.1",
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-types": "^0.24.8",
     "react": "^19.3.1",
     "sigma": "^4.0.3",
-    "three": "^0.186.1",
-    "@effect/atom-react": "catalog:"
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/d3-hierarchy": "^3.1.7",

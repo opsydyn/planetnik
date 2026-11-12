@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@planetnik/common": "workspace:*",
-    "effect": "catalog:",
+    "effect": "catalog:effect",
     "tree-sitter-python": "^0.25.0",
     "tree-sitter-rust": "^0.24.0",
     "web-tree-sitter": "^0.27.1"

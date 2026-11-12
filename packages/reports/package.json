@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@planetnik/common": "workspace:*",
-    "@planetnik/analyzer": "workspace:*"
+    "@planetnik/analyzer": "workspace:*",
+    "@planetnik/common": "workspace:*"
   }
 }
