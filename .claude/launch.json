@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "foldkit-site",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--filter", "@planetnik/foldkit-site", "dev"],
+      "port": 4321
+    }
+  ]
+}
