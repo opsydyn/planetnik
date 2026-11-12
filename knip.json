@@ -19,8 +19,7 @@
       "entry": ["**/*{.,_}{test,spec}.{ts,tsx,js,jsx}"]
     },
     "apps/foldkit-site": {
-      "bun": true,
-      "ignore": [".astro/**"]
+      "bun": true
     },
     "apps/runtime": {
       "bun": true,

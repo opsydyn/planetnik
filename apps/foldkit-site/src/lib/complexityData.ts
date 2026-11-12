@@ -65,13 +65,14 @@ export const complexityGridFields = GRID_COLUMNS.map((column) => column.field)
 /**
  * Where the rows the page does not inline are served from.
  *
- * `src/pages/data/complexity-rows.json.ts` prerenders to this path, so the two
- * have to agree; they share this constant rather than each spelling it. The
- * site is served under a base path, and the URL is baked into the page, so the
- * base has to be applied here — a root-relative `/data/...` 404s in
- * production while working locally, which is the way round that ships broken.
+ * It must match where `src/pages/data/complexity-rows.json.ts` prerenders,
+ * which is fixed by that file's location rather than by this constant, so a
+ * move of either has to move the other. The site is served under a base path,
+ * and the URL is baked into the page, so the base has to be applied here — a
+ * root-relative `/data/...` 404s in production while working locally, which is
+ * the way round that ships broken.
  */
-export const COMPLEXITY_ROWS_URL = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/data/complexity-rows.json`
+const COMPLEXITY_ROWS_URL = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/data/complexity-rows.json`
 
 /**
  * Rows inlined in the page: one grid page, which is all the grid can show
