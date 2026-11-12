@@ -1,0 +1,47 @@
+---
+import { getCollection } from "astro:content"
+import { route } from "@planetnik/report-data/lib/route"
+
+import BarChart from "../apps/horizontalBar/app"
+
+// Data prep stays in Astro frontmatter, exactly as apps/site does it, and the
+// island receives plain serialisable props.
+const units = await getCollection("units")
+const rows = units
+  .slice()
+  .sort((a, b) => b.data.linesOfCode - a.data.linesOfCode)
+  .slice(0, 8)
+  .map((u) => ({ label: u.data.shortName, value: u.data.linesOfCode }))
+
+// Falls back to fixture rows so the seam is demonstrable without a configured
+// PLANETNIK_DATA_DIR.
+const data = rows.length > 0 ? rows : [
+  { label: "CodeAnalyzer.ts", value: 1460 },
+  { label: "ReportDataGrid.tsx", value: 506 },
+  { label: "ForceGraph.tsx", value: 466 },
+  { label: "Treemap.tsx", value: 188 },
+]
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Planetnik (FoldKit)</title>
+  </head>
+  <body>
+    <h1>Planetnik — FoldKit strangler target</h1>
+    <p>
+      Route helper from <code>@planetnik/report-data</code>:
+      <a href={route("/overview")}>overview</a>
+    </p>
+    <h2>Largest units by lines of code</h2>
+    <BarChart
+      title="Largest units by lines of code"
+      description="Lines of code per unit, largest first."
+      rows={data}
+      client:load
+      noMeta
+    />
+  </body>
+</html>

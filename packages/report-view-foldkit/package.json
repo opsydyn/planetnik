@@ -1,0 +1,26 @@
+{
+  "name": "@planetnik/report-view-foldkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./scaffold/*": "./src/scaffold/*.ts",
+    "./charts/*": "./src/charts/*.ts",
+    "./tables/*": "./src/tables/*.ts",
+    "./styles/charts.css": "./src/scaffold/charts.css",
+    "./styles/dataGrid.css": "./src/tables/dataGrid.css"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opsydyn/foldkit-viz": "0.16.0",
+    "effect": "catalog:effect",
+    "foldkit": "0.170.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^6.0.3"
+  }
+}

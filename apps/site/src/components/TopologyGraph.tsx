@@ -1,14 +1,17 @@
 import dagre from "@dagrejs/dagre"
 import { RegistryProvider, useAtom, useAtomValue } from "@effect/atom-react"
+import { maxOf } from "@planetnik/report-data/lib/arrayMath"
 import { Background, type Edge, type Node, ReactFlow, useEdgesState, useNodesState } from "@xyflow/react"
-import { maxOf } from "../lib/arrayMath"
 import "@xyflow/react/dist/style.css"
+import { chartHelp } from "@planetnik/report-data/lib/chartHelp"
+import {
+  getContributorDisplayName,
+  getContributorHref as getDefaultContributorHref,
+} from "@planetnik/report-data/lib/contributors"
+import { buildContributorForceGraph } from "@planetnik/report-data/lib/forceGraph"
+import { getLandscapeRepositoryContributorHref } from "@planetnik/report-data/lib/landscapeRoutes"
+import { route } from "@planetnik/report-data/lib/route"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { chartHelp } from "../lib/chartHelp"
-import { getContributorDisplayName, getContributorHref as getDefaultContributorHref } from "../lib/contributors"
-import { buildContributorForceGraph } from "../lib/forceGraph"
-import { getLandscapeRepositoryContributorHref } from "../lib/landscapeRoutes"
-import { route } from "../lib/route"
 import {
   currentEdgesAtom,
   type PeopleDep,

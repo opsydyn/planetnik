@@ -1,4 +1,4 @@
-import type { ForceGraphEdge, ForceGraphNode } from "../../lib/forceGraph"
+import type { ForceGraphEdge, ForceGraphNode } from "@planetnik/report-data/lib/forceGraph"
 import ForceGraph from "../graphs/ForceGraph"
 
 interface SharedPackage {

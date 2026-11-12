@@ -276,7 +276,7 @@ function BigBallOfMudInner({
                   strokeOpacity={selectedNode ? 0.95 : 0.45}
                   strokeWidth={selectedNode ? 2 : 1}
                 />
-                {/* biome-ignore lint/a11y/useSemanticElements: an HTML button is invalid inside SVG; this circle retains tabIndex and Enter/Space activation. */}
+                {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an HTML button is invalid inside SVG; this circle retains tabIndex and Enter/Space activation. */}
                 <circle
                   role="button"
                   tabIndex={0}

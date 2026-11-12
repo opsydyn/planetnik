@@ -1,7 +1,7 @@
+import { maxOf } from "@planetnik/report-data/lib/arrayMath"
 import { Group } from "@visx/group"
 import { scaleLinear } from "@visx/scale"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
-import { maxOf } from "../../lib/arrayMath"
 import type { TechnologyIconData } from "../../lib/iconography"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"

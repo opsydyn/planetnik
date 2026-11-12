@@ -41,17 +41,6 @@ export {
   type ImpactSnackingCandidateExportInfo,
   type ImpactSourceHotspot,
 } from "./ImpactExportInfo.js"
-export {
-  MetricsTrendExporter,
-  type MetricsTrendInfo,
-  type ValueSnapshotPair,
-} from "./MetricsTrendExporter.js"
-export {
-  createSnapshotExportContext,
-  type SnapshotExportContext,
-} from "./SnapshotContext.js"
-export {
-  type UnitInfoExport,
-  UnitListExporter,
-  type UnitsExportInfo,
-} from "./UnitsExportInfo.js"
+export { MetricsTrendExporter, type MetricsTrendInfo, type ValueSnapshotPair } from "./MetricsTrendExporter.js"
+export { createSnapshotExportContext, type SnapshotExportContext } from "./SnapshotContext.js"
+export { type UnitInfoExport, UnitListExporter, type UnitsExportInfo } from "./UnitsExportInfo.js"

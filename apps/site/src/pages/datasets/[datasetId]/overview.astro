@@ -7,11 +7,11 @@ import DatasetReportHeader from "../../../components/datasets/DatasetReportHeade
 import TechnologyIcon from "../../../components/icons/TechnologyIcon.astro"
 import StaticReportTable from "../../../components/tables/StaticReportTable.astro"
 import ExploreLayout from "../../../layouts/ExploreLayout.astro"
-import { chartHelp } from "../../../lib/chartHelp"
-import { loadDatasetCatalog } from "../../../lib/datasets/catalogSource"
-import { getDatasetViewPath } from "../../../lib/datasets/explore"
-import { readDatasetReport, type DatasetReportSnapshot } from "../../../lib/datasets/reportReader"
-import { route } from "../../../lib/route"
+import { chartHelp } from "@planetnik/report-data/lib/chartHelp"
+import { loadDatasetCatalog } from "@planetnik/report-data/lib/datasets/catalogSource"
+import { getDatasetViewPath } from "@planetnik/report-data/lib/datasets/explore"
+import { readDatasetReport, type DatasetReportSnapshot } from "@planetnik/report-data/lib/datasets/reportReader"
+import { route } from "@planetnik/report-data/lib/route"
 
 interface Props {
   dataset: DatasetDescriptor

@@ -244,6 +244,6 @@ export async function* streamJsonArrayObjects(
     parser.finish()
   } catch (error) {
     if (error instanceof Error) throw error
-    throw new Error(`unable to stream JSON array '${key}' from '${path}': ${String(error)}`)
+    throw new Error(`unable to stream JSON array '${key}' from '${path}': ${String(error)}`, { cause: error })
   }
 }

@@ -1,10 +1,7 @@
 export { ComponentDependency } from "./ComponentDependency.js"
 export { DependenciesAnalysis } from "./DependenciesAnalysis.js"
 export { DependenciesFinder } from "./DependenciesFinder.js"
-export {
-  DependenciesFinderExtractor,
-  type FileDependency,
-} from "./DependenciesFinderExtractor.js"
+export { DependenciesFinderExtractor, type FileDependency } from "./DependenciesFinderExtractor.js"
 export { Dependency } from "./Dependency.js"
 export { DependencyAnchor } from "./DependencyAnchor.js"
 export { DependencyError } from "./DependencyError.js"

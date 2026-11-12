@@ -1,14 +1,14 @@
 ---
 import RepositoryMetricsView from "@planetnik/report-ui/views/RepositoryMetricsView";
 import Dashboard from "../../../../layouts/Dashboard.astro";
-import { readLandscapeRepoJson } from "../../../../lib/landscape";
+import { readLandscapeRepoJson } from "@planetnik/report-data/lib/landscape";
 import {
 	getLandscapeRepositoryPageContext,
 	getLandscapeRepositoryStaticPaths,
 	type LandscapeRepoPageProps,
 } from "../../../../lib/landscapeRepoContext";
-import { getMetric, parseMetricsJson } from "../../../../lib/metrics";
-import { route } from "../../../../lib/route";
+import { getMetric, parseMetricsJson } from "@planetnik/report-data/lib/metrics";
+import { route } from "@planetnik/report-data/lib/route";
 
 export async function getStaticPaths() {
 	return getLandscapeRepositoryStaticPaths();

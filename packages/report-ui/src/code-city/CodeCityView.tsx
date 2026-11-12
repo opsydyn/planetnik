@@ -525,7 +525,7 @@ export default function CodeCityView({
               }
               onRendererUnavailable={setRendererUnavailable}
             />
-            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: the keyboard map exposes a focusable selection summary so keyboard users can revisit the live status. */}
+            {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the keyboard map exposes a focusable selection summary so keyboard users can revisit the live status. */}
             <p className="code-city__map-status" role="status" tabIndex={0}>
               {selectionResult.selection
                 ? `${selectionResult.incidentEdgeIds.length} connected dependency ${selectionResult.incidentEdgeIds.length === 1 ? "route" : "routes"}.`

@@ -122,7 +122,7 @@ function CommitHeatmapInner({
                   column.map((cell) => {
                     const commitCount = cell.count ?? 0
                     return (
-                      // biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: a focusable SVG data graphic exposes its tooltip on focus; it has no button action.
+                      // oxlint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- a focusable SVG data graphic exposes its tooltip on focus; it has no button action.
                       <rect
                         role="img"
                         key={cell.bin.date}

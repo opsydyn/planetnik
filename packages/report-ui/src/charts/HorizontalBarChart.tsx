@@ -136,7 +136,7 @@ function HorizontalBarInner({
                   height={ICON_SIZE}
                   viewBox={`0 0 ${d.icon.width} ${d.icon.height}`}
                   aria-hidden="true"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: icon bodies come from the build-time @iconify-json/devicon catalog via getTechnologyIconData, never report or user HTML.
+                  // oxlint-disable-next-line react/no-danger -- icon bodies come from the build-time @iconify-json/devicon catalog via getTechnologyIconData, never report or user HTML.
                   dangerouslySetInnerHTML={{ __html: d.icon.body }}
                 />
               ) : null}
@@ -179,7 +179,7 @@ function HorizontalBarInner({
                 fill={chartTheme.colors.barBg}
               />
 
-              {/* biome-ignore lint/a11y/noInteractiveElementToNoninteractiveRole: this SVG data graphic only exposes a tooltip, with no button action. */}
+              {/* oxlint-disable-next-line jsx-a11y/no-interactive-element-to-noninteractive-role -- this SVG data graphic only exposes a tooltip, with no button action. */}
               <rect
                 x={labelWidth}
                 y={BAR_Y}

@@ -1,8 +1,8 @@
+import type { ContributorHeatmapCell } from "@planetnik/report-data/lib/contributorHeatmap"
+import { buildContributorHeatmap } from "@planetnik/report-data/lib/contributorHeatmap"
+import type { DailyActivityEntry } from "@planetnik/report-data/lib/contributors"
 import { HeatmapRect } from "@visx/heatmap"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
-import type { ContributorHeatmapCell } from "../../lib/contributorHeatmap"
-import { buildContributorHeatmap } from "../../lib/contributorHeatmap"
-import type { DailyActivityEntry } from "../../lib/contributors"
 import ChartCard from "./ChartCard"
 import { chartTheme } from "./theme"
 

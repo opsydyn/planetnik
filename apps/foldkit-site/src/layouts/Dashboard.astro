@@ -1,0 +1,44 @@
+---
+// The design tokens come from the stylesheet `report-ui` already publishes as
+// a subpath, which is how apps/site consumes them too. Only the CSS is
+// imported, so no React reaches this app; extracting the tokens into their own
+// package is the Phase 3 move, once more than one page needs them.
+import "@planetnik/report-ui/theme/dashboard-shell.css"
+import "@planetnik/report-view-foldkit/styles/charts.css"
+import "@planetnik/report-view-foldkit/styles/dataGrid.css"
+
+interface Props {
+  title: string
+  projectName?: string
+}
+
+const { title, projectName } = Astro.props
+---
+
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{title}{projectName ? ` — ${projectName}` : ""}</title>
+  </head>
+  <body>
+    <main class="dashboard-main">
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style>
+  body {
+    margin: 0;
+    background: var(--color-surface, #0d1117);
+    color: var(--color-text, #e6edf3);
+    font-family: var(--font-body, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace);
+  }
+
+  .dashboard-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+  }
+</style>

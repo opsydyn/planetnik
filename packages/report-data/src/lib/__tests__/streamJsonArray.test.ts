@@ -62,7 +62,7 @@ describe("streamJsonArrayObjects", () => {
 
   test("rejects an invalid object member and malformed UTF-8", async () => {
     await expect(collect(fixture('{"records":[{"id":}]}'), "records", 5)).rejects.toThrow("invalid object record")
-    const path = fixture('{"records":[]}' + "\u0000")
+    const path = fixture(`{"records":[]}\u0000`)
     writeFileSync(
       path,
       Buffer.from([

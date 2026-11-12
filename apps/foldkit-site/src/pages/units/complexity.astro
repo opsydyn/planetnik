@@ -1,0 +1,88 @@
+---
+import { getCollection, getEntry } from "astro:content"
+
+import DataGrid from "../../apps/dataGrid/app"
+import Distribution from "../../apps/distribution/app"
+import Donut from "../../apps/donut/app"
+import Scatter from "../../apps/scatter/app"
+import Dashboard from "../../layouts/Dashboard.astro"
+import { complexityFlags, type Unit } from "../../lib/complexityData"
+
+// The island version: four client-only islands composed by Astro. Its
+// server-rendered counterpart at /units/complexity-ssr prepares its data with
+// the same function, so the only difference between the two pages is delivery.
+//
+// Every island is `client:load`, and none can be `client:visible`. Astro's
+// visible directive observes an island's children, because `astro-island` is
+// `display: contents`; a FoldKit island's only child is the empty mount shell
+// the renderer emits, which measures 0x0 and so never intersects. The scatter
+// and the grid were on `client:visible` and silently never hydrated. An island
+// that server-rendered would have size, and the directive would work — see
+// amendment 8 of docs/foldkit-site-port-assessment.md.
+const summary = await getEntry("analysis", "summary")
+const units = await getCollection("units")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const data = complexityFlags(units.map((unit) => unit.data as Unit), projectName)
+---
+
+<Dashboard title="Conditional Complexity" projectName={projectName}>
+  <h2>Conditional Complexity</h2>
+  <p class="subtitle">{data.unitCount.toLocaleString()} units analyzed</p>
+
+  <section class="section">
+    <h3>Complexity Risk</h3>
+    <Donut
+      title="Complexity risk"
+      valueLabel="units"
+      data={data.risk}
+      description={data.riskHelp}
+      noMeta
+    />
+  </section>
+
+  <section class="section">
+    <h3>McCabe Complexity Distribution</h3>
+    <Distribution
+      title="McCabe complexity distribution"
+      data={data.distribution}
+      description={data.distributionHelp}
+      noMeta
+    />
+  </section>
+
+  <section class="section">
+    <h3>LOC vs McCabe Complexity</h3>
+    <Scatter
+      title="Lines of code against McCabe complexity"
+      xLabel="Lines of Code"
+      yLabel="McCabe Index"
+      thresholdX={50}
+      thresholdY={10}
+      data={data.scatter}
+      description={data.scatterHelp}
+      noMeta
+    />
+  </section>
+
+  <section class="section">
+    <h3>Most Complex Units</h3>
+    <DataGrid
+      title="Complexity Table"
+      description="Search and paginate the full complexity dataset while the charts stay focused on the highest-signal views."
+      searchPlaceholder="Search unit or file path"
+      rows={data.gridRows}
+      totalRows={data.gridTotalRows}
+      rowsUrl={data.gridRowsUrl}
+      columns={data.gridColumns}
+      client:visible
+      noMeta
+    />
+  </section>
+</Dashboard>
+
+<style>
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+</style>

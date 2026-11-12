@@ -1,10 +1,10 @@
 ---
 import ExploreLayout from "../../layouts/ExploreLayout.astro"
 import PortfolioActionQueuePanel from "./PortfolioActionQueuePanel.astro"
-import { actionQueuePagePath } from "../../lib/datasets/actionQueuePage.js"
-import type { ActionQueueArtifactPage } from "../../lib/datasets/actionQueueArtifactRoutes.js"
+import { actionQueuePagePath } from "@planetnik/report-data/lib/datasets/actionQueuePage"
+import type { ActionQueueArtifactPage } from "@planetnik/report-data/lib/datasets/actionQueueArtifactRoutes"
 import type { PortfolioActionQueueFilters } from "@planetnik/common"
-import { route } from "../../lib/route.js"
+import { route } from "@planetnik/report-data/lib/route"
 
 interface Props {
   page: ActionQueueArtifactPage

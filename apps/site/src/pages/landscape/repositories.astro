@@ -2,9 +2,9 @@
 import { getCollection, getEntry } from "astro:content";
 import Dashboard from "../../layouts/Dashboard.astro";
 import LandscapeRepositoriesView from "@planetnik/report-ui/views/LandscapeRepositoriesView";
-import { chartHelp } from "../../lib/chartHelp";
-import { getLandscapeRepositoryHref } from "../../lib/landscape";
-import { route } from "../../lib/route";
+import { chartHelp } from "@planetnik/report-data/lib/chartHelp";
+import { getLandscapeRepositoryHref } from "@planetnik/report-data/lib/landscape";
+import { route } from "@planetnik/report-data/lib/route";
 
 const reportContext = await getEntry("reportContext", "context");
 if (reportContext?.data.reportMode !== "landscape") {

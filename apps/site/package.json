@@ -1,10 +1,7 @@
 {
   "name": "site",
-  "type": "module",
   "version": "0.0.1",
-  "engines": {
-    "bun": ">=1.4.2"
-  },
+  "type": "module",
   "scripts": {
     "dev": "astro dev",
     "materialize-action-queue": "bun scripts/materialize-action-queue.ts",
@@ -15,18 +12,21 @@
     "typecheck": "astro check",
     "optimize-images": "sharp -i public/*.png -o public/ -f webp -- resize 1024",
     "concat-background-video": "bun run scripts/concat-background-video.ts",
-    "optimize-pages-media": "bun run scripts/optimize-pages-media.ts"
+    "optimize-pages-media": "bun run scripts/optimize-pages-media.ts",
+    "test": "bun test"
   },
   "dependencies": {
-    "@astrojs/react": "7.1.1",
+    "@astrojs/react": "7.1.8",
     "@base-ui/react": "^1.9.0",
     "@copilotkit/react-core": "^1.79.1",
     "@copilotkit/react-ui": "^1.79.1",
     "@dagrejs/dagre": "^3.1.2",
-    "@effect/platform-browser": "catalog:",
+    "@effect/atom-react": "catalog:effect",
+    "@effect/platform-browser": "catalog:effect",
     "@iconify-json/devicon": "^1.2.71",
     "@phosphor-icons/react": "^2.1.10",
     "@planetnik/common": "workspace:*",
+    "@planetnik/report-data": "workspace:*",
     "@planetnik/report-ui": "workspace:*",
     "@react-sigma/core": "^6.0.0",
     "@tanstack/react-table": "^9.3.1",
@@ -38,11 +38,11 @@
     "@visx/shape": "^4.0.0",
     "@visx/tooltip": "^4.0.0",
     "@xyflow/react": "^12.12.0",
-    "astro": "7.4.2",
+    "astro": "7.4.11",
     "astro-icon": "^1.2.0",
     "astro-tunnel": "^0.1.9",
     "d3-hierarchy": "^3.1.2",
-    "effect": "catalog:",
+    "effect": "catalog:effect",
     "fuse.js": "^7.5.0",
     "graphology": "^0.26.0",
     "graphology-layout": "^0.6.1",
@@ -50,8 +50,7 @@
     "graphology-types": "^0.24.8",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "sigma": "^4.0.3",
-    "@effect/atom-react": "catalog:"
+    "sigma": "^4.0.3"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
@@ -60,5 +59,8 @@
     "@types/react-dom": "^19.3.0",
     "sharp-cli": "^6.1.0",
     "typescript": "^6.0.3"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
   }
 }

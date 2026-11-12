@@ -1,8 +1,11 @@
+import type {
+  BalancedCouplingModel,
+  BalancedCouplingSnapshot,
+} from "@planetnik/report-data/lib/coupling/balancedCouplingModel"
 import { Group } from "@visx/group"
 import { Pie } from "@visx/shape"
 import { useTooltip, useTooltipInPortal } from "@visx/tooltip"
 import { useEffect, useId, useMemo, useState } from "react"
-import type { BalancedCouplingModel, BalancedCouplingSnapshot } from "../../lib/coupling/balancedCouplingModel"
 import ChartCard from "../charts/ChartCard"
 import { chartTheme } from "../charts/theme"
 

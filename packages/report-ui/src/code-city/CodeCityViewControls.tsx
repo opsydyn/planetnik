@@ -44,7 +44,7 @@ export function CodeCityViewControls({
           onClick={onReset}
         >
           Reset overview
-          {/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: kbd has no tabIndex and is not focusable; aria-keyshortcuts announces Home on the button. */}
+          {/* oxlint-disable-next-line jsx-a11y/no-aria-hidden-on-focusable -- kbd has no tabIndex and is not focusable; aria-keyshortcuts announces Home on the button. */}
           <kbd aria-hidden="true">Home</kbd>
         </button>
       ) : null}

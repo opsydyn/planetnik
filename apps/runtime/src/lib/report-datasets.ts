@@ -2332,47 +2332,44 @@ export function readReportTopologySummary(dataDir: string): ReportTopologySummar
     const rawContributors = Array.isArray(p.contributors) ? p.contributors : []
     impactPeriods[label] = rawContributors
       .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-      .map(
-        (entry): TopologyContributorImpact => ({
-          email: typeof entry.email === "string" ? entry.email : "",
-          display_name: typeof entry.display_name === "string" ? entry.display_name : "",
-          glue_score: typeof entry.glue_score === "number" ? entry.glue_score : 0,
-          snacking_score: typeof entry.snacking_score === "number" ? entry.snacking_score : 0,
-          structural_impact_score:
-            typeof entry.structural_impact_score === "number" ? entry.structural_impact_score : 0,
-          visible_activity_score: typeof entry.visible_activity_score === "number" ? entry.visible_activity_score : 0,
-          collaborator_count: typeof entry.collaborator_count === "number" ? entry.collaborator_count : 0,
-          shared_files_count: typeof entry.shared_files_count === "number" ? entry.shared_files_count : 0,
-          commits_count: typeof entry.commits_count === "number" ? entry.commits_count : 0,
-          files_touched: typeof entry.files_touched === "number" ? entry.files_touched : 0,
-          components_touched: typeof entry.components_touched === "number" ? entry.components_touched : 0,
-          dominant_dimension: typeof entry.dominant_dimension === "string" ? entry.dominant_dimension : "",
-          dimensions:
-            typeof entry.dimensions === "object" && entry.dimensions !== null
-              ? Object.fromEntries(
-                  Object.entries(entry.dimensions as Record<string, unknown>).map(([k, v]) => [
-                    k,
-                    typeof v === "number" ? v : 0,
-                  ]),
-                )
-              : {},
-          top_components: Array.isArray(entry.top_components)
-            ? entry.top_components
-                .filter((c): c is Record<string, unknown> => typeof c === "object" && c !== null)
-                .map((c) => ({
-                  name: typeof c.name === "string" ? c.name : "",
-                  files: typeof c.files === "number" ? c.files : 0,
-                  commits: typeof c.commits === "number" ? c.commits : 0,
-                }))
-            : [],
-          top_routes: Array.isArray(entry.top_routes)
-            ? entry.top_routes.filter((r): r is string => typeof r === "string")
-            : [],
-          reasons: Array.isArray(entry.reasons) ? entry.reasons.filter((r): r is string => typeof r === "string") : [],
-          is_glue: typeof entry.is_glue === "boolean" ? entry.is_glue : false,
-          is_snacking: typeof entry.is_snacking === "boolean" ? entry.is_snacking : false,
-        }),
-      )
+      .map((entry): TopologyContributorImpact => ({
+        email: typeof entry.email === "string" ? entry.email : "",
+        display_name: typeof entry.display_name === "string" ? entry.display_name : "",
+        glue_score: typeof entry.glue_score === "number" ? entry.glue_score : 0,
+        snacking_score: typeof entry.snacking_score === "number" ? entry.snacking_score : 0,
+        structural_impact_score: typeof entry.structural_impact_score === "number" ? entry.structural_impact_score : 0,
+        visible_activity_score: typeof entry.visible_activity_score === "number" ? entry.visible_activity_score : 0,
+        collaborator_count: typeof entry.collaborator_count === "number" ? entry.collaborator_count : 0,
+        shared_files_count: typeof entry.shared_files_count === "number" ? entry.shared_files_count : 0,
+        commits_count: typeof entry.commits_count === "number" ? entry.commits_count : 0,
+        files_touched: typeof entry.files_touched === "number" ? entry.files_touched : 0,
+        components_touched: typeof entry.components_touched === "number" ? entry.components_touched : 0,
+        dominant_dimension: typeof entry.dominant_dimension === "string" ? entry.dominant_dimension : "",
+        dimensions:
+          typeof entry.dimensions === "object" && entry.dimensions !== null
+            ? Object.fromEntries(
+                Object.entries(entry.dimensions as Record<string, unknown>).map(([k, v]) => [
+                  k,
+                  typeof v === "number" ? v : 0,
+                ]),
+              )
+            : {},
+        top_components: Array.isArray(entry.top_components)
+          ? entry.top_components
+              .filter((c): c is Record<string, unknown> => typeof c === "object" && c !== null)
+              .map((c) => ({
+                name: typeof c.name === "string" ? c.name : "",
+                files: typeof c.files === "number" ? c.files : 0,
+                commits: typeof c.commits === "number" ? c.commits : 0,
+              }))
+          : [],
+        top_routes: Array.isArray(entry.top_routes)
+          ? entry.top_routes.filter((r): r is string => typeof r === "string")
+          : [],
+        reasons: Array.isArray(entry.reasons) ? entry.reasons.filter((r): r is string => typeof r === "string") : [],
+        is_glue: typeof entry.is_glue === "boolean" ? entry.is_glue : false,
+        is_snacking: typeof entry.is_snacking === "boolean" ? entry.is_snacking : false,
+      }))
       .filter((entry) => entry.email.length > 0)
   }
 

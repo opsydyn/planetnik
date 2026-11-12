@@ -1,7 +1,7 @@
+import { chartHelp } from "@planetnik/report-data/lib/chartHelp"
+import { buildTemporalForceGraph } from "@planetnik/report-data/lib/forceGraph"
+import { normalizeTemporalCommit, type TemporalCommitValue } from "@planetnik/report-data/lib/temporalCommit"
 import { startTransition, useDeferredValue, useId, useMemo, useState } from "react"
-import { chartHelp } from "../lib/chartHelp"
-import { buildTemporalForceGraph } from "../lib/forceGraph"
-import { normalizeTemporalCommit, type TemporalCommitValue } from "../lib/temporalCommit"
 import HorizontalBarChart from "./charts/HorizontalBarChart"
 import ForceGraph from "./graphs/ForceGraph"
 import ReportDataGrid from "./tables/ReportDataGrid"
@@ -112,7 +112,7 @@ export default function TemporalDependenciesExplorer({ sections }: TemporalDepen
   const latestCommit =
     filteredRows.reduce((latest, row) => {
       const normalizedLatestCommit = normalizeTemporalCommit(row.latestCommit)
-      // biome-ignore lint/complexity/useMathMinMax: ISO date strings need lexical comparison, not numeric coercion.
+      // oxlint-disable-next-line unicorn/prefer-math-min-max -- ISO date strings need lexical comparison, not numeric coercion.
       return normalizedLatestCommit > latest ? normalizedLatestCommit : latest
     }, "") || "—"
 

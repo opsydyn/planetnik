@@ -1,0 +1,36 @@
+---
+export const prerender = true
+
+import { getCollection, getEntry } from "astro:content"
+import { resolvePageDocument } from "@opsydyn/astro-foldkit/server"
+
+import ComplexityPage from "../../apps/complexityPage/page"
+import Dashboard from "../../layouts/Dashboard.astro"
+import { complexityFlags, type Unit } from "../../lib/complexityData"
+
+// Same data as /units/complexity. The difference is the delivery: one FoldKit
+// application owns this document, so the server renders it and the browser
+// hydrates that exact DOM, instead of four islands that start empty.
+const summary = await getEntry("analysis", "summary")
+const units = await getCollection("units")
+const projectName = summary?.data.metadata.name ?? "Unknown"
+
+const flags = complexityFlags(units.map((unit) => unit.data as Unit), projectName)
+
+const document = await resolvePageDocument(ComplexityPage, {
+  request: Astro.request,
+  url: Astro.url,
+  params: Astro.params,
+  props: { flags },
+})
+---
+
+<Dashboard title={document.title}>
+  <ComplexityPage client:load flags={flags} />
+</Dashboard>
+
+<style is:global>
+  .subtitle { color: var(--color-text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .section { margin-bottom: 2rem; }
+  .section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+</style>

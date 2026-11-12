@@ -2,7 +2,7 @@ import { useAtom } from "@effect/atom-react"
 import { PauseIcon } from "@phosphor-icons/react/dist/csr/Pause"
 import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play"
 import { useEffect } from "react"
-import { publicVideoPausedAtom } from "../../lib/public-video-preferences.js"
+import { publicVideoPausedAtom } from "../../lib/public-video-preferences"
 
 const PLAYER_ID = "public-video-player"
 const AUDIO_ID = "public-audio-player"

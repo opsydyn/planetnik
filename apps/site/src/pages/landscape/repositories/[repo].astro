@@ -1,13 +1,13 @@
 ---
 import { getCollection, getEntry } from "astro:content";
 import Dashboard from "../../../layouts/Dashboard.astro";
-import { getContributorDisplayName } from "../../../lib/contributors";
+import { getContributorDisplayName } from "@planetnik/report-data/lib/contributors";
 import {
 	getLandscapeRepoRouteParam,
 	getLandscapeRepositoryContributorHref,
 	readLandscapeRepoJson,
-} from "../../../lib/landscape";
-import { route } from "../../../lib/route";
+} from "@planetnik/report-data/lib/landscape";
+import { route } from "@planetnik/report-data/lib/route";
 import LandscapeRepositoryDashboardView from "@planetnik/report-ui/views/LandscapeRepositoryDashboardView";
 
 interface RepoAnalysisSummary {

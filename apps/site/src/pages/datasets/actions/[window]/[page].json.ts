@@ -1,11 +1,11 @@
-import type { APIRoute, GetStaticPaths } from "astro"
 import {
   actionQueueArtifactCacheKey,
   defaultActionQueueArtifactDirectory,
   loadActionQueueArtifactManifest,
   parseActionQueueArtifactParams,
   readActionQueueArtifactPage,
-} from "../../../../lib/datasets/actionQueueArtifactRoutes.js"
+} from "@planetnik/report-data/lib/datasets/actionQueueArtifactRoutes"
+import type { APIRoute, GetStaticPaths } from "astro"
 
 export const prerender = true
 

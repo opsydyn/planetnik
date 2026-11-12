@@ -167,7 +167,7 @@ function readFindingsInput(configPath: string, parsed: Record<string, unknown>):
     try {
       raw = JSON.parse(readFileSync(findingsPath, "utf-8"))
     } catch (error) {
-      throw new Error(`Failed to parse findings JSON at ${findingsPath}: ${String(error)}`)
+      throw new Error(`Failed to parse findings JSON at ${findingsPath}: ${String(error)}`, { cause: error })
     }
 
     const document = parseFindingsAuthoringDocument(raw, findingsPath)

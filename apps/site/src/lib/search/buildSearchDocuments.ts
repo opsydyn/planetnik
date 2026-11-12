@@ -1,7 +1,7 @@
 // ADR-0005: Build the site-wide search corpus from Astro content collections.
 import { getCollection, getEntry } from "astro:content"
-import { getLandscapeContributorHref, getLandscapeRepositoryHref } from "../landscapeRoutes"
-import { route } from "../route"
+import { getLandscapeContributorHref, getLandscapeRepositoryHref } from "@planetnik/report-data/lib/landscapeRoutes"
+import { route } from "@planetnik/report-data/lib/route"
 import type { SearchDocument } from "./types"
 
 type PageDefinition = Omit<SearchDocument, "id" | "kind" | "rank">
