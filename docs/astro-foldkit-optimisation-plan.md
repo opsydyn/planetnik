@@ -3,6 +3,7 @@
 **Date:** 2026-11-11
 **Dogfood target:** `apps/foldkit-site`, the complexity report
 **Baseline:** astro-foldkit 0.10.0, Astro 7.4.11, FoldKit 0.170.0
+**Status:** closed on 2026-11-12 at astro-foldkit 0.12.0; see [Closed](#closed-2026-11-12-at-0120) at the end.
 
 Everything below is measured on the pilot page, not reasoned about. The
 measurements come first because they reorder the obvious priorities.
@@ -248,3 +249,67 @@ preserved.
 The earlier advice stands and is now sharper: do not optimise the HTML. It is
 12,710 bytes, and the question that mattered was never its size but whether any
 JavaScript had to run before the reader could read it.
+
+---
+
+## Closed, 2026-11-12, at 0.12.0
+
+The adapter side of this plan is finished. Every item within our control that
+measured as worth doing has shipped, and what remains is either upstream in
+FoldKit or too small to justify the work on a static report site.
+
+### What shipped
+
+| Release | Change | Effect on `apps/foldkit-site` |
+|---|---|---|
+| 0.10.0 | `lazyApp(load, { prerender: true })` | islands have markup and size; `client:visible` works |
+| 0.11.0 | renderer warnings for the arrangements that fail silently | none needed: the site triggers none |
+| 0.12.0 | `client:interaction`, which replays input made before boot | measured, not adopted (below) |
+| 0.12.0 | island dependencies pre-bundled when the dev server starts | the grid hydrates on a cold dev start without a 504 and reload |
+
+Both FoldKit pages are now at **no JavaScript at load**. The complexity report
+pre-renders all four islands, leaves the three charts without a directive and
+gives the grid `client:visible`: 351 KB in eight requests arrives only when the
+table is scrolled to. The home page's bar chart was the last island on
+`client:load` without `prerender`; it now pre-renders with no directive and
+ships no `<astro-island>` and no script. Every chart mark carries its hover text
+as a native `<title>`.
+
+### `client:interaction`, measured and not adopted
+
+Under Slow 4G with a 4× CPU slowdown on a phone viewport, three runs each, from
+a tap on the grid to a usable search box:
+
+| Grid directive | JS at load | JS after scrolling | Tap to usable search |
+|---|---|---|---|
+| `client:visible` | 0 KB | 172 KB transferred | 12–25 ms |
+| `client:interaction` | 0 KB | 0 KB | 1.62–1.71 s |
+
+`client:interaction` saves the download for readers who scroll past the table
+without using it, and charges every reader who does use it the whole download
+after their tap. This grid also keeps its controls disabled until its rows
+arrive, so the first tap can only start the download. `client:visible` stays.
+The directive is the right choice for an island most readers never touch whose
+controls work in the pre-rendered markup; the package README and skill now say
+so.
+
+### What is left, and why it does not keep this open
+
+- **Lazy Model codec — upstream FoldKit, 129 KB.** The largest remaining number,
+  and not ours: the runtime builds the Model JSON codec at every start, as shown
+  above. It is worth raising with FoldKit with that proof attached.
+- **Per-island hydration — upstream FoldKit.** An island adopting its
+  pre-rendered markup instead of replacing it would make `client:interaction`
+  cheaper and let several interactive islands defer independently. Planetnik
+  has one interactive island per page, so it would not change these numbers.
+- **`server:defer` support — adapter.** It needs a server adapter; the report
+  site is static.
+- **Props channel — adapter.** About 7 KB gzipped on the grid page. Cosmetic.
+- **Data-loading recipe — adapter docs.** The row split that took the page from
+  89,638 to 6,302 gzipped bytes is still documented only here. It is the one
+  loose end that would help another consumer, and it is documentation, not
+  optimisation.
+
+Reopen this when FoldKit ships a lazy codec or per-island hydration, or when a
+hosted app needs `server:defer`.
+
