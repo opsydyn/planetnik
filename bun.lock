@@ -90,7 +90,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@astrojs/react": "7.1.8",
-        "@opsydyn/astro-foldkit": "0.12.0",
+        "@opsydyn/astro-foldkit": "0.13.0",
         "@planetnik/report-data": "workspace:*",
         "@planetnik/report-ui": "workspace:*",
         "@planetnik/report-view-foldkit": "workspace:*",
@@ -831,7 +831,7 @@
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
-    "@opsydyn/astro-foldkit": ["@opsydyn/astro-foldkit@0.12.0", "", { "dependencies": { "@foldkit/vite-plugin": "^0.29.0" }, "peerDependencies": { "astro": ">=5.0.0", "effect": "~4.1.0", "foldkit": ">=0.170.0 <0.171.0" } }, "sha512-aRlQS+ZLIGJAeIAPB+YOKHuflr2DGR5wRPcbtRDsL7bdcJe+6+rs9mkPsZm6kBDY9N5dx7/ARqVNS8qB32c9Cw=="],
+    "@opsydyn/astro-foldkit": ["@opsydyn/astro-foldkit@0.13.0", "", { "dependencies": { "@foldkit/vite-plugin": "^0.29.0" }, "peerDependencies": { "astro": ">=5.0.0", "effect": "~4.1.0", "foldkit": ">=0.170.0 <0.171.0" } }, "sha512-LgjOTGujO8QZQYg+c+KiKNFDDTTwlEgP/syx6NCps8liu1Gk/pjGD7OSIHzBdrkbZBpSisox6XpaldeR+OcOMQ=="],
 
     "@opsydyn/elysia-spectral": ["@opsydyn/elysia-spectral@1.5.4", "", { "dependencies": { "@stoplight/spectral-core": "^1.22.0", "@stoplight/spectral-formats": "^1.8.0", "@stoplight/spectral-functions": "^1.10.2", "@stoplight/spectral-parsers": "^1.0.4", "@stoplight/spectral-rulesets": "^1.22.1", "@usebruno/converters": "^0.18.1", "@usebruno/lang": "^0.35.0", "signale": "^1.4.0", "yaml": "^2.8.1" }, "peerDependencies": { "elysia": "^1.4.0" } }, "sha512-K0fXPwW6bpDTgVKvSD1IVfp3XdeM7DJwHfxuwDFBQM/wUeBe7vyBy6vK3xwUXw5/IJCeW2zYO11Arfz26MKsnQ=="],
 
